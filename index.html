@@ -321,6 +321,109 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
   .att-grid{grid-template-columns:1fr 1fr}
   .mnum{font-size:24px}
 }
+
+/* ===== EXTRA ANIMATIONS ===== */
+@keyframes slideInRight{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(-60px)}to{opacity:1;transform:translateX(0)}}
+@keyframes bounceIn{0%{transform:scale(0.3);opacity:0}50%{transform:scale(1.05)}70%{transform:scale(0.9)}100%{transform:scale(1);opacity:1}}
+@keyframes rubberBand{0%{transform:scaleX(1)}30%{transform:scaleX(1.25) scaleY(0.75)}40%{transform:scaleX(0.75) scaleY(1.25)}50%{transform:scaleX(1.15) scaleY(0.85)}65%{transform:scaleX(0.95) scaleY(1.05)}75%{transform:scaleX(1.05) scaleY(0.95)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}10%,30%,50%,70%,90%{transform:translateX(-8px)}20%,40%,60%,80%{transform:translateX(8px)}}
+@keyframes flipIn{from{transform:perspective(400px) rotateY(90deg);opacity:0}to{transform:perspective(400px) rotateY(0);opacity:1}}
+@keyframes zoomIn{from{transform:scale(0.5);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes tada{0%{transform:scale(1)}10%,20%{transform:scale(0.9) rotate(-3deg)}30%,50%,70%,90%{transform:scale(1.1) rotate(3deg)}40%,60%,80%{transform:scale(1.1) rotate(-3deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes wave{0%{transform:rotate(0deg)}15%{transform:rotate(14deg)}30%{transform:rotate(-8deg)}40%{transform:rotate(14deg)}50%{transform:rotate(-4deg)}60%{transform:rotate(10deg)}70%{transform:rotate(0deg)}100%{transform:rotate(0deg)}}
+@keyframes typewriter{from{width:0}to{width:100%}}
+@keyframes blink{0%,100%{border-color:transparent}50%{border-color:var(--red)}}
+@keyframes morphBg{0%,100%{border-radius:60% 40% 30% 70%/60% 30% 70% 40%}50%{border-radius:30% 60% 70% 40%/50% 60% 30% 60%}}
+@keyframes glitch{0%,100%{clip-path:polygon(0 0,100% 0,100% 100%,0 100%);transform:translate(0)}20%{clip-path:polygon(0 20%,100% 20%,100% 40%,0 40%);transform:translate(-3px,3px)}40%{clip-path:polygon(0 60%,100% 60%,100% 80%,0 80%);transform:translate(3px,-3px)}60%{clip-path:polygon(0 40%,100% 40%,100% 60%,0 60%);transform:translate(-3px)}80%{clip-path:polygon(0 80%,100% 80%,100% 100%,0 100%);transform:translate(3px,3px)}}
+@keyframes neonPulse{0%,100%{text-shadow:0 0 4px rgba(255,255,255,.3)}50%{text-shadow:0 0 10px rgba(255,255,255,.8),0 0 20px rgba(230,57,70,.5)}}
+@keyframes rippleEffect{0%{transform:scale(0);opacity:.6}100%{transform:scale(4);opacity:0}}
+@keyframes borderRun{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+/* HOVER EFFECTS */
+.mcard{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+.mcard:hover{transform:translateY(-6px) scale(1.02)!important;box-shadow:0 20px 50px rgba(0,0,0,.3)!important}
+.mcard:active{transform:scale(0.97)!important;transition:all .1s!important}
+
+.ccard{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+.ccard:hover{transform:translateX(-6px) translateY(-2px) scale(1.01)!important;box-shadow:0 15px 40px rgba(0,0,0,.25)!important}
+
+.sitem{transition:all .25s cubic-bezier(.34,1.56,.64,1)!important}
+.sitem:hover{transform:translateX(-5px)!important;padding-right:22px!important}
+.sitem.active{animation:slideInLeft .4s cubic-bezier(.34,1.56,.64,1)!important}
+
+.btn{transition:all .25s cubic-bezier(.34,1.56,.64,1)!important;position:relative;overflow:hidden}
+.btn:hover{transform:translateY(-2px) scale(1.03)!important}
+.btn:active{transform:scale(0.95)!important}
+.btn::after{content:'';position:absolute;inset:50% 50%;background:rgba(255,255,255,.2);border-radius:50%;transition:all .4s ease;width:0;height:0}
+.btn:active::after{inset:-50%;width:200%;height:200%}
+
+.mni{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+.mni.as,.mni.at,.mni.aa{animation:bounceIn .5s cubic-bezier(.34,1.56,.64,1)!important}
+.mni-icon{display:block;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.mni:hover .mni-icon{transform:scale(1.3) rotate(-5deg)}
+.mni:active .mni-icon{transform:scale(0.8)}
+
+.alert{animation:slideInRight .4s cubic-bezier(.16,1,.3,1)!important}
+.iitem{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+.iitem:hover{transform:translateY(-3px) scale(1.02)!important;border-color:rgba(100,160,220,.4)!important}
+
+/* PAGE TRANSITIONS */
+.mcontent{animation:fadeIn .35s ease!important}
+
+/* BANNER ANIMATION */
+.banner{animation:slideInLeft .5s cubic-bezier(.16,1,.3,1)!important}
+.wb-title{animation:fadeUp .6s .1s cubic-bezier(.16,1,.3,1) both!important}
+.wb-badge{animation:bounceIn .6s .2s cubic-bezier(.34,1.56,.64,1) both!important}
+
+/* NUMBER COUNTER */
+.mnum{animation:zoomIn .5s cubic-bezier(.34,1.56,.64,1)!important}
+
+/* LOGO */
+.tb-brand img{transition:all .4s cubic-bezier(.34,1.56,.64,1)!important}
+.tb-brand img:hover{transform:rotate(15deg) scale(1.15)!important}
+
+/* PROGRESS BAR */
+.pfill{animation:progressFill 1.5s cubic-bezier(.16,1,.3,1)!important}
+
+/* NOTIFICATION BELL */
+#topBell{animation:wave 2s ease-in-out infinite!important}
+
+/* LOGIN CARD */
+.rtab{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+.rtab:hover{transform:translateY(-3px) scale(1.05)!important}
+.rtab.rs,.rtab.rt,.rtab.ra{animation:rubberBand .6s!important}
+
+.lbtn{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+.lbtn:hover{transform:translateY(-3px) scale(1.02)!important;box-shadow:0 10px 30px rgba(0,0,0,.3)!important}
+.lbtn:active{transform:scale(0.96)!important}
+
+/* TABLE ROWS */
+.gtable tr{transition:all .2s ease!important}
+.gtable tr:hover td{background:rgba(100,160,220,.08)!important;transform:translateX(-3px)!important}
+
+/* ATT CARDS */
+.att-card{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+.att-card:hover{transform:translateY(-4px) scale(1.03)!important;border-color:rgba(100,160,220,.4)!important}
+
+.abtn{transition:all .25s cubic-bezier(.34,1.56,.64,1)!important}
+.abtn:active{transform:scale(0.9)!important}
+
+/* SCHEDULE */
+.sch-item{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+.sch-item:hover{transform:translateX(-8px) scale(1.01)!important;border-color:rgba(100,160,220,.4)!important}
+
+/* RIPPLE ON CLICK */
+.ripple-effect{position:absolute;border-radius:50%;background:rgba(255,255,255,.3);animation:rippleEffect .6s linear;pointer-events:none}
+
+/* TOAST */
+.toast{animation:slideInRight .4s cubic-bezier(.16,1,.3,1)!important}
+
+/* TX BUTTON */
+#txBtn{transition:all .3s cubic-bezier(.34,1.56,.64,1)!important}
+#txBtn:hover{transform:scale(1.15) rotate(15deg)!important}
+#txBtn:active{transform:scale(0.9)!important}
+
 </style>
 
 
@@ -1261,6 +1364,52 @@ async function restoreSession(){
 document.addEventListener('DOMContentLoaded',()=>{
   restoreSession();
 });
+
+
+// Ripple effect on all buttons
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('button, .btn, .mcard, .ccard');
+  if(!btn) return;
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple-effect';
+  const rect = btn.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX-rect.left-size/2}px;top:${e.clientY-rect.top-size/2}px`;
+  btn.style.position = 'relative';
+  btn.style.overflow = 'hidden';
+  btn.appendChild(ripple);
+  setTimeout(()=>ripple.remove(), 600);
+});
+
+// Stagger animations للبطاقات
+function staggerAnimate(selector, animClass, delay=80){
+  document.querySelectorAll(selector).forEach((el,i)=>{
+    el.style.opacity='0';
+    el.style.transform='translateY(30px)';
+    setTimeout(()=>{
+      el.style.transition=`all 0.5s cubic-bezier(0.16,1,0.3,1)`;
+      el.style.opacity='1';
+      el.style.transform='translateY(0)';
+    }, i*delay);
+  });
+}
+
+// تطبيق stagger على تحميل الصفحة
+const origAnimCards = animCards;
+animCards = function(){
+  origAnimCards();
+  setTimeout(()=>{
+    staggerAnimate('.mcard', '', 100);
+    staggerAnimate('.ccard', '', 80);
+    staggerAnimate('.iitem', '', 60);
+    staggerAnimate('.alert', '', 50);
+    staggerAnimate('.sch-item', '', 70);
+    staggerAnimate('.att-card', '', 40);
+  }, 50);
+};
+
+// Page transition
+const origShow = showSPage || null;
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('loginPage').style.display!=='none')doLogin();
