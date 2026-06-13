@@ -461,6 +461,9 @@ async function doLogin(){
       user=f;
       await loadStudent();
     }
+    // حفظ الجلسة
+    localStorage.setItem('bla_user', JSON.stringify(user));
+    localStorage.setItem('bla_role', role);
     showApp();
   }catch(e){showErr('بيانات الدخول غير صحيحة');}
   document.getElementById('lbtn').disabled=false;
@@ -865,10 +868,7 @@ const tPgs={
     const crs=[...new Set(students.map(s=>s.course))];
     return `
     <div class="stitle">رصد الدرجات والتقييم</div>
-    <div class="alert ab" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <span><span class="aicon">💡</span> عدّل الدرجات هنا ثم احفظها في الشيت مباشرة</span>
-      <a href="https://docs.google.com/spreadsheets/d/1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8/edit" target="_blank" class="btn btn-b btn-sm" style="text-decoration:none;margin-right:10px">📊 فتح الشيت</a>
-    </div>
+    
     ${crs.map(course=>{
       const ss=students.filter(s=>s.course===course);
       return `<div style="margin-bottom:24px">
@@ -879,7 +879,7 @@ const tPgs={
             <td>${s.name.split(' ').slice(0,3).join(' ')}</td>
             <td><span class="pill ${pillClass(Math.round(s.pct))}">${Math.round(s.pct)}%</span></td>
             <td style="color:${s.abs>20?'#ff8a92':'var(--muted)'}">${Math.round(s.abs)}%</td>
-            <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" value="${gradesData[s.sid]||''}" onchange="gradesData['${s.sid}']=this.value" id="g-${s.sid}"></td>
+            <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${s.abs>25?'disabled title="محروم - غياب +25%"':""} value="${gradesData[s.sid]||''}" onchange="gradesData['${s.sid}']=this.value" id="g-${s.sid}"></td>
           </tr>`).join('')}</tbody>
         </table>
         <div class="btn-row"><button class="btn btn-g" onclick="saveGrades('${course}')">💾 حفظ درجات ${course}</button></div>
@@ -935,14 +935,28 @@ async function saveAttendance(course){
   if(!records.length){showToast('لم يتم تسجيل أي حضور','w');return}
   showToast('جاري الحفظ...','i');
   try{
-    await fetch(SCRIPT_URL,{
-      method:'POST',
-      mode:'no-cors',
-      body:JSON.stringify({action:'saveAttendance',records}),
-      headers:{'Content-Type':'text/plain'}
+    const url=SCRIPT_URL+'?action=saveAttendance&data='+encodeURIComponent(JSON.stringify(records));
+    await new Promise((resolve,reject)=>{
+      const cb='cb_'+Date.now();
+      window[cb]=(d)=>{
+        delete window[cb];
+        document.getElementById('jsonp_'+cb)?.remove();
+        if(d.status==='ok') resolve(d);
+        else reject(new Error(d.msg));
+      };
+      const s=document.createElement('script');
+      s.id='jsonp_'+cb;
+      s.src=url+'&callback='+cb;
+      s.onerror=()=>{delete window[cb];reject(new Error('network'))};
+      document.head.appendChild(s);
     });
-    showToast('✅ تم إرسال الحضور للشيت','s');
-  }catch(e){showToast('تعذر الاتصال: '+e.message,'e');}
+    showToast('✅ تم حفظ الحضور في الشيت','s');
+  }catch(e){
+    try{
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveAttendance',records}),headers:{'Content-Type':'text/plain'}});
+      showToast('✅ تم إرسال الحضور','s');
+    }catch(e2){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
+  }
 }
 
 async function saveGrades(course){
@@ -951,20 +965,40 @@ async function saveGrades(course){
   ss.forEach(s=>{
     const grade=gradesData[s.sid];
     if(grade!==undefined&&grade!==''){
+      // تحقق من الحرمان - غياب أكثر من 25%
+      if(s.abs>25){
+        showToast('⚠️ '+s.name.split(' ')[0]+' محروم (غياب '+Math.round(s.abs)+'%)','w');
+        return;
+      }
       records.push({key:s.key,sid:s.sid,grade:parseFloat(grade)||0});
     }
   });
   if(!records.length){showToast('لم يتم إدخال أي درجات','w');return}
   showToast('جاري الحفظ...','i');
   try{
-    await fetch(SCRIPT_URL,{
-      method:'POST',
-      mode:'no-cors',
-      body:JSON.stringify({action:'saveGrades',records}),
-      headers:{'Content-Type':'text/plain'}
+    const url=SCRIPT_URL+'?action=saveGrades&data='+encodeURIComponent(JSON.stringify(records));
+    await new Promise((resolve,reject)=>{
+      const cb='cb_'+Date.now();
+      window[cb]=(d)=>{
+        delete window[cb];
+        document.getElementById('jsonp_'+cb)?.remove();
+        if(d.status==='ok') resolve(d);
+        else reject(new Error(d.msg));
+      };
+      const s=document.createElement('script');
+      s.id='jsonp_'+cb;
+      s.src=url+'&callback='+cb;
+      s.onerror=()=>{delete window[cb];reject(new Error('network'))};
+      document.head.appendChild(s);
     });
-    showToast('✅ تم إرسال الدرجات للشيت','s');
-  }catch(e){showToast('تعذر الاتصال: '+e.message,'e');}
+    showToast('✅ تم حفظ الدرجات في الشيت','s');
+  }catch(e){
+    // fallback - no-cors
+    try{
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveGrades',records}),headers:{'Content-Type':'text/plain'}});
+      showToast('✅ تم إرسال الدرجات','s');
+    }catch(e2){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
+  }
 }
 
 function triggerUpload(course){
@@ -1142,6 +1176,8 @@ function filterSt(){
 
 // ===== LOGOUT =====
 function doLogout(){
+  localStorage.removeItem('bla_user');
+  localStorage.removeItem('bla_role');
   user=null;courses=[];students=[];allCourses=[];files={};attendanceData={};gradesData={};
   document.getElementById('appShell').style.display='none';
   document.getElementById('loginPage').style.display='flex';
@@ -1164,6 +1200,30 @@ function copyLink(){
   const link=window.location.href+'#record-'+user.id;
   navigator.clipboard.writeText(link).then(()=>showToast('تم نسخ الرابط','s')).catch(()=>showToast('تعذر النسخ','e'));
 }
+
+// استرجاع الجلسة عند تحميل الصفحة
+async function restoreSession(){
+  try{
+    const savedUser=localStorage.getItem('bla_user');
+    const savedRole=localStorage.getItem('bla_role');
+    if(!savedUser||!savedRole)return;
+    const u=JSON.parse(savedUser);
+    role=savedRole;
+    currentUser=u;
+    user=u;
+    if(role==='s') await loadStudent();
+    else if(role==='t') await loadTrainer();
+    else await loadAdmin();
+    showApp();
+  }catch(e){
+    localStorage.removeItem('bla_user');
+    localStorage.removeItem('bla_role');
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  restoreSession();
+});
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('loginPage').style.display!=='none')doLogin();
