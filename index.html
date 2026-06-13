@@ -312,7 +312,6 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 @media(max-width:768px){
   .mob-nav{display:block}
   .sidebar{display:none!important}
-  .topbar{display:none!important}
   .mcontent{padding:16px 14px 80px!important}
   .topbar{padding:10px 14px}
   .metrics{grid-template-columns:1fr 1fr;gap:10px}
@@ -1428,7 +1427,7 @@ document.addEventListener('keydown',e=>{
 
 
 <!-- TRANSLATE -->
-<div id="txWidget" style="position:fixed;bottom:85px;left:16px;z-index:10000">
+<div id="txWidget" style="position:fixed;top:70px;left:12px;z-index:10000">
   <div id="txMenu" style="display:none;background:rgba(10,20,35,0.97);backdrop-filter:blur(20px);border:1px solid rgba(100,160,220,0.2);border-radius:16px;padding:16px;min-width:160px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-bottom:10px">
     <div style="font-size:11px;color:#6b8cae;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Language / اللغة</div>
     <div style="display:flex;flex-direction:column;gap:6px">
@@ -1716,7 +1715,7 @@ function translateTo(lang){
   btn.style.background='rgba(13,29,48,0.95)';
   btn.style.borderColor='rgba(100,160,220,0.25)';
   // إعادة بناء الصفحة بالترجمة
-  if(typeof user !== "undefined" && user) showApp();
+  try{if(typeof user !== 'undefined' && user && typeof showApp === 'function') showApp();}catch(e){}
 }
 
 // استرجاع اللغة
