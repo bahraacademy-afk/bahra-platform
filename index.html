@@ -773,7 +773,7 @@ function buildMobNav(r,pages){
   const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'تنبيهات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير'};
   const ac=r==='s'?'as':r==='t'?'at':'aa';
   const mn=document.getElementById('mobNav');
-  mn.style.display='block';
+  mn.style.display='';
   mn.innerHTML=`<div class="mob-nav-items">${pages.map((p,i)=>`<button class="mni ${i===0?ac:''}" onclick="mobNav('${p}',this,'${r}')"><span class="mni-icon">${map[p]||'📌'}</span><span>${lbls[p]||p}</span></button>`).join('')}</div>`;
 }
 
