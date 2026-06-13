@@ -446,13 +446,13 @@ async function doLogin(){
       user=f;
       await loadTrainer();
     } else {
-      const rows=await fetchSheet('قاعدة بيانات مركزي!A:H');
+      const rows=await fetchSheet('قاعدة بيانات مركزي!A:G');
       let f=null;
       for(let i=1;i<rows.length;i++){
         const r=rows[i];
         if(!r[0])continue;
         if(n0(r[0])===sid&&(norm(r[4])===sph||norm(r[4])===norm('0'+sph))){
-          f={id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[7]),role:'s'};break;
+          f={id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),role:'s'};break;
         }
       }
       if(!f)throw new Error('not found');
