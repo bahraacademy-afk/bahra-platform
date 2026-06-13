@@ -924,22 +924,21 @@ async function saveAttendance(course){
   const records=[];
   ss.forEach(s=>{
     if(attendanceData[s.sid]?.status){
-      const absence = attendanceData[s.sid].status==='غائب'?1:0;
-      records.push({key:s.key, sid:s.sid, absence});
+      const absence=attendanceData[s.sid].status==='غائب'?1:0;
+      records.push({key:s.key,sid:s.sid,absence});
     }
   });
   if(!records.length){showToast('لم يتم تسجيل أي حضور','w');return}
   showToast('جاري الحفظ...','i');
   try{
-    const r=await fetch(SCRIPT_URL,{
+    await fetch(SCRIPT_URL,{
       method:'POST',
+      mode:'no-cors',
       body:JSON.stringify({action:'saveAttendance',records}),
-      headers:{'Content-Type':'application/json'}
+      headers:{'Content-Type':'text/plain'}
     });
-    const d=await r.json();
-    if(d.status==='ok') showToast(`✅ تم حفظ ${records.length} سجل في الشيت`,'s');
-    else showToast('خطأ: '+d.msg,'e');
-  }catch(e){showToast('تعذر الاتصال بالشيت','e');}
+    showToast('✅ تم إرسال الحضور للشيت','s');
+  }catch(e){showToast('تعذر الاتصال: '+e.message,'e');}
 }
 
 async function saveGrades(course){
@@ -954,15 +953,14 @@ async function saveGrades(course){
   if(!records.length){showToast('لم يتم إدخال أي درجات','w');return}
   showToast('جاري الحفظ...','i');
   try{
-    const r=await fetch(SCRIPT_URL,{
+    await fetch(SCRIPT_URL,{
       method:'POST',
+      mode:'no-cors',
       body:JSON.stringify({action:'saveGrades',records}),
-      headers:{'Content-Type':'application/json'}
+      headers:{'Content-Type':'text/plain'}
     });
-    const d=await r.json();
-    if(d.status==='ok') showToast(`✅ تم حفظ درجات ${records.length} متدرب في الشيت`,'s');
-    else showToast('خطأ: '+d.msg,'e');
-  }catch(e){showToast('تعذر الاتصال بالشيت','e');}
+    showToast('✅ تم إرسال الدرجات للشيت','s');
+  }catch(e){showToast('تعذر الاتصال: '+e.message,'e');}
 }
 
 function triggerUpload(course){
