@@ -312,6 +312,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 @media(max-width:768px){
   .mob-nav{display:block}
   .sidebar{display:none!important}
+  .topbar{display:none!important}
   .mcontent{padding:16px 14px 80px!important}
   .topbar{padding:10px 14px}
   .metrics{grid-template-columns:1fr 1fr;gap:10px}
@@ -621,7 +622,8 @@ function navHTML(r,pages){
     alerts:{icon:'🔔',lbl:'التنبيهات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
-    settings:{icon:'⚙️',lbl:'الإعدادات'}
+    settings:{icon:'⚙️',lbl:'الإعدادات'},
+    record:{icon:'🏅',lbl:'السجل التدريبي'}
   };
   const ac=r==='s'?'active':r==='t'?'active at':'active aa';
   return pages.map(p=>`<div class="sitem" onclick="show${r.toUpperCase()}Page('${p}',this)" id="sn-${p}"><span class="sicon">${map[p]?.icon||'📌'}</span>${map[p]?.lbl||p}</div>`).join('');
@@ -723,7 +725,7 @@ const sPgs={
     </div>`).join('')||'<div class="empty"><div class="empty-icon">📎</div>لا توجد مقررات</div>'}`,
     record:()=>{
     const certUrl = user.cert || '';
-    const isEmpty = !certUrl || certUrl === 'سجل تدريبي' || certUrl === '';
+    const isEmpty = !certUrl || certUrl === 'سجل تدريبي' || certUrl === '' || certUrl === 'رابط الشهادة' || !certUrl.startsWith('http');
     if(isEmpty){
       return '<div class="empty"><div class="empty-icon">🏅</div><div>لم يتم رفع شهادتك بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">تواصل مع إدارة الأكاديمية</div></div>';
     }
