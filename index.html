@@ -323,17 +323,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 }
 </style>
 
-<script type="text/javascript">
-function googleTranslateElementInit(){
-  new google.translate.TranslateElement({
-    pageLanguage:'ar',
-    includedLanguages:'en,ar',
-    layout:google.translate.TranslateElement.InlineLayout.SIMPLE,
-    autoDisplay:false
-  },'google_translate_element');
-}
-</script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+
 <style>
 .goog-te-banner-frame{display:none!important}
 body{top:0!important}
@@ -1280,61 +1271,57 @@ document.addEventListener('keydown',e=>{
 
 
 
-<!-- ===== TRANSLATE WIDGET ===== -->
-<div id="translateWidget" style="position:fixed;bottom:80px;left:16px;z-index:10000;display:flex;flex-direction:column;align-items:flex-start;gap:8px">
-  
-  <!-- القائمة -->
-  <div id="translateMenu" style="display:none;background:rgba(10,20,35,0.97);backdrop-filter:blur(20px);border:1px solid rgba(100,160,220,0.2);border-radius:16px;padding:16px;min-width:200px;box-shadow:0 8px 32px rgba(0,0,0,0.4);animation:fadeUp .3s ease">
-    <div style="font-size:12px;color:#6b8cae;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px">اختر اللغة</div>
-    <div id="google_translate_element"></div>
-    <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
-      <button onclick="setLang('ar')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#e8f0f8;padding:8px 14px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:13px;cursor:pointer;text-align:right;transition:all .2s;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(100,160,220,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-        <span style="font-size:18px">🇸🇦</span> العربية
-      </button>
-      <button onclick="setLang('en')" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#e8f0f8;padding:8px 14px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:13px;cursor:pointer;text-align:right;transition:all .2s;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='rgba(100,160,220,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-        <span style="font-size:18px">🇬🇧</span> English
-      </button>
+
+
+<!-- TRANSLATE -->
+<div id="txWidget" style="position:fixed;bottom:85px;left:16px;z-index:10000">
+  <div id="txMenu" style="display:none;background:rgba(10,20,35,0.97);backdrop-filter:blur(20px);border:1px solid rgba(100,160,220,0.2);border-radius:16px;padding:16px;min-width:180px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-bottom:10px">
+    <div style="font-size:11px;color:#6b8cae;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">اختر اللغة</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <button onclick="translateTo('ar')" class="txbtn">🇸🇦 العربية</button>
+      <button onclick="translateTo('en')" class="txbtn">🇬🇧 English</button>
+      <button onclick="translateTo('ur')" class="txbtn">🇵🇰 اردو</button>
+      <button onclick="translateTo('fr')" class="txbtn">🇫🇷 Français</button>
     </div>
   </div>
-
-  <!-- الزر الرئيسي -->
-  <button onclick="toggleTranslate()" id="translateBtn" style="background:rgba(13,29,48,0.95);backdrop-filter:blur(20px);border:1px solid rgba(100,160,220,0.25);color:#e8f0f8;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.3);transition:all .3s;display:flex;align-items:center;justify-content:center" onmouseover="this.style.transform='scale(1.1)';this.style.borderColor='rgba(100,160,220,0.5)'" onmouseout="this.style.transform='scale(1)';this.style.borderColor='rgba(100,160,220,0.25)'">
-    🌐
-  </button>
+  <button onclick="toggleTx()" id="txBtn" style="width:46px;height:46px;border-radius:50%;background:rgba(13,29,48,0.95);backdrop-filter:blur(20px);border:1px solid rgba(100,160,220,0.25);color:#e8f0f8;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:all .3s;display:flex;align-items:center;justify-content:center">🌐</button>
 </div>
-
+<style>
+.txbtn{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#e8f0f8;padding:9px 14px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:13px;cursor:pointer;width:100%;text-align:right;transition:all .2s}
+.txbtn:hover{background:rgba(26,122,191,0.2);border-color:rgba(26,122,191,0.4)}
+</style>
 <script>
-function toggleTranslate(){
-  const menu=document.getElementById('translateMenu');
-  const btn=document.getElementById('translateBtn');
-  if(menu.style.display==='none'){
-    menu.style.display='block';
-    btn.style.background='rgba(26,122,191,0.3)';
-    btn.style.borderColor='rgba(26,122,191,0.6)';
+function toggleTx(){
+  const m=document.getElementById('txMenu');
+  const b=document.getElementById('txBtn');
+  if(m.style.display==='none'){
+    m.style.display='block';
+    b.style.background='rgba(26,122,191,0.3)';
+    b.style.borderColor='rgba(26,122,191,0.6)';
+    b.innerHTML='✕';
   } else {
-    menu.style.display='none';
-    btn.style.background='rgba(13,29,48,0.95)';
-    btn.style.borderColor='rgba(100,160,220,0.25)';
+    m.style.display='none';
+    b.style.background='rgba(13,29,48,0.95)';
+    b.style.borderColor='rgba(100,160,220,0.25)';
+    b.innerHTML='🌐';
   }
 }
 
-function setLang(lang){
-  const select=document.querySelector('.goog-te-combo');
-  if(select){
-    select.value=lang;
-    select.dispatchEvent(new Event('change'));
-  }
-  document.getElementById('translateMenu').style.display='none';
-  document.getElementById('translateBtn').style.background='rgba(13,29,48,0.95)';
+function translateTo(lang){
+  const url='https://translate.google.com/translate?sl=ar&tl='+lang+'&u='+encodeURIComponent(window.location.href);
+  window.open(url,'_blank');
+  document.getElementById('txMenu').style.display='none';
+  document.getElementById('txBtn').innerHTML='🌐';
+  document.getElementById('txBtn').style.background='rgba(13,29,48,0.95)';
 }
 
-// إغلاق عند الضغط خارج الزر
 document.addEventListener('click',function(e){
-  const widget=document.getElementById('translateWidget');
-  if(widget&&!widget.contains(e.target)){
-    document.getElementById('translateMenu').style.display='none';
-    document.getElementById('translateBtn').style.background='rgba(13,29,48,0.95)';
-    document.getElementById('translateBtn').style.borderColor='rgba(100,160,220,0.25)';
+  const w=document.getElementById('txWidget');
+  if(w&&!w.contains(e.target)){
+    document.getElementById('txMenu').style.display='none';
+    document.getElementById('txBtn').innerHTML='🌐';
+    document.getElementById('txBtn').style.background='rgba(13,29,48,0.95)';
+    document.getElementById('txBtn').style.borderColor='rgba(100,160,220,0.25)';
   }
 });
 </script>
