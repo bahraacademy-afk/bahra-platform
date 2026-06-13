@@ -865,6 +865,10 @@ const tPgs={
     const crs=[...new Set(students.map(s=>s.course))];
     return `
     <div class="stitle">رصد الدرجات والتقييم</div>
+    <div class="alert ab" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <span><span class="aicon">💡</span> عدّل الدرجات هنا ثم احفظها في الشيت مباشرة</span>
+      <a href="https://docs.google.com/spreadsheets/d/1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8/edit" target="_blank" class="btn btn-b btn-sm" style="text-decoration:none;margin-right:10px">📊 فتح الشيت</a>
+    </div>
     ${crs.map(course=>{
       const ss=students.filter(s=>s.course===course);
       return `<div style="margin-bottom:24px">
