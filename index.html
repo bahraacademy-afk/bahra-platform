@@ -387,6 +387,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 <script>
 const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
 const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxX3cnPTzwubn6RXWwQfIQWJF65kMhOpFka0DBudbmdJyEYgVAype5RR4tAaIzhWJqX/exec';
 const ADMIN=[{id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف الأكاديمية'},{id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف الأكاديمية'}];
 
 let role='s', user=null, courses=[], students=[], allCourses=[], files={};
@@ -918,18 +919,50 @@ function setAtt(sid,status,btn){
   if(st)st.textContent=status==='حاضر'?'✓ تم التسجيل':'✗ غائب';
 }
 
-function saveAttendance(course){
+async function saveAttendance(course){
   const ss=students.filter(s=>s.course===course);
-  let saved=0;
-  ss.forEach(s=>{if(attendanceData[s.sid]?.status)saved++;});
-  showToast(`تم حفظ حضور ${saved} متدرب من ${ss.length} في ${course}`,'s');
+  const records=[];
+  ss.forEach(s=>{
+    if(attendanceData[s.sid]?.status){
+      const absence = attendanceData[s.sid].status==='غائب'?1:0;
+      records.push({key:s.key, sid:s.sid, absence});
+    }
+  });
+  if(!records.length){showToast('لم يتم تسجيل أي حضور','w');return}
+  showToast('جاري الحفظ...','i');
+  try{
+    const r=await fetch(SCRIPT_URL,{
+      method:'POST',
+      body:JSON.stringify({action:'saveAttendance',records}),
+      headers:{'Content-Type':'application/json'}
+    });
+    const d=await r.json();
+    if(d.status==='ok') showToast(`✅ تم حفظ ${records.length} سجل في الشيت`,'s');
+    else showToast('خطأ: '+d.msg,'e');
+  }catch(e){showToast('تعذر الاتصال بالشيت','e');}
 }
 
-function saveGrades(course){
+async function saveGrades(course){
   const ss=students.filter(s=>s.course===course);
-  let saved=0;
-  ss.forEach(s=>{if(gradesData[s.sid]!==undefined&&gradesData[s.sid]!=='')saved++;});
-  showToast(`تم حفظ درجات ${saved} متدرب في ${course}`,'s');
+  const records=[];
+  ss.forEach(s=>{
+    const grade=gradesData[s.sid];
+    if(grade!==undefined&&grade!==''){
+      records.push({key:s.key,sid:s.sid,grade:parseFloat(grade)||0});
+    }
+  });
+  if(!records.length){showToast('لم يتم إدخال أي درجات','w');return}
+  showToast('جاري الحفظ...','i');
+  try{
+    const r=await fetch(SCRIPT_URL,{
+      method:'POST',
+      body:JSON.stringify({action:'saveGrades',records}),
+      headers:{'Content-Type':'application/json'}
+    });
+    const d=await r.json();
+    if(d.status==='ok') showToast(`✅ تم حفظ درجات ${records.length} متدرب في الشيت`,'s');
+    else showToast('خطأ: '+d.msg,'e');
+  }catch(e){showToast('تعذر الاتصال بالشيت','e');}
 }
 
 function triggerUpload(course){
