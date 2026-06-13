@@ -1275,10 +1275,13 @@ document.addEventListener('keydown',e=>{
 
 
 
+
+
+
 <!-- TRANSLATE -->
-<div id="txWidget" style="position:fixed;bottom:85px;left:16px;z-index:10000;display:none">
+<div id="txWidget" style="position:fixed;bottom:85px;left:16px;z-index:10000">
   <div id="txMenu" style="display:none;background:rgba(10,20,35,0.97);backdrop-filter:blur(20px);border:1px solid rgba(100,160,220,0.2);border-radius:16px;padding:16px;min-width:160px;box-shadow:0 8px 32px rgba(0,0,0,0.4);margin-bottom:10px">
-    <div style="font-size:11px;color:#6b8cae;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">اختر اللغة</div>
+    <div style="font-size:11px;color:#6b8cae;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px">Language / اللغة</div>
     <div style="display:flex;flex-direction:column;gap:6px">
       <button onclick="translateTo('ar')" class="txbtn">🇸🇦 العربية</button>
       <button onclick="translateTo('en')" class="txbtn">🇬🇧 English</button>
@@ -1286,27 +1289,292 @@ document.addEventListener('keydown',e=>{
   </div>
   <button onclick="toggleTx()" id="txBtn" style="width:46px;height:46px;border-radius:50%;background:rgba(13,29,48,0.95);backdrop-filter:blur(20px);border:1px solid rgba(100,160,220,0.25);color:#e8f0f8;font-size:20px;cursor:pointer;box-shadow:0 4px 20px rgba(0,0,0,0.4);transition:all .3s;display:flex;align-items:center;justify-content:center">🌐</button>
 </div>
-
-<div id="google_translate_element" style="display:none"></div>
-
 <style>
 .txbtn{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#e8f0f8;padding:9px 14px;border-radius:10px;font-family:Tajawal,sans-serif;font-size:13px;cursor:pointer;width:100%;text-align:right;transition:all .2s}
 .txbtn:hover{background:rgba(26,122,191,0.2);border-color:rgba(26,122,191,0.4)}
-.goog-te-banner-frame,.goog-te-balloon-frame{display:none!important}
-body{top:0!important;position:static!important}
-.skiptranslate{display:none!important}
 </style>
+<script>
 
-<script type="text/javascript">
-function googleTranslateElementInit(){
-  new google.translate.TranslateElement({
-    pageLanguage:'ar',
-    includedLanguages:'ar,en',
-    autoDisplay:false
-  },'google_translate_element');
-  // أظهر الزر بعد تحميل Google Translate
-  document.getElementById('txWidget').style.display='block';
+const TRANSLATIONS = {
+  ar: {
+    'الرقم الأكاديمي':'الرقم الأكاديمي',
+    'رقم الجوال':'رقم الجوال',
+    'اسم المستخدم':'اسم المستخدم',
+    'الرقم الوظيفي':'الرقم الوظيفي',
+    'دخول المنصة':'دخول المنصة',
+    'بيانات الدخول غير صحيحة':'بيانات الدخول غير صحيحة',
+    'يرجى إدخال البيانات':'يرجى إدخال البيانات',
+    'جاري التحقق...':'جاري التحقق...',
+    'المنصة الأكاديمية المتكاملة':'المنصة الأكاديمية المتكاملة',
+    'أدخل رقمك الأكاديمي':'أدخل رقمك الأكاديمي',
+    'متدرب':'متدرب',
+    'مدرب':'مدرب',
+    'إداري':'إداري',
+    'الرئيسية':'الرئيسية',
+    'مقرراتي':'مقرراتي',
+    'أدائي':'أدائي',
+    'الجدول':'الجدول',
+    'ملفي':'ملفي',
+    'السجل التدريبي':'السجل التدريبي',
+    'المرفقات':'المرفقات',
+    'قوائم الفصول':'قوائم الفصول',
+    'تسجيل الحضور':'تسجيل الحضور',
+    'رصد الدرجات':'رصد الدرجات',
+    'التنبيهات':'التنبيهات',
+    'لوحة المتابعة':'لوحة المتابعة',
+    'المتدربون':'المتدربون',
+    'المقررات':'المقررات',
+    'التقارير':'التقارير',
+    'الإعدادات':'الإعدادات',
+    'خروج':'خروج',
+    'إجمالي المقررات':'إجمالي المقررات',
+    'مكتملة +80%':'مكتملة +80%',
+    'متوسط الإنجاز':'متوسط الإنجاز',
+    'إجمالي المتدربين':'إجمالي المتدربين',
+    'المدربون':'المدربون',
+    'المقررات النشطة':'المقررات النشطة',
+    'مقررات مكتملة':'مقررات مكتملة',
+    'متوسط عام':'متوسط عام',
+    'تنبيهات':'تنبيهات',
+    'الاسم الكامل':'الاسم الكامل',
+    'التخصص':'التخصص',
+    'الشعبة':'الشعبة',
+    'البريد الإلكتروني':'البريد الإلكتروني',
+    'الصلاحية':'الصلاحية',
+    'الإداري':'الإداري',
+    'المقرر':'المقرر',
+    'الرمز':'الرمز',
+    'المدرب':'المدرب',
+    'الإنجاز':'الإنجاز',
+    'الغياب':'الغياب',
+    'الحالة':'الحالة',
+    'الرقم':'الرقم',
+    'الاسم':'الاسم',
+    'النسبة':'النسبة',
+    'مكتمل':'مكتمل',
+    'جاري':'جاري',
+    'يحتاج متابعة':'يحتاج متابعة',
+    'محروم':'محروم',
+    'حاضر':'حاضر',
+    'غائب':'غائب',
+    'حفظ':'حفظ',
+    'إغلاق':'إغلاق',
+    'طباعة التقرير':'طباعة التقرير',
+    'نسخ الرابط':'نسخ الرابط',
+    'فتح الشهادة':'فتح الشهادة',
+    'تنزيل':'تنزيل',
+    'عرض الكل':'عرض الكل',
+    'ابحث':'ابحث',
+    'كل الشعب':'كل الشعب',
+    'الكل':'الكل',
+    'غياب عالي':'غياب عالي',
+    'أداء منخفض':'أداء منخفض',
+    'جميع المتدربين بحالة جيدة — لا توجد تنبيهات':'جميع المتدربين بحالة جيدة — لا توجد تنبيهات',
+    'لا توجد تنبيهات حرجة':'لا توجد تنبيهات حرجة',
+    'لم يتم رفع شهادتك بعد':'لم يتم رفع شهادتك بعد',
+    'تواصل مع إدارة الأكاديمية':'تواصل مع إدارة الأكاديمية',
+    'لا توجد مقررات مسجلة':'لا توجد مقررات مسجلة',
+    'لا توجد مرفقات بعد':'لا توجد مرفقات بعد',
+    'تقرير الأداء':'تقرير الأداء',
+    'تفاصيل المقررات':'تفاصيل المقررات',
+    'تقارير الأداء الأكاديمي':'تقارير الأداء الأكاديمي',
+    'توزيع المتدربين بالشعب':'توزيع المتدربين بالشعب',
+    'أداء المدربين':'أداء المدربين',
+    'بياناتي الشخصية':'بياناتي الشخصية',
+    'جدول التدريب الأسبوعي':'جدول التدريب الأسبوعي',
+    'المرفقات والمواد العلمية':'المرفقات والمواد العلمية',
+    'رفع المرفقات للمتدربين':'رفع المرفقات للمتدربين',
+    'التنبيهات والمتابعة':'التنبيهات والمتابعة',
+    'لوحة المتابعة المركزية':'لوحة المتابعة المركزية',
+    'نظام التنبيهات الأكاديمية':'نظام التنبيهات الأكاديمية',
+    'إعدادات النظام':'إعدادات النظام',
+    'إحصائيات سريعة':'إحصائيات سريعة',
+    'معرف الشيت':'معرف الشيت',
+    'رابط الشيت':'رابط الشيت',
+    'آخر المقررات':'آخر المقررات',
+    'ملخص الأداء':'ملخص الأداء',
+    'اضغط أو اسحب الملفات هنا للرفع':'اضغط أو اسحب الملفات هنا للرفع',
+    'تسجيل الحضور اليومي':'تسجيل الحضور اليومي',
+    'سجّل حضور وغياب المتدربين ثم اضغط حفظ':'سجّل حضور وغياب المتدربين ثم اضغط حفظ',
+    'رصد الدرجات والتقييم':'رصد الدرجات والتقييم',
+    'جميع المتدربين':'جميع المتدربين',
+    'مركزي':'مركزي',
+    'الشهادة جاهزة':'الشهادة جاهزة',
+    'شهادتك جاهزة — اضغط لعرضها أو تنزيلها':'شهادتك جاهزة — اضغط لعرضها أو تنزيلها',
+    'جاري الحفظ...':'جاري الحفظ...',
+    'تم حفظ':'تم حفظ',
+    'تعذر الاتصال':'تعذر الاتصال',
+    'تعذر الحفظ':'تعذر الحفظ',
+    'لم يتم تسجيل أي حضور':'لم يتم تسجيل أي حضور',
+    'لم يتم إدخال أي درجات':'لم يتم إدخال أي درجات',
+    'تم إرسال الدرجات للشيت':'تم إرسال الدرجات للشيت',
+    'تم إرسال الحضور للشيت':'تم إرسال الحضور للشيت',
+    'تم نسخ الرابط':'تم نسخ الرابط',
+    'الأحد':'الأحد',
+    'الاثنين':'الاثنين',
+    'الثلاثاء':'الثلاثاء',
+    'الأربعاء':'الأربعاء',
+    'الخميس':'الخميس'
+  },
+  en: {
+    'الرقم الأكاديمي':'Academic ID',
+    'رقم الجوال':'Mobile Number',
+    'اسم المستخدم':'Username',
+    'الرقم الوظيفي':'Employee ID',
+    'دخول المنصة':'Login',
+    'بيانات الدخول غير صحيحة':'Incorrect login credentials',
+    'يرجى إدخال البيانات':'Please enter your credentials',
+    'جاري التحقق...':'Verifying...',
+    'المنصة الأكاديمية المتكاملة':'Integrated Academic Platform',
+    'أدخل رقمك الأكاديمي':'Enter your academic ID',
+    'متدرب':'Trainee',
+    'مدرب':'Trainer',
+    'إداري':'Admin',
+    'الرئيسية':'Home',
+    'مقرراتي':'My Courses',
+    'أدائي':'Performance',
+    'الجدول':'Schedule',
+    'ملفي':'Profile',
+    'السجل التدريبي':'Certificate',
+    'المرفقات':'Attachments',
+    'قوائم الفصول':'Classes',
+    'تسجيل الحضور':'Attendance',
+    'رصد الدرجات':'Grades',
+    'التنبيهات':'Alerts',
+    'لوحة المتابعة':'Dashboard',
+    'المتدربون':'Trainees',
+    'المقررات':'Courses',
+    'التقارير':'Reports',
+    'الإعدادات':'Settings',
+    'خروج':'Logout',
+    'إجمالي المقررات':'Total Courses',
+    'مكتملة +80%':'Completed +80%',
+    'متوسط الإنجاز':'Avg. Progress',
+    'إجمالي المتدربين':'Total Trainees',
+    'المدربون':'Trainers',
+    'المقررات النشطة':'Active Courses',
+    'مقررات مكتملة':'Completed Courses',
+    'متوسط عام':'Overall Avg.',
+    'تنبيهات':'Alerts',
+    'الاسم الكامل':'Full Name',
+    'التخصص':'Major',
+    'الشعبة':'Section',
+    'البريد الإلكتروني':'Email',
+    'الصلاحية':'Role',
+    'الإداري':'Admin',
+    'المقرر':'Course',
+    'الرمز':'Code',
+    'المدرب':'Trainer',
+    'الإنجاز':'Progress',
+    'الغياب':'Absence',
+    'الحالة':'Status',
+    'الرقم':'ID',
+    'الاسم':'Name',
+    'النسبة':'Rate',
+    'مكتمل':'Completed',
+    'جاري':'In Progress',
+    'يحتاج متابعة':'Needs Attention',
+    'محروم':'Deprived',
+    'حاضر':'Present',
+    'غائب':'Absent',
+    'حفظ':'Save',
+    'إغلاق':'Close',
+    'طباعة التقرير':'Print Report',
+    'نسخ الرابط':'Copy Link',
+    'فتح الشهادة':'Open Certificate',
+    'تنزيل':'Download',
+    'عرض الكل':'View All',
+    'ابحث':'Search',
+    'كل الشعب':'All Sections',
+    'الكل':'All',
+    'غياب عالي':'High Absence',
+    'أداء منخفض':'Low Performance',
+    'جميع المتدربين بحالة جيدة — لا توجد تنبيهات':'All trainees are in good condition',
+    'لا توجد تنبيهات حرجة':'No critical alerts',
+    'لم يتم رفع شهادتك بعد':'Certificate not uploaded yet',
+    'تواصل مع إدارة الأكاديمية':'Contact academy administration',
+    'لا توجد مقررات مسجلة':'No registered courses',
+    'لا توجد مرفقات بعد':'No attachments yet',
+    'تقرير الأداء':'Performance Report',
+    'تفاصيل المقررات':'Course Details',
+    'تقارير الأداء الأكاديمي':'Academic Performance Reports',
+    'توزيع المتدربين بالشعب':'Trainees Distribution by Section',
+    'أداء المدربين':'Trainer Performance',
+    'بياناتي الشخصية':'My Profile',
+    'جدول التدريب الأسبوعي':'Weekly Training Schedule',
+    'المرفقات والمواد العلمية':'Attachments & Materials',
+    'رفع المرفقات للمتدربين':'Upload Materials for Trainees',
+    'التنبيهات والمتابعة':'Alerts & Follow-up',
+    'لوحة المتابعة المركزية':'Central Dashboard',
+    'نظام التنبيهات الأكاديمية':'Academic Alert System',
+    'إعدادات النظام':'System Settings',
+    'إحصائيات سريعة':'Quick Stats',
+    'معرف الشيت':'Sheet ID',
+    'رابط الشيت':'Sheet Link',
+    'آخر المقررات':'Recent Courses',
+    'ملخص الأداء':'Performance Summary',
+    'اضغط أو اسحب الملفات هنا للرفع':'Click or drag files here to upload',
+    'تسجيل الحضور اليومي':'Daily Attendance',
+    'سجّل حضور وغياب المتدربين ثم اضغط حفظ':'Record attendance then save',
+    'رصد الدرجات والتقييم':'Grade Assessment',
+    'جميع المتدربين':'All Trainees',
+    'مركزي':'Central',
+    'الشهادة جاهزة':'Certificate Ready',
+    'شهادتك جاهزة — اضغط لعرضها أو تنزيلها':'Your certificate is ready',
+    'جاري الحفظ...':'Saving...',
+    'تم حفظ':'Saved',
+    'تعذر الاتصال':'Connection failed',
+    'تعذر الحفظ':'Save failed',
+    'لم يتم تسجيل أي حضور':'No attendance recorded',
+    'لم يتم إدخال أي درجات':'No grades entered',
+    'تم إرسال الدرجات للشيت':'Grades sent to sheet',
+    'تم إرسال الحضور للشيت':'Attendance sent to sheet',
+    'تم نسخ الرابط':'Link copied',
+    'الأحد':'Sunday',
+    'الاثنين':'Monday',
+    'الثلاثاء':'Tuesday',
+    'الأربعاء':'Wednesday',
+    'الخميس':'Thursday'
+  }
+};
+
+let currentLang = 'ar';
+
+function translateTo(lang){
+  currentLang = lang;
+  const t = TRANSLATIONS[lang];
+  // ترجمة شاملة لكل النصوص
+  document.querySelectorAll('*').forEach(el=>{
+    if(el.children.length === 0 && el.textContent.trim()){
+      const txt = el.textContent.trim();
+      if(t[txt] !== undefined) el.textContent = t[txt];
+    }
+  });
+  // ترجمة placeholders
+  document.querySelectorAll('input[placeholder]').forEach(el=>{
+    const ph = el.getAttribute('placeholder');
+    if(t[ph]) el.setAttribute('placeholder', t[ph]);
+  });
+  // غير اتجاه الصفحة
+  document.documentElement.dir = lang==='en' ? 'ltr' : 'rtl';
+  document.documentElement.lang = lang;
+  // حفظ اللغة
+  localStorage.setItem('bla_lang', lang);
+  // أغلق القائمة
+  document.getElementById('txMenu').style.display='none';
+  const btn=document.getElementById('txBtn');
+  btn.innerHTML = lang==='en' ? '🇸🇦' : '🌐';
+  btn.style.background='rgba(13,29,48,0.95)';
+  btn.style.borderColor='rgba(100,160,220,0.25)';
+  // إعادة بناء الصفحة بالترجمة
+  if(typeof user !== "undefined" && user) showApp();
 }
+
+// استرجاع اللغة
+document.addEventListener('DOMContentLoaded',()=>{
+  const savedLang = localStorage.getItem('bla_lang');
+  if(savedLang && savedLang !== 'ar') setTimeout(()=>translateTo(savedLang), 500);
+});
 
 function toggleTx(){
   const m=document.getElementById('txMenu');
@@ -1314,48 +1582,22 @@ function toggleTx(){
   if(m.style.display==='none'||!m.style.display){
     m.style.display='block';
     b.style.background='rgba(26,122,191,0.3)';
-    b.style.borderColor='rgba(26,122,191,0.6)';
     b.innerHTML='✕';
-  } else {
+  }else{
     m.style.display='none';
     b.style.background='rgba(13,29,48,0.95)';
-    b.style.borderColor='rgba(100,160,220,0.25)';
-    b.innerHTML='🌐';
+    b.innerHTML= currentLang==='en'?'🇸🇦':'🌐';
   }
 }
-
-function translateTo(lang){
-  const select=document.querySelector('.goog-te-combo');
-  if(select){
-    select.value=lang;
-    select.dispatchEvent(new Event('change'));
-    // غير اتجاه الصفحة
-    if(lang==='en'){
-      document.getElementById('txBtn').innerHTML='🇸🇦';
-      document.getElementById('txBtn').title='ارجع للعربية';
-    } else {
-      document.getElementById('txBtn').innerHTML='🌐';
-    }
-  }
-  document.getElementById('txMenu').style.display='none';
-  document.getElementById('txBtn').style.background='rgba(13,29,48,0.95)';
-  document.getElementById('txBtn').style.borderColor='rgba(100,160,220,0.25)';
-}
-
 document.addEventListener('click',function(e){
   const w=document.getElementById('txWidget');
   if(w&&!w.contains(e.target)){
-    const m=document.getElementById('txMenu');
-    if(m) m.style.display='none';
+    document.getElementById('txMenu').style.display='none';
     const b=document.getElementById('txBtn');
-    if(b&&b.innerHTML==='✕'){
-      b.innerHTML='🌐';
-      b.style.background='rgba(13,29,48,0.95)';
-    }
+    if(b) b.innerHTML=currentLang==='en'?'🇸🇦':'🌐';
   }
 });
 </script>
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 </body>
 </html>
