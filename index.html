@@ -1226,7 +1226,7 @@ const aPgs={
     </div>
     <div class="gtable"><table>
       <thead><tr><th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>التخصص</th><th>الجوال</th></tr></thead>
-      <tbody id="stBody">${students.map(s=>`<tr data-n="${s.name}" data-i="${s.id}" data-g="${s.grp}">
+      <tbody id="stBody">${students.map(s=>`<tr data-n="${s.name}" data-i="${s.id}" data-g="${s.grp}" onclick="showStudentDetail('${s.id}')" style="cursor:pointer;transition:background .2s" onmouseover="this.style.background='rgba(100,160,220,0.08)'" onmouseout="this.style.background=''">
         <td style="color:var(--muted)">${s.id}</td><td>${s.name}</td><td>${s.grp}</td>
         <td style="color:var(--muted);font-size:12px">${s.spec||'—'}</td><td style="color:var(--muted)">${s.ph||'—'}</td>
       </tr>`).join('')}</tbody>
@@ -1238,7 +1238,7 @@ const aPgs={
     ${crs.map(name=>{
       const cs=allCourses.filter(c=>c.course===name);
       const avg=Math.round(cs.reduce((a,c)=>a+c.pct,0)/cs.length);
-      return `<div class="ccard cc-y">
+      return `<div class="ccard cc-y" onclick="showCourseDetail('${name.replace(/'/g, "\\'")}');" style="cursor:pointer">
         <div class="cc-top"><div><div class="cc-name">${name}</div><div class="cc-meta">المدرب: ${cs[0]?.trainer||'—'} · ${cs.length} متدرب</div></div><span class="pill ${pillClass(avg)}">${avg}%</span></div>
         <div class="prog"><div class="pfill ${fillClass(avg)}" style="width:${avg}%"></div></div>
       </div>`;
