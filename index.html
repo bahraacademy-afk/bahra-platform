@@ -1410,6 +1410,164 @@ animCards = function(){
 // Page transition
 const origShow = showSPage || null;
 
+
+// ===== STUDENT DETAIL MODAL =====
+function showStudentDetail(sid){
+  const st=students.find(s=>s.id===sid);
+  if(!st)return;
+  const stCourses=allCourses.filter(c=>c.sid===sid);
+  const avg=stCourses.length?Math.round(stCourses.reduce((a,c)=>a+c.pct,0)/stCourses.length):0;
+  
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='studentModal';
+  overlay.innerHTML=`
+    <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto">
+      <div class="modal-title">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="av av-s" style="width:44px;height:44px;font-size:16px">${st.name.split(' ').slice(0,2).map(w=>w[0]).join('')}</div>
+          <div>
+            <div style="font-size:16px;font-weight:700">${st.name}</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:400">الشعبة ${st.grp} · ${st.spec}</div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('studentModal').remove()">✕</button>
+      </div>
+      
+      <div class="igrid" style="margin-bottom:16px">
+        <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${st.id}</div></div>
+        <div class="iitem"><div class="ilbl">الجوال</div><div class="ival">${st.ph||'—'}</div></div>
+        <div class="iitem"><div class="ilbl">البريد</div><div class="ival" style="font-size:11px">${st.email||'—'}</div></div>
+        <div class="iitem"><div class="ilbl">متوسط الإنجاز</div><div class="ival" style="color:${avg>=70?'var(--green)':avg>=50?'var(--gold)':'var(--red)'}">${avg}%</div></div>
+      </div>
+      
+      <div class="stitle">المقررات (${stCourses.length})</div>
+      ${stCourses.length?stCourses.map(c=>{
+        const p=Math.round(c.pct);
+        return `<div class="ccard cc-b" style="margin-bottom:8px;padding:14px 16px">
+          <div class="cc-top" style="margin-bottom:8px">
+            <div><div class="cc-name" style="font-size:13px">${c.course}</div><div class="cc-meta">${c.trainer||'—'}</div></div>
+            <span class="pill ${p>=80?'pg':p>=50?'py':'pr'}">${p}%</span>
+          </div>
+          <div class="prog"><div class="pfill ${p>=80?'pf-g':p>=50?'pf-y':'pf-r'}" style="width:${p}%"></div></div>
+          <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--muted)">
+            <span>إنجاز: ${p}%</span><span>غياب: ${Math.round(c.abs)}%</span>
+            ${c.abs>25?'<span style="color:var(--red)">⚠️ محروم</span>':''}
+          </div>
+        </div>`;
+      }).join(''):'<div class="empty">لا توجد مقررات</div>'}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+// ===== COURSE DETAIL MODAL =====
+function showCourseDetail(courseName){
+  const cs=allCourses.filter(c=>c.course===courseName);
+  const avg=cs.length?Math.round(cs.reduce((a,c)=>a+c.pct,0)/cs.length):0;
+  const trainer=cs[0]?.trainer||'—';
+  
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='courseModal';
+  overlay.innerHTML=`
+    <div class="modal" style="max-width:660px;max-height:88vh;overflow-y:auto">
+      <div class="modal-title">
+        <div>
+          <div style="font-size:16px;font-weight:700">📚 ${courseName}</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:400">المدرب: ${trainer} · ${cs.length} متدرب · متوسط ${avg}%</div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('courseModal').remove()">✕</button>
+      </div>
+      
+      <div class="metrics" style="margin-bottom:16px">
+        <div class="mcard mc-b"><div class="micon">👥</div><div class="mnum cb">${cs.length}</div><div class="mlbl">متدرب</div></div>
+        <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${cs.filter(c=>c.pct>=80).length}</div><div class="mlbl">مكتملة</div></div>
+        <div class="mcard mc-r"><div class="micon">⚠️</div><div class="mnum cr">${cs.filter(c=>c.abs>25).length}</div><div class="mlbl">محروم</div></div>
+      </div>
+      
+      <div class="gtable">
+        <table>
+          <thead><tr><th>الاسم</th><th>الإنجاز</th><th>الغياب</th><th>الحالة</th></tr></thead>
+          <tbody>${cs.map(c=>{
+            const st=students.find(s=>s.id===c.sid);
+            const p=Math.round(c.pct);
+            const status=c.abs>25?'<span style="color:var(--red)">محروم</span>':p>=80?'<span style="color:var(--green)">مكتمل</span>':p>=50?'<span style="color:var(--gold)">جاري</span>':'<span style="color:var(--red)">متأخر</span>';
+            return `<tr onclick="document.getElementById('courseModal').remove();setTimeout(()=>showStudentDetail('${c.sid}'),100)" style="cursor:pointer">
+              <td>${st?st.name.split(' ').slice(0,3).join(' '):c.sid}</td>
+              <td><span class="pill ${p>=80?'pg':p>=50?'py':'pr'}">${p}%</span></td>
+              <td style="color:${c.abs>25?'var(--red)':'var(--muted)'}">${Math.round(c.abs)}%</td>
+              <td>${status}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+// ===== ADD USER MODAL =====
+function showAddUser(type){
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='addUserModal';
+  const isStudent = type==='student';
+  overlay.innerHTML=`
+    <div class="modal" style="max-width:480px">
+      <div class="modal-title">
+        <div>${isStudent?'🎓 إضافة متدرب جديد':'👨‍🏫 إضافة مدرب جديد'}</div>
+        <button class="modal-close" onclick="document.getElementById('addUserModal').remove()">✕</button>
+      </div>
+      <div class="mform-group"><label>الاسم الكامل *</label><input type="text" id="nu-name" placeholder="أدخل الاسم الكامل"></div>
+      ${isStudent?`
+        <div class="mform-group"><label>الرقم الأكاديمي *</label><input type="text" id="nu-id" placeholder="مثال: 331692"></div>
+        <div class="mform-group"><label>الشعبة *</label><select id="nu-grp"><option value="1">الشعبة 1</option><option value="2">الشعبة 2</option><option value="3">الشعبة 3</option></select></div>
+        <div class="mform-group"><label>التخصص</label><input type="text" id="nu-spec" placeholder="مثال: تقنية الألكترونيات الصناعية وتحكم"></div>
+      `:`
+        <div class="mform-group"><label>الرقم الوظيفي *</label><input type="text" id="nu-id" placeholder="مثال: 1806328"></div>
+        <div class="mform-group"><label>التخصص</label><input type="text" id="nu-spec" placeholder="مثال: هندسة الكترونيات وتحكم"></div>
+      `}
+      <div class="mform-group"><label>رقم الجوال *</label><input type="text" id="nu-ph" placeholder="05xxxxxxxx"></div>
+      <div class="mform-group"><label>البريد الإلكتروني</label><input type="email" id="nu-email" placeholder="example@email.com"></div>
+      <div class="btn-row" style="justify-content:flex-end;margin-top:8px">
+        <button class="btn btn-out" onclick="document.getElementById('addUserModal').remove()">إلغاء</button>
+        <button class="btn ${isStudent?'btn-r':'btn-b'}" onclick="submitNewUser('${type}')">إضافة ✓</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+async function submitNewUser(type){
+  const name=document.getElementById('nu-name').value.trim();
+  const id=document.getElementById('nu-id').value.trim();
+  const ph=document.getElementById('nu-ph').value.trim();
+  const email=document.getElementById('nu-email')?.value.trim()||'';
+  const spec=document.getElementById('nu-spec')?.value.trim()||'';
+  const grp=document.getElementById('nu-grp')?.value||'';
+  
+  if(!name||!id||!ph){showToast('يرجى ملء الحقول المطلوبة','w');return}
+  
+  showToast('جاري الإضافة...','i');
+  
+  const records=[{type,name,id,ph,email,spec,grp}];
+  try{
+    await fetch(SCRIPT_URL,{
+      method:'POST',mode:'no-cors',
+      body:JSON.stringify({action:'addUser',records}),
+      headers:{'Content-Type':'text/plain'}
+    });
+    showToast(`✅ تمت إضافة ${name} بنجاح`,'s');
+    document.getElementById('addUserModal').remove();
+  }catch(e){
+    showToast('تعذر الإضافة — جرب مرة أخرى','e');
+  }
+}
+
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('loginPage').style.display!=='none')doLogin();
 });
