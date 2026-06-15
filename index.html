@@ -1288,7 +1288,13 @@ const aPgs={
     </table></div>`;
   },
   all_students:()=>`
-    <div class="stitle">جميع المتدربين (${students.length})</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div class="stitle" style="margin-bottom:0">جميع المتدربين (${students.length})</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-r btn-sm" onclick="showAddUser('student')">➕ إضافة متدرب</button>
+        <button class="btn btn-b btn-sm" onclick="showAddUser('trainer')">➕ إضافة مدرب</button>
+      </div>
+    </div>
     <div class="search-row">
       <input type="text" id="stSearch" placeholder="ابحث بالاسم أو الرقم..." oninput="filterSt()">
       <select id="stGrp" onchange="filterSt()">
