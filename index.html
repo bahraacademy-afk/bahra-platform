@@ -1519,15 +1519,21 @@ function showStudentDetail(sid){
         <div class="iitem"><div class="ilbl">متوسط الإنجاز</div><div class="ival" style="color:${avg>=70?'var(--green)':avg>=50?'var(--gold)':'var(--red)'}">${avg}%</div></div>
       </div>
       
-      <div class="ccard ${st.cert&&st.cert.startsWith('http')?'cc-g':'cc-y'}" style="margin-bottom:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:20px">🏅</span>
-          <div>
-            <div style="font-size:13px;font-weight:600">الشهادة الإلكترونية</div>
-            <div style="font-size:11px;color:var(--muted)">${st.cert&&st.cert.startsWith('http')?'متوفرة':'لم يتم رفعها بعد'}</div>
+      <div class="ccard ${st.cert&&st.cert.startsWith('http')?'cc-g':'cc-y'}" style="margin-bottom:16px;padding:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:${st.cert&&st.cert.startsWith('http')?'14px':'0'}">
+          <span style="font-size:22px">🏅</span>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:700">الشهادة الإلكترونية</div>
+            <div style="font-size:11px;color:var(--muted)">${st.cert&&st.cert.startsWith('http')?'الشهادة متوفرة وجاهزة':'لم يتم رفع الشهادة بعد'}</div>
           </div>
         </div>
-        ${st.cert&&st.cert.startsWith('http')?`<a href="${st.cert}" target="_blank" class="btn btn-g btn-sm" style="text-decoration:none">عرض 🔗</a>`:''}
+        ${st.cert&&st.cert.startsWith('http')?`
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <a href="${st.cert}" target="_blank" class="btn btn-g btn-sm" style="text-decoration:none;flex:1;text-align:center">🔗 فتح الشهادة</a>
+          <button class="btn btn-b btn-sm" onclick="navigator.clipboard.writeText('${st.cert}').then(()=>showToast('تم نسخ الرابط','s'))" style="flex:1">📋 نسخ الرابط</button>
+        </div>
+        <div style="padding:10px 12px;background:rgba(255,255,255,.04);border-radius:8px;font-size:11px;color:var(--muted);word-break:break-all">${st.cert}</div>
+        `:''}
       </div>
       
       <div class="stitle">المقررات (${stCourses.length})</div>
