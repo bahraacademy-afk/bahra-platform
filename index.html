@@ -679,22 +679,22 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 
 // ===== LOAD DATA =====
 async function loadStudent(){
-  const cr=await fetchSheet('سجل المقررات!A:I');
+  const cr=await fetchSheet('سجل المقررات!A:J');
   courses=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(n0(r[1])===user.id)
-      courses.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0});
+      courses.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,half:n0(r[9])||'غير محدد'});
   }
 }
 
 async function loadTrainer(){
-  const cr=await fetchSheet('سجل المقررات!A:I');
+  const cr=await fetchSheet('سجل المقررات!A:J');
   students=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(n0(r[6])===user.name)
-      students.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0});
+      students.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,half:n0(r[9])||'غير محدد'});
   }
 }
 
@@ -712,7 +712,7 @@ async function loadAdmin(){
   allCourses=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
-    if(r[1])allCourses.push({key:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0});
+    if(r[1])allCourses.push({key:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,half:n0(r[9])||'غير محدد'});
   }
 }
 
@@ -882,10 +882,10 @@ const sPgs={
     ${tot>3?`<div style="text-align:center;margin-top:12px"><button class="btn btn-out btn-sm" onclick="showSPage('courses',null)">عرض الكل (${tot})</button></div>`:''}`;
   },
   courses:()=>{
-    const terms=[...new Set(courses.map(c=>c.code.split('-')[1]||'').filter(Boolean))];
+    const halves=[...new Set(courses.map(c=>c.half).filter(h=>h&&h!=='غير محدد'))].sort();
     return `
     <div class="stitle">مقرراتي (${courses.length})</div>
-    ${terms.length>1?`<div class="term-tabs"><button class="tterm active" onclick="filterTerm('all',this)">الكل</button>${terms.map(t=>`<button class="tterm" onclick="filterTerm('${t}',this)">${t}</button>`).join('')}</div>`:''}
+    ${halves.length>1?`<div class="term-tabs"><button class="tterm active" onclick="filterTerm('all',this)">الكل</button>${halves.map(h=>`<button class="tterm" onclick="filterTerm('${h}',this)">${h}</button>`).join('')}</div>`:''}
     <div id="coursesList">${courses.length?courses.map(c=>courseCardHTML(c)).join(''):'<div class="empty"><div class="empty-icon">📚</div>لا توجد مقررات مسجلة</div>'}</div>`;
   },
   performance:()=>{
@@ -975,17 +975,17 @@ const sPgs={
 function courseCardHTML(c){
   const p=Math.round(c.pct);
   return `<div class="ccard ${ccClass(p)}">
-    <div class="cc-top"><div><div class="cc-name">${c.course}</div><div class="cc-meta">${c.code}${c.trainer?' · '+c.trainer:''}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
+    <div class="cc-top"><div><div class="cc-name">${c.course}</div><div class="cc-meta">${c.code}${c.trainer?' · '+c.trainer:''}${c.half&&c.half!=='غير محدد'?' · '+c.half:''}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
     <div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>
     <div class="cc-footer"><span>الإنجاز: ${p}%</span><span>الغياب: ${Math.round(c.abs)}%</span></div>
   </div>`;
 }
 
-function filterTerm(term,btn){
+function filterTerm(half,btn){
   document.querySelectorAll('.tterm').forEach(b=>b.className='tterm');
   btn.className='tterm active';
-  const filtered=term==='all'?courses:courses.filter(c=>c.code.includes('-'+term));
-  document.getElementById('coursesList').innerHTML=filtered.map(c=>courseCardHTML(c)).join('')||'<div class="empty">لا توجد مقررات لهذا الترم</div>';
+  const filtered=half==='all'?courses:courses.filter(c=>c.half===half);
+  document.getElementById('coursesList').innerHTML=filtered.map(c=>courseCardHTML(c)).join('')||'<div class="empty">لا توجد مقررات لهذا النصف</div>';
   setTimeout(()=>document.querySelectorAll('#coursesList .ccard').forEach((el,i)=>{el.classList.add('anim-up','d'+(Math.min(i+1,6)));initScrollObs();}),10);
 }
 
