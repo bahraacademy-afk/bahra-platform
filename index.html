@@ -1273,10 +1273,10 @@ const aPgs={
     return `
     <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${user.title} — ${user.name}</div></div><div class="bpill bp-y">إداري</div></div>
     <div class="metrics">
-      <div class="mcard mc-b"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
-      <div class="mcard mc-g"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
-      <div class="mcard mc-y"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${trainers}">${trainers}</div><div class="mlbl">المدربون</div></div>
-      <div class="mcard mc-r"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الإنجاز</div></div>
+      <div class="mcard mc-b" data-nav="all_students" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
+      <div class="mcard mc-g" data-nav="all_courses" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
+      <div class="mcard mc-y" data-nav="trainers" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${trainers}">${trainers}</div><div class="mlbl">المدربون</div></div>
+      <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الإنجاز</div></div>
     </div>
     ${warns?`<div class="alert ad"><span class="aicon">🔴</span>${warns} حالة تحتاج متابعة فورية</div>`:''}
     <div class="stitle">توزيع المتدربين بالشعب</div>
@@ -1287,7 +1287,7 @@ const aPgs={
         const gc=allCourses.filter(c=>gs.some(s=>s.id===c.sid));
         const ga=gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
         const gw=gc.filter(c=>c.abs>20||c.pct<40).length;
-        return `<tr><td>الشعبة ${g}</td><td>${gs.length}</td><td><span class="pill ${pillClass(ga)}">${ga}%</span></td><td>${gw?`<span class="pill pr">${gw}</span>`:'<span class="pill pg">0</span>'}</td></tr>`;
+        return `<tr data-grp="${g}" onclick="showGroupDetail(this.dataset.grp)" style="cursor:pointer"><td>الشعبة ${g}</td><td>${gs.length}</td><td><span class="pill ${pillClass(ga)}">${ga}%</span></td><td>${gw?`<span class="pill pr">${gw}</span>`:'<span class="pill pg">0</span>'}</td></tr>`;
       }).join('')}</tbody>
     </table></div>`;
   },
@@ -1693,6 +1693,69 @@ function toggleTheme(){
     });
   }
 })();
+
+
+// ===== GROUP DETAIL MODAL =====
+function showGroupDetail(grp){
+  const gs = students.filter(s=>s.grp===grp);
+  const gc = allCourses.filter(c=>gs.some(s=>s.id===c.sid));
+  const ga = gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
+  
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='groupModal';
+  overlay.innerHTML=`
+    <div class="modal" style="max-width:620px;max-height:85vh;overflow-y:auto">
+      <div class="modal-title">
+        <div>
+          <div style="font-size:16px;font-weight:700">📋 الشعبة ${grp}</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:400">${gs.length} متدرب · متوسط ${ga}%</div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('groupModal').remove()">✕</button>
+      </div>
+      <div class="gtable">
+        <table>
+          <thead><tr><th>الرقم</th><th>الاسم</th><th>التخصص</th><th>الجوال</th></tr></thead>
+          <tbody>${gs.map(s=>`<tr onclick="document.getElementById('groupModal').remove();setTimeout(()=>showStudentDetail('${s.id}'),100)" style="cursor:pointer">
+            <td style="color:var(--muted)">${s.id}</td><td>${s.name}</td>
+            <td style="color:var(--muted);font-size:12px">${s.spec||'—'}</td>
+            <td style="color:var(--muted)">${s.ph||'—'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
+}
+
+// ربط البطاقات بالتنقل
+document.addEventListener('click', function(e){
+  const card = e.target.closest('[data-nav]');
+  if(card){
+    const target = card.dataset.nav;
+    if(target === 'trainers'){
+      // عرض المدربين كنافذة
+      const trainerNames = [...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
+      const overlay=document.createElement('div');
+      overlay.className='modal-overlay';
+      overlay.id='trainersModal';
+      overlay.innerHTML=`<div class="modal" style="max-width:500px">
+        <div class="modal-title"><div>👨‍🏫 المدربون (${trainerNames.length})</div>
+        <button class="modal-close" onclick="document.getElementById('trainersModal').remove()">✕</button></div>
+        ${trainerNames.map(t=>{
+          const tc=allCourses.filter(c=>c.trainer===t);
+          const ta=tc.length?Math.round(tc.reduce((a,c)=>a+c.pct,0)/tc.length):0;
+          return `<div class="iitem" style="margin-bottom:8px"><div class="ilbl">${t}</div><div class="ival">${tc.length} مقرر · متوسط ${ta}%</div></div>`;
+        }).join('')}
+      </div>`;
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click',ev=>{ if(ev.target===overlay) overlay.remove(); });
+    } else {
+      showAPage(target, document.querySelector(`.sitem[onclick*="${target}"]`));
+    }
+  }
+});
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('loginPage').style.display!=='none')doLogin();
