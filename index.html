@@ -708,7 +708,7 @@ async function loadAdmin(){
   for(let i=1;i<sr.length;i++){
     const r=sr[i];
     if(!r[0])continue;
-    students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5])});
+    students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6])});
   }
   allCourses=[];
   for(let i=1;i<cr.length;i++){
@@ -1517,6 +1517,17 @@ function showStudentDetail(sid){
         <div class="iitem"><div class="ilbl">الجوال</div><div class="ival">${st.ph||'—'}</div></div>
         <div class="iitem"><div class="ilbl">البريد</div><div class="ival" style="font-size:11px">${st.email||'—'}</div></div>
         <div class="iitem"><div class="ilbl">متوسط الإنجاز</div><div class="ival" style="color:${avg>=70?'var(--green)':avg>=50?'var(--gold)':'var(--red)'}">${avg}%</div></div>
+      </div>
+      
+      <div class="ccard ${st.cert&&st.cert.startsWith('http')?'cc-g':'cc-y'}" style="margin-bottom:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">🏅</span>
+          <div>
+            <div style="font-size:13px;font-weight:600">الشهادة الإلكترونية</div>
+            <div style="font-size:11px;color:var(--muted)">${st.cert&&st.cert.startsWith('http')?'متوفرة':'لم يتم رفعها بعد'}</div>
+          </div>
+        </div>
+        ${st.cert&&st.cert.startsWith('http')?`<a href="${st.cert}" target="_blank" class="btn btn-g btn-sm" style="text-decoration:none">عرض 🔗</a>`:''}
       </div>
       
       <div class="stitle">المقررات (${stCourses.length})</div>
