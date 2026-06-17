@@ -599,6 +599,7 @@ const ADMIN=[{id:'admin',ph:'568696450',name:'م. براء الفران',title:'
 
 let role='s', user=null, courses=[], students=[], allCourses=[], files={};
 let attendanceData={}, gradesData={};
+let activeFilters={half:'all',letter:'all'};
 
 function norm(p){return String(p||'').replace(/^0/,'').trim()}
 function n0(v){return String(v||'').trim()}
@@ -884,10 +885,13 @@ const sPgs={
     ${tot>3?`<div style="text-align:center;margin-top:12px"><button class="btn btn-out btn-sm" onclick="showSPage('courses',null)">عرض الكل (${tot})</button></div>`:''}`;
   },
   courses:()=>{
+    activeFilters={half:'all',letter:'all'};
     const halves=[...new Set(courses.map(c=>c.half).filter(h=>h&&h!=='غير محدد'))].sort();
+    const letters=[...new Set(courses.map(c=>c.letter).filter(l=>l&&l!==''))];
     return `
     <div class="stitle">مقرراتي (${courses.length})</div>
-    ${halves.length>1?`<div class="term-tabs"><button class="tterm active" onclick="filterTerm('all',this)">الكل</button>${halves.map(h=>`<button class="tterm" onclick="filterTerm('${h}',this)">${h}</button>`).join('')}</div>`:''}
+    ${halves.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">النصف المجزأ</div><div class="term-tabs"><button class="tterm active" data-grp="half" onclick="filterTerm('half','all',this)">الكل</button>${halves.map(h=>`<button class="tterm" data-grp="half" onclick="filterTerm('half','${h}',this)">${h}</button>`).join('')}</div>`:''}
+    ${letters.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">التقدير</div><div class="term-tabs"><button class="tterm active" data-grp="letter" onclick="filterTerm('letter','all',this)">الكل</button>${letters.map(l=>`<button class="tterm" data-grp="letter" onclick="filterTerm('letter','${l}',this)">${l}</button>`).join('')}</div>`:''}
     <div id="coursesList">${courses.length?courses.map(c=>courseCardHTML(c)).join(''):'<div class="empty"><div class="empty-icon">📚</div>لا توجد مقررات مسجلة</div>'}</div>`;
   },
   performance:()=>{
@@ -983,11 +987,17 @@ function courseCardHTML(c){
   </div>`;
 }
 
-function filterTerm(half,btn){
-  document.querySelectorAll('.tterm').forEach(b=>b.className='tterm');
-  btn.className='tterm active';
-  const filtered=half==='all'?courses:courses.filter(c=>c.half===half);
-  document.getElementById('coursesList').innerHTML=filtered.map(c=>courseCardHTML(c)).join('')||'<div class="empty">لا توجد مقررات لهذا النصف</div>';
+function filterTerm(grp,val,btn){
+  // تحديث الزر النشط في مجموعته فقط
+  document.querySelectorAll(`.tterm[data-grp="${grp}"]`).forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  activeFilters[grp]=val;
+  // تطبيق الفلترين معاً
+  const filtered=courses.filter(c=>
+    (activeFilters.half==='all'||c.half===activeFilters.half)&&
+    (activeFilters.letter==='all'||c.letter===activeFilters.letter)
+  );
+  document.getElementById('coursesList').innerHTML=filtered.map(c=>courseCardHTML(c)).join('')||'<div class="empty"><div class="empty-icon">🔍</div>لا توجد مقررات مطابقة</div>';
   setTimeout(()=>document.querySelectorAll('#coursesList .ccard').forEach((el,i)=>{el.classList.add('anim-up','d'+(Math.min(i+1,6)));initScrollObs();}),10);
 }
 
