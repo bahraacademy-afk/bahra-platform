@@ -681,29 +681,29 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 
 // ===== LOAD DATA =====
 async function loadStudent(){
-  const cr=await fetchSheet('سجل المقررات!A:J');
+  const cr=await fetchSheet('سجل المقررات!A:L');
   courses=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(n0(r[1])===user.id)
-      courses.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,half:n0(r[9])||'غير محدد'});
+      courses.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
   }
 }
 
 async function loadTrainer(){
-  const cr=await fetchSheet('سجل المقررات!A:J');
+  const cr=await fetchSheet('سجل المقررات!A:L');
   students=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(n0(r[6])===user.name)
-      students.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,half:n0(r[9])||'غير محدد'});
+      students.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
   }
 }
 
 async function loadAdmin(){
   const [sr,cr]=await Promise.all([
     fetchSheet('قاعدة بيانات مركزي!A:G'),
-    fetchSheet('سجل المقررات!A:I')
+    fetchSheet('سجل المقررات!A:L')
   ]);
   students=[];
   for(let i=1;i<sr.length;i++){
@@ -714,7 +714,7 @@ async function loadAdmin(){
   allCourses=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
-    if(r[1])allCourses.push({key:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,half:n0(r[9])||'غير محدد'});
+    if(r[1])allCourses.push({key:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
   }
 }
 
@@ -979,7 +979,7 @@ function courseCardHTML(c){
   return `<div class="ccard ${ccClass(p)}">
     <div class="cc-top"><div><div class="cc-name">${c.course}</div><div class="cc-meta">${c.code}${c.trainer?' · '+c.trainer:''}${c.half&&c.half!=='غير محدد'?' · '+c.half:''}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
     <div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>
-    <div class="cc-footer"><span>الإنجاز: ${p}%</span><span>الغياب: ${Math.round(c.abs)}%</span></div>
+    <div class="cc-footer"><span>الإنجاز: ${p}%</span><span>الغياب: ${Math.round(c.abs)}%</span>${c.letter?'<span>التقدير: '+c.letter+'</span>':''}</div>
   </div>`;
 }
 
