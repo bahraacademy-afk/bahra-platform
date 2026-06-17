@@ -880,18 +880,20 @@ const sPgs={
   home:()=>{
     const tot=courses.length,avg=tot?Math.round(courses.reduce((a,c)=>a+c.pct,0)/tot):0;
     const done=courses.filter(c=>c.pct>=80).length,warn=courses.filter(c=>c.abs>20||c.pct<40).length;
+    const current=courses.filter(c=>c.status==='حالي');
+    const past=courses.filter(c=>c.status==='سابق');
     return `
     <div class="banner anim-up"><div><div class="btitle">مرحباً، ${user.name.split(' ')[0]} 👋</div><div class="bsub">${user.spec} — الشعبة ${user.grp}</div></div><div class="bpill bp-r">الشعبة ${user.grp}</div></div>
     <div class="metrics">
-      <div class="mcard mc-b"><div class="micon">📚</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">إجمالي المقررات</div></div>
-      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg" data-target="${done}">${done}</div><div class="mlbl">مكتملة +80%</div></div>
+      <div class="mcard mc-b"><div class="micon">🟢</div><div class="mnum cb" data-target="${current.length}">${current.length}</div><div class="mlbl">مواد حالية</div></div>
+      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg" data-target="${past.length}">${past.length}</div><div class="mlbl">مواد مكتملة</div></div>
       <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الإنجاز</div></div>
       ${warn?`<div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warn}">${warn}</div><div class="mlbl">تنبيهات</div></div>`:''}
     </div>
     ${warn?`<div class="alert aw"><span class="aicon">⚠️</span>لديك ${warn} مقرر يحتاج متابعة</div>`:''}
-    <div class="stitle">آخر المقررات</div>
-    ${courses.slice(0,3).map(c=>courseCardHTML(c)).join('')}
-    ${tot>3?`<div style="text-align:center;margin-top:12px"><button class="btn btn-out btn-sm" onclick="showSPage('courses',null)">عرض الكل (${tot})</button></div>`:''}`;
+    <div class="stitle">📚 موادك الحالية ${current.length?`(${current.length})`:''}</div>
+    ${current.length?current.map(c=>courseCardHTML(c)).join(''):'<div class="alert ab"><span class="aicon">📭</span>لا توجد مواد حالية مسجّلة الآن — موادك السابقة مكتملة</div>'}
+    ${past.length?`<div style="text-align:center;margin-top:16px"><button class="btn btn-out btn-sm" onclick="showSPage('courses',null)">عرض جميع المواد (${tot}) — حالية وسابقة</button></div>`:''}`;
   },
   courses:()=>{
     activeFilters={half:'all',letter:'all',status:'all'};
