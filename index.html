@@ -597,9 +597,9 @@ const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwEftWMoptxlAyNMtdyJZydvtU3uscLq6kMCP5BZ-a_HgHb4lpHcaSjBufTt1uFgLlV/exec';
 const ADMIN=[{id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف الأكاديمية'},{id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف الأكاديمية'}];
 
-let role='s', user=null, courses=[], students=[], allCourses=[], files={};
+let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[];
 let attendanceData={}, gradesData={};
-let activeFilters={half:'all',letter:'all'};
+let activeFilters={half:'all',letter:'all',status:'all'};
 
 function norm(p){return String(p||'').replace(/^0/,'').trim()}
 function n0(v){return String(v||'').trim()}
@@ -682,12 +682,21 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 
 // ===== LOAD DATA =====
 async function loadStudent(){
-  const cr=await fetchSheet('سجل المقررات!A:L');
+  const [cr,cat]=await Promise.all([
+    fetchSheet('سجل المقررات!A:L'),
+    fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[])
+  ]);
   courses=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(n0(r[1])===user.id)
       courses.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
+  }
+  // قاعدة بيانات المقررات الكاملة (الخطة الدراسية)
+  catalog=[];
+  for(let i=1;i<cat.length;i++){
+    const r=cat[i];
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4])});
   }
 }
 
@@ -885,47 +894,88 @@ const sPgs={
     ${tot>3?`<div style="text-align:center;margin-top:12px"><button class="btn btn-out btn-sm" onclick="showSPage('courses',null)">عرض الكل (${tot})</button></div>`:''}`;
   },
   courses:()=>{
-    activeFilters={half:'all',letter:'all'};
+    activeFilters={half:'all',letter:'all',status:'all'};
     const halves=[...new Set(courses.map(c=>c.half).filter(h=>h&&h!=='غير محدد'))].sort();
     const letters=[...new Set(courses.map(c=>c.letter).filter(l=>l&&l!==''))];
+    const statuses=[...new Set(courses.map(c=>c.status).filter(s=>s&&s!==''))];
+    const cur=courses.filter(c=>c.status==='حالي').length;
+    const past=courses.filter(c=>c.status==='سابق').length;
     return `
     <div class="stitle">مقرراتي (${courses.length})</div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      ${cur?`<div class="bpill bp-b" style="font-size:12px">🟢 حالية: ${cur}</div>`:''}
+      ${past?`<div class="bpill" style="font-size:12px;background:rgba(150,150,150,.15);color:#aaa;border:1px solid rgba(150,150,150,.3)">⚪ سابقة: ${past}</div>`:''}
+    </div>
+    ${statuses.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">الحالة</div><div class="term-tabs"><button class="tterm active" data-grp="status" onclick="filterTerm('status','all',this)">الكل</button>${statuses.map(s=>`<button class="tterm" data-grp="status" onclick="filterTerm('status','${s}',this)">${s}</button>`).join('')}</div>`:''}
     ${halves.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">النصف المجزأ</div><div class="term-tabs"><button class="tterm active" data-grp="half" onclick="filterTerm('half','all',this)">الكل</button>${halves.map(h=>`<button class="tterm" data-grp="half" onclick="filterTerm('half','${h}',this)">${h}</button>`).join('')}</div>`:''}
     ${letters.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">التقدير</div><div class="term-tabs"><button class="tterm active" data-grp="letter" onclick="filterTerm('letter','all',this)">الكل</button>${letters.map(l=>`<button class="tterm" data-grp="letter" onclick="filterTerm('letter','${l}',this)">${l}</button>`).join('')}</div>`:''}
     <div id="coursesList">${courses.length?courses.map(c=>courseCardHTML(c)).join(''):'<div class="empty"><div class="empty-icon">📚</div>لا توجد مقررات مسجلة</div>'}</div>`;
   },
   performance:()=>{
     const tot=courses.length,avg=tot?Math.round(courses.reduce((a,c)=>a+c.pct,0)/tot):0;
+    // مقارنة مع الخطة الدراسية الكاملة (قاعدة بيانات المقررات)
+    const norm=s=>String(s||'').replace(/\s/g,'');
+    const takenCodes=new Set(courses.map(c=>norm(c.code)));
+    const remaining=catalog.filter(cat=>!takenCodes.has(norm(cat.code)));
+    const totalPlan=catalog.length;
+    const takenCount=catalog.length?catalog.filter(cat=>takenCodes.has(norm(cat.code))).length:tot;
+    const planPct=totalPlan?Math.round(takenCount/totalPlan*100):0;
+    let compareSection='';
+    if(totalPlan>0){
+      compareSection=`
+      <div class="stitle">الخطة الدراسية — المجتاز والمتبقي</div>
+      <div class="ccard cc-b" style="margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:14px;font-weight:700">نسبة إكمال الخطة</div>
+          <div style="font-size:18px;font-weight:900;color:${planPct>=80?'var(--green)':planPct>=50?'var(--gold)':'#6ab8f7'}">${planPct}%</div>
+        </div>
+        <div class="prog"><div class="pfill ${planPct>=80?'pf-g':planPct>=50?'pf-y':'pf-b'}" style="width:${planPct}%"></div></div>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--muted)">
+          <span>✅ مجتاز: ${takenCount}</span><span>⏳ متبقي: ${remaining.length}</span><span>📚 الإجمالي: ${totalPlan}</span>
+        </div>
+      </div>
+      ${remaining.length?`
+      <div style="font-size:13px;font-weight:700;color:#f4c78a;margin-bottom:10px">⏳ مواد لم تُؤخذ بعد (${remaining.length})</div>
+      <div class="gtable" style="margin-bottom:14px"><table>
+        <thead><tr><th>المقرر</th><th>الرمز</th><th>الفصل</th><th>الوحدات</th></tr></thead>
+        <tbody>${remaining.map(r=>`<tr>
+          <td>${r.name}</td><td style="color:var(--muted)">${r.code}</td>
+          <td style="color:var(--muted)">${r.term||'—'}</td><td style="color:var(--muted)">${r.units||'—'}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>`:'<div class="alert as"><span class="aicon">🎓</span>أكملت جميع مواد الخطة الدراسية!</div>'}`;
+    }
     return `
     <div class="banner anim-up"><div><div class="btitle">تقرير الأداء 📊</div><div class="bsub">نظرة شاملة على مستواك الأكاديمي</div></div><div class="bpill bp-b" style="font-size:20px;font-weight:900">${avg}%</div></div>
     <div class="metrics">
-      <div class="mcard mc-b"><div class="micon">📚</div><div class="mnum cb">${tot}</div><div class="mlbl">مقرر</div></div>
-      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${courses.filter(c=>c.pct>=80).length}</div><div class="mlbl">مكتملة</div></div>
+      <div class="mcard mc-b"><div class="micon">📚</div><div class="mnum cb">${tot}</div><div class="mlbl">مقرر مأخوذ</div></div>
+      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${courses.filter(c=>c.pct>=80).length}</div><div class="mlbl">مكتملة +80%</div></div>
       <div class="mcard mc-y"><div class="micon">📉</div><div class="mnum cy">${courses.filter(c=>c.abs>15).length}</div><div class="mlbl">غياب عالي</div></div>
     </div>
-    <div class="stitle">تفاصيل المقررات</div>
+    ${compareSection}
+    <div class="stitle">تفاصيل المقررات المأخوذة</div>
     <div class="gtable">
-      <table><thead><tr><th>المقرر</th><th>الرمز</th><th>المدرب</th><th>الإنجاز</th><th>الغياب</th></tr></thead>
+      <table><thead><tr><th>المقرر</th><th>الرمز</th><th>التقدير</th><th>الإنجاز</th><th>الحالة</th></tr></thead>
       <tbody>${courses.map(c=>`<tr>
         <td>${c.course}</td><td style="color:var(--muted)">${c.code}</td>
-        <td style="color:var(--muted)">${c.trainer||'—'}</td>
+        <td style="color:var(--muted)">${c.letter||'—'}</td>
         <td><span class="pill ${pillClass(Math.round(c.pct))}">${Math.round(c.pct)}%</span></td>
-        <td style="color:${c.abs>20?'#ff8a92':'var(--muted)'}">${Math.round(c.abs)}%</td>
+        <td style="color:var(--muted);font-size:12px">${c.status||'—'}</td>
       </tr>`).join('')}</tbody></table>
     </div>`;
   },
   schedule:()=>{
     const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
     const times=['8:00 - 10:00','10:00 - 12:00','12:30 - 14:30','14:30 - 16:30'];
+    const current=courses.filter(c=>c.status==='حالي');
     return `
     <div class="stitle">جدول التدريب الأسبوعي</div>
-    <div class="alert ab"><span class="aicon">📅</span>الجدول بناءً على مقرراتك المسجلة</div>
-    ${courses.map((c,i)=>`
+    <div class="alert ab"><span class="aicon">📅</span>الجدول يعرض موادك <strong style="margin:0 4px">الحالية</strong> فقط — المواد السابقة مكتملة ولا تظهر هنا</div>
+    ${current.length?current.map((c,i)=>`
     <div class="sch-item">
       <div class="sch-time">${times[i%4]}<div class="sch-day">${days[i%5]}</div></div>
-      <div style="flex:1"><div style="font-size:14px;font-weight:600">${c.course}</div><div style="font-size:12px;color:var(--muted);margin-top:2px">${c.trainer||'—'} · ${c.code}</div></div>
-      <span class="pill ${pillClass(Math.round(c.pct))}">${Math.round(c.pct)}%</span>
-    </div>`).join('')||'<div class="empty"><div class="empty-icon">📅</div>لا توجد مقررات</div>'}`;
+      <div style="flex:1"><div style="font-size:14px;font-weight:600">${c.course}</div><div style="font-size:12px;color:var(--muted);margin-top:2px">${c.trainer||'—'} · ${c.code}${c.half&&c.half!=='غير محدد'?' · '+c.half:''}</div></div>
+      <span class="pill pg">حالية</span>
+    </div>`).join(''):'<div class="empty"><div class="empty-icon">📅</div><div>لا توجد مواد حالية</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر الجدول عند تسجيلك في مواد النصف الحالي</div></div>'}`;
   },
   attachments:()=>`
     <div class="stitle">المرفقات والمواد العلمية</div>
@@ -992,10 +1042,11 @@ function filterTerm(grp,val,btn){
   document.querySelectorAll(`.tterm[data-grp="${grp}"]`).forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   activeFilters[grp]=val;
-  // تطبيق الفلترين معاً
+  // تطبيق كل الفلاتر معاً
   const filtered=courses.filter(c=>
     (activeFilters.half==='all'||c.half===activeFilters.half)&&
-    (activeFilters.letter==='all'||c.letter===activeFilters.letter)
+    (activeFilters.letter==='all'||c.letter===activeFilters.letter)&&
+    (activeFilters.status==='all'||c.status===activeFilters.status)
   );
   document.getElementById('coursesList').innerHTML=filtered.map(c=>courseCardHTML(c)).join('')||'<div class="empty"><div class="empty-icon">🔍</div>لا توجد مقررات مطابقة</div>';
   setTimeout(()=>document.querySelectorAll('#coursesList .ccard').forEach((el,i)=>{el.classList.add('anim-up','d'+(Math.min(i+1,6)));initScrollObs();}),10);
