@@ -305,6 +305,20 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .tterm:hover{border-color:rgba(100,160,220,.3);color:var(--text)}
 .tterm.active{background:rgba(26,122,191,.15);border-color:rgba(26,122,191,.4);color:#6ab8f7}
 
+/* ===== KPI CHART ===== */
+.kpi-wrap{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;backdrop-filter:blur(10px);margin-bottom:16px}
+.kpi-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.kpi-card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;position:relative;overflow:hidden}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kpi-val{font-size:26px;font-weight:900;line-height:1;margin-bottom:4px}
+.kpi-lbl{font-size:11px;color:var(--muted)}
+.kpi-bar-row{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.kpi-bar-label{width:90px;font-size:13px;flex-shrink:0;text-align:right}
+.kpi-bar-track{flex:1;background:rgba(255,255,255,.05);border-radius:8px;height:28px;position:relative;overflow:hidden}
+.kpi-bar-fill{height:100%;border-radius:8px;transition:width 1.2s cubic-bezier(.16,1,.3,1);display:flex;align-items:center;justify-content:flex-start;padding:0 10px}
+.kpi-bar-val{font-size:12px;font-weight:700;color:#fff;white-space:nowrap}
+.kpi-gauge{display:inline-block;position:relative}
+
 /* EMPTY STATE */
 .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px}
 .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
@@ -1320,7 +1334,108 @@ function buildAdminApp(){
 function showAPage(pg,el){
   if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active aa'}
   const mc=document.getElementById('mcontent');
-  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';animCards();},10);
+  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';animCards();if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);},10);
+}
+
+// ===== KPI لكل شعبة =====
+function computeKPI(grp){
+  // grp = 'all' أو رقم الشعبة
+  const gs = grp==='all' ? students : students.filter(s=>s.grp===grp);
+  const ids = new Set(gs.map(s=>s.id));
+  const gc = allCourses.filter(c=>ids.has(c.sid));
+  const traineeCount = gs.length;
+  const avg = gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
+  const completed = gc.filter(c=>c.pct>=80).length;
+  const completionRate = gc.length?Math.round(completed/gc.length*100):0;
+  const passRate = gc.length?Math.round(gc.filter(c=>c.pct>=60).length/gc.length*100):0;
+  const avgAbs = gc.length?Math.round(gc.reduce((a,c)=>a+c.abs,0)/gc.length):0;
+  const alerts = gc.filter(c=>c.abs>20||c.pct<40).length;
+  return {traineeCount,avg,completionRate,passRate,avgAbs,alerts,courseCount:gc.length};
+}
+
+function renderKPI(grp,btn){
+  if(btn){document.querySelectorAll('#kpiTabs .tterm').forEach(b=>b.classList.remove('active'));btn.classList.add('active');}
+  const el=document.getElementById('kpiContent');
+  if(!el)return;
+  const color=v=>v>=80?'var(--green)':v>=60?'var(--gold)':'var(--red)';
+  const fillCol=v=>v>=80?'linear-gradient(90deg,#27ae60,#2ecc71)':v>=60?'linear-gradient(90deg,#e67e22,#f4a261)':'linear-gradient(90deg,#c1121f,#e63946)';
+
+  if(grp==='all'){
+    // مقارنة الشعب الثلاث جنباً إلى جنب
+    const grps=[...new Set(students.map(s=>s.grp))].sort();
+    const data=grps.map(g=>({g,...computeKPI(g)}));
+    const metrics=[
+      {key:'avg',lbl:'متوسط الإنجاز',suf:'%'},
+      {key:'completionRate',lbl:'نسبة الإكمال',suf:'%'},
+      {key:'passRate',lbl:'نسبة النجاح',suf:'%'}
+    ];
+    let html='<div class="kpi-wrap">';
+    // بطاقات إجمالية سريعة لكل شعبة
+    html+='<div class="kpi-cards">';
+    data.forEach(d=>{
+      html+=`<div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${fillCol(d.avg)}"></div>
+        <div class="kpi-val" style="color:${color(d.avg)}">${d.avg}%</div>
+        <div class="kpi-lbl">الشعبة ${d.g} · ${d.traineeCount} متدرب</div></div>`;
+    });
+    html+='</div>';
+    // أشرطة مقارنة لكل مؤشر
+    metrics.forEach(m=>{
+      html+=`<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:700">${m.lbl}</div>`;
+      data.forEach(d=>{
+        const v=d[m.key];
+        html+=`<div class="kpi-bar-row">
+          <div class="kpi-bar-label">الشعبة ${d.g}</div>
+          <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.min(v,100)}%;background:${fillCol(v)}"><span class="kpi-bar-val">${v}${m.suf}</span></div></div>
+        </div>`;
+      });
+    });
+    // تنبيهات لكل شعبة
+    html+='<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:700">الحالات الحرجة (تنبيهات)</div>';
+    data.forEach(d=>{
+      const mx=Math.max(...data.map(x=>x.alerts),1);
+      const w=Math.round(d.alerts/mx*100);
+      html+=`<div class="kpi-bar-row">
+        <div class="kpi-bar-label">الشعبة ${d.g}</div>
+        <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.max(w,d.alerts?12:0)}%;background:linear-gradient(90deg,#c1121f,#e63946)"><span class="kpi-bar-val">${d.alerts}</span></div></div>
+      </div>`;
+    });
+    html+='</div>';
+    el.innerHTML=html;
+  } else {
+    // شعبة واحدة — مؤشرات تفصيلية + قياس دائري
+    const k=computeKPI(grp);
+    const gaugeR=52,circ=2*Math.PI*gaugeR;
+    const dash=circ*(1-k.avg/100);
+    const gcol=color(k.avg);
+    el.innerHTML=`<div class="kpi-wrap">
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;justify-content:center;margin-bottom:8px">
+        <div class="kpi-gauge">
+          <svg width="140" height="140" viewBox="0 0 140 140">
+            <circle cx="70" cy="70" r="${gaugeR}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="12"/>
+            <circle cx="70" cy="70" r="${gaugeR}" fill="none" stroke="${gcol}" stroke-width="12" stroke-linecap="round"
+              stroke-dasharray="${circ}" stroke-dashoffset="${circ}" transform="rotate(-90 70 70)"
+              style="transition:stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1)" id="gaugeArc"/>
+            <text x="70" y="64" text-anchor="middle" font-size="30" font-weight="900" fill="${gcol}" font-family="Tajawal">${k.avg}%</text>
+            <text x="70" y="86" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="Tajawal">متوسط الإنجاز</text>
+          </svg>
+        </div>
+        <div class="kpi-cards" style="flex:1;min-width:240px;margin-bottom:0">
+          <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--blue)"></div><div class="kpi-val cb" style="color:#6ab8f7">${k.traineeCount}</div><div class="kpi-lbl">متدرب</div></div>
+          <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${fillCol(k.completionRate)}"></div><div class="kpi-val" style="color:${color(k.completionRate)}">${k.completionRate}%</div><div class="kpi-lbl">نسبة الإكمال</div></div>
+          <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${fillCol(k.passRate)}"></div><div class="kpi-val" style="color:${color(k.passRate)}">${k.passRate}%</div><div class="kpi-lbl">نسبة النجاح</div></div>
+          <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${k.alerts?'var(--red)':'var(--green)'}"></div><div class="kpi-val" style="color:${k.alerts?'var(--red)':'var(--green)'}">${k.alerts}</div><div class="kpi-lbl">حالات حرجة</div></div>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin:16px 0 10px;font-weight:700">مؤشرات تفصيلية — الشعبة ${grp}</div>
+      ${[{l:'متوسط الإنجاز',v:k.avg,s:'%'},{l:'نسبة الإكمال',v:k.completionRate,s:'%'},{l:'نسبة النجاح',v:k.passRate,s:'%'},{l:'متوسط الغياب',v:k.avgAbs,s:'%',inv:true}].map(m=>`
+        <div class="kpi-bar-row">
+          <div class="kpi-bar-label">${m.l}</div>
+          <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.min(m.v,100)}%;background:${m.inv?(m.v>20?'linear-gradient(90deg,#c1121f,#e63946)':'linear-gradient(90deg,#27ae60,#2ecc71)'):fillCol(m.v)}"><span class="kpi-bar-val">${m.v}${m.s}</span></div></div>
+        </div>`).join('')}
+    </div>`;
+    // تحريك القياس الدائري
+    setTimeout(()=>{const arc=document.getElementById('gaugeArc');if(arc)arc.style.strokeDashoffset=dash;},100);
+  }
 }
 
 const aPgs={
@@ -1339,6 +1454,12 @@ const aPgs={
       <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الإنجاز</div></div>
     </div>
     ${warns?`<div class="alert ad"><span class="aicon">🔴</span>${warns} حالة تحتاج متابعة فورية</div>`:''}
+    <div class="stitle">📊 مؤشرات الأداء (KPI)</div>
+    <div class="term-tabs" id="kpiTabs">
+      <button class="tterm active" onclick="renderKPI('all',this)">كل الشعب</button>
+      ${grps.map(g=>`<button class="tterm" onclick="renderKPI('${g}',this)">الشعبة ${g}</button>`).join('')}
+    </div>
+    <div id="kpiContent"></div>
     <div class="stitle">توزيع المتدربين بالشعب</div>
     <div class="gtable"><table>
       <thead><tr><th>الشعبة</th><th>عدد المتدربين</th><th>متوسط الإنجاز</th><th>تنبيهات</th></tr></thead>
