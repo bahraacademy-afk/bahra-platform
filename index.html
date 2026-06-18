@@ -589,7 +589,7 @@ body{top:0!important}
     </div>
     <div class="tb-right">
       <button id="themeBtn" onclick="toggleTheme()" title="تبديل الوضع">🌙</button>
-      <div class="notif-btn" onclick="showNotifs()" title="التنبيهات">🔔<div class="notif-dot" id="notifDot"></div></div>
+      <div class="notif-btn" onclick="showNotifs()" title="الاشعارات">🔔<div class="notif-dot" id="notifDot"></div></div>
       <span class="role-badge" id="rbadge"></span>
       <div class="av" id="topAv"></div>
       <span class="uname" id="topName"></span>
@@ -771,6 +771,13 @@ function showApp(){
 function pillClass(p){return p>=80?'pg':p>=60?'py':'pr'}
 function fillClass(p){return p>=80?'pf-g':p>=60?'pf-y':'pf-r'}
 function ccClass(p){return p>=80?'cc-g':p>=60?'cc-y':'cc-r'}
+// ===== منطق المشاكل الفعلية =====
+// أداء منخفض: فقط للمواد التي اترصدت درجتها (>0) وليست حالية (لسه ما خلصت)
+function isLowPerf(c){return c.status!=='حالي' && c.pct>0 && c.pct<60}
+// غياب عالي: ينطبق على كل المواد
+function isHighAbs(c){return c.abs>20}
+// مشكلة عامة (للعدّ والتلوين)
+function hasIssue(c){return isHighAbs(c)||isLowPerf(c)}
 // ===== المعدّل من 5 (نظام GPA السعودي) =====
 function gradeToGPA(g){
   g=parseFloat(g)||0;
@@ -866,11 +873,11 @@ function initParticles(){
 
 function showNotifs(){
   const alerts=getAlerts();
-  if(!alerts.length){showToast('لا توجد تنبيهات','s');return}
+  if(!alerts.length){showToast('لا توجد اشعارات','s');return}
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';
   overlay.innerHTML=`<div class="modal">
-    <div class="modal-title">🔔 التنبيهات <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-title">🔔 الاشعارات <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
     ${alerts.map(a=>`<div class="alert ${a.type}"><span class="aicon">${a.icon}</span>${a.msg}</div>`).join('')}
     <div class="btn-row"><button class="btn btn-out btn-sm" onclick="this.closest('.modal-overlay').remove()">إغلاق</button></div>
   </div>`;
@@ -881,8 +888,9 @@ function getAlerts(){
   const list=[];
   const src=user.role==='s'?courses:allCourses;
   src.forEach(c=>{
-    if(c.abs>20)list.push({type:'aw',icon:'⚠️',msg:`${user.role==='s'?c.course:c.sname} — غياب ${Math.round(c.abs)}% في ${c.course||c.course}`});
-    if(c.pct<40)list.push({type:'ad',icon:'📉',msg:`${user.role==='s'?c.course:c.sname} — إنجاز ${Math.round(c.pct)}% في ${c.course||c.course}`});
+    const nm=user.role==='s'?c.course:c.sname;
+    if(isHighAbs(c))list.push({type:'aw',icon:'⚠️',msg:`${nm} — غياب ${Math.round(c.abs)}% في ${c.course}`});
+    if(isLowPerf(c))list.push({type:'ad',icon:'📉',msg:`${nm} — درجة ${Math.round(c.pct)}% في ${c.course}`});
   });
   return list;
 }
@@ -900,7 +908,7 @@ function navHTML(r,pages){
     performance:{icon:'📊',lbl:'أدائي'},schedule:{icon:'📅',lbl:'الجدول'},
     profile:{icon:'👤',lbl:'ملفي'},students:{icon:'👥',lbl:'قوائم الفصول'},
     attendance:{icon:'✅',lbl:'تسجيل الحضور'},grades:{icon:'📝',lbl:'رصد الدرجات'},
-    alerts:{icon:'🔔',lbl:'التنبيهات'},attachments:{icon:'📎',lbl:'المرفقات'},
+    alerts:{icon:'🔔',lbl:'الاشعارات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
     settings:{icon:'⚙️',lbl:'الإعدادات'},
@@ -912,7 +920,7 @@ function navHTML(r,pages){
 
 function buildMobNav(r,pages){
   const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'تنبيهات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير'};
   const ac=r==='s'?'as':r==='t'?'at':'aa';
   const mn=document.getElementById('mobNav');
   mn.style.display='';
@@ -939,7 +947,7 @@ function showSPage(pg,el){
 const sPgs={
   home:()=>{
     const tot=courses.length,avg=tot?Math.round(courses.reduce((a,c)=>a+c.pct,0)/tot):0;
-    const done=courses.filter(c=>c.pct>=80).length,warn=courses.filter(c=>c.abs>20||c.pct<40).length;
+    const done=courses.filter(c=>c.pct>=80).length,warn=courses.filter(hasIssue).length;
     const current=courses.filter(c=>c.status==='حالي');
     const past=courses.filter(c=>c.status==='سابق');
     const gpa=gpaFrom(courses);
@@ -950,7 +958,7 @@ const sPgs={
       <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
       <div class="mcard mc-b"><div class="micon">🟢</div><div class="mnum cb" data-target="${current.length}">${current.length}</div><div class="mlbl">مواد حالية</div></div>
       <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg" data-target="${past.length}">${past.length}</div><div class="mlbl">مواد مكتملة</div></div>
-      ${warn?`<div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warn}">${warn}</div><div class="mlbl">تنبيهات</div></div>`:''}
+      ${warn?`<div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warn}">${warn}</div><div class="mlbl">اشعارات</div></div>`:''}
     </div>
     ${warn?`<div class="alert aw"><span class="aicon">⚠️</span>لديك ${warn} مقرر يحتاج متابعة</div>`:''}
     <div class="stitle">📚 موادك الحالية ${current.length?`(${current.length})`:''}</div>
@@ -1135,7 +1143,7 @@ const tPgs={
   home:()=>{
     const crs=[...new Set(students.map(s=>s.course))];
     const avg=students.length?Math.round(students.reduce((a,s)=>a+s.pct,0)/students.length):0;
-    const warns=students.filter(s=>s.abs>20||s.pct<40).length;
+    const warns=students.filter(hasIssue).length;
     // تحديد حالة المقرر: حالي إذا فيه ولو متدرب واحد حالته "حالي"
     const courseStatus=course=>{
       const ss=students.filter(s=>s.course===course);
@@ -1157,7 +1165,7 @@ const tPgs={
       <div class="mcard mc-b"><div class="micon">👥</div><div class="mnum cb" data-target="${[...new Set(students.map(s=>s.sid))].length}">${[...new Set(students.map(s=>s.sid))].length}</div><div class="mlbl">إجمالي المتدربين</div></div>
       <div class="mcard mc-g"><div class="micon">🟢</div><div class="mnum cg" data-target="${currentCrs.length}">${currentCrs.length}</div><div class="mlbl">مقررات حالية</div></div>
       <div class="mcard mc-r"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=60?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
-      <div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warns}">${warns}</div><div class="mlbl">تنبيهات</div></div>
+      <div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warns}">${warns}</div><div class="mlbl">اشعارات</div></div>
     </div>
     <div class="stitle">🟢 مقرراتك الحالية ${currentCrs.length?`(${currentCrs.length})`:''}</div>
     ${currentCrs.length?currentCrs.map(c=>courseCard(c,false)).join(''):'<div class="alert ab"><span class="aicon">📭</span>لا توجد مقررات حالية الآن</div>'}
@@ -1235,15 +1243,15 @@ const tPgs={
     }).join(''):'<div class="empty"><div class="empty-icon">📝</div>لا توجد مقررات حالية لرصد الدرجات</div>'}`;
   },
   alerts:()=>{
-    const hi=students.filter(s=>s.abs>20);
-    const lo=students.filter(s=>s.pct<40);
+    const hi=students.filter(isHighAbs);
+    const lo=students.filter(isLowPerf);
     return `
-    <div class="stitle">التنبيهات والمتابعة</div>
+    <div class="stitle">الاشعارات والمتابعة</div>
     ${hi.length?`<div style="margin-bottom:20px"><div style="font-size:13px;font-weight:700;color:#f4c78a;margin-bottom:10px">⚠️ غياب عالي (${hi.length} حالة)</div>
     ${hi.map(s=>`<div class="alert aw"><span class="aicon">👤</span>${s.name.split(' ').slice(0,3).join(' ')} — غياب ${Math.round(s.abs)}% في ${s.course}</div>`).join('')}</div>`:''}
     ${lo.length?`<div><div style="font-size:13px;font-weight:700;color:#ff8a92;margin-bottom:10px">🔴 أداء منخفض (${lo.length} حالة)</div>
-    ${lo.map(s=>`<div class="alert ad"><span class="aicon">📉</span>${s.name.split(' ').slice(0,3).join(' ')} — إنجاز ${Math.round(s.pct)}% في ${s.course}</div>`).join('')}</div>`:''}
-    ${!hi.length&&!lo.length?'<div class="alert as"><span class="aicon">✅</span>جميع المتدربين بحالة جيدة — لا توجد تنبيهات</div>':''}`;
+    ${lo.map(s=>`<div class="alert ad"><span class="aicon">📉</span>${s.name.split(' ').slice(0,3).join(' ')} — درجة ${Math.round(s.pct)}% في ${s.course}</div>`).join('')}</div>`:''}
+    ${!hi.length&&!lo.length?'<div class="alert as"><span class="aicon">✅</span>جميع المتدربين بحالة جيدة — لا توجد اشعارات</div>':''}`;
   },
   attachments:()=>`
     <div class="stitle">رفع المرفقات للمتدربين</div>
@@ -1423,7 +1431,7 @@ function computeKPI(grp){
   const excellenceRate = gc.length?Math.round(gc.filter(c=>c.pct>=80).length/gc.length*100):0;
   const passRate = gc.length?Math.round(gc.filter(c=>c.pct>=60).length/gc.length*100):0;
   const avgAbs = gc.length?Math.round(gc.reduce((a,c)=>a+c.abs,0)/gc.length):0;
-  const alerts = gc.filter(c=>c.abs>20||c.pct<40).length;
+  const alerts = gc.filter(hasIssue).length;
   const gpa = gpaFrom(gc);
   return {traineeCount,avg,completionRate,excellenceRate,passRate,avgAbs,alerts,courseCount:gc.length,gpa,planTotal};
 }
@@ -1464,8 +1472,8 @@ function renderKPI(grp,btn){
         </div>`;
       });
     });
-    // تنبيهات لكل شعبة
-    html+='<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:700">الحالات الحرجة (تنبيهات)</div>';
+    // اشعارات لكل شعبة
+    html+='<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:700">الحالات الحرجة (اشعارات)</div>';
     data.forEach(d=>{
       const mx=Math.max(...data.map(x=>x.alerts),1);
       const w=Math.round(d.alerts/mx*100);
@@ -1518,7 +1526,7 @@ const aPgs={
     const tot=students.length,crs=[...new Set(allCourses.map(c=>c.course))].length;
     const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
     const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
-    const warns=allCourses.filter(c=>c.abs>20||c.pct<40).length;
+    const warns=allCourses.filter(hasIssue).length;
     const grps=[...new Set(students.map(s=>s.grp))];
     return `
     <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${user.title} — ${user.name}</div></div><div class="bpill bp-y">إداري</div></div>
@@ -1537,13 +1545,13 @@ const aPgs={
     <div id="kpiContent"></div>
     <div class="stitle">توزيع المتدربين بالشعب</div>
     <div class="gtable"><table>
-      <thead><tr><th>الشعبة</th><th>عدد المتدربين</th><th>المعدّل /5</th><th>متوسط الدرجات</th><th>تنبيهات</th></tr></thead>
+      <thead><tr><th>الشعبة</th><th>عدد المتدربين</th><th>المعدّل /5</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead>
       <tbody>${grps.map(g=>{
         const gs=students.filter(s=>s.grp===g);
         const gc=allCourses.filter(c=>gs.some(s=>s.id===c.sid));
         const ga=gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
         const ggpa=gpaFrom(gc);
-        const gw=gc.filter(c=>c.abs>20||c.pct<40).length;
+        const gw=gc.filter(hasIssue).length;
         return `<tr data-grp="${g}" onclick="showGroupDetail(this.dataset.grp)" style="cursor:pointer"><td>الشعبة ${g}</td><td>${gs.length}</td><td><span style="font-weight:700;color:${gpaColor(ggpa)}">${ggpa}</span></td><td><span class="pill ${pillClass(ga)}">${ga}%</span></td><td>${gw?`<span class="pill pr">${gw}</span>`:'<span class="pill pg">0</span>'}</td></tr>`;
       }).join('')}</tbody>
     </table></div>`;
@@ -1584,18 +1592,18 @@ const aPgs={
     }).join('')}`;
   },
   alerts:()=>{
-    const hi=allCourses.filter(c=>c.abs>20),lo=allCourses.filter(c=>c.pct<40);
+    const hi=allCourses.filter(isHighAbs),lo=allCourses.filter(isLowPerf);
     return `
-    <div class="stitle">نظام التنبيهات الأكاديمية</div>
+    <div class="stitle">نظام الاشعارات الأكاديمية</div>
     ${hi.length?`<div style="margin-bottom:20px">
       <div style="font-size:13px;font-weight:700;color:#f4c78a;margin-bottom:10px">⚠️ غياب عالي (${hi.length} حالة)</div>
       ${hi.slice(0,15).map(c=>`<div class="alert aw"><span class="aicon">👤</span>${c.sname} — غياب ${Math.round(c.abs)}% في ${c.course}</div>`).join('')}
     </div>`:''}
     ${lo.length?`<div>
       <div style="font-size:13px;font-weight:700;color:#ff8a92;margin-bottom:10px">🔴 أداء منخفض (${lo.length} حالة)</div>
-      ${lo.slice(0,15).map(c=>`<div class="alert ad"><span class="aicon">📉</span>${c.sname} — إنجاز ${Math.round(c.pct)}% في ${c.course}</div>`).join('')}
+      ${lo.slice(0,15).map(c=>`<div class="alert ad"><span class="aicon">📉</span>${c.sname} — درجة ${Math.round(c.pct)}% في ${c.course}</div>`).join('')}
     </div>`:''}
-    ${!hi.length&&!lo.length?'<div class="alert as"><span class="aicon">✅</span>لا توجد تنبيهات حرجة</div>':''}`;
+    ${!hi.length&&!lo.length?'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات حرجة</div>':''}`;
   },
   reports:()=>{
     const tot=students.length;
@@ -1604,7 +1612,7 @@ const aPgs={
     const trRows=trainers.map(t=>{
       const tc=allCourses.filter(c=>c.trainer===t);
       const ta=tc.length?Math.round(tc.reduce((a,c)=>a+c.pct,0)/tc.length):0;
-      const tw=tc.filter(c=>c.abs>20||c.pct<40).length;
+      const tw=tc.filter(hasIssue).length;
       const pc=pillClass(ta);
       return '<tr><td>'+t+'</td><td>'+tc.length+'</td><td><span class="pill '+pc+'">'+ta+'%</span></td><td>'+(tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>')+'</td></tr>';
     }).join('');
@@ -1615,7 +1623,7 @@ const aPgs={
       +'<div class="mcard mc-y"><div class="micon">📊</div><div class="mnum cy">'+avg+'%</div><div class="mlbl">متوسط عام</div></div>'
       +'</div>'
       +'<div class="stitle">أداء المدربين</div>'
-      +'<div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>تنبيهات</th></tr></thead><tbody>'+trRows+'</tbody></table></div>'
+      +'<div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>'+trRows+'</tbody></table></div>'
       +'<div class="btn-row"><button class="btn btn-b" onclick="window.print()">🖨️ طباعة التقرير</button></div>';
   },
     settings:()=>{
@@ -2077,7 +2085,7 @@ const TRANSLATIONS = {
     'قوائم الفصول':'قوائم الفصول',
     'تسجيل الحضور':'تسجيل الحضور',
     'رصد الدرجات':'رصد الدرجات',
-    'التنبيهات':'التنبيهات',
+    'الاشعارات':'الاشعارات',
     'لوحة المتابعة':'لوحة المتابعة',
     'المتدربون':'المتدربون',
     'المقررات':'المقررات',
@@ -2096,7 +2104,7 @@ const TRANSLATIONS = {
     'المقررات النشطة':'المقررات النشطة',
     'مقررات مكتملة':'مقررات مكتملة',
     'متوسط عام':'متوسط عام',
-    'تنبيهات':'تنبيهات',
+    'اشعارات':'اشعارات',
     'الاسم الكامل':'الاسم الكامل',
     'التخصص':'التخصص',
     'الشعبة':'الشعبة',
@@ -2130,8 +2138,8 @@ const TRANSLATIONS = {
     'الكل':'الكل',
     'غياب عالي':'غياب عالي',
     'أداء منخفض':'أداء منخفض',
-    'جميع المتدربين بحالة جيدة — لا توجد تنبيهات':'جميع المتدربين بحالة جيدة — لا توجد تنبيهات',
-    'لا توجد تنبيهات حرجة':'لا توجد تنبيهات حرجة',
+    'جميع المتدربين بحالة جيدة — لا توجد اشعارات':'جميع المتدربين بحالة جيدة — لا توجد اشعارات',
+    'لا توجد اشعارات حرجة':'لا توجد اشعارات حرجة',
     'لم يتم رفع شهادتك بعد':'لم يتم رفع شهادتك بعد',
     'تواصل مع إدارة الأكاديمية':'تواصل مع إدارة الأكاديمية',
     'لا توجد مقررات مسجلة':'لا توجد مقررات مسجلة',
@@ -2145,9 +2153,9 @@ const TRANSLATIONS = {
     'جدول التدريب الأسبوعي':'جدول التدريب الأسبوعي',
     'المرفقات والمواد العلمية':'المرفقات والمواد العلمية',
     'رفع المرفقات للمتدربين':'رفع المرفقات للمتدربين',
-    'التنبيهات والمتابعة':'التنبيهات والمتابعة',
+    'الاشعارات والمتابعة':'الاشعارات والمتابعة',
     'لوحة المتابعة المركزية':'لوحة المتابعة المركزية',
-    'نظام التنبيهات الأكاديمية':'نظام التنبيهات الأكاديمية',
+    'نظام الاشعارات الأكاديمية':'نظام الاشعارات الأكاديمية',
     'إعدادات النظام':'إعدادات النظام',
     'إحصائيات سريعة':'إحصائيات سريعة',
     'معرف الشيت':'معرف الشيت',
@@ -2206,7 +2214,7 @@ const TRANSLATIONS = {
     'قوائم الفصول':'Classes',
     'تسجيل الحضور':'Attendance',
     'رصد الدرجات':'Grades',
-    'التنبيهات':'Alerts',
+    'الاشعارات':'Alerts',
     'لوحة المتابعة':'Dashboard',
     'المتدربون':'Trainees',
     'المقررات':'Courses',
@@ -2225,7 +2233,7 @@ const TRANSLATIONS = {
     'المقررات النشطة':'Active Courses',
     'مقررات مكتملة':'Completed Courses',
     'متوسط عام':'Overall Avg.',
-    'تنبيهات':'Alerts',
+    'اشعارات':'Alerts',
     'الاسم الكامل':'Full Name',
     'التخصص':'Major',
     'الشعبة':'Section',
@@ -2259,8 +2267,8 @@ const TRANSLATIONS = {
     'الكل':'All',
     'غياب عالي':'High Absence',
     'أداء منخفض':'Low Performance',
-    'جميع المتدربين بحالة جيدة — لا توجد تنبيهات':'All trainees are in good condition',
-    'لا توجد تنبيهات حرجة':'No critical alerts',
+    'جميع المتدربين بحالة جيدة — لا توجد اشعارات':'All trainees are in good condition',
+    'لا توجد اشعارات حرجة':'No critical alerts',
     'لم يتم رفع شهادتك بعد':'Certificate not uploaded yet',
     'تواصل مع إدارة الأكاديمية':'Contact academy administration',
     'لا توجد مقررات مسجلة':'No registered courses',
@@ -2274,9 +2282,9 @@ const TRANSLATIONS = {
     'جدول التدريب الأسبوعي':'Weekly Training Schedule',
     'المرفقات والمواد العلمية':'Attachments & Materials',
     'رفع المرفقات للمتدربين':'Upload Materials for Trainees',
-    'التنبيهات والمتابعة':'Alerts & Follow-up',
+    'الاشعارات والمتابعة':'Alerts & Follow-up',
     'لوحة المتابعة المركزية':'Central Dashboard',
-    'نظام التنبيهات الأكاديمية':'Academic Alert System',
+    'نظام الاشعارات الأكاديمية':'Academic Alert System',
     'إعدادات النظام':'System Settings',
     'إحصائيات سريعة':'Quick Stats',
     'معرف الشيت':'Sheet ID',
