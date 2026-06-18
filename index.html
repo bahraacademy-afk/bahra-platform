@@ -571,8 +571,8 @@ body{top:0!important}
         <input type="text" id="inpId" placeholder="أدخل رقمك الأكاديمي" inputmode="text" autocomplete="off">
       </div>
       <div class="fgroup">
-        <label>رقم الجوال</label>
-        <input type="text" id="inpPh" placeholder="05xxxxxxxx" inputmode="numeric" autocomplete="off">
+        <label id="phLbl">الرقم السري</label>
+        <input type="password" id="inpPh" placeholder="أدخل الرقم السري" inputmode="numeric" autocomplete="off">
       </div>
       <button class="lbtn bs" id="lbtn" onclick="doLogin()">دخول المنصة</button>
       <div class="err-box" id="errBox">بيانات الدخول غير صحيحة</div>
@@ -637,9 +637,10 @@ function setRole(r,btn){
   btn.classList.add('r'+r);
   const lb=document.getElementById('idLbl');
   const lb2=document.getElementById('lbtn');
-  if(r==='s'){lb.textContent='الرقم الأكاديمي';lb2.className='lbtn bs'}
-  else if(r==='t'){lb.textContent='الرقم الوظيفي';lb2.className='lbtn bt'}
-  else{lb.textContent='اسم المستخدم';lb2.className='lbtn ba'}
+  const inp=document.getElementById('inpId');
+  if(r==='s'){lb.textContent='الرقم الأكاديمي';inp.placeholder='أدخل رقمك الأكاديمي';lb2.className='lbtn bs'}
+  else if(r==='t'){lb.textContent='الرقم الوظيفي';inp.placeholder='أدخل رقمك الوظيفي';lb2.className='lbtn bt'}
+  else{lb.textContent='اسم المستخدم';inp.placeholder='أدخل اسم المستخدم';lb2.className='lbtn ba'}
 }
 
 // ===== LOGIN =====
@@ -2037,6 +2038,11 @@ const TRANSLATIONS = {
   ar: {
     'الرقم الأكاديمي':'الرقم الأكاديمي',
     'رقم الجوال':'رقم الجوال',
+    'الرقم السري':'الرقم السري',
+    'أدخل الرقم السري':'أدخل الرقم السري',
+    'أدخل رقمك الأكاديمي':'أدخل رقمك الأكاديمي',
+    'أدخل رقمك الوظيفي':'أدخل رقمك الوظيفي',
+    'أدخل اسم المستخدم':'أدخل اسم المستخدم',
     'اسم المستخدم':'اسم المستخدم',
     'الرقم الوظيفي':'الرقم الوظيفي',
     'دخول المنصة':'دخول المنصة',
@@ -2161,6 +2167,11 @@ const TRANSLATIONS = {
   en: {
     'الرقم الأكاديمي':'Academic ID',
     'رقم الجوال':'Mobile Number',
+    'الرقم السري':'Password',
+    'أدخل الرقم السري':'Enter your password',
+    'أدخل رقمك الأكاديمي':'Enter your academic ID',
+    'أدخل رقمك الوظيفي':'Enter your employee ID',
+    'أدخل اسم المستخدم':'Enter your username',
     'اسم المستخدم':'Username',
     'الرقم الوظيفي':'Employee ID',
     'دخول المنصة':'Login',
