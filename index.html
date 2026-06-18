@@ -1428,8 +1428,7 @@ function renderKPI(grp,btn){
     const metrics=[
       {key:'avg',lbl:'متوسط الدرجات',suf:'%'},
       {key:'completionRate',lbl:'نسبة إكمال الخطة',suf:'%'},
-      {key:'passRate',lbl:'نسبة النجاح',suf:'%'},
-      {key:'excellenceRate',lbl:'نسبة التفوق (80%+)',suf:'%'}
+      {key:'passRate',lbl:'نسبة النجاح',suf:'%'}
     ];
     let html='<div class="kpi-wrap">';
     // بطاقات إجمالية سريعة لكل شعبة
@@ -1489,7 +1488,7 @@ function renderKPI(grp,btn){
         </div>
       </div>
       <div style="font-size:12px;color:var(--muted);margin:16px 0 10px;font-weight:700">مؤشرات تفصيلية — الشعبة ${grp}</div>
-      ${[{l:'متوسط الدرجات',v:k.avg,s:'%'},{l:'نسبة إكمال الخطة',v:k.completionRate,s:'%'},{l:'نسبة النجاح',v:k.passRate,s:'%'},{l:'نسبة التفوق (80%+)',v:k.excellenceRate,s:'%'},{l:'متوسط الغياب',v:k.avgAbs,s:'%',inv:true}].map(m=>`
+      ${[{l:'متوسط الدرجات',v:k.avg,s:'%'},{l:'نسبة إكمال الخطة',v:k.completionRate,s:'%'},{l:'نسبة النجاح',v:k.passRate,s:'%'},{l:'متوسط الغياب',v:k.avgAbs,s:'%',inv:true}].map(m=>`
         <div class="kpi-bar-row">
           <div class="kpi-bar-label">${m.l}</div>
           <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.min(m.v,100)}%;background:${m.inv?(m.v>20?'linear-gradient(90deg,#c1121f,#e63946)':'linear-gradient(90deg,#27ae60,#2ecc71)'):fillCol(m.v)}"><span class="kpi-bar-val">${m.v}${m.s}</span></div></div>
