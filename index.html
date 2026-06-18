@@ -761,9 +761,48 @@ function showApp(){
 }
 
 // ===== UTILS =====
-function pillClass(p){return p>=80?'pg':p>=50?'py':'pr'}
-function fillClass(p){return p>=80?'pf-g':p>=50?'pf-y':'pf-r'}
-function ccClass(p){return p>=80?'cc-g':p>=50?'cc-y':'cc-r'}
+function pillClass(p){return p>=80?'pg':p>=60?'py':'pr'}
+function fillClass(p){return p>=80?'pf-g':p>=60?'pf-y':'pf-r'}
+function ccClass(p){return p>=80?'cc-g':p>=60?'cc-y':'cc-r'}
+// ===== المعدّل من 5 (نظام GPA السعودي) =====
+function gradeToGPA(g){
+  g=parseFloat(g)||0;
+  if(g>=95)return 5.00;
+  if(g>=90)return 4.75;
+  if(g>=85)return 4.50;
+  if(g>=80)return 4.00;
+  if(g>=75)return 3.50;
+  if(g>=70)return 3.00;
+  if(g>=65)return 2.50;
+  if(g>=60)return 2.00;
+  return 1.00;
+}
+function gpaFrom(list){
+  if(!list||!list.length)return 0;
+  const sum=list.reduce((a,c)=>a+gradeToGPA(c.pct),0);
+  return (sum/list.length).toFixed(2);
+}
+function gpaColor(gpa){gpa=parseFloat(gpa);return gpa>=4.5?'var(--green)':gpa>=3.5?'#6ab8f7':gpa>=2.5?'var(--gold)':'var(--red)'}
+// تحويل الدرجة لنقاط المعدل (من 5) حسب نظام التدريب التقني
+function gpaPoint(g){
+  if(g>=95)return 5.0;
+  if(g>=90)return 4.75;
+  if(g>=85)return 4.5;
+  if(g>=80)return 4.0;
+  if(g>=75)return 3.5;
+  if(g>=70)return 3.0;
+  if(g>=65)return 2.5;
+  if(g>=60)return 2.0;
+  return 1.0;
+}
+// حساب المعدل التراكمي من 5 لقائمة مقررات
+function calcGPA(list){
+  if(!list||!list.length)return 0;
+  const sum=list.reduce((a,c)=>a+gpaPoint(c.pct),0);
+  return (sum/list.length).toFixed(2);
+}
+// لون المعدل من 5
+function gpaColor(g){g=parseFloat(g);return g>=4?'var(--green)':g>=2.5?'var(--gold)':'var(--red)'}
 function animCards(){
   setTimeout(()=>{
     document.querySelectorAll('.mcard').forEach((el,i)=>{el.classList.add('anim-scale','d'+(Math.min(i+1,6)));});
@@ -896,12 +935,14 @@ const sPgs={
     const done=courses.filter(c=>c.pct>=80).length,warn=courses.filter(c=>c.abs>20||c.pct<40).length;
     const current=courses.filter(c=>c.status==='حالي');
     const past=courses.filter(c=>c.status==='سابق');
+    const gpa=gpaFrom(courses);
     return `
     <div class="banner anim-up"><div><div class="btitle">مرحباً، ${user.name.split(' ')[0]} 👋</div><div class="bsub">${user.spec} — الشعبة ${user.grp}</div></div><div class="bpill bp-r">الشعبة ${user.grp}</div></div>
     <div class="metrics">
+      <div class="mcard mc-p"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpa)}">${gpa}<span style="font-size:14px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
+      <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
       <div class="mcard mc-b"><div class="micon">🟢</div><div class="mnum cb" data-target="${current.length}">${current.length}</div><div class="mlbl">مواد حالية</div></div>
       <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg" data-target="${past.length}">${past.length}</div><div class="mlbl">مواد مكتملة</div></div>
-      <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الإنجاز</div></div>
       ${warn?`<div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warn}">${warn}</div><div class="mlbl">تنبيهات</div></div>`:''}
     </div>
     ${warn?`<div class="alert aw"><span class="aicon">⚠️</span>لديك ${warn} مقرر يحتاج متابعة</div>`:''}
@@ -961,11 +1002,12 @@ const sPgs={
       </table></div>`:'<div class="alert as"><span class="aicon">🎓</span>أكملت جميع مواد الخطة الدراسية!</div>'}`;
     }
     return `
-    <div class="banner anim-up"><div><div class="btitle">تقرير الأداء 📊</div><div class="bsub">نظرة شاملة على مستواك الأكاديمي</div></div><div class="bpill bp-b" style="font-size:20px;font-weight:900">${avg}%</div></div>
+    <div class="banner anim-up"><div><div class="btitle">تقرير الأداء 📊</div><div class="bsub">نظرة شاملة على مستواك الأكاديمي</div></div><div class="bpill bp-b" style="font-size:18px;font-weight:900;text-align:center;line-height:1.2">${gpaFrom(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5</div></div></div>
     <div class="metrics">
+      <div class="mcard mc-p"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpaFrom(courses))}">${gpaFrom(courses)}<span style="font-size:13px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
+      <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
       <div class="mcard mc-b"><div class="micon">📚</div><div class="mnum cb">${tot}</div><div class="mlbl">مقرر مأخوذ</div></div>
-      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${courses.filter(c=>c.pct>=80).length}</div><div class="mlbl">مكتملة +80%</div></div>
-      <div class="mcard mc-y"><div class="micon">📉</div><div class="mnum cy">${courses.filter(c=>c.abs>15).length}</div><div class="mlbl">غياب عالي</div></div>
+      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${courses.filter(c=>c.pct>=60).length}</div><div class="mlbl">ناجح</div></div>
     </div>
     ${compareSection}
     <div class="stitle">تفاصيل المقررات المأخوذة</div>
@@ -1029,6 +1071,7 @@ const sPgs={
     return html2;
   },
   profile:()=>`
+    <div class="banner anim-up"><div><div class="btitle">المعدّل التراكمي 🏆</div><div class="bsub">${user.name.split(' ').slice(0,3).join(' ')}</div></div><div class="bpill" style="font-size:22px;font-weight:900;text-align:center;line-height:1.1;background:rgba(155,89,182,.15);color:${gpaColor(gpaFrom(courses))};border:1px solid rgba(155,89,182,.3)">${gpaFrom(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5.00</div></div></div>
     <div class="stitle">بياناتي الشخصية</div>
     <div class="igrid">
       <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${user.id}</div></div>
@@ -1036,7 +1079,7 @@ const sPgs={
       <div class="iitem"><div class="ilbl">التخصص</div><div class="ival">${user.spec}</div></div>
       <div class="iitem"><div class="ilbl">الشعبة</div><div class="ival">${user.grp}</div></div>
       <div class="iitem"><div class="ilbl">رقم الجوال</div><div class="ival">${user.ph}</div></div>
-      <div class="iitem"><div class="ilbl">البريد الإلكتروني</div><div class="ival" style="font-size:12px">${user.email||'—'}</div></div>
+      <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival">${courses.length?Math.round(courses.reduce((a,c)=>a+c.pct,0)/courses.length):0}%</div></div>
     </div>
     <div class="stitle">ملخص الأداء</div>
     <div class="ccard cc-b">
@@ -1091,7 +1134,7 @@ const tPgs={
     <div class="metrics">
       <div class="mcard mc-b"><div class="micon">👥</div><div class="mnum cb" data-target="${[...new Set(students.map(s=>s.sid))].length}">${[...new Set(students.map(s=>s.sid))].length}</div><div class="mlbl">إجمالي المتدربين</div></div>
       <div class="mcard mc-g"><div class="micon">📚</div><div class="mnum cg" data-target="${crs.length}">${crs.length}</div><div class="mlbl">المقررات</div></div>
-      <div class="mcard mc-r"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الإنجاز</div></div>
+      <div class="mcard mc-r"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
       <div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warns}">${warns}</div><div class="mlbl">تنبيهات</div></div>
     </div>
     <div class="stitle">المقررات</div>
@@ -1350,7 +1393,8 @@ function computeKPI(grp){
   const passRate = gc.length?Math.round(gc.filter(c=>c.pct>=60).length/gc.length*100):0;
   const avgAbs = gc.length?Math.round(gc.reduce((a,c)=>a+c.abs,0)/gc.length):0;
   const alerts = gc.filter(c=>c.abs>20||c.pct<40).length;
-  return {traineeCount,avg,completionRate,passRate,avgAbs,alerts,courseCount:gc.length};
+  const gpa = gpaFrom(gc);
+  return {traineeCount,avg,completionRate,passRate,avgAbs,alerts,courseCount:gc.length,gpa};
 }
 
 function renderKPI(grp,btn){
@@ -1365,7 +1409,7 @@ function renderKPI(grp,btn){
     const grps=[...new Set(students.map(s=>s.grp))].sort();
     const data=grps.map(g=>({g,...computeKPI(g)}));
     const metrics=[
-      {key:'avg',lbl:'متوسط الإنجاز',suf:'%'},
+      {key:'avg',lbl:'متوسط الدرجات',suf:'%'},
       {key:'completionRate',lbl:'نسبة الإكمال',suf:'%'},
       {key:'passRate',lbl:'نسبة النجاح',suf:'%'}
     ];
@@ -1374,8 +1418,8 @@ function renderKPI(grp,btn){
     html+='<div class="kpi-cards">';
     data.forEach(d=>{
       html+=`<div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${fillCol(d.avg)}"></div>
-        <div class="kpi-val" style="color:${color(d.avg)}">${d.avg}%</div>
-        <div class="kpi-lbl">الشعبة ${d.g} · ${d.traineeCount} متدرب</div></div>`;
+        <div class="kpi-val" style="color:${gpaColor(d.gpa)}">${d.gpa}<span style="font-size:12px;color:var(--muted)">/5</span></div>
+        <div class="kpi-lbl">الشعبة ${d.g} · ${d.traineeCount} متدرب · ${d.avg}%</div></div>`;
     });
     html+='</div>';
     // أشرطة مقارنة لكل مؤشر
@@ -1416,18 +1460,18 @@ function renderKPI(grp,btn){
               stroke-dasharray="${circ}" stroke-dashoffset="${circ}" transform="rotate(-90 70 70)"
               style="transition:stroke-dashoffset 1.4s cubic-bezier(.16,1,.3,1)" id="gaugeArc"/>
             <text x="70" y="64" text-anchor="middle" font-size="30" font-weight="900" fill="${gcol}" font-family="Tajawal">${k.avg}%</text>
-            <text x="70" y="86" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="Tajawal">متوسط الإنجاز</text>
+            <text x="70" y="86" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="Tajawal">متوسط الدرجات</text>
           </svg>
         </div>
         <div class="kpi-cards" style="flex:1;min-width:240px;margin-bottom:0">
+          <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--purple)"></div><div class="kpi-val" style="color:${gpaColor(k.gpa)}">${k.gpa}<span style="font-size:11px;color:var(--muted)">/5</span></div><div class="kpi-lbl">المعدّل التراكمي</div></div>
           <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--blue)"></div><div class="kpi-val cb" style="color:#6ab8f7">${k.traineeCount}</div><div class="kpi-lbl">متدرب</div></div>
-          <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${fillCol(k.completionRate)}"></div><div class="kpi-val" style="color:${color(k.completionRate)}">${k.completionRate}%</div><div class="kpi-lbl">نسبة الإكمال</div></div>
           <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${fillCol(k.passRate)}"></div><div class="kpi-val" style="color:${color(k.passRate)}">${k.passRate}%</div><div class="kpi-lbl">نسبة النجاح</div></div>
           <div class="kpi-card"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:${k.alerts?'var(--red)':'var(--green)'}"></div><div class="kpi-val" style="color:${k.alerts?'var(--red)':'var(--green)'}">${k.alerts}</div><div class="kpi-lbl">حالات حرجة</div></div>
         </div>
       </div>
       <div style="font-size:12px;color:var(--muted);margin:16px 0 10px;font-weight:700">مؤشرات تفصيلية — الشعبة ${grp}</div>
-      ${[{l:'متوسط الإنجاز',v:k.avg,s:'%'},{l:'نسبة الإكمال',v:k.completionRate,s:'%'},{l:'نسبة النجاح',v:k.passRate,s:'%'},{l:'متوسط الغياب',v:k.avgAbs,s:'%',inv:true}].map(m=>`
+      ${[{l:'متوسط الدرجات',v:k.avg,s:'%'},{l:'نسبة الإكمال',v:k.completionRate,s:'%'},{l:'نسبة النجاح',v:k.passRate,s:'%'},{l:'متوسط الغياب',v:k.avgAbs,s:'%',inv:true}].map(m=>`
         <div class="kpi-bar-row">
           <div class="kpi-bar-label">${m.l}</div>
           <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.min(m.v,100)}%;background:${m.inv?(m.v>20?'linear-gradient(90deg,#c1121f,#e63946)':'linear-gradient(90deg,#27ae60,#2ecc71)'):fillCol(m.v)}"><span class="kpi-bar-val">${m.v}${m.s}</span></div></div>
@@ -1451,7 +1495,7 @@ const aPgs={
       <div class="mcard mc-b" data-nav="all_students" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
       <div class="mcard mc-g" data-nav="all_courses" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
       <div class="mcard mc-y" data-nav="trainers" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${trainers}">${trainers}</div><div class="mlbl">المدربون</div></div>
-      <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الإنجاز</div></div>
+      <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
     </div>
     ${warns?`<div class="alert ad"><span class="aicon">🔴</span>${warns} حالة تحتاج متابعة فورية</div>`:''}
     <div class="stitle">📊 مؤشرات الأداء (KPI)</div>
@@ -1462,13 +1506,14 @@ const aPgs={
     <div id="kpiContent"></div>
     <div class="stitle">توزيع المتدربين بالشعب</div>
     <div class="gtable"><table>
-      <thead><tr><th>الشعبة</th><th>عدد المتدربين</th><th>متوسط الإنجاز</th><th>تنبيهات</th></tr></thead>
+      <thead><tr><th>الشعبة</th><th>عدد المتدربين</th><th>المعدّل /5</th><th>متوسط الدرجات</th><th>تنبيهات</th></tr></thead>
       <tbody>${grps.map(g=>{
         const gs=students.filter(s=>s.grp===g);
         const gc=allCourses.filter(c=>gs.some(s=>s.id===c.sid));
         const ga=gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
+        const ggpa=gpaFrom(gc);
         const gw=gc.filter(c=>c.abs>20||c.pct<40).length;
-        return `<tr data-grp="${g}" onclick="showGroupDetail(this.dataset.grp)" style="cursor:pointer"><td>الشعبة ${g}</td><td>${gs.length}</td><td><span class="pill ${pillClass(ga)}">${ga}%</span></td><td>${gw?`<span class="pill pr">${gw}</span>`:'<span class="pill pg">0</span>'}</td></tr>`;
+        return `<tr data-grp="${g}" onclick="showGroupDetail(this.dataset.grp)" style="cursor:pointer"><td>الشعبة ${g}</td><td>${gs.length}</td><td><span style="font-weight:700;color:${gpaColor(ggpa)}">${ggpa}</span></td><td><span class="pill ${pillClass(ga)}">${ga}%</span></td><td>${gw?`<span class="pill pr">${gw}</span>`:'<span class="pill pg">0</span>'}</td></tr>`;
       }).join('')}</tbody>
     </table></div>`;
   },
@@ -1539,7 +1584,7 @@ const aPgs={
       +'<div class="mcard mc-y"><div class="micon">📊</div><div class="mnum cy">'+avg+'%</div><div class="mlbl">متوسط عام</div></div>'
       +'</div>'
       +'<div class="stitle">أداء المدربين</div>'
-      +'<div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الإنجاز</th><th>تنبيهات</th></tr></thead><tbody>'+trRows+'</tbody></table></div>'
+      +'<div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>تنبيهات</th></tr></thead><tbody>'+trRows+'</tbody></table></div>'
       +'<div class="btn-row"><button class="btn btn-b" onclick="window.print()">🖨️ طباعة التقرير</button></div>';
   },
     settings:()=>{
@@ -1700,8 +1745,8 @@ function showStudentDetail(sid){
       <div class="igrid" style="margin-bottom:16px">
         <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${st.id}</div></div>
         <div class="iitem"><div class="ilbl">الجوال</div><div class="ival">${st.ph||'—'}</div></div>
-        <div class="iitem"><div class="ilbl">البريد</div><div class="ival" style="font-size:11px">${st.email||'—'}</div></div>
-        <div class="iitem"><div class="ilbl">متوسط الإنجاز</div><div class="ival" style="color:${avg>=70?'var(--green)':avg>=50?'var(--gold)':'var(--red)'}">${avg}%</div></div>
+        <div class="iitem"><div class="ilbl">المعدّل التراكمي</div><div class="ival" style="color:${gpaColor(gpaFrom(stCourses))};font-weight:700">${gpaFrom(stCourses)} <span style="font-size:11px;color:var(--muted);font-weight:400">/ 5</span></div></div>
+        <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival" style="color:${avg>=70?'var(--green)':avg>=60?'var(--gold)':'var(--red)'}">${avg}%</div></div>
       </div>
       
       <div class="ccard ${st.cert&&st.cert.startsWith('http')?'cc-g':'cc-y'}" style="margin-bottom:16px;padding:18px">
@@ -1763,8 +1808,8 @@ function showCourseDetail(courseName){
       
       <div class="metrics" style="margin-bottom:16px">
         <div class="mcard mc-b"><div class="micon">👥</div><div class="mnum cb">${cs.length}</div><div class="mlbl">متدرب</div></div>
-        <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${cs.filter(c=>c.pct>=80).length}</div><div class="mlbl">مكتملة</div></div>
-        <div class="mcard mc-r"><div class="micon">⚠️</div><div class="mnum cr">${cs.filter(c=>c.abs>25).length}</div><div class="mlbl">محروم</div></div>
+        <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${cs.filter(c=>c.pct>=60&&c.abs<=25).length}</div><div class="mlbl">ناجح</div></div>
+        <div class="mcard mc-r"><div class="micon">❌</div><div class="mnum cr">${cs.filter(c=>c.pct<60||c.abs>25).length}</div><div class="mlbl">راسب/محروم</div></div>
       </div>
       
       <div class="gtable">
@@ -1773,10 +1818,10 @@ function showCourseDetail(courseName){
           <tbody>${cs.map(c=>{
             const st=students.find(s=>s.id===c.sid);
             const p=Math.round(c.pct);
-            const status=c.abs>25?'<span style="color:var(--red)">محروم</span>':p>=80?'<span style="color:var(--green)">مكتمل</span>':p>=50?'<span style="color:var(--gold)">جاري</span>':'<span style="color:var(--red)">متأخر</span>';
+            const status=c.abs>25?'<span style="color:var(--red)">محروم</span>':p>=60?'<span style="color:var(--green)">ناجح</span>':'<span style="color:var(--red)">راسب</span>';
             return `<tr onclick="document.getElementById('courseModal').remove();setTimeout(()=>showStudentDetail('${c.sid}'),100)" style="cursor:pointer">
               <td>${st?st.name.split(' ').slice(0,3).join(' '):c.sid}</td>
-              <td><span class="pill ${p>=80?'pg':p>=50?'py':'pr'}">${p}%</span></td>
+              <td><span class="pill ${p>=60?'pg':'pr'}">${p}%</span></td>
               <td style="color:${c.abs>25?'var(--red)':'var(--muted)'}">${Math.round(c.abs)}%</td>
               <td>${status}</td>
             </tr>`;
@@ -2005,7 +2050,11 @@ const TRANSLATIONS = {
     'خروج':'خروج',
     'إجمالي المقررات':'إجمالي المقررات',
     'مكتملة +80%':'مكتملة +80%',
-    'متوسط الإنجاز':'متوسط الإنجاز',
+    'متوسط الدرجات':'متوسط الدرجات',
+    'المعدّل التراكمي':'المعدّل التراكمي',
+    'المعدّل /5':'المعدّل /5',
+    'ناجح':'ناجح',
+    'راسب':'راسب',
     'إجمالي المتدربين':'إجمالي المتدربين',
     'المدربون':'المدربون',
     'المقررات النشطة':'المقررات النشطة',
@@ -2125,7 +2174,11 @@ const TRANSLATIONS = {
     'خروج':'Logout',
     'إجمالي المقررات':'Total Courses',
     'مكتملة +80%':'Completed +80%',
-    'متوسط الإنجاز':'Avg. Progress',
+    'متوسط الدرجات':'Avg. Grade',
+    'المعدّل التراكمي':'GPA',
+    'المعدّل /5':'GPA /5',
+    'ناجح':'Pass',
+    'راسب':'Fail',
     'إجمالي المتدربين':'Total Trainees',
     'المدربون':'Trainers',
     'المقررات النشطة':'Active Courses',
