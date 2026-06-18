@@ -1136,23 +1136,35 @@ const tPgs={
     const crs=[...new Set(students.map(s=>s.course))];
     const avg=students.length?Math.round(students.reduce((a,s)=>a+s.pct,0)/students.length):0;
     const warns=students.filter(s=>s.abs>20||s.pct<40).length;
+    // تحديد حالة المقرر: حالي إذا فيه ولو متدرب واحد حالته "حالي"
+    const courseStatus=course=>{
+      const ss=students.filter(s=>s.course===course);
+      return ss.some(s=>s.status==='حالي')?'حالي':(ss.some(s=>s.status==='مستقبلي')?'مستقبلي':'سابق');
+    };
+    const currentCrs=crs.filter(c=>courseStatus(c)==='حالي');
+    const pastCrs=crs.filter(c=>courseStatus(c)!=='حالي');
+    const courseCard=(course,faded)=>{
+      const ss=students.filter(s=>s.course===course);
+      const a=Math.round(ss.reduce((x,s)=>x+s.pct,0)/ss.length);
+      return `<div class="ccard ${faded?'cc-b':'cc-g'}" ${faded?'style="opacity:.6"':''}>
+        <div class="cc-top"><div><div class="cc-name">${course}</div><div class="cc-meta">${ss.length} متدرب · ${ss[0]?.code||''}</div></div><span class="pill ${pillClass(a)}">${a}%</span></div>
+        <div class="prog"><div class="pfill ${faded?'pf-b':'pf-g'}" style="width:${a}%"></div></div>
+      </div>`;
+    };
     return `
     <div class="banner"><div><div class="btitle">مرحباً، ${user.name.split(' ')[0]} 👨‍🏫</div><div class="bsub">${user.spec}</div></div><div class="bpill bp-b">مدرب</div></div>
     <div class="metrics">
       <div class="mcard mc-b"><div class="micon">👥</div><div class="mnum cb" data-target="${[...new Set(students.map(s=>s.sid))].length}">${[...new Set(students.map(s=>s.sid))].length}</div><div class="mlbl">إجمالي المتدربين</div></div>
-      <div class="mcard mc-g"><div class="micon">📚</div><div class="mnum cg" data-target="${crs.length}">${crs.length}</div><div class="mlbl">المقررات</div></div>
-      <div class="mcard mc-r"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
+      <div class="mcard mc-g"><div class="micon">🟢</div><div class="mnum cg" data-target="${currentCrs.length}">${currentCrs.length}</div><div class="mlbl">مقررات حالية</div></div>
+      <div class="mcard mc-r"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=60?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
       <div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warns}">${warns}</div><div class="mlbl">تنبيهات</div></div>
     </div>
-    <div class="stitle">المقررات</div>
-    ${crs.map(course=>{
-      const ss=students.filter(s=>s.course===course);
-      const a=Math.round(ss.reduce((x,s)=>x+s.pct,0)/ss.length);
-      return `<div class="ccard cc-b">
-        <div class="cc-top"><div><div class="cc-name">${course}</div><div class="cc-meta">${ss.length} متدرب · ${ss[0]?.code||''}</div></div><span class="pill ${pillClass(a)}">${a}%</span></div>
-        <div class="prog"><div class="pfill pf-b" style="width:${a}%"></div></div>
-      </div>`;
-    }).join('')}`;
+    <div class="stitle">🟢 مقرراتك الحالية ${currentCrs.length?`(${currentCrs.length})`:''}</div>
+    ${currentCrs.length?currentCrs.map(c=>courseCard(c,false)).join(''):'<div class="alert ab"><span class="aicon">📭</span>لا توجد مقررات حالية الآن</div>'}
+    ${pastCrs.length?`
+    <div class="stitle" style="margin-top:24px;opacity:.7">⚪ مقررات سابقة (${pastCrs.length})</div>
+    <div class="alert" style="background:rgba(150,150,150,.08);border:1px solid rgba(150,150,150,.2);color:var(--muted)"><span class="aicon">📋</span>مقررات مكتملة سابقاً — للأرشيف فقط</div>
+    ${pastCrs.map(c=>courseCard(c,true)).join('')}`:''}`;
   },
   students:()=>{
     const crs=[...new Set(students.map(s=>s.course))];
@@ -1174,12 +1186,13 @@ const tPgs={
     }).join('')}`;
   },
   attendance:()=>{
-    const crs=[...new Set(students.map(s=>s.course))];
+    const allCrs=[...new Set(students.map(s=>s.course))];
+    const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>s.status==='حالي'));
     const today=new Date().toLocaleDateString('ar-SA');
     return `
     <div class="stitle">تسجيل الحضور — ${today}</div>
-    <div class="alert ab"><span class="aicon">📋</span>سجّل حضور وغياب المتدربين ثم اضغط حفظ</div>
-    ${crs.map(course=>{
+    <div class="alert ab"><span class="aicon">📋</span>سجّل حضور وغياب المتدربين في <strong style="margin:0 4px">المقررات الحالية</strong> ثم اضغط حفظ</div>
+    ${crs.length?crs.map(course=>{
       const ss=[...new Map(students.filter(s=>s.course===course).map(s=>[s.sid,s])).values()];
       return `<div style="margin-bottom:24px">
         <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:#6ab8f7">📚 ${course}</div>
@@ -1196,14 +1209,15 @@ const tPgs={
         </div>
         <div class="btn-row"><button class="btn btn-b" onclick="saveAttendance('${course}')">💾 حفظ حضور ${course}</button></div>
       </div>`;
-    }).join('')}`;
+    }).join(''):'<div class="empty"><div class="empty-icon">📅</div>لا توجد مقررات حالية لتسجيل الحضور</div>'}`;
   },
   grades:()=>{
-    const crs=[...new Set(students.map(s=>s.course))];
+    const allCrs=[...new Set(students.map(s=>s.course))];
+    const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>s.status==='حالي'));
     return `
     <div class="stitle">رصد الدرجات والتقييم</div>
-    
-    ${crs.map(course=>{
+    <div class="alert ab"><span class="aicon">📝</span>رصد درجات <strong style="margin:0 4px">المقررات الحالية</strong> فقط</div>
+    ${crs.length?crs.map(course=>{
       const ss=students.filter(s=>s.course===course);
       return `<div style="margin-bottom:24px">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${course}</div>
@@ -1218,7 +1232,7 @@ const tPgs={
         </table>
         <div class="btn-row"><button class="btn btn-g" onclick="saveGrades('${course}')">💾 حفظ درجات ${course}</button></div>
       </div>`;
-    }).join('')}`;
+    }).join(''):'<div class="empty"><div class="empty-icon">📝</div>لا توجد مقررات حالية لرصد الدرجات</div>'}`;
   },
   alerts:()=>{
     const hi=students.filter(s=>s.abs>20);
