@@ -725,9 +725,10 @@ async function loadTrainer(){
 }
 
 async function loadAdmin(){
-  const [sr,cr]=await Promise.all([
+  const [sr,cr,cat]=await Promise.all([
     fetchSheet('قاعدة بيانات مركزي!A:G'),
-    fetchSheet('سجل المقررات!A:L')
+    fetchSheet('سجل المقررات!A:L'),
+    fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[])
   ]);
   students=[];
   for(let i=1;i<sr.length;i++){
@@ -739,6 +740,11 @@ async function loadAdmin(){
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(r[1])allCourses.push({key:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
+  }
+  catalog=[];
+  for(let i=1;i<cat.length;i++){
+    const r=cat[i];
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4])});
   }
 }
 
@@ -1388,13 +1394,23 @@ function computeKPI(grp){
   const gc = allCourses.filter(c=>ids.has(c.sid));
   const traineeCount = gs.length;
   const avg = gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
-  const completed = gc.filter(c=>c.pct>=80).length;
-  const completionRate = gc.length?Math.round(completed/gc.length*100):0;
+  // نسبة إكمال الخطة = المواد المأخوذة ÷ إجمالي مواد الخطة الدراسية
+  let planTotal = catalog.length;
+  if(!planTotal){
+    // احتياطي: أكبر عدد مواد أخذها متدرب = الخطة الكاملة
+    const cnt={}; allCourses.forEach(c=>cnt[c.sid]=(cnt[c.sid]||0)+1);
+    planTotal = Math.max(1, ...Object.values(cnt).concat([1]));
+  }
+  const cnt={}; gc.forEach(c=>cnt[c.sid]=(cnt[c.sid]||0)+1);
+  const compVals = gs.map(s=>Math.min((cnt[s.id]||0)/planTotal,1));
+  const completionRate = compVals.length?Math.round(compVals.reduce((a,b)=>a+b,0)/compVals.length*100):0;
+  // نسبة التفوق = المواد بدرجة 80%+
+  const excellenceRate = gc.length?Math.round(gc.filter(c=>c.pct>=80).length/gc.length*100):0;
   const passRate = gc.length?Math.round(gc.filter(c=>c.pct>=60).length/gc.length*100):0;
   const avgAbs = gc.length?Math.round(gc.reduce((a,c)=>a+c.abs,0)/gc.length):0;
   const alerts = gc.filter(c=>c.abs>20||c.pct<40).length;
   const gpa = gpaFrom(gc);
-  return {traineeCount,avg,completionRate,passRate,avgAbs,alerts,courseCount:gc.length,gpa};
+  return {traineeCount,avg,completionRate,excellenceRate,passRate,avgAbs,alerts,courseCount:gc.length,gpa,planTotal};
 }
 
 function renderKPI(grp,btn){
@@ -1410,8 +1426,9 @@ function renderKPI(grp,btn){
     const data=grps.map(g=>({g,...computeKPI(g)}));
     const metrics=[
       {key:'avg',lbl:'متوسط الدرجات',suf:'%'},
-      {key:'completionRate',lbl:'نسبة الإكمال',suf:'%'},
-      {key:'passRate',lbl:'نسبة النجاح',suf:'%'}
+      {key:'completionRate',lbl:'نسبة إكمال الخطة',suf:'%'},
+      {key:'passRate',lbl:'نسبة النجاح',suf:'%'},
+      {key:'excellenceRate',lbl:'نسبة التفوق (80%+)',suf:'%'}
     ];
     let html='<div class="kpi-wrap">';
     // بطاقات إجمالية سريعة لكل شعبة
@@ -1471,7 +1488,7 @@ function renderKPI(grp,btn){
         </div>
       </div>
       <div style="font-size:12px;color:var(--muted);margin:16px 0 10px;font-weight:700">مؤشرات تفصيلية — الشعبة ${grp}</div>
-      ${[{l:'متوسط الدرجات',v:k.avg,s:'%'},{l:'نسبة الإكمال',v:k.completionRate,s:'%'},{l:'نسبة النجاح',v:k.passRate,s:'%'},{l:'متوسط الغياب',v:k.avgAbs,s:'%',inv:true}].map(m=>`
+      ${[{l:'متوسط الدرجات',v:k.avg,s:'%'},{l:'نسبة إكمال الخطة',v:k.completionRate,s:'%'},{l:'نسبة النجاح',v:k.passRate,s:'%'},{l:'نسبة التفوق (80%+)',v:k.excellenceRate,s:'%'},{l:'متوسط الغياب',v:k.avgAbs,s:'%',inv:true}].map(m=>`
         <div class="kpi-bar-row">
           <div class="kpi-bar-label">${m.l}</div>
           <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.min(m.v,100)}%;background:${m.inv?(m.v>20?'linear-gradient(90deg,#c1121f,#e63946)':'linear-gradient(90deg,#27ae60,#2ecc71)'):fillCol(m.v)}"><span class="kpi-bar-val">${m.v}${m.s}</span></div></div>
