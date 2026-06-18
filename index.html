@@ -608,10 +608,14 @@ body{top:0!important}
 <script>
 const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
 const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwEftWMoptxlAyNMtdyJZydvtU3uscLq6kMCP5BZ-a_HgHb4lpHcaSjBufTt1uFgLlV/exec';
-const ADMIN=[{id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف الأكاديمية'},{id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف الأكاديمية'}];
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx8g-clb-E12c7KfFVMWO_oQ5J8lbD5JiGQEqbAp531nlWYPYblMwnttO66hejbFce3/exec';
+const ADMIN=[
+  {id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
+  {id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
+  {id:'director',ph:'000000000',name:'مدير الأكاديمية',title:'مدير الأكاديمية',level:'director'}
+];
 
-let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[];
+let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[];
 let attendanceData={}, gradesData={};
 let activeFilters={half:'all',letter:'all',status:'all'};
 
@@ -713,6 +717,7 @@ async function loadStudent(){
     const r=cat[i];
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4])});
   }
+  await loadRequests();
 }
 
 async function loadTrainer(){
@@ -747,9 +752,20 @@ async function loadAdmin(){
     const r=cat[i];
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4])});
   }
+  await loadRequests();
 }
 
-// ===== SHOW APP =====
+// تحميل طلبات الخدمات من تبويب "طلبات الخدمات"
+// الأعمدة: A=معرف B=الرقم الأكاديمي C=الاسم D=الشعبة E=نوع الطلب F=التفاصيل G=التاريخ H=اعتماد المشرف I=اعتماد المدير J=الحالة النهائية K=ملاحظات
+async function loadRequests(){
+  const rq=await fetchSheet('طلبات الخدمات!A:K').catch(()=>[]);
+  requests=[];
+  for(let i=1;i<rq.length;i++){
+    const r=rq[i];
+    if(!n0(r[0]))continue;
+    requests.push({rid:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),type:n0(r[4]),details:n0(r[5]),date:n0(r[6]),supStatus:n0(r[7])||'معلق',dirStatus:n0(r[8])||'معلق',finalStatus:n0(r[9])||'قيد المراجعة',notes:n0(r[10])});
+  }
+}
 function showApp(){
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appShell').style.display='block';
@@ -897,8 +913,8 @@ function getAlerts(){
 
 // ===== STUDENT APP =====
 function buildStudentApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('s',['home','courses','performance','schedule','record','attachments','profile']);
-  buildMobNav('s',['home','courses','record','schedule','profile']);
+  document.getElementById('sidebar').innerHTML=navHTML('s',['home','courses','performance','schedule','services','record','attachments','profile']);
+  buildMobNav('s',['home','courses','services','schedule','profile']);
   showSPage('home',null);
 }
 
@@ -912,15 +928,17 @@ function navHTML(r,pages){
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
     settings:{icon:'⚙️',lbl:'الإعدادات'},
-    record:{icon:'🏅',lbl:'السجل التدريبي'}
+    record:{icon:'🏅',lbl:'السجل التدريبي'},
+    services:{icon:'📝',lbl:'الخدمات'},
+    requests:{icon:'📋',lbl:'الطلبات والموافقات'}
   };
   const ac=r==='s'?'active':r==='t'?'active at':'active aa';
   return pages.map(p=>`<div class="sitem" onclick="show${r.toUpperCase()}Page('${p}',this)" id="sn-${p}"><span class="sicon">${map[p]?.icon||'📌'}</span>${map[p]?.lbl||p}</div>`).join('');
 }
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير'};
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات'};
   const ac=r==='s'?'as':r==='t'?'at':'aa';
   const mn=document.getElementById('mobNav');
   mn.style.display='';
@@ -1049,6 +1067,43 @@ const sPgs={
       <div style="flex:1"><div style="font-size:14px;font-weight:600">${c.course}</div><div style="font-size:12px;color:var(--muted);margin-top:2px">${c.trainer||'—'} · ${c.code}${c.half&&c.half!=='غير محدد'?' · '+c.half:''}</div></div>
       <span class="pill pg">حالية</span>
     </div>`).join(''):'<div class="empty"><div class="empty-icon">📅</div><div>لا توجد مواد حالية</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر الجدول عند تسجيلك في مواد النصف الحالي</div></div>'}`;
+  },
+  services:()=>{
+    const myReqs=requests.filter(r=>r.sid===user.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const statusBadge=r=>{
+      if(r.finalStatus==='معتمد'||r.dirStatus==='معتمد')return '<span class="pill pg">معتمد نهائياً ✓</span>';
+      if(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'||r.finalStatus==='مرفوض')return '<span class="pill pr">مرفوض</span>';
+      if(r.supStatus==='معتمد')return '<span class="pill pb">بانتظار المدير</span>';
+      return '<span class="pill py">بانتظار المشرف</span>';
+    };
+    return `
+    <div class="stitle">📝 الخدمات والطلبات</div>
+    <div class="alert ab"><span class="aicon">ℹ️</span>قدّم طلبك وسيمر على المشرف الأكاديمي ثم مدير الأكاديمية للاعتماد</div>
+    <div class="ccard cc-b" style="margin-bottom:20px">
+      <div class="cc-name" style="margin-bottom:14px">➕ تقديم طلب جديد</div>
+      <div class="mform-group"><label>نوع الطلب</label>
+        <select id="rq-type">
+          <option value="ورقة تعريف">ورقة تعريف بالمتدرب</option>
+          <option value="عذر غياب">عذر غياب</option>
+          <option value="طلب آخر">طلب آخر</option>
+        </select>
+      </div>
+      <div class="mform-group"><label>التفاصيل / السبب</label>
+        <textarea id="rq-details" placeholder="اكتب تفاصيل طلبك هنا..."></textarea>
+      </div>
+      <div class="btn-row"><button class="btn btn-r" onclick="submitRequest()">📨 إرسال الطلب</button></div>
+    </div>
+    <div class="stitle">طلباتي ${myReqs.length?`(${myReqs.length})`:''}</div>
+    ${myReqs.length?myReqs.map(r=>`
+      <div class="ccard ${r.finalStatus==='معتمد'||r.dirStatus==='معتمد'?'cc-g':r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'?'cc-r':'cc-y'}">
+        <div class="cc-top"><div><div class="cc-name">${r.type}</div><div class="cc-meta">${r.date||''}</div></div>${statusBadge(r)}</div>
+        ${r.details?`<div style="font-size:13px;color:var(--muted);margin-top:8px">${r.details}</div>`:''}
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:11px">
+          <span style="color:${r.supStatus==='معتمد'?'var(--green)':r.supStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المشرف: ${r.supStatus}</span>
+          <span style="color:${r.dirStatus==='معتمد'?'var(--green)':r.dirStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدير: ${r.dirStatus}</span>
+        </div>
+        ${r.notes?`<div style="font-size:12px;color:#f4c78a;margin-top:6px">📌 ${r.notes}</div>`:''}
+      </div>`).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات سابقة</div>'}`;
   },
   attachments:()=>`
     <div class="stitle">المرفقات والمواد العلمية</div>
@@ -1398,8 +1453,8 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','alerts','reports','settings']);
-  buildMobNav('a',['overview','all_students','all_courses','alerts','reports']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','requests','alerts','reports','settings']);
+  buildMobNav('a',['overview','all_students','requests','alerts','reports']);
   showAPage('overview',null);
 }
 
@@ -1590,6 +1645,33 @@ const aPgs={
         <div class="prog"><div class="pfill ${fillClass(avg)}" style="width:${avg}%"></div></div>
       </div>`;
     }).join('')}`;
+  },
+  requests:()=>{
+    const isDir=user.level==='director';
+    // المشرف يشوف الطلبات المعلقة عنده | المدير يشوف اللي اعتمدها المشرف وتنتظر المدير
+    const pending=requests.filter(r=>{
+      if(isDir)return r.supStatus==='معتمد'&&r.dirStatus==='معلق';
+      return r.supStatus==='معلق';
+    });
+    const done=requests.filter(r=>!pending.includes(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const card=(r,actionable)=>{
+      const finalBadge=(r.finalStatus==='معتمد'||r.dirStatus==='معتمد')?'<span class="pill pg">معتمد نهائياً ✓</span>':(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')?'<span class="pill pr">مرفوض</span>':r.supStatus==='معتمد'?'<span class="pill pb">بانتظار المدير</span>':'<span class="pill py">بانتظار المشرف</span>';
+      return `<div class="ccard ${actionable?'cc-y':((r.dirStatus==='معتمد')?'cc-g':(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')?'cc-r':'cc-b')}" style="margin-bottom:12px">
+        <div class="cc-top"><div><div class="cc-name">${r.type} — ${r.sname}</div><div class="cc-meta">الشعبة ${r.grp} · ${r.sid} · ${r.date||''}</div></div>${finalBadge}</div>
+        ${r.details?`<div style="font-size:13px;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px">${r.details}</div>`:''}
+        <div style="display:flex;gap:16px;font-size:11px;margin-top:6px">
+          <span style="color:${r.supStatus==='معتمد'?'var(--green)':r.supStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المشرف: ${r.supStatus}</span>
+          <span style="color:${r.dirStatus==='معتمد'?'var(--green)':r.dirStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدير: ${r.dirStatus}</span>
+        </div>
+        ${actionable?`<div class="btn-row"><button class="btn btn-g btn-sm" onclick="actOnRequest('${r.rid}','معتمد')">✓ اعتماد</button><button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','مرفوض')">✕ رفض</button></div>`:''}
+      </div>`;
+    };
+    return `
+    <div class="banner"><div><div class="btitle">📋 الطلبات والموافقات</div><div class="bsub">${isDir?'مدير الأكاديمية — الاعتماد النهائي':'المشرف الأكاديمي — المراجعة الأولى'}</div></div><div class="bpill ${isDir?'bp-y':'bp-b'}">${isDir?'مدير':'مشرف'}</div></div>
+    <div class="stitle">🔔 بانتظار اعتمادك ${pending.length?`(${pending.length})`:''}</div>
+    ${pending.length?pending.map(r=>card(r,true)).join(''):'<div class="alert as"><span class="aicon">✅</span>لا توجد طلبات بانتظار اعتمادك</div>'}
+    <div class="stitle" style="margin-top:24px">📚 كل الطلبات (${requests.length})</div>
+    ${done.length?done.map(r=>card(r,false)).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات</div>'}`;
   },
   alerts:()=>{
     const hi=allCourses.filter(isHighAbs),lo=allCourses.filter(isLowPerf);
@@ -1856,10 +1938,11 @@ function showCourseDetail(courseName){
           <thead><tr><th>الاسم</th><th>الإنجاز</th><th>الغياب</th><th>الحالة</th></tr></thead>
           <tbody>${cs.map(c=>{
             const st=students.find(s=>s.id===c.sid);
+            const dispName=st?st.name:(c.sname||c.sid);
             const p=Math.round(c.pct);
             const status=c.abs>25?'<span style="color:var(--red)">محروم</span>':p>=60?'<span style="color:var(--green)">ناجح</span>':'<span style="color:var(--red)">راسب</span>';
             return `<tr onclick="document.getElementById('courseModal').remove();setTimeout(()=>showStudentDetail('${c.sid}'),100)" style="cursor:pointer">
-              <td>${st?st.name.split(' ').slice(0,3).join(' '):c.sid}</td>
+              <td>${dispName.split(' ').slice(0,3).join(' ')}</td>
               <td><span class="pill ${p>=60?'pg':'pr'}">${p}%</span></td>
               <td style="color:${c.abs>25?'var(--red)':'var(--muted)'}">${Math.round(c.abs)}%</td>
               <td>${status}</td>
@@ -1932,8 +2015,47 @@ async function submitNewUser(type){
   }
 }
 
+// ===== نظام الطلبات والموافقات =====
+// الطالب يرسل طلب جديد
+async function submitRequest(){
+  const type=document.getElementById('rq-type').value;
+  const details=document.getElementById('rq-details').value.trim();
+  if(!details){showToast('يرجى كتابة تفاصيل الطلب','w');return}
+  const rid='REQ'+Date.now();
+  const now=new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+  const rec={rid,sid:user.id,sname:user.name,grp:user.grp,type,details,date:now,supStatus:'معلق',dirStatus:'معلق',finalStatus:'قيد المراجعة',notes:''};
+  showToast('جاري إرسال الطلب...','i');
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'addRequest',records:[rec]}),headers:{'Content-Type':'text/plain'}});
+    showToast('✅ تم إرسال طلبك بنجاح','s');
+    // تحديث محلي فوري
+    requests.unshift(rec);
+    document.getElementById('rq-details').value='';
+    showSPage('services',null);
+  }catch(e){showToast('تعذر الإرسال — جرب مرة أخرى','e');}
+}
 
-// ===== THEME TOGGLE =====
+// الإداري (مشرف أو مدير) يعتمد/يرفض طلب
+async function actOnRequest(rid,decision){
+  const r=requests.find(x=>x.rid===rid);
+  if(!r)return;
+  const isDir=user.level==='director';
+  // تحديث محلي
+  if(isDir){
+    r.dirStatus=decision;
+    r.finalStatus=decision==='معتمد'?'معتمد':'مرفوض';
+  }else{
+    r.supStatus=decision;
+    if(decision==='مرفوض')r.finalStatus='مرفوض';
+  }
+  const payload={rid,supStatus:r.supStatus,dirStatus:r.dirStatus,finalStatus:r.finalStatus,by:user.name,level:user.level||'supervisor'};
+  showToast('جاري الحفظ...','i');
+  try{
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'updateRequest',records:[payload]}),headers:{'Content-Type':'text/plain'}});
+    showToast(decision==='معتمد'?'✅ تم الاعتماد':'تم الرفض','s');
+    showAPage('requests',null);
+  }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
+}
 function toggleTheme(){
   const body = document.body;
   const isLight = body.classList.contains('light-mode');
