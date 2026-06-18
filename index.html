@@ -612,7 +612,11 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx8g-clb-E12c7KfFVMWO_
 const ADMIN=[
   {id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
   {id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
-  {id:'director',ph:'000000000',name:'مدير الأكاديمية',title:'مدير الأكاديمية',level:'director'}
+  {id:'1805468',ph:'534821578',name:'هشام نبيه',title:'مدير الأكاديمية',level:'director'},
+  {id:'admin2',ph:'000000001',name:'إداري احتياط 1',title:'مشرف أكاديمي',level:'supervisor'},
+  {id:'admin3',ph:'000000002',name:'إداري احتياط 2',title:'مشرف أكاديمي',level:'supervisor'},
+  {id:'admin4',ph:'000000003',name:'إداري احتياط 3',title:'مدير الأكاديمية',level:'director'},
+  {id:'admin5',ph:'000000004',name:'إداري احتياط 4',title:'مدير الأكاديمية',level:'director'}
 ];
 
 let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[];
@@ -657,9 +661,29 @@ async function doLogin(){
   document.getElementById('ldg').style.display='block';
   try{
     if(role==='a'){
-      const f=ADMIN.find(a=>norm(a.id)===norm(sid)&&norm(a.ph)===sph);
+      let f=null;
+      // أولاً: ابحث في تبويب قاعدة بيانات الاداريين
+      // A=الرقم الوظيفي B=الاسم C=المسمى D=الجوال E=البريد F=الرقم السري G=الصلاحية
+      try{
+        const rows=await fetchSheet('قاعدة بيانات الاداريين!A:G');
+        for(let i=1;i<rows.length;i++){
+          const r=rows[i];
+          if(!r[0])continue;
+          const pw=norm(r[5])||norm(r[3]); // الرقم السري (F)، وإن فضي فالجوال (D)
+          if(n0(r[0])===sid&&(pw===sph||norm(r[3])===sph)){
+            const lvl=n0(r[6]).includes('مدير')?'director':'supervisor';
+            f={id:n0(r[0]),name:n0(r[1]),title:n0(r[2])||'إداري',ph:n0(r[3]),email:n0(r[4]),level:lvl,role:'a'};
+            break;
+          }
+        }
+      }catch(e){/* لو التبويب غير موجود نكمل للاحتياط */}
+      // احتياط: حسابات الكود الثابتة
+      if(!f){
+        const a=ADMIN.find(a=>norm(a.id)===norm(sid)&&norm(a.ph)===sph);
+        if(a)f={...a,role:'a'};
+      }
       if(!f)throw new Error('not found');
-      user={...f,role:'a'};
+      user=f;
       await loadAdmin();
     } else if(role==='t'){
       const rows=await fetchSheet('قاعدة بيانات المدربين!A:E');
