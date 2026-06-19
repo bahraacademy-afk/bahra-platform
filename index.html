@@ -877,6 +877,11 @@ function absHoursToPct(absHours,code){
 function normCode(c){return String(c||'').replace(/\s+/g,'').trim()}
 
 // ===== مولّد الجدول الأوتوماتيكي =====
+// ساعات الاتصال الأسبوعية لمادة (من قاعدة المقررات حسب الرمز)
+function weeklyHours(code){
+  const cat=catalog.find(c=>normCode(c.code)===normCode(code));
+  return cat?(parseFloat(cat.hours)||0):0;
+}
 // يجلب المواد الحالية لشعبة + مدربيها + يحسب عدد الحصص الأسبوعية
 function coursesForSchedule(grp){
   const seen={};
