@@ -1326,11 +1326,11 @@ const sPgs={
     return `
     <div class="banner anim-up"><div><div class="btitle">مرحباً، ${user.name.split(' ')[0]} 👋</div><div class="bsub">${user.spec} — الشعبة ${user.grp}</div></div><div class="bpill bp-r">الشعبة ${user.grp}</div></div>
     <div class="metrics">
-      <div class="mcard mc-p"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpa)}">${gpa}<span style="font-size:14px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
-      <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
-      <div class="mcard mc-b"><div class="micon">🟢</div><div class="mnum cb" data-target="${current.length}">${current.length}</div><div class="mlbl">مواد حالية</div></div>
-      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg" data-target="${past.length}">${past.length}</div><div class="mlbl">مواد مكتملة</div></div>
-      ${warn?`<div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warn}">${warn}</div><div class="mlbl">اشعارات</div></div>`:''}
+      <div class="mcard mc-p" onclick="showStudentStat('gpa')" style="cursor:pointer"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpa)}">${gpa}<span style="font-size:14px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
+      <div class="mcard mc-r" onclick="showStudentStat('avg')" style="cursor:pointer"><div class="micon">📈</div><div class="mnum cr" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
+      <div class="mcard mc-b" onclick="showStudentStat('current')" style="cursor:pointer"><div class="micon">🟢</div><div class="mnum cb" data-target="${current.length}">${current.length}</div><div class="mlbl">مواد حالية</div></div>
+      <div class="mcard mc-g" onclick="showStudentStat('done')" style="cursor:pointer"><div class="micon">✅</div><div class="mnum cg" data-target="${past.length}">${past.length}</div><div class="mlbl">مواد مكتملة</div></div>
+      ${warn?`<div class="mcard mc-y" onclick="showStudentStat('alerts')" style="cursor:pointer"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warn}">${warn}</div><div class="mlbl">اشعارات</div></div>`:''}
     </div>
     ${warn?`<div class="alert aw"><span class="aicon">⚠️</span>لديك ${warn} مقرر يحتاج متابعة</div>`:''}
     <div class="stitle">📚 موادك الحالية ${current.length?`(${current.length})`:''}</div>
@@ -1591,10 +1591,10 @@ const tPgs={
     return `
     <div class="banner"><div><div class="btitle">مرحباً، ${user.name.split(' ')[0]} 👨‍🏫</div><div class="bsub">${user.spec}</div></div><div class="bpill bp-b">مدرب</div></div>
     <div class="metrics">
-      <div class="mcard mc-b"><div class="micon">👥</div><div class="mnum cb" data-target="${[...new Set(students.map(s=>s.sid))].length}">${[...new Set(students.map(s=>s.sid))].length}</div><div class="mlbl">إجمالي المتدربين</div></div>
-      <div class="mcard mc-g"><div class="micon">🟢</div><div class="mnum cg" data-target="${currentCrs.length}">${currentCrs.length}</div><div class="mlbl">مقررات حالية</div></div>
-      <div class="mcard mc-r"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=60?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
-      <div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warns}">${warns}</div><div class="mlbl">اشعارات</div></div>
+      <div class="mcard mc-b" onclick="showTrainerStat('students')" style="cursor:pointer"><div class="micon">👥</div><div class="mnum cb" data-target="${[...new Set(students.map(s=>s.sid))].length}">${[...new Set(students.map(s=>s.sid))].length}</div><div class="mlbl">إجمالي المتدربين</div></div>
+      <div class="mcard mc-g" onclick="showTrainerStat('current')" style="cursor:pointer"><div class="micon">🟢</div><div class="mnum cg" data-target="${currentCrs.length}">${currentCrs.length}</div><div class="mlbl">مقررات حالية</div></div>
+      <div class="mcard mc-r" onclick="showTrainerStat('avg')" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=60?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
+      <div class="mcard mc-y" onclick="showTrainerStat('alerts')" style="cursor:pointer"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warns}">${warns}</div><div class="mlbl">اشعارات</div></div>
     </div>
     <div class="stitle">🟢 مقرراتك الحالية ${currentCrs.length?`(${currentCrs.length})`:''}</div>
     ${currentCrs.length?currentCrs.map(c=>courseCard(c,false)).join(''):'<div class="alert ab"><span class="aicon">📭</span>لا توجد مقررات حالية الآن</div>'}
@@ -2145,23 +2145,28 @@ const aPgs={
   reports:()=>{
     const tot=students.length;
     const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
+    const completed=allCourses.filter(c=>c.pct>=80).length;
+    const passRate=allCourses.length?Math.round(allCourses.filter(c=>c.pct>=60).length/allCourses.length*100):0;
+    const deprived=allCourses.filter(c=>c.abs>=25).length;
     const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
     const trRows=trainers.map(t=>{
       const tc=allCourses.filter(c=>c.trainer===t);
       const ta=tc.length?Math.round(tc.reduce((a,c)=>a+c.pct,0)/tc.length):0;
       const tw=tc.filter(hasIssue).length;
       const pc=pillClass(ta);
-      return '<tr><td>'+t+'</td><td>'+tc.length+'</td><td><span class="pill '+pc+'">'+ta+'%</span></td><td>'+(tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>')+'</td></tr>';
+      return `<tr onclick="showTrainerDetail('${t}')" style="cursor:pointer"><td>${t}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td><span class="pill ${pc}">${ta}%</span></td><td>${tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>'}</td></tr>`;
     }).join('');
-    return '<div class="stitle">تقارير الأداء الأكاديمي</div>'
-      +'<div class="metrics">'
-      +'<div class="mcard mc-b"><div class="micon">🎓</div><div class="mnum cb">'+tot+'</div><div class="mlbl">متدرب</div></div>'
-      +'<div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">'+allCourses.filter(c=>c.pct>=80).length+'</div><div class="mlbl">مقررات مكتملة</div></div>'
-      +'<div class="mcard mc-y"><div class="micon">📊</div><div class="mnum cy">'+avg+'%</div><div class="mlbl">متوسط عام</div></div>'
-      +'</div>'
-      +'<div class="stitle">أداء المدربين</div>'
-      +'<div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>'+trRows+'</tbody></table></div>'
-      +'<div class="btn-row"><button class="btn btn-b" onclick="window.print()">🖨️ طباعة التقرير</button></div>';
+    return `<div class="stitle">تقارير الأداء الأكاديمي</div>
+    <div class="alert ab"><span class="aicon">👆</span>اضغط على أي بطاقة أو صف لعرض التفاصيل الكاملة</div>
+    <div class="metrics">
+      <div class="mcard mc-y" onclick="showRepDetail('avg')" style="cursor:pointer"><div class="micon">📊</div><div class="mnum cy">${avg}%</div><div class="mlbl">متوسط عام</div></div>
+      <div class="mcard mc-g" onclick="showRepDetail('completed')" style="cursor:pointer"><div class="micon">✅</div><div class="mnum cg">${completed}</div><div class="mlbl">مقررات مكتملة</div></div>
+      <div class="mcard mc-b" onclick="showRepDetail('trainers')" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cb">${trainers.length}</div><div class="mlbl">مدرب</div></div>
+      <div class="mcard mc-r" onclick="showRepDetail('deprived')" style="cursor:pointer"><div class="micon">⛔</div><div class="mnum cr">${deprived}</div><div class="mlbl">حالات حرمان</div></div>
+    </div>
+    <div class="stitle">أداء المدربين <span style="font-size:12px;color:var(--muted);font-weight:400">(اضغط للتفاصيل)</span></div>
+    <div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>${trRows}</tbody></table></div>
+    <div class="btn-row"><button class="btn btn-b" onclick="printAcademicReport()">🖨️ طباعة التقرير</button></div>`;
   },
     settings:()=>{
     const totSt=students.length;
@@ -2296,6 +2301,192 @@ const origShow = showSPage || null;
 
 
 // ===== STUDENT DETAIL MODAL =====
+// ===== مودال تفاصيل موحّد (لكل البطاقات في كل البوابات) =====
+function showDetail(title,icon,html){
+  const old=document.getElementById('detailModal');if(old)old.remove();
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';
+  overlay.id='detailModal';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  overlay.innerHTML=`
+    <div class="modal" style="max-width:600px;max-height:85vh;overflow-y:auto">
+      <div class="modal-title">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">${icon||'📊'}</span>
+          <div style="font-size:16px;font-weight:700">${title}</div>
+        </div>
+        <button class="modal-close" onclick="document.getElementById('detailModal').remove()">✕</button>
+      </div>
+      <div>${html}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+// صف قائمة بسيط داخل المودال
+function detailRow(label,value,color){
+  return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border)">
+    <span style="font-size:13px;color:var(--muted)">${label}</span>
+    <span style="font-size:14px;font-weight:700;color:${color||'var(--text)'}">${value}</span>
+  </div>`;
+}
+// تفاصيل بطاقات تقرير الإداري
+function showRepDetail(kind){
+  const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
+  if(kind==='avg'){
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:12px">متوسط الدرجات لكل شعبة:</div>';
+    grps.forEach(g=>{
+      const gc=allCourses.filter(c=>students.filter(s=>s.grp===g).map(s=>s.id).includes(c.sid));
+      const a=gc.length?Math.round(gc.reduce((x,c)=>x+c.pct,0)/gc.length):0;
+      html+=detailRow('الشعبة '+g,a+'%',a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)');
+    });
+    showDetail('متوسط الأداء العام','📊',html);
+  }else if(kind==='completed'){
+    const byGrp={};
+    allCourses.filter(c=>c.pct>=80).forEach(c=>{byGrp[c.grp]=(byGrp[c.grp]||0)+1;});
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المقررات المكتملة (درجة 80%+) لكل شعبة:</div>';
+    grps.forEach(g=>html+=detailRow('الشعبة '+g,(byGrp[g]||0)+' مقرر','var(--green)'));
+    html+=detailRow('الإجمالي',allCourses.filter(c=>c.pct>=80).length+' مقرر','var(--green)');
+    showDetail('المقررات المكتملة','✅',html);
+  }else if(kind==='trainers'){
+    const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المدربون النشطون:</div>';
+    trainers.forEach(t=>{
+      const tc=allCourses.filter(c=>c.trainer===t);
+      const a=tc.length?Math.round(tc.reduce((x,c)=>x+c.pct,0)/tc.length):0;
+      html+=`<div onclick="document.getElementById('detailModal').remove();showTrainerDetail('${t}')" style="cursor:pointer">${detailRow(t,a+'% · '+[...new Set(tc.map(c=>c.sid))].length+' متدرب',a>=70?'var(--green)':'var(--gold)')}</div>`;
+    });
+    showDetail('المدربون','👨‍🏫',html);
+  }else if(kind==='deprived'){
+    const dep=allCourses.filter(c=>c.abs>=25);
+    let html=dep.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المتدربون المحرومون (غياب 25%+):</div>':'<div class="alert as"><span class="aicon">✅</span>لا توجد حالات حرمان</div>';
+    dep.forEach(c=>{const st=students.find(s=>s.id===c.sid);html+=detailRow((st?st.name.split(' ').slice(0,3).join(' '):c.sname)+' · '+c.course,Math.round(c.abs)+'%','var(--red)');});
+    showDetail('حالات الحرمان','⛔',html);
+  }
+}
+// تفاصيل أداء مدرب
+function showTrainerDetail(t){
+  const tc=allCourses.filter(c=>c.trainer===t);
+  const a=tc.length?Math.round(tc.reduce((x,c)=>x+c.pct,0)/tc.length):0;
+  const courses=[...new Set(tc.map(c=>c.course))];
+  let html=`<div class="igrid" style="margin-bottom:16px">
+    <div class="iitem"><div class="ilbl">عدد المتدربين</div><div class="ival">${[...new Set(tc.map(c=>c.sid))].length}</div></div>
+    <div class="iitem"><div class="ilbl">عدد المقررات</div><div class="ival">${courses.length}</div></div>
+    <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival" style="color:${a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)'}">${a}%</div></div>
+    <div class="iitem"><div class="ilbl">اشعارات</div><div class="ival" style="color:${tc.filter(hasIssue).length?'var(--red)':'var(--green)'}">${tc.filter(hasIssue).length}</div></div>
+  </div>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:8px">المقررات:</div>`;
+  courses.forEach(co=>{
+    const cc=tc.filter(c=>c.course===co);
+    const ca=Math.round(cc.reduce((x,c)=>x+c.pct,0)/cc.length);
+    html+=detailRow(co+' ('+cc.length+' متدرب)',ca+'%',ca>=70?'var(--green)':ca>=60?'var(--gold)':'var(--red)');
+  });
+  showDetail('المدرب: '+t,'👨‍🏫',html);
+}
+// تفاصيل بطاقات المدرب
+function showTrainerStat(kind){
+  if(kind==='students'){
+    const ids=[...new Set(students.map(s=>s.sid))];
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:10px">متدربوك ('+ids.length+'):</div>';
+    ids.forEach(id=>{const s=students.find(x=>x.sid===id);html+=detailRow(s.name.split(' ').slice(0,3).join(' '),'الشعبة '+s.grp);});
+    showDetail('إجمالي المتدربين','👥',html);
+  }else if(kind==='current'){
+    const cur=[...new Set(students.filter(s=>s.status==='حالي').map(s=>s.course))];
+    let html=cur.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">المقررات الحالية:</div>':'<div class="alert ab">لا توجد مقررات حالية</div>';
+    cur.forEach(co=>{const cc=students.filter(s=>s.course===co);const a=Math.round(cc.reduce((x,s)=>x+s.pct,0)/cc.length);html+=detailRow(co,cc.length+' متدرب · '+a+'%',a>=70?'var(--green)':'var(--gold)');});
+    showDetail('المقررات الحالية','🟢',html);
+  }else if(kind==='avg'){
+    const crs=[...new Set(students.map(s=>s.course))];
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:10px">متوسط الدرجات لكل مقرر:</div>';
+    crs.forEach(co=>{const cc=students.filter(s=>s.course===co);const a=Math.round(cc.reduce((x,s)=>x+s.pct,0)/cc.length);html+=detailRow(co,a+'%',a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)');});
+    showDetail('متوسط الدرجات','📊',html);
+  }else if(kind==='alerts'){
+    const iss=students.filter(hasIssue);
+    let html=iss.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">حالات تحتاج متابعة:</div>':'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات</div>';
+    iss.forEach(s=>{const r=isHighAbs(s)?'غياب '+Math.round(s.abs)+'%':'درجة '+Math.round(s.pct)+'%';html+=detailRow(s.name.split(' ').slice(0,3).join(' ')+' · '+s.course,r,'var(--red)');});
+    showDetail('الاشعارات','⚠️',html);
+  }
+}
+// تفاصيل بطاقات الطالب
+function showStudentStat(kind){
+  if(kind==='gpa'){
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:10px">معدّل كل مقرر (من 5):</div>';
+    courses.filter(c=>c.pct>0).forEach(c=>{const g=gradeToGPA(c.pct);html+=detailRow(c.course,g.toFixed(2),gpaColor(g));});
+    showDetail('المعدّل التراكمي','🏆',html);
+  }else if(kind==='avg'){
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:10px">درجاتك:</div>';
+    courses.forEach(c=>{const p=Math.round(c.pct);html+=detailRow(c.course,p+'%',p>=80?'var(--green)':p>=60?'var(--gold)':'var(--red)');});
+    showDetail('متوسط الدرجات','📈',html);
+  }else if(kind==='current'){
+    const cur=courses.filter(c=>c.status==='حالي');
+    let html=cur.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">موادك الحالية:</div>':'<div class="alert ab">لا توجد مواد حالية</div>';
+    cur.forEach(c=>html+=detailRow(c.course,c.trainer||'—'));
+    showDetail('المواد الحالية','🟢',html);
+  }else if(kind==='done'){
+    const past=courses.filter(c=>c.status==='سابق');
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:10px">المواد المكتملة:</div>';
+    past.forEach(c=>{const p=Math.round(c.pct);html+=detailRow(c.course,p+'% · '+(c.letter||''),p>=80?'var(--green)':p>=60?'var(--gold)':'var(--red)');});
+    showDetail('المواد المكتملة','✅',html);
+  }else if(kind==='alerts'){
+    const iss=courses.filter(hasIssue);
+    let html=iss.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">مواد تحتاج متابعة:</div>':'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات</div>';
+    iss.forEach(c=>{const r=isHighAbs(c)?'غياب '+Math.round(c.abs)+'%':'درجة '+Math.round(c.pct)+'%';html+=detailRow(c.course,r,'var(--red)');});
+    showDetail('الاشعارات','⚠️',html);
+  }
+}
+// طباعة تقرير الأداء الأكاديمي
+function printAcademicReport(){
+  const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
+  const today=new Date().toLocaleDateString('ar-SA');
+  const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
+  const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
+  const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
+  const secRows=grps.map(g=>{
+    const gs=students.filter(s=>s.grp===g);
+    const gc=allCourses.filter(c=>gs.map(s=>s.id).includes(c.sid));
+    const a=gc.length?Math.round(gc.reduce((x,c)=>x+c.pct,0)/gc.length):0;
+    const pass=gc.length?Math.round(gc.filter(c=>c.pct>=60).length/gc.length*100):0;
+    return `<tr><td>الشعبة ${g}</td><td>${gs.length}</td><td>${a}%</td><td>${pass}%</td><td>${gc.filter(c=>c.abs>=25).length}</td></tr>`;
+  }).join('');
+  const trRows=trainers.map(t=>{
+    const tc=allCourses.filter(c=>c.trainer===t);
+    const a=tc.length?Math.round(tc.reduce((x,c)=>x+c.pct,0)/tc.length):0;
+    return `<tr><td>${t}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td>${[...new Set(tc.map(c=>c.course))].length}</td><td>${a}%</td><td>${tc.filter(hasIssue).length}</td></tr>`;
+  }).join('');
+  const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الأداء الأكاديمي</title>
+  <style>
+  @page{size:A4;margin:14mm}*{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box}
+  body{margin:0;color:#1a2942}
+  .hdr{display:flex;align-items:center;gap:16px;border-bottom:3px solid #c9a227;padding-bottom:14px;margin-bottom:18px}
+  .hdr img{width:62px;height:62px;border-radius:50%}.hdr .t1{font-size:21px;font-weight:800;color:#0a2348}.hdr .t2{font-size:12px;color:#5a6b85;margin-top:2px}
+  .hdr .meta{margin-right:auto;text-align:left;font-size:12px;color:#5a6b85}
+  .kpis{display:flex;gap:12px;margin-bottom:22px}
+  .kpi{flex:1;border:1px solid #c5cfdd;border-radius:10px;padding:14px;text-align:center}
+  .kpi .n{font-size:26px;font-weight:800;color:#0a2348}.kpi .l{font-size:11px;color:#5a6b85;margin-top:3px}
+  .sec-title{font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:9px 14px;border-radius:8px;margin:20px 0 12px}
+  table{width:100%;border-collapse:collapse;margin-bottom:8px}
+  th{background:#0a2348;color:#fff;font-size:12px;padding:8px;border:1px solid #0a2348}
+  td{border:1px solid #c5cfdd;padding:7px;text-align:center;font-size:12px}
+  tr:nth-child(even) td{background:#f6f8fb}
+  .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700}
+  @media print{.noprint{display:none}}
+  </style></head><body>
+  <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">أكاديمية بحرة التعليمية</div><div class="t2">تقرير الأداء الأكاديمي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
+  <div class="kpis">
+    <div class="kpi"><div class="n">${students.length}</div><div class="l">متدرب</div></div>
+    <div class="kpi"><div class="n">${avg}%</div><div class="l">متوسط عام</div></div>
+    <div class="kpi"><div class="n">${trainers.length}</div><div class="l">مدرب</div></div>
+    <div class="kpi"><div class="n">${allCourses.filter(c=>c.pct>=80).length}</div><div class="l">مقرر مكتمل</div></div>
+  </div>
+  <div class="sec-title">أداء الشعب</div>
+  <table><thead><tr><th>الشعبة</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>نسبة النجاح</th><th>حالات حرمان</th></tr></thead><tbody>${secRows}</tbody></table>
+  <div class="sec-title">أداء المدربين</div>
+  <table><thead><tr><th>المدرب</th><th>المتدربون</th><th>المقررات</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>${trRows}</tbody></table>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){showToast('فعّل النوافذ المنبثقة','w');return;}
+  w.document.write(html);w.document.close();
+}
+
 function showStudentDetail(sid){
   const st=students.find(s=>s.id===sid);
   if(!st)return;
