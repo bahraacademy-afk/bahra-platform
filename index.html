@@ -581,9 +581,51 @@ body{top:0!important}
   font-size:13px!important;
   cursor:pointer;
 }
+/* ===== شاشة البداية ===== */
+#splash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 50% 40%,#13243f 0%,#0a0e1a 70%);transition:opacity .6s ease,visibility .6s ease}
+#splash.hide{opacity:0;visibility:hidden}
+.splash-inner{text-align:center;padding:20px}
+.splash-logo-wrap{margin-bottom:24px}
+#splashLogo{width:120px;height:120px;border-radius:50%;opacity:0;
+  animation:splashLogo 1s cubic-bezier(.2,.8,.2,1) forwards;
+  box-shadow:0 0 0 0 rgba(230,57,70,.5)}
+@keyframes splashLogo{0%{opacity:0;transform:scale(.4) rotate(-12deg)}60%{transform:scale(1.12) rotate(4deg)}100%{opacity:1;transform:scale(1) rotate(0);
+  box-shadow:0 0 60px 6px rgba(230,57,70,.35)}}
+.splash-name{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:10px;direction:ltr}
+.sword{display:inline-flex;align-items:center;font-size:clamp(26px,7vw,42px);font-weight:900;color:#fff;font-family:'Segoe UI',sans-serif;letter-spacing:.5px}
+.sword .sl{display:inline-block;opacity:0;transform:scale(.2);animation:slPop .5s cubic-bezier(.2,1.4,.4,1) forwards}
+.sword .sl.red{color:#ff4757}
+.sword .sr{display:inline-block;overflow:hidden;white-space:nowrap;max-width:0;opacity:0;animation:srReveal .55s ease forwards}
+.w1 .sl{animation-delay:.5s}.w1 .sr{animation-delay:.8s}
+.w2 .sl{animation-delay:1.25s}.w2 .sr{animation-delay:1.55s}
+.w3 .sl{animation-delay:2s}.w3 .sr{animation-delay:2.3s}
+@keyframes slPop{to{opacity:1;transform:scale(1)}}
+@keyframes srReveal{to{max-width:260px;opacity:1}}
+.splash-sub{color:#8a9bb5;font-size:14px;opacity:0;animation:fadeUp .6s ease 2.7s forwards}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:.9;transform:translateY(0)}}
+.splash-bar{width:200px;height:4px;border-radius:4px;background:rgba(255,255,255,.08);margin:26px auto 12px;overflow:hidden}
+.splash-bar-fill{height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,#ff4757,#ffa502);animation:splashBar 2.6s ease forwards}
+@keyframes splashBar{0%{width:0}100%{width:100%}}
+.splash-status{color:#6a7a95;font-size:12px;opacity:0;animation:fadeUp .5s ease 1s forwards}
 </style>
 </head>
 <body>
+
+<!-- شاشة البداية مع أنيميشن الشعار والاسم -->
+<div id="splash">
+  <div class="splash-inner">
+    <div class="splash-logo-wrap"><img id="splashLogo" alt="شعار الأكاديمية"></div>
+    <div class="splash-name">
+      <span class="sword w1"><span class="sl">B</span><span class="sr">ahra</span></span>
+      <span class="sword w2"><span class="sl red">L</span><span class="sr">earning</span></span>
+      <span class="sword w3"><span class="sl">A</span><span class="sr">cademy</span></span>
+    </div>
+    <div class="splash-sub">المنصة الأكاديمية المتكاملة</div>
+    <div class="splash-bar"><div class="splash-bar-fill"></div></div>
+    <div class="splash-status" id="splashStatus">جاري تحميل البيانات...</div>
+  </div>
+</div>
 
 <div class="bg-layer">
   <div class="bg-grid"></div>
@@ -2229,27 +2271,49 @@ function copyLink(){
   navigator.clipboard.writeText(link).then(()=>showToast('تم نسخ الرابط','s')).catch(()=>showToast('تعذر النسخ','e'));
 }
 
+// ===== شاشة البداية =====
+const SPLASH_MIN=2900; // الحد الأدنى لعرض الشاشة (مدة الأنيميشن)
+let splashStart=Date.now();
+function hideSplash(){
+  const sp=document.getElementById('splash');
+  if(!sp)return;
+  const elapsed=Date.now()-splashStart;
+  const wait=Math.max(0,SPLASH_MIN-elapsed);
+  setTimeout(()=>{sp.classList.add('hide');setTimeout(()=>sp.remove(),650);},wait);
+}
+function setSplashLogo(){
+  try{
+    const fav=document.querySelector('link[rel="icon"]');
+    const img=document.getElementById('splashLogo');
+    if(fav&&img)img.src=fav.href;
+  }catch(e){}
+}
+
 // استرجاع الجلسة عند تحميل الصفحة
 async function restoreSession(){
   try{
     const savedUser=localStorage.getItem('bla_user');
     const savedRole=localStorage.getItem('bla_role');
-    if(!savedUser||!savedRole)return;
+    if(!savedUser||!savedRole){hideSplash();return;}
     const u=JSON.parse(savedUser);
     role=savedRole;
     currentUser=u;
     user=u;
+    const st=document.getElementById('splashStatus');if(st)st.textContent='جاري جلب بياناتك...';
     if(role==='s') await loadStudent();
     else if(role==='t') await loadTrainer();
     else await loadAdmin();
     showApp();
+    hideSplash();
   }catch(e){
     localStorage.removeItem('bla_user');
     localStorage.removeItem('bla_role');
+    hideSplash();
   }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+  setSplashLogo();
   restoreSession();
 });
 
