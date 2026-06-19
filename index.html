@@ -185,6 +185,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .sch-table{width:100%;border-collapse:collapse;min-width:640px}
 .sch-table th{background:var(--card2);padding:12px 8px;font-size:13px;font-weight:700;border:1px solid var(--border);color:#6ab8f7}
 .sch-pnum{background:var(--card2);font-weight:700;text-align:center;padding:8px;border:1px solid var(--border);font-size:12px;color:var(--muted)}
+.sch-time{font-size:10px;color:#6ab8f7;font-weight:600;margin-top:4px;white-space:nowrap}
 .sch-cell{border:1px solid var(--border);padding:4px;height:64px;vertical-align:middle;text-align:center;transition:.15s;min-width:110px}
 .sch-cell.filled{background:rgba(46,204,113,.06)}
 .sch-cell:not(.filled):hover{background:rgba(26,122,191,.06);cursor:default}
@@ -193,6 +194,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .sch-item:active{cursor:grabbing}
 .sch-course{font-size:12px;font-weight:700;color:var(--text);line-height:1.3}
 .sch-trainer{font-size:10px;color:var(--muted);margin-top:2px}
+.sch-room{margin-top:5px;width:100%;font-size:10px;padding:3px 4px;border-radius:6px;border:1px solid rgba(244,162,97,.3);background:rgba(244,162,97,.08);color:#f4a261;cursor:pointer}
 .cc-footer{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px}
 
 /* ===== TABLE ===== */
@@ -642,8 +644,10 @@ const ADMIN=[
 
 let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
-let schedule={}, schedConfig={periodsPerDay:5, periodHours:2};
+let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8};
 const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+// معامل/قاعات الأكاديمية (قابلة للتعديل)
+const LABS=['قاعة التدريب','معمل الكمبيوتر','معمل الإلكترونيات','معمل النيوماتك','معمل الهيدروليك'];
 let attendanceData={}, gradesData={};
 let activeFilters={half:'all',letter:'all',status:'all'};
 
@@ -882,6 +886,21 @@ function weeklyHours(code){
   const cat=catalog.find(c=>normCode(c.code)===normCode(code));
   return cat?(parseFloat(cat.hours)||0):0;
 }
+// تنسيق الوقت (رقم عشري لساعة بصيغة 12)
+function fmtTime(h){
+  h=((h%24)+24)%24;
+  let hr=Math.floor(h), mn=Math.round((h-hr)*60);
+  if(mn===60){hr++;mn=0;}
+  const ampm=hr<12?'ص':'م';
+  let h12=hr%12; if(h12===0)h12=12;
+  return `${h12}:${String(mn).padStart(2,'0')} ${ampm}`;
+}
+// وقت الحصة رقم p (تبدأ من 0)
+function periodTime(p){
+  const s=schedConfig.startHour+p*schedConfig.periodHours;
+  const e=s+schedConfig.periodHours;
+  return fmtTime(s)+' - '+fmtTime(e);
+}
 // يجلب المواد الحالية لشعبة + مدربيها + يحسب عدد الحصص الأسبوعية
 function coursesForSchedule(grp){
   const seen={};
@@ -909,6 +928,21 @@ function trainerBusy(grp,day,period,trainer){
   }
   return false;
 }
+// التحقق من تعارض المعمل في نفس اليوم+الحصة عبر كل الشعب
+function labBusy(grp,day,period,room){
+  if(!room)return false;
+  const slot=day+'|'+period;
+  for(const g in schedule){
+    const cell=schedule[g]&&schedule[g][slot];
+    if(cell&&cell.room===room&&!(g===grp))return true;
+  }
+  return false;
+}
+// اختيار أول معمل متاح لخانة
+function freeLab(grp,day,period){
+  for(const lab of LABS){if(!labBusy(grp,day,period,lab))return lab;}
+  return LABS[0];
+}
 // توليد جدول لشعبة واحدة
 function generateScheduleFor(grp){
   const courses=coursesForSchedule(grp);
@@ -931,7 +965,8 @@ function generateScheduleFor(grp){
           const slot=DAYS[d]+'|'+p;
           if(grid[slot])continue; // الخانة مشغولة بالشعبة
           if(trainerBusy(grp,DAYS[d],p,c.trainer))continue; // المدرب مشغول بشعبة ثانية
-          grid[slot]={code:c.code,course:c.course,trainer:c.trainer};
+          const room=freeLab(grp,DAYS[d],p); // معمل متاح
+          grid[slot]={code:c.code,course:c.course,trainer:c.trainer,room};
           usedDays[d]=1; placed++; done=true; break;
         }
         if(done)break;
@@ -966,6 +1001,13 @@ function schDrop(e,grp,toSlot){
 }
 function schClear(grp,slot){
   if(schedule[grp]&&schedule[grp][slot]){delete schedule[grp][slot];showAPage('schedule',null);}
+}
+// تغيير معمل خانة مع تنبيه التعارض
+function schSetRoom(grp,slot,room){
+  if(!schedule[grp]||!schedule[grp][slot])return;
+  const [day,p]=slot.split('|');
+  schedule[grp][slot].room=room;
+  if(labBusy(grp,day,p,room))showToast('⚠️ تنبيه: المعمل محجوز بشعبة أخرى بنفس الوقت','w');
 }
 function gradeToGPA(g){
   g=parseFloat(g)||0;
@@ -1875,6 +1917,9 @@ const aPgs={
         ${c?`<div class="sch-item" draggable="true" ondragstart="schDrag(event,'${cur}','${slot}')">
           <div class="sch-course">${c.course}</div>
           <div class="sch-trainer">${c.trainer||''}</div>
+          <select class="sch-room" onclick="event.stopPropagation()" onchange="schSetRoom('${cur}','${slot}',this.value)">
+            ${LABS.map(l=>`<option value="${l}" ${c.room===l?'selected':''}>${l}</option>`).join('')}
+          </select>
         </div>`:'<span class="sch-empty">+</span>'}
       </td>`;
     };
@@ -1891,13 +1936,15 @@ const aPgs={
         <input type="number" min="1" max="8" value="${P}" onchange="schedConfig.periodsPerDay=parseInt(this.value)||5;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>ساعة الحصة</label>
         <input type="number" min="1" max="6" step="0.5" value="${schedConfig.periodHours}" onchange="schedConfig.periodHours=parseFloat(this.value)||2;showAPage('schedule',null)"></div>
+      <div class="sch-cfg"><label>بداية الدوام</label>
+        <input type="number" min="6" max="14" step="0.5" value="${schedConfig.startHour}" onchange="schedConfig.startHour=parseFloat(this.value)||8;showAPage('schedule',null)"></div>
       <button class="btn btn-b" onclick="genSchedule('${cur}')">⚡ ولّد الجدول</button>
     </div>
     ${cListInfo.length?`<div class="alert ab"><span class="aicon">📚</span>الشعبة ${cur}: ${cListInfo.length} مواد حالية · تحتاج ${neededCount} حصة أسبوعياً · ${placedCount} موزّعة</div>`:'<div class="alert aw"><span class="aicon">⚠️</span>لا توجد مواد حالية لهذه الشعبة (تأكد من حالة المواد = حالي)</div>'}
     ${cListInfo.length?`<div class="sch-legend">${cListInfo.map(c=>`<span class="sch-tag">${c.course} <b>(${c.sessions} حصص)</b> · ${c.trainer}</span>`).join('')}</div>`:''}
     <div class="sch-wrap"><table class="sch-table">
       <thead><tr><th>الحصة</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-      <tbody>${[...Array(P).keys()].map(p=>`<tr><td class="sch-pnum">${p+1}</td>${DAYS.map(d=>cell(d,p)).join('')}</tr>`).join('')}</tbody>
+      <tbody>${[...Array(P).keys()].map(p=>`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time">${periodTime(p)}</div></td>${DAYS.map(d=>cell(d,p)).join('')}</tr>`).join('')}</tbody>
     </table></div>
     <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اسحب أي مادة لخانة ثانية لتعديل الجدول · اضغط على خانة لحذفها</div>`;
   },
