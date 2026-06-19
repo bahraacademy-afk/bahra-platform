@@ -173,6 +173,26 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .pr{background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.25)}
 .pb{background:rgba(26,122,191,.12);color:#6ab8f7;border:1px solid rgba(26,122,191,.25)}
 .po{background:rgba(255,138,76,.14);color:#ff8a4c;border:1px solid rgba(255,138,76,.3)}
+/* ===== جدول التوليد ===== */
+.sch-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:16px;padding:14px;background:var(--card2);border-radius:12px;border:1px solid var(--border)}
+.sch-cfg{display:flex;flex-direction:column;gap:4px}
+.sch-cfg label{font-size:11px;color:var(--muted)}
+.sch-cfg select,.sch-cfg input{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:13px;min-width:90px}
+.sch-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.sch-tag{font-size:11px;padding:5px 12px;border-radius:14px;background:rgba(26,122,191,.1);color:#6ab8f7;border:1px solid rgba(26,122,191,.2)}
+.sch-tag b{color:var(--text)}
+.sch-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+.sch-table{width:100%;border-collapse:collapse;min-width:640px}
+.sch-table th{background:var(--card2);padding:12px 8px;font-size:13px;font-weight:700;border:1px solid var(--border);color:#6ab8f7}
+.sch-pnum{background:var(--card2);font-weight:700;text-align:center;padding:8px;border:1px solid var(--border);font-size:12px;color:var(--muted)}
+.sch-cell{border:1px solid var(--border);padding:4px;height:64px;vertical-align:middle;text-align:center;transition:.15s;min-width:110px}
+.sch-cell.filled{background:rgba(46,204,113,.06)}
+.sch-cell:not(.filled):hover{background:rgba(26,122,191,.06);cursor:default}
+.sch-empty{color:var(--muted);opacity:.3;font-size:18px}
+.sch-item{cursor:grab;padding:6px 8px;border-radius:8px;background:rgba(26,122,191,.14);border:1px solid rgba(26,122,191,.3)}
+.sch-item:active{cursor:grabbing}
+.sch-course{font-size:12px;font-weight:700;color:var(--text);line-height:1.3}
+.sch-trainer{font-size:10px;color:var(--muted);margin-top:2px}
 .cc-footer{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px}
 
 /* ===== TABLE ===== */
@@ -621,6 +641,9 @@ const ADMIN=[
 ];
 
 let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[];
+// جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
+let schedule={}, schedConfig={periodsPerDay:5, periodHours:2};
+const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
 let attendanceData={}, gradesData={};
 let activeFilters={half:'all',letter:'all',status:'all'};
 
@@ -852,7 +875,93 @@ function absHoursToPct(absHours,code){
   return Math.min(Math.round((absHours/total)*1000)/10,100); // خانة عشرية واحدة
 }
 function normCode(c){return String(c||'').replace(/\s+/g,'').trim()}
-// ===== المعدّل من 5 (نظام GPA السعودي) =====
+
+// ===== مولّد الجدول الأوتوماتيكي =====
+// يجلب المواد الحالية لشعبة + مدربيها + يحسب عدد الحصص الأسبوعية
+function coursesForSchedule(grp){
+  const seen={};
+  const list=[];
+  allCourses.forEach(c=>{
+    if(c.grp!==grp)return;
+    if(c.status!=='حالي')return;
+    const key=normCode(c.code)||c.course;
+    if(seen[key])return;
+    seen[key]=1;
+    const weekly=weeklyHours(c.code); // ساعات الاتصال الأسبوعية من القاعدة
+    const sess=Math.max(1,Math.round(weekly/schedConfig.periodHours)||1);
+    list.push({code:c.code,course:c.course,trainer:c.trainer||'—',weekly,sessions:Math.min(sess,DAYS.length)});
+  });
+  return list;
+}
+// التحقق من تعارض المدرب في نفس اليوم+الحصة عبر كل الشعب
+function trainerBusy(grp,day,period,trainer){
+  if(!trainer||trainer==='—')return false;
+  const slot=day+'|'+period;
+  for(const g in schedule){
+    if(g===grp)continue;
+    const cell=schedule[g]&&schedule[g][slot];
+    if(cell&&cell.trainer===trainer)return true;
+  }
+  return false;
+}
+// توليد جدول لشعبة واحدة
+function generateScheduleFor(grp){
+  const courses=coursesForSchedule(grp);
+  const grid={};
+  const P=schedConfig.periodsPerDay;
+  // ترتيب: المواد ذات الحصص الأكثر أولاً
+  courses.sort((a,b)=>b.sessions-a.sessions);
+  courses.forEach(c=>{
+    let placed=0;
+    const usedDays={};
+    // محاولة توزيع كل حصة على يوم مختلف
+    let attempts=0;
+    while(placed<c.sessions&&attempts<200){
+      attempts++;
+      // اختر يوم (يفضّل يوم ما استُخدم لهذي المادة)
+      const dayOrder=[...Array(DAYS.length).keys()].sort((a,b)=>(usedDays[a]?1:0)-(usedDays[b]?1:0)||Math.random()-0.5);
+      let done=false;
+      for(const d of dayOrder){
+        for(let p=0;p<P;p++){
+          const slot=DAYS[d]+'|'+p;
+          if(grid[slot])continue; // الخانة مشغولة بالشعبة
+          if(trainerBusy(grp,DAYS[d],p,c.trainer))continue; // المدرب مشغول بشعبة ثانية
+          grid[slot]={code:c.code,course:c.course,trainer:c.trainer};
+          usedDays[d]=1; placed++; done=true; break;
+        }
+        if(done)break;
+      }
+      if(!done)break; // ما فيه خانة متاحة
+    }
+  });
+  schedule[grp]=grid;
+  return grid;
+}
+// توليد بضغطة زر
+function genSchedule(grp){
+  generateScheduleFor(grp);
+  showToast('تم توليد جدول الشعبة '+grp,'s');
+  showAPage('schedule',null);
+}
+// سحب وإفلات لتعديل الجدول يدوياً
+function schDrag(e,grp,slot){e.dataTransfer.setData('text',grp+'::'+slot)}
+function schDrop(e,grp,toSlot){
+  e.preventDefault();
+  const data=e.dataTransfer.getData('text');
+  const [fromGrp,fromSlot]=data.split('::');
+  if(fromGrp!==grp)return; // نفس الشعبة فقط
+  const g=schedule[grp];
+  if(!g||!g[fromSlot])return;
+  const moving=g[fromSlot];
+  const target=g[toSlot];
+  // تبديل أو نقل
+  if(target){g[fromSlot]=target;}else{delete g[fromSlot];}
+  g[toSlot]=moving;
+  showAPage('schedule',null);
+}
+function schClear(grp,slot){
+  if(schedule[grp]&&schedule[grp][slot]){delete schedule[grp][slot];showAPage('schedule',null);}
+}
 function gradeToGPA(g){
   g=parseFloat(g)||0;
   if(g>=95)return 5.00;
@@ -1549,7 +1658,7 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','requests','alerts','reports','settings']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','schedule','requests','alerts','reports','settings']);
   buildMobNav('a',['overview','all_students','requests','alerts','reports']);
   showAPage('overview',null);
 }
@@ -1741,6 +1850,51 @@ const aPgs={
         <div class="prog"><div class="pfill ${fillClass(avg)}" style="width:${avg}%"></div></div>
       </div>`;
     }).join('')}`;
+  },
+  schedule:()=>{
+    const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
+    const cur=window._schedGrp||grps[0]||'1';
+    window._schedGrp=cur;
+    const grid=schedule[cur]||{};
+    const P=schedConfig.periodsPerDay;
+    const cListInfo=coursesForSchedule(cur);
+    const placedCount=Object.keys(grid).length;
+    const neededCount=cListInfo.reduce((a,c)=>a+c.sessions,0);
+    // خلايا الجدول
+    const cell=(day,p)=>{
+      const slot=day+'|'+p;
+      const c=grid[slot];
+      return `<td class="sch-cell ${c?'filled':''}" 
+        ondragover="event.preventDefault()" ondrop="schDrop(event,'${cur}','${slot}')"
+        onclick="${c?`schClear('${cur}','${slot}')`:''}">
+        ${c?`<div class="sch-item" draggable="true" ondragstart="schDrag(event,'${cur}','${slot}')">
+          <div class="sch-course">${c.course}</div>
+          <div class="sch-trainer">${c.trainer||''}</div>
+        </div>`:'<span class="sch-empty">+</span>'}
+      </td>`;
+    };
+    return `
+    <div class="banner"><div><div class="btitle">📅 مولّد الجدول الأوتوماتيكي</div><div class="bsub">يولّد جدول الأحد-الخميس تلقائياً · قابل للتعديل بالسحب</div></div></div>
+    <div class="sch-controls">
+      <div class="sch-cfg">
+        <label>الشعبة</label>
+        <select onchange="window._schedGrp=this.value;showAPage('schedule',null)">
+          ${grps.map(g=>`<option value="${g}" ${g===cur?'selected':''}>الشعبة ${g}</option>`).join('')}
+        </select>
+      </div>
+      <div class="sch-cfg"><label>حصص باليوم</label>
+        <input type="number" min="1" max="8" value="${P}" onchange="schedConfig.periodsPerDay=parseInt(this.value)||5;showAPage('schedule',null)"></div>
+      <div class="sch-cfg"><label>ساعة الحصة</label>
+        <input type="number" min="1" max="6" step="0.5" value="${schedConfig.periodHours}" onchange="schedConfig.periodHours=parseFloat(this.value)||2;showAPage('schedule',null)"></div>
+      <button class="btn btn-b" onclick="genSchedule('${cur}')">⚡ ولّد الجدول</button>
+    </div>
+    ${cListInfo.length?`<div class="alert ab"><span class="aicon">📚</span>الشعبة ${cur}: ${cListInfo.length} مواد حالية · تحتاج ${neededCount} حصة أسبوعياً · ${placedCount} موزّعة</div>`:'<div class="alert aw"><span class="aicon">⚠️</span>لا توجد مواد حالية لهذه الشعبة (تأكد من حالة المواد = حالي)</div>'}
+    ${cListInfo.length?`<div class="sch-legend">${cListInfo.map(c=>`<span class="sch-tag">${c.course} <b>(${c.sessions} حصص)</b> · ${c.trainer}</span>`).join('')}</div>`:''}
+    <div class="sch-wrap"><table class="sch-table">
+      <thead><tr><th>الحصة</th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
+      <tbody>${[...Array(P).keys()].map(p=>`<tr><td class="sch-pnum">${p+1}</td>${DAYS.map(d=>cell(d,p)).join('')}</tr>`).join('')}</tbody>
+    </table></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اسحب أي مادة لخانة ثانية لتعديل الجدول · اضغط على خانة لحذفها</div>`;
   },
   requests:()=>{
     const isDir=user.level==='director';
