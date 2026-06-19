@@ -1023,6 +1023,106 @@ function genAllSchedule(){
   showToast('تم توليد جدول كل الشعب','s');
   showAPage('schedule',null);
 }
+// ===== تقرير الجدول القابل للطباعة =====
+// جداول المدربين: {مدرب: {يوم|حصة: {course,grp,room}}}
+function buildTrainerSchedules(){
+  const res={};
+  for(const grp in schedule){
+    for(const slot in schedule[grp]){
+      const c=schedule[grp][slot];
+      if(!c.trainer||c.trainer==='—')continue;
+      if(!res[c.trainer])res[c.trainer]={};
+      res[c.trainer][slot]={course:c.course,grp,room:c.room};
+    }
+  }
+  return res;
+}
+// جداول القاعات: {قاعة: {يوم|حصة: {course,grp,trainer}}}
+function buildRoomSchedules(){
+  const res={};
+  for(const grp in schedule){
+    for(const slot in schedule[grp]){
+      const c=schedule[grp][slot];
+      const room=c.room||'غير محدد';
+      if(!res[room])res[room]={};
+      res[room][slot]={course:c.course,grp,trainer:c.trainer};
+    }
+  }
+  return res;
+}
+// بناء جدول HTML من شبكة + دالة عرض الخلية
+function schReportTable(grid,cellRender){
+  const days=activeDays();
+  const P=schedConfig.periodsPerDay;
+  const head='<tr><th class="hc">الحصة</th>'+days.map(d=>`<th>${d}</th>`).join('')+'</tr>';
+  const body=[...Array(P).keys()].map(p=>{
+    const cells=days.map(d=>{
+      const c=grid[d+'|'+p];
+      return c?`<td class="f">${cellRender(c)}</td>`:'<td class="e">—</td>';
+    }).join('');
+    return `<tr><td class="tc">الحصة ${p+1}<br><small>${periodTime(p)}</small></td>${cells}</tr>`;
+  }).join('');
+  return `<table class="rt">${head}${body}</table>`;
+}
+// طباعة التقرير الكامل
+function printScheduleReport(){
+  if(!Object.keys(schedule).length||!Object.values(schedule).some(g=>Object.keys(g).length)){
+    showToast('ولّد الجدول أولاً','w');return;
+  }
+  const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
+  const today=new Date().toLocaleDateString('ar-SA');
+  const grps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
+  // 1) جداول الشعب (المتدربين)
+  const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<b>${c.course}</b><span>${c.trainer||''}</span><i>${c.room||''}</i>`)}</div>`).join('');
+  // 2) جداول المدربين
+  const tSched=buildTrainerSchedules();
+  const trHtml=Object.keys(tSched).map(t=>`<div class="block"><h3>👨‍🏫 المدرب: ${t}</h3>${schReportTable(tSched[t],c=>`<b>${c.course}</b><span>الشعبة ${c.grp}</span><i>${c.room||''}</i>`)}</div>`).join('');
+  // 3) جداول القاعات
+  const rSched=buildRoomSchedules();
+  const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<b>${c.course}</b><span>الشعبة ${c.grp}</span><i>${c.trainer||''}</i>`)}</div>`).join('');
+  const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الجدول الدراسي</title>
+  <style>
+  @page{size:A4 landscape;margin:12mm}
+  *{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box}
+  body{margin:0;color:#1a2942;background:#fff}
+  .hdr{display:flex;align-items:center;gap:16px;border-bottom:3px solid #c9a227;padding-bottom:14px;margin-bottom:18px}
+  .hdr img{width:64px;height:64px;border-radius:50%}
+  .hdr .t1{font-size:22px;font-weight:800;color:#0a2348}
+  .hdr .t2{font-size:13px;color:#5a6b85;margin-top:2px}
+  .hdr .meta{margin-right:auto;text-align:left;font-size:12px;color:#5a6b85}
+  .sec-title{font-size:18px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:10px 16px;border-radius:8px;margin:24px 0 14px}
+  .block{margin-bottom:20px;page-break-inside:avoid}
+  .block h3{font-size:15px;font-weight:700;color:#0a2348;margin:0 0 8px;padding-right:6px;border-right:4px solid #c9a227}
+  table.rt{width:100%;border-collapse:collapse;margin-bottom:6px}
+  table.rt th{background:#0a2348;color:#fff;font-size:12px;font-weight:700;padding:8px 4px;border:1px solid #0a2348;text-align:center}
+  table.rt th.hc{background:#c9a227;width:90px}
+  table.rt td{border:1px solid #c5cfdd;padding:6px 4px;text-align:center;vertical-align:middle;font-size:11px;height:52px}
+  table.rt td.tc{background:#f0f3f8;font-weight:700;color:#0a2348;font-size:11px;width:90px}
+  table.rt td.tc small{font-weight:500;color:#7a8aa3;font-size:9px}
+  table.rt td.f{background:#fbf8ef}
+  table.rt td.f b{display:block;color:#0a2348;font-size:11px;font-weight:700;line-height:1.3}
+  table.rt td.f span{display:block;color:#5a6b85;font-size:9px;margin-top:2px}
+  table.rt td.f i{display:block;color:#c9a227;font-size:9px;font-style:normal;margin-top:1px}
+  table.rt td.e{color:#cfd6e0}
+  .page-break{page-break-before:always}
+  @media print{.noprint{display:none}}
+  .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700}
+  </style></head><body>
+  <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <div class="hdr">
+    ${logo?`<img src="${logo}" alt="logo">`:''}
+    <div><div class="t1">أكاديمية بحرة التعليمية</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div></div>
+    <div class="meta">تاريخ الإصدار: ${today}<br>الدوام: ${fmtTime(schedConfig.startHour)} · ${schedConfig.periodsPerDay} حصص</div>
+  </div>
+  <div class="sec-title">أولاً: جداول الشعب (المتدربين)</div>${secHtml}
+  <div class="sec-title page-break">ثانياً: جداول المدربين</div>${trHtml}
+  <div class="sec-title page-break">ثالثاً: جداول القاعات والمعامل</div>${rmHtml}
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){showToast('فعّل النوافذ المنبثقة للطباعة','w');return;}
+  w.document.write(html);
+  w.document.close();
+}
 // سحب وإفلات لتعديل الجدول يدوياً
 function schDrag(e,grp,slot){e.dataTransfer.setData('text',grp+'::'+slot)}
 function schDrop(e,grp,toSlot){
@@ -1940,7 +2040,7 @@ const aPgs={
   },
   schedule:()=>{
     const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
-    const cur=window._schedGrp||grps[0]||'1';
+    const cur=window._schedGrp||'all';
     window._schedGrp=cur;
     const isAll=cur==='all';
     const P=schedConfig.periodsPerDay;
@@ -1996,6 +2096,7 @@ const aPgs={
       <div class="sch-cfg"><label>بداية الدوام</label>
         <input type="number" min="6" max="14" step="0.5" value="${schedConfig.startHour}" onchange="schedConfig.startHour=parseFloat(this.value)||8;showAPage('schedule',null)"></div>
       ${genBtn}
+      <button class="btn btn-out" onclick="printScheduleReport()">🖨️ طباعة تقرير</button>
     </div>
     ${isAll?grps.map(g=>tableFor(g)).join(''):tableFor(cur)}
     <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اسحب أي مادة لخانة ثانية لتعديل الجدول · اضغط على خانة لحذفها</div>`;
