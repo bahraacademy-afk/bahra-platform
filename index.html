@@ -172,6 +172,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .py{background:rgba(244,162,97,.12);color:#f4a261;border:1px solid rgba(244,162,97,.25)}
 .pr{background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.25)}
 .pb{background:rgba(26,122,191,.12);color:#6ab8f7;border:1px solid rgba(26,122,191,.25)}
+.po{background:rgba(255,138,76,.14);color:#ff8a4c;border:1px solid rgba(255,138,76,.3)}
 .cc-footer{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px}
 
 /* ===== TABLE ===== */
@@ -745,12 +746,20 @@ async function loadStudent(){
 }
 
 async function loadTrainer(){
-  const cr=await fetchSheet('سجل المقررات!A:L');
+  const [cr,cat]=await Promise.all([
+    fetchSheet('سجل المقررات!A:L'),
+    fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[])
+  ]);
   students=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(n0(r[6])===user.name)
       students.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
+  }
+  catalog=[];
+  for(let i=1;i<cat.length;i++){
+    const r=cat[i];
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0});
   }
 }
 
@@ -814,10 +823,35 @@ function ccClass(p){return p>=80?'cc-g':p>=60?'cc-y':'cc-r'}
 // ===== منطق المشاكل الفعلية =====
 // أداء منخفض: فقط للمواد التي اترصدت درجتها (>0) وليست حالية (لسه ما خلصت)
 function isLowPerf(c){return c.status!=='حالي' && c.pct>0 && c.pct<60}
-// غياب عالي: ينطبق على كل المواد
-function isHighAbs(c){return c.abs>20}
+// ===== مستويات الإنذار للغياب =====
+// 10% إنذار أول | 20% إنذار ثاني | 25% محروم
+function absLevel(abs){
+  abs=parseFloat(abs)||0;
+  if(abs>=25)return {key:'deprived',label:'محروم',color:'var(--red)',pill:'pr'};
+  if(abs>=20)return {key:'warn2',label:'إنذار ثاني',color:'#ff8a3c',pill:'pr'};
+  if(abs>=10)return {key:'warn1',label:'إنذار أول',color:'#f4c78a',pill:'py'};
+  return {key:'ok',label:'منتظم',color:'var(--green)',pill:'pg'};
+}
+function isDeprived(abs){return (parseFloat(abs)||0)>=25}
+// غياب عالي للاشعارات: من الإنذار الأول (10%) فأكثر
+function isHighAbs(c){return (parseFloat(c.abs)||0)>=10}
 // مشكلة عامة (للعدّ والتلوين)
 function hasIssue(c){return isHighAbs(c)||isLowPerf(c)}
+// ===== حساب ساعات المادة في النصف المجزأ =====
+// ساعات الاتصال أسبوعية × 8 أسابيع = إجمالي ساعات النصف المجزأ
+const WEEKS_PER_HALF=8;
+function courseTotalHours(code){
+  const cat=catalog.find(c=>normCode(c.code)===normCode(code));
+  const weekly=cat?parseFloat(cat.hours)||0:0;
+  return weekly*WEEKS_PER_HALF;
+}
+// نسبة الغياب = (ساعات الغياب ÷ إجمالي ساعات المادة) × 100
+function absHoursToPct(absHours,code){
+  const total=courseTotalHours(code);
+  if(!total)return 0;
+  return Math.min(Math.round((absHours/total)*1000)/10,100); // خانة عشرية واحدة
+}
+function normCode(c){return String(c||'').replace(/\s+/g,'').trim()}
 // ===== المعدّل من 5 (نظام GPA السعودي) =====
 function gradeToGPA(g){
   g=parseFloat(g)||0;
@@ -1106,11 +1140,29 @@ const sPgs={
     <div class="ccard cc-b" style="margin-bottom:20px">
       <div class="cc-name" style="margin-bottom:14px">➕ تقديم طلب جديد</div>
       <div class="mform-group"><label>نوع الطلب</label>
-        <select id="rq-type">
+        <select id="rq-type" onchange="toggleExcuseFields()">
           <option value="ورقة تعريف">ورقة تعريف بالمتدرب</option>
           <option value="عذر غياب">عذر غياب</option>
           <option value="طلب آخر">طلب آخر</option>
         </select>
+      </div>
+      <div id="excuse-fields" style="display:none">
+        <div class="mform-group"><label>المادة (الغياب فيها)</label>
+          <select id="rq-course">
+            <option value="">— اختر المادة —</option>
+            ${[...new Set(courses.filter(c=>c.status==='حالي').map(c=>c.course))].map(cn=>{
+              const c=courses.find(x=>x.course===cn);
+              return `<option value="${cn}" data-code="${normCode(c?.code||'')}">${cn}</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div class="mform-group"><label>عدد ساعات الغياب المطلوب عذرها</label>
+          <input type="number" id="rq-hours" min="0" step="0.5" placeholder="مثال: 4">
+        </div>
+        <div class="mform-group"><label>رابط الملف الداعم (المستند/الصورة)</label>
+          <input type="text" id="rq-file" placeholder="الصق رابط الملف من Google Drive">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">ارفع المستند على Drive واجعله "أي شخص لديه الرابط" ثم الصق الرابط هنا</div>
+        </div>
       </div>
       <div class="mform-group"><label>التفاصيل / السبب</label>
         <textarea id="rq-details" placeholder="اكتب تفاصيل طلبك هنا..."></textarea>
@@ -1183,10 +1235,12 @@ const sPgs={
 
 function courseCardHTML(c){
   const p=Math.round(c.pct);
+  const av=absLevel(c.abs);
+  const showWarn=av.key!=='ok'&&c.status==='حالي';
   return `<div class="ccard ${ccClass(p)}">
     <div class="cc-top"><div><div class="cc-name">${c.course}</div><div class="cc-meta">${c.code}${c.trainer?' · '+c.trainer:''}${c.half&&c.half!=='غير محدد'?' · '+c.half:''}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
     <div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>
-    <div class="cc-footer"><span>الإنجاز: ${p}%</span><span>الغياب: ${Math.round(c.abs)}%</span>${c.letter?'<span>التقدير: '+c.letter+'</span>':''}</div>
+    <div class="cc-footer"><span>الإنجاز: ${p}%</span><span style="color:${av.color}">الغياب: ${Math.round(c.abs)}%${showWarn?' · '+av.label:''}</span>${c.letter?'<span>التقدير: '+c.letter+'</span>':''}</div>
   </div>`;
 }
 
@@ -1266,7 +1320,7 @@ const tPgs={
           <tbody>${ss.map(s=>`<tr>
             <td style="color:var(--muted)">${s.sid}</td><td>${s.name}</td><td>${s.grp}</td>
             <td><span class="pill ${pillClass(Math.round(s.pct))}">${Math.round(s.pct)}%</span></td>
-            <td style="color:${s.abs>20?'#ff8a92':'var(--muted)'}">${Math.round(s.abs)}%</td>
+            <td style="color:${absLevel(s.abs).color}" title="${absLevel(s.abs).label}">${Math.round(s.abs)}%</td>
           </tr>`).join('')}</tbody>
         </table></div>
       </div>`;
@@ -1275,28 +1329,39 @@ const tPgs={
   attendance:()=>{
     const allCrs=[...new Set(students.map(s=>s.course))];
     const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>s.status==='حالي'));
-    const today=new Date().toLocaleDateString('ar-SA');
     return `
-    <div class="stitle">تسجيل الحضور — ${today}</div>
-    <div class="alert ab"><span class="aicon">📋</span>سجّل حضور وغياب المتدربين في <strong style="margin:0 4px">المقررات الحالية</strong> ثم اضغط حفظ</div>
+    <div class="stitle">تسجيل الغياب بالساعات</div>
+    <div class="alert ab"><span class="aicon">⏱️</span>أدخل <strong style="margin:0 4px">عدد ساعات الغياب</strong> لكل متدرب، والمنصة تحسب النسبة تلقائياً (ساعات الاتصال × ${WEEKS_PER_HALF} أسابيع)</div>
     ${crs.length?crs.map(course=>{
       const ss=[...new Map(students.filter(s=>s.course===course).map(s=>[s.sid,s])).values()];
+      const code=ss[0]?.code||'';
+      const total=courseTotalHours(code);
+      const cat=catalog.find(c=>normCode(c.code)===normCode(code));
+      const weekly=cat?parseFloat(cat.hours)||0:0;
       return `<div style="margin-bottom:24px">
-        <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:#6ab8f7">📚 ${course}</div>
-        <div class="att-grid" id="att-${course.replace(/\s/g,'_')}">
-          ${ss.map(s=>`<div class="att-card">
-            <div class="att-name">${s.name.split(' ').slice(0,3).join(' ')}</div>
-            <div class="att-id">${s.sid}</div>
-            <div class="att-btns">
-              <button class="abtn abtn-p ${(attendanceData[s.sid]||{})['حاضر']?'sel':''}" onclick="setAtt('${s.sid}','حاضر',this)">حاضر ✓</button>
-              <button class="abtn abtn-a ${(attendanceData[s.sid]||{})['غائب']?'sel':''}" onclick="setAtt('${s.sid}','غائب',this)">غائب ✗</button>
-            </div>
-            <div class="att-status" id="as-${s.sid}">${attendanceData[s.sid]?.status||''}</div>
-          </div>`).join('')}
+        <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#6ab8f7">📚 ${course}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${weekly?`${weekly} ساعة/أسبوع × ${WEEKS_PER_HALF} = <strong>${total} ساعة إجمالي</strong>`:'⚠️ لا توجد ساعات اتصال لهذه المادة في قاعدة المقررات'}</div>
+        <div class="att-grid">
+          ${ss.map(s=>{
+            const curHours=attendanceData[s.sid]?.hours??'';
+            const curPct=curHours!==''&&total?absHoursToPct(parseFloat(curHours)||0,code):Math.round(s.abs);
+            const lv=absLevel(curPct);
+            return `<div class="att-card">
+              <div class="att-name">${s.name.split(' ').slice(0,3).join(' ')}</div>
+              <div class="att-id">${s.sid}</div>
+              <div style="display:flex;align-items:center;gap:6px;justify-content:center;margin:8px 0">
+                <input type="number" min="0" max="${total||999}" step="0.5" placeholder="ساعات" value="${curHours}" 
+                  oninput="onAbsHours('${s.sid}','${normCode(code)}',this.value)" id="ah-${s.sid}"
+                  style="width:70px;padding:8px;text-align:center;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+                <span style="font-size:11px;color:var(--muted)">ساعة</span>
+              </div>
+              <div class="att-status" id="ap-${s.sid}" style="color:${lv.color};font-weight:700">${curHours!==''?`${curPct}% · ${lv.label}`:`الحالي: ${Math.round(s.abs)}%`}</div>
+            </div>`;
+          }).join('')}
         </div>
-        <div class="btn-row"><button class="btn btn-b" onclick="saveAttendance('${course}')">💾 حفظ حضور ${course}</button></div>
+        <div class="btn-row"><button class="btn btn-b" onclick="saveAttendance('${course}')">💾 حفظ غياب ${course}</button></div>
       </div>`;
-    }).join(''):'<div class="empty"><div class="empty-icon">📅</div>لا توجد مقررات حالية لتسجيل الحضور</div>'}`;
+    }).join(''):'<div class="empty"><div class="empty-icon">📅</div>لا توجد مقررات حالية لتسجيل الغياب</div>'}`;
   },
   grades:()=>{
     const allCrs=[...new Set(students.map(s=>s.course))];
@@ -1313,8 +1378,8 @@ const tPgs={
           <tbody>${ss.map(s=>`<tr>
             <td>${s.name.split(' ').slice(0,3).join(' ')}</td>
             <td><span class="pill ${pillClass(Math.round(s.pct))}">${Math.round(s.pct)}%</span></td>
-            <td style="color:${s.abs>20?'#ff8a92':'var(--muted)'}">${Math.round(s.abs)}%</td>
-            <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${s.abs>25?'disabled title="محروم - غياب +25%"':""} value="${gradesData[s.sid]||''}" onchange="gradesData['${s.sid}']=this.value" id="g-${s.sid}"></td>
+            <td style="color:${absLevel(s.abs).color}" title="${absLevel(s.abs).label}">${Math.round(s.abs)}%</td>
+            <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${isDeprived(s.abs)?'disabled title="محروم - غياب +25%"':""} value="${gradesData[s.sid]||''}" onchange="gradesData['${s.sid}']=this.value" id="g-${s.sid}"></td>
           </tr>`).join('')}</tbody>
         </table>
         <div class="btn-row"><button class="btn btn-g" onclick="saveGrades('${course}')">💾 حفظ درجات ${course}</button></div>
@@ -1348,26 +1413,33 @@ const tPgs={
     </div>`).join('')||'<div class="empty">لا توجد مقررات</div>'}`
 };
 
-function setAtt(sid,status,btn){
-  const card=btn.closest('.att-card');
-  card.querySelectorAll('.abtn').forEach(b=>b.classList.remove('sel'));
-  btn.classList.add('sel');
+// عند إدخال ساعات الغياب: احسب النسبة وحدّثها فورياً
+function onAbsHours(sid,code,val){
   if(!attendanceData[sid])attendanceData[sid]={};
-  attendanceData[sid].status=status;
-  const st=document.getElementById('as-'+sid);
-  if(st)st.textContent=status==='حاضر'?'✓ تم التسجيل':'✗ غائب';
+  attendanceData[sid].hours=val;
+  attendanceData[sid].code=code;
+  const hours=parseFloat(val)||0;
+  const pct=absHoursToPct(hours,code);
+  const lv=absLevel(pct);
+  const el=document.getElementById('ap-'+sid);
+  if(el){
+    el.style.color=lv.color;
+    el.textContent=val!==''?`${pct}% · ${lv.label}`:'';
+  }
 }
 
 async function saveAttendance(course){
   const ss=students.filter(s=>s.course===course);
   const records=[];
   ss.forEach(s=>{
-    if(attendanceData[s.sid]?.status){
-      const absence=attendanceData[s.sid].status==='غائب'?1:0;
+    const d=attendanceData[s.sid];
+    if(d&&d.hours!==''&&d.hours!=null){
+      const hours=parseFloat(d.hours)||0;
+      const absence=absHoursToPct(hours,s.code); // النسبة المحسوبة
       records.push({key:s.key,sid:s.sid,absence});
     }
   });
-  if(!records.length){showToast('لم يتم تسجيل أي حضور','w');return}
+  if(!records.length){showToast('لم تُدخل أي ساعات غياب','w');return}
   showToast('جاري الحفظ...','i');
   try{
     const url=SCRIPT_URL+'?action=saveAttendance&data='+encodeURIComponent(JSON.stringify(records));
@@ -1401,7 +1473,7 @@ async function saveGrades(course){
     const grade=gradesData[s.sid];
     if(grade!==undefined&&grade!==''){
       // تحقق من الحرمان - غياب أكثر من 25%
-      if(s.abs>25){
+      if(isDeprived(s.abs)){
         showToast('⚠️ '+s.name.split(' ')[0]+' محروم (غياب '+Math.round(s.abs)+'%)','w');
         return;
       }
@@ -1922,7 +1994,7 @@ function showStudentDetail(sid){
           <div class="prog"><div class="pfill ${p>=80?'pf-g':p>=50?'pf-y':'pf-r'}" style="width:${p}%"></div></div>
           <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--muted)">
             <span>إنجاز: ${p}%</span><span>غياب: ${Math.round(c.abs)}%</span>
-            ${c.abs>25?'<span style="color:var(--red)">⚠️ محروم</span>':''}
+            ${isDeprived(c.abs)?'<span style="color:var(--red)">⚠️ محروم</span>':''}
           </div>
         </div>`;
       }).join(''):'<div class="empty">لا توجد مقررات</div>'}
@@ -1954,7 +2026,7 @@ function showCourseDetail(courseName){
       <div class="metrics" style="margin-bottom:16px">
         <div class="mcard mc-b"><div class="micon">👥</div><div class="mnum cb">${cs.length}</div><div class="mlbl">متدرب</div></div>
         <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${cs.filter(c=>c.pct>=60&&c.abs<=25).length}</div><div class="mlbl">ناجح</div></div>
-        <div class="mcard mc-r"><div class="micon">❌</div><div class="mnum cr">${cs.filter(c=>c.pct<60||c.abs>25).length}</div><div class="mlbl">راسب/محروم</div></div>
+        <div class="mcard mc-r"><div class="micon">❌</div><div class="mnum cr">${cs.filter(c=>c.pct<60||isDeprived(c.abs)).length}</div><div class="mlbl">راسب/محروم</div></div>
       </div>
       
       <div class="gtable">
@@ -1964,11 +2036,11 @@ function showCourseDetail(courseName){
             const st=students.find(s=>s.id===c.sid);
             const dispName=st?st.name:(c.sname||c.sid);
             const p=Math.round(c.pct);
-            const status=c.abs>25?'<span style="color:var(--red)">محروم</span>':p>=60?'<span style="color:var(--green)">ناجح</span>':'<span style="color:var(--red)">راسب</span>';
+            const status=isDeprived(c.abs)?'<span style="color:var(--red)">محروم</span>':p>=60?'<span style="color:var(--green)">ناجح</span>':'<span style="color:var(--red)">راسب</span>';
             return `<tr onclick="document.getElementById('courseModal').remove();setTimeout(()=>showStudentDetail('${c.sid}'),100)" style="cursor:pointer">
               <td>${dispName.split(' ').slice(0,3).join(' ')}</td>
               <td><span class="pill ${p>=60?'pg':'pr'}">${p}%</span></td>
-              <td style="color:${c.abs>25?'var(--red)':'var(--muted)'}">${Math.round(c.abs)}%</td>
+              <td style="color:${isDeprived(c.abs)?'var(--red)':'var(--muted)'}">${Math.round(c.abs)}%</td>
               <td>${status}</td>
             </tr>`;
           }).join('')}</tbody>
@@ -2041,18 +2113,37 @@ async function submitNewUser(type){
 
 // ===== نظام الطلبات والموافقات =====
 // الطالب يرسل طلب جديد
+// إظهار/إخفاء حقول العذر حسب نوع الطلب
+function toggleExcuseFields(){
+  const t=document.getElementById('rq-type').value;
+  const f=document.getElementById('excuse-fields');
+  if(f)f.style.display=(t==='عذر غياب')?'block':'none';
+}
+
 async function submitRequest(){
   const type=document.getElementById('rq-type').value;
-  const details=document.getElementById('rq-details').value.trim();
+  let details=document.getElementById('rq-details').value.trim();
+  let exCourse='',exCode='',exHours='',exFile='';
+  if(type==='عذر غياب'){
+    const sel=document.getElementById('rq-course');
+    exCourse=sel.value;
+    exCode=sel.options[sel.selectedIndex]?.dataset.code||'';
+    exHours=document.getElementById('rq-hours').value.trim();
+    exFile=document.getElementById('rq-file').value.trim();
+    if(!exCourse){showToast('اختر المادة','w');return}
+    if(!exHours||parseFloat(exHours)<=0){showToast('أدخل عدد ساعات الغياب','w');return}
+    // ندمج تفاصيل العذر في حقل التفاصيل ليُحفظ في الشيت
+    details=`[عذر غياب] المادة: ${exCourse} | ساعات: ${exHours} | السبب: ${details||'—'}`+(exFile?` | الملف: ${exFile}`:'');
+  }
   if(!details){showToast('يرجى كتابة تفاصيل الطلب','w');return}
   const rid='REQ'+Date.now();
-  const now=new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
-  const rec={rid,sid:user.id,sname:user.name,grp:user.grp,type,details,date:now,supStatus:'معلق',dirStatus:'معلق',finalStatus:'قيد المراجعة',notes:''};
+  const now=new Date().toLocaleDateString('en-CA');
+  const rec={rid,sid:user.id,sname:user.name,grp:user.grp,type,details,date:now,supStatus:'معلق',dirStatus:'معلق',finalStatus:'قيد المراجعة',notes:'',
+    exCode,exHours};
   showToast('جاري إرسال الطلب...','i');
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'addRequest',records:[rec]}),headers:{'Content-Type':'text/plain'}});
     showToast('✅ تم إرسال طلبك بنجاح','s');
-    // تحديث محلي فوري
     requests.unshift(rec);
     document.getElementById('rq-details').value='';
     showSPage('services',null);
@@ -2064,7 +2155,6 @@ async function actOnRequest(rid,decision){
   const r=requests.find(x=>x.rid===rid);
   if(!r)return;
   const isDir=user.level==='director';
-  // تحديث محلي
   if(isDir){
     r.dirStatus=decision;
     r.finalStatus=decision==='معتمد'?'معتمد':'مرفوض';
@@ -2073,10 +2163,35 @@ async function actOnRequest(rid,decision){
     if(decision==='مرفوض')r.finalStatus='مرفوض';
   }
   const payload={rid,supStatus:r.supStatus,dirStatus:r.dirStatus,finalStatus:r.finalStatus,by:user.name,level:user.level||'supervisor'};
+  // ===== خصم ساعات العذر عند الاعتماد النهائي =====
+  let excuseInfo=null;
+  if(isDir&&decision==='معتمد'&&r.type==='عذر غياب'){
+    // استخرج المادة والساعات (من الحقول أو من نص التفاصيل)
+    let code=r.exCode||'', hrs=parseFloat(r.exHours)||0;
+    if(!hrs){const m=(r.details||'').match(/ساعات:\s*([\d.]+)/);if(m)hrs=parseFloat(m[1])||0;}
+    if(!code){
+      const m=(r.details||'').match(/المادة:\s*([^|]+)/);
+      if(m){const cn=m[1].trim();const cc=allCourses.find(x=>x.sid===r.sid&&x.course===cn);if(cc)code=normCode(cc.code);}
+    }
+    // ابحث عن سجل المادة للطالب
+    const rowC=allCourses.find(x=>x.sid===r.sid&&normCode(x.code)===normCode(code));
+    if(rowC&&hrs>0){
+      const excusedPct=absHoursToPct(hrs,code);
+      const newAbs=Math.max(0,Math.round((rowC.abs-excusedPct)*10)/10);
+      rowC.abs=newAbs; // تحديث محلي
+      excuseInfo={key:rowC.key,sid:r.sid,absence:newAbs};
+    }
+  }
   showToast('جاري الحفظ...','i');
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'updateRequest',records:[payload]}),headers:{'Content-Type':'text/plain'}});
-    showToast(decision==='معتمد'?'✅ تم الاعتماد':'تم الرفض','s');
+    // لو فيه خصم ساعات، احفظ النسبة الجديدة في سجل المقررات
+    if(excuseInfo){
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveAttendance',records:[excuseInfo]}),headers:{'Content-Type':'text/plain'}});
+      showToast('✅ تم الاعتماد وخصم ساعات الغياب','s');
+    }else{
+      showToast(decision==='معتمد'?'✅ تم الاعتماد':'تم الرفض','s');
+    }
     showAPage('requests',null);
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
