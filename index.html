@@ -221,6 +221,12 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .sch-room-tag{font-size:9px;color:#f4a261;margin-top:3px;background:rgba(244,162,97,.1);border-radius:5px;padding:2px 4px;display:inline-block}
 .sch-time-sm{font-size:9px;color:#6ab8f7;font-weight:600;margin-top:3px}
 .sch-break td{background:rgba(244,162,97,.08)!important;border-color:rgba(244,162,97,.25)!important}
+.att-marks{display:flex;gap:5px;margin-top:10px}
+.amk{flex:1;padding:8px 4px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--card2);color:var(--muted);transition:.15s}
+.amk:hover{filter:brightness(1.15)}
+.amk-p.on{background:rgba(46,204,113,.2);border-color:var(--green);color:var(--green)}
+.amk-l.on{background:rgba(244,162,97,.2);border-color:var(--gold);color:var(--gold)}
+.amk-a.on{background:rgba(231,76,60,.2);border-color:var(--red);color:#ff8a92}
 .cc-footer{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px}
 
 /* ===== TABLE ===== */
@@ -728,7 +734,7 @@ body{top:0!important}
 <script>
 const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
 const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwy4CDXmoU8Si5gYimiidkaen2w2iuht91I8A9WxE46glpSs82r1fpC5sICZ7cXMpiU/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwQjP4pskzy-UvCkbSEX_HVBF-O_IYUcKee8lIx5CxfjZCfd_-f9ZEuYZd2W2pPD415/exec';
 const ADMIN=[
   {id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
   {id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
@@ -1101,8 +1107,7 @@ function generateScheduleFor(grp){
     for(const s of slots){
       const slot=s.day+'|'+s.p;
       if(grid[slot])continue;
-      if(trainerBusy(grp,s.day,s.p,c.trainer))continue;
-      // تفضيل: تجنّب نفس المادة بنفس اليوم (إلا للضرورة)
+      // ملاحظة: مسموح نفس المدرب/القاعة لشعبتين (حصص مدمجة) — لا نمنع التعارض
       const dk=c.code+'|'+s.day;
       if(courseDayCount[dk]){if(!bestSlot)bestSlot=s;continue;}
       bestSlot=s;break;
@@ -1610,9 +1615,9 @@ const sPgs={
         <div class="mform-group"><label>عدد ساعات الغياب المطلوب عذرها</label>
           <input type="number" id="rq-hours" min="0" step="0.5" placeholder="مثال: 4">
         </div>
-        <div class="mform-group"><label>رابط الملف الداعم (المستند/الصورة)</label>
-          <input type="text" id="rq-file" placeholder="الصق رابط الملف من Google Drive">
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">ارفع المستند على Drive واجعله "أي شخص لديه الرابط" ثم الصق الرابط هنا</div>
+        <div class="mform-group"><label>ملف العذر (PDF)</label>
+          <input type="file" id="rq-file" accept="application/pdf,.pdf">
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">ارفق مستند العذر بصيغة PDF — يُحفظ تلقائياً في أرشيف الأكاديمية (مجلد اعذار الغياب)</div>
         </div>
       </div>
       <div class="mform-group"><label>التفاصيل / السبب</label>
@@ -1882,38 +1887,33 @@ const tPgs={
     const allCrs=[...new Set(students.map(s=>s.course))];
     const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>s.status==='حالي'));
     return `
-    <div class="stitle">تسجيل الغياب بالساعات</div>
-    <div class="alert ab"><span class="aicon">⏱️</span>أدخل <strong style="margin:0 4px">عدد ساعات الغياب</strong> لكل متدرب، والمنصة تحسب النسبة تلقائياً (ساعات الاتصال × ${WEEKS_PER_HALF} أسابيع)</div>
+    <div class="stitle">تسجيل حضور اليوم</div>
+    <div class="alert ab"><span class="aicon">✅</span>سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> لحصة اليوم — <strong>كل تأخيرين = غياب</strong>، والمنصة تحدّث نسبة الغياب تلقائياً</div>
     ${crs.length?crs.map(course=>{
       const ss=[...new Map(students.filter(s=>s.course===course).map(s=>[s.sid,s])).values()];
       const code=ss[0]?.code||'';
       const total=courseTotalHours(code);
-      const cat=catalog.find(c=>normCode(c.code)===normCode(code));
-      const weekly=cat?parseFloat(cat.hours)||0:0;
+      const sessionHrs=schedConfig.periodHours||2;
       return `<div style="margin-bottom:24px">
         <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#6ab8f7">📚 ${course}</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${!weekly?'⚠️ لا توجد ساعات اتصال لهذه المادة في قاعدة المقررات':isCoopTraining(code)?`تدريب تعاوني ميداني · <strong>${total} ساعة إجمالي</strong>`:`${weekly} ساعة/أسبوع × ${WEEKS_PER_HALF} = <strong>${total} ساعة إجمالي</strong>`}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${total?`حصة اليوم تُضاف على الغياب المحفوظ · غائب = حصة كاملة · متأخر = نصف حصة`:'⚠️ لا توجد ساعات لهذه المادة في قاعدة المقررات'}</div>
         <div class="att-grid">
-          ${ss.map(s=>{
-            const curHours=attendanceData[s.sid]?.hours??'';
-            const curPct=curHours!==''&&total?absHoursToPct(parseFloat(curHours)||0,code):Math.round(s.abs);
-            const lv=absLevel(curPct);
-            return `<div class="att-card">
-              <div class="att-name">${s.name.split(' ').slice(0,3).join(' ')}</div>
-              <div class="att-id">${s.sid}</div>
-              <div style="display:flex;align-items:center;gap:6px;justify-content:center;margin:8px 0">
-                <input type="number" min="0" max="${total||999}" step="0.5" placeholder="ساعات" value="${curHours}" 
-                  oninput="onAbsHours('${s.sid}','${normCode(code)}',this.value)" id="ah-${s.sid}"
-                  style="width:70px;padding:8px;text-align:center;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
-                <span style="font-size:11px;color:var(--muted)">ساعة</span>
-              </div>
-              <div class="att-status" id="ap-${s.sid}" style="color:${lv.color};font-weight:700">${curHours!==''?`${curPct}% · ${lv.label}`:`الحالي: ${Math.round(s.abs)}%`}</div>
-            </div>`;
-          }).join('')}
+          ${ss.map(s=>`<div class="att-card">
+            <div class="att-name">${s.name.split(' ').slice(0,3).join(' ')}</div>
+            <div class="att-id">${s.sid} · غياب حالي <span style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</span></div>
+            <div class="att-marks">
+              <button class="amk amk-p" id="mk-${s.sid}-present" onclick="setMark('${s.sid}','present')">✓ حاضر</button>
+              <button class="amk amk-l" id="mk-${s.sid}-late" onclick="setMark('${s.sid}','late')">⏰ متأخر</button>
+              <button class="amk amk-a" id="mk-${s.sid}-absent" onclick="setMark('${s.sid}','absent')">✕ غائب</button>
+            </div>
+          </div>`).join('')}
         </div>
-        <div class="btn-row"><button class="btn btn-b" onclick="saveAttendance('${course}')">💾 حفظ غياب ${course}</button></div>
+        <div class="btn-row">
+          <button class="btn btn-out btn-sm" onclick="markAll('${course}','present')">✓ تعليم الكل حاضر</button>
+          <button class="btn btn-b" onclick="saveSession('${course}','${normCode(code)}',${sessionHrs})">💾 حفظ حضور اليوم</button>
+        </div>
       </div>`;
-    }).join(''):'<div class="empty"><div class="empty-icon">📅</div>لا توجد مقررات حالية لتسجيل الغياب</div>'}`;
+    }).join(''):'<div class="empty"><div class="empty-icon">📅</div>لا توجد مقررات حالية لتسجيل الحضور</div>'}`;
   },
   grades:()=>{
     const allCrs=[...new Set(students.map(s=>s.course))];
@@ -1978,6 +1978,50 @@ function onAbsHours(sid,code,val){
     el.style.color=lv.color;
     el.textContent=val!==''?`${pct}% · ${lv.label}`:'';
   }
+}
+
+// ===== تسجيل الحضور (حاضر/متأخر/غائب) =====
+let attMarks={};
+function setMark(sid,mark){
+  attMarks[sid]=mark;
+  ['present','late','absent'].forEach(k=>{const b=document.getElementById('mk-'+sid+'-'+k);if(b)b.classList.remove('on');});
+  const b=document.getElementById('mk-'+sid+'-'+mark);if(b)b.classList.add('on');
+}
+function markAll(course,mark){
+  const ss=[...new Map(students.filter(s=>s.course===course).map(s=>[s.sid,s])).values()];
+  ss.forEach(s=>setMark(s.sid,mark));
+}
+// حفظ حضور اليوم: غائب=حصة كاملة، متأخر=نصف حصة (تأخيرين=غياب)
+async function saveSession(course,code,sessionHrs){
+  const ss=[...new Map(students.filter(s=>s.course===course).map(s=>[s.sid,s])).values()];
+  const total=courseTotalHours(code);
+  if(!total){showToast('لا توجد ساعات لهذه المادة في قاعدة المقررات','w');return;}
+  const records=[];
+  let marked=0, absC=0, lateC=0;
+  ss.forEach(s=>{
+    const mk=attMarks[s.sid];
+    if(!mk)return;
+    marked++;
+    let add=0;
+    if(mk==='absent'){add=sessionHrs;absC++;}
+    else if(mk==='late'){add=sessionHrs/2;lateC++;}
+    if(add>0){
+      const curHrs=(parseFloat(s.abs)||0)/100*total;
+      const newPct=Math.min(Math.round((curHrs+add)/total*1000)/10,100);
+      s.abs=newPct;
+      records.push({key:s.key,sid:s.sid,absence:newPct});
+    }
+  });
+  if(!marked){showToast('سجّل حضور المتدربين أولاً','w');return;}
+  showToast('جاري حفظ الحضور...','i');
+  try{
+    if(records.length){
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveAttendance',records}),headers:{'Content-Type':'text/plain'}});
+    }
+    showToast(`✅ تم حفظ الحضور — ${absC} غياب · ${lateC} تأخير`,'s');
+    attMarks={};
+    showTPage('attendance',null);
+  }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
 
 async function saveAttendance(course){
@@ -3000,27 +3044,42 @@ function toggleExcuseFields(){
 async function submitRequest(){
   const type=document.getElementById('rq-type').value;
   let details=document.getElementById('rq-details').value.trim();
-  let exCourse='',exCode='',exHours='',exFile='';
+  let exCourse='',exCode='',exHours='',fileData='',fileName='';
   if(type==='عذر غياب'){
     const sel=document.getElementById('rq-course');
     exCourse=sel.value;
     exCode=sel.options[sel.selectedIndex]?.dataset.code||'';
     exHours=document.getElementById('rq-hours').value.trim();
-    exFile=document.getElementById('rq-file').value.trim();
     if(!exCourse){showToast('اختر المادة','w');return}
     if(!exHours||parseFloat(exHours)<=0){showToast('أدخل عدد ساعات الغياب','w');return}
-    // ندمج تفاصيل العذر في حقل التفاصيل ليُحفظ في الشيت
-    details=`[عذر غياب] المادة: ${exCourse} | ساعات: ${exHours} | السبب: ${details||'—'}`+(exFile?` | الملف: ${exFile}`:'');
+    // قراءة ملف PDF إن وُجد
+    const fileInput=document.getElementById('rq-file');
+    if(fileInput&&fileInput.files&&fileInput.files[0]){
+      const f=fileInput.files[0];
+      if(f.type!=='application/pdf'&&!f.name.toLowerCase().endsWith('.pdf')){showToast('الملف لازم يكون PDF','w');return}
+      if(f.size>5*1024*1024){showToast('حجم الملف كبير (الحد 5 ميجا)','w');return}
+      fileName=f.name;
+      showToast('جاري قراءة الملف...','i');
+      fileData=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(String(r.result).split(',')[1]||'');
+        r.onerror=()=>rej();
+        r.readAsDataURL(f);
+      }).catch(()=>'');
+    }
+    // ندمج تفاصيل العذر (رابط الملف يضيفه Apps Script بعد الحفظ في درايف)
+    details=`[عذر غياب] المادة: ${exCourse} | ساعات: ${exHours} | السبب: ${details||'—'}`;
   }
   if(!details){showToast('يرجى كتابة تفاصيل الطلب','w');return}
   const rid='REQ'+Date.now();
   const now=new Date().toLocaleDateString('en-CA');
   const rec={rid,sid:user.id,sname:user.name,grp:user.grp,type,details,date:now,supStatus:'معلق',dirStatus:'معلق',finalStatus:'قيد المراجعة',notes:'',
-    exCode,exHours,trnStatus:type==='عذر غياب'?'معلق':'—'};
+    exCode,exHours,trnStatus:type==='عذر غياب'?'معلق':'—',fileData,fileName};
   showToast('جاري إرسال الطلب...','i');
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'addRequest',records:[rec]}),headers:{'Content-Type':'text/plain'}});
     showToast('✅ تم إرسال طلبك بنجاح','s');
+    delete rec.fileData; // ما نحتفظ بالـ base64 بالذاكرة
     requests.unshift(rec);
     document.getElementById('rq-details').value='';
     showSPage('services',null);
