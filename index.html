@@ -979,10 +979,19 @@ function hasIssue(c){return isHighAbs(c)||isLowPerf(c)}
 // ===== حساب ساعات المادة في النصف المجزأ =====
 // ساعات الاتصال أسبوعية × 8 أسابيع = إجمالي ساعات النصف المجزأ
 const WEEKS_PER_HALF=8;
+// كشف التدريب التعاوني (حالة خاصة: ساعات إجمالية مباشرة + خارج الجدول الأسبوعي)
+function isCoopTraining(code){
+  const cat=catalog.find(c=>normCode(c.code)===normCode(code));
+  const name=cat?cat.name:'';
+  return /تدريب\s*تعاوني|التعاوني/.test(name);
+}
 function courseTotalHours(code){
   const cat=catalog.find(c=>normCode(c.code)===normCode(code));
-  const weekly=cat?parseFloat(cat.hours)||0:0;
-  return weekly*WEEKS_PER_HALF;
+  const hours=cat?parseFloat(cat.hours)||0:0;
+  // التدريب التعاوني: الرقم إجمالي مباشر (تدريب ميداني فصل كامل)
+  if(isCoopTraining(code))return hours;
+  // باقي المواد: ساعات أسبوعية × عدد الأسابيع
+  return hours*WEEKS_PER_HALF;
 }
 // نسبة الغياب = (ساعات الغياب ÷ إجمالي ساعات المادة) × 100
 function absHoursToPct(absHours,code){
@@ -1020,6 +1029,7 @@ function coursesForSchedule(grp){
   allCourses.forEach(c=>{
     if(c.grp!==grp)return;
     if(c.status!=='حالي')return;
+    if(isCoopTraining(c.code))return; // التدريب التعاوني ميداني — خارج الجدول الأسبوعي
     const key=normCode(c.code)||c.course;
     if(seen[key])return;
     seen[key]=1;
@@ -1797,7 +1807,7 @@ const tPgs={
       const weekly=cat?parseFloat(cat.hours)||0:0;
       return `<div style="margin-bottom:24px">
         <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#6ab8f7">📚 ${course}</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${weekly?`${weekly} ساعة/أسبوع × ${WEEKS_PER_HALF} = <strong>${total} ساعة إجمالي</strong>`:'⚠️ لا توجد ساعات اتصال لهذه المادة في قاعدة المقررات'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${!weekly?'⚠️ لا توجد ساعات اتصال لهذه المادة في قاعدة المقررات':isCoopTraining(code)?`تدريب تعاوني ميداني · <strong>${total} ساعة إجمالي</strong>`:`${weekly} ساعة/أسبوع × ${WEEKS_PER_HALF} = <strong>${total} ساعة إجمالي</strong>`}</div>
         <div class="att-grid">
           ${ss.map(s=>{
             const curHours=attendanceData[s.sid]?.hours??'';
