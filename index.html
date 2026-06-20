@@ -370,13 +370,42 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 @media(max-width:768px){
   .mob-nav{display:block}
   .sidebar{display:none!important}
-  .mcontent{padding:16px 14px 80px!important}
-  .topbar{padding:10px 14px}
+  .mcontent{padding:14px 12px 110px!important}
+  .topbar{padding:10px 12px;gap:6px}
   .metrics{grid-template-columns:1fr 1fr;gap:10px}
   .igrid{grid-template-columns:1fr}
   .banner{flex-direction:column;text-align:center;padding:16px}
   .att-grid{grid-template-columns:1fr 1fr}
   .mnum{font-size:24px}
+  /* شريط تنقل عائم احترافي */
+  .mob-nav{bottom:calc(10px + env(safe-area-inset-bottom));left:12px;right:12px;
+    background:rgba(10,18,33,.82);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
+    border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:8px 6px;
+    box-shadow:0 12px 40px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.3)}
+  .mob-nav-items{justify-content:space-around}
+  .mni{min-width:52px;padding:7px 8px;border-radius:14px;font-size:9.5px;gap:4px}
+  .mni-icon{font-size:21px}
+  .mni.as,.mni.at,.mni.aa{background:rgba(255,255,255,.06)}
+  .mni::before{top:auto;bottom:2px}
+  /* هيدر أنظف على الجوال */
+  .topbar{border-radius:0 0 18px 18px}
+  .role-badge{font-size:11px;padding:5px 9px}
+  .uname{font-size:12px;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .notif-btn,.out-btn{font-size:12px}
+  .av{width:34px;height:34px}
+  .stitle{font-size:15px}
+  .mcard{padding:16px 14px}
+  .micon{font-size:22px}
+  .mlbl{font-size:11px}
+  .banner .btitle{font-size:18px}
+  /* جداول قابلة للتمرير أفقياً */
+  .gtable{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .modal{max-width:94vw!important;margin:10px}
+  .sch-controls{gap:8px}
+  .sch-cfg select,.sch-cfg input{min-width:70px;font-size:12px}
+}
+@media(max-width:768px){
+  body.light-mode .mob-nav{background:rgba(255,255,255,.85)!important;border:1px solid rgba(26,58,107,.1)!important;box-shadow:0 12px 40px rgba(26,58,107,.18)!important}
 }
 
 /* ===== EXTRA ANIMATIONS ===== */
@@ -704,7 +733,7 @@ const ADMIN=[
   {id:'admin5',ph:'000000004',name:'إداري احتياط 4',title:'مدير الأكاديمية',level:'director'}
 ];
 
-let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[];
+let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
 let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5};
 const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
@@ -853,10 +882,11 @@ async function loadTrainer(){
 }
 
 async function loadAdmin(){
-  const [sr,cr,cat]=await Promise.all([
+  const [sr,cr,cat,td]=await Promise.all([
     fetchSheet('قاعدة بيانات مركزي!A:G'),
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[])
+    fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[]),
+    fetchSheet('قاعدة بيانات المدربين!A:E').catch(()=>[])
   ]);
   students=[];
   for(let i=1;i<sr.length;i++){
@@ -874,7 +904,19 @@ async function loadAdmin(){
     const r=cat[i];
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4])});
   }
+  // قاعدة المدربين المسجّلين (لهم حسابات): A=الرقم B=الاسم C=التخصص D=الجوال E=البريد
+  trainersDB=[];
+  for(let i=1;i<td.length;i++){
+    const r=td[i];
+    if(n0(r[1]))trainersDB.push({id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4])});
+  }
   await loadRequests();
+}
+// المدرب حالي = له حساب مسجّل في قاعدة المدربين فقط
+function isCurrentTrainer(name){
+  if(!name)return false;
+  const nrm=s=>n0(s).replace(/\s+/g,' ').trim();
+  return trainersDB.some(t=>nrm(t.name)===nrm(name));
 }
 
 // تحميل طلبات الخدمات من تبويب "طلبات الخدمات"
@@ -2188,26 +2230,30 @@ const aPgs={
     const tot=students.length;
     const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
     const completed=allCourses.filter(c=>c.pct>=80).length;
-    const passRate=allCourses.length?Math.round(allCourses.filter(c=>c.pct>=60).length/allCourses.length*100):0;
     const deprived=allCourses.filter(c=>c.abs>=25).length;
-    const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
-    const trRows=trainers.map(t=>{
+    const allTrainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
+    const current=allTrainers.filter(isCurrentTrainer);
+    const old=allTrainers.filter(t=>!isCurrentTrainer(t));
+    const rowFor=(t,faded)=>{
       const tc=allCourses.filter(c=>c.trainer===t);
       const ta=tc.length?Math.round(tc.reduce((a,c)=>a+c.pct,0)/tc.length):0;
       const tw=tc.filter(hasIssue).length;
-      const pc=pillClass(ta);
-      return `<tr onclick="showTrainerDetail('${t}')" style="cursor:pointer"><td>${t}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td><span class="pill ${pc}">${ta}%</span></td><td>${tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>'}</td></tr>`;
-    }).join('');
+      return `<tr onclick="showTrainerDetail('${t}')" style="cursor:pointer${faded?';opacity:.6':''}"><td>${t}${faded?' <span style="font-size:10px;color:var(--muted)">(سابق)</span>':''}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td><span class="pill ${pillClass(ta)}">${ta}%</span></td><td>${tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>'}</td></tr>`;
+    };
     return `<div class="stitle">تقارير الأداء الأكاديمي</div>
     <div class="alert ab"><span class="aicon">👆</span>اضغط على أي بطاقة أو صف لعرض التفاصيل الكاملة</div>
     <div class="metrics">
       <div class="mcard mc-y" onclick="showRepDetail('avg')" style="cursor:pointer"><div class="micon">📊</div><div class="mnum cy">${avg}%</div><div class="mlbl">متوسط عام</div></div>
       <div class="mcard mc-g" onclick="showRepDetail('completed')" style="cursor:pointer"><div class="micon">✅</div><div class="mnum cg">${completed}</div><div class="mlbl">مقررات مكتملة</div></div>
-      <div class="mcard mc-b" onclick="showRepDetail('trainers')" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cb">${trainers.length}</div><div class="mlbl">مدرب</div></div>
+      <div class="mcard mc-b" onclick="showRepDetail('trainers')" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cb">${current.length}</div><div class="mlbl">مدرب حالي</div></div>
       <div class="mcard mc-r" onclick="showRepDetail('deprived')" style="cursor:pointer"><div class="micon">⛔</div><div class="mnum cr">${deprived}</div><div class="mlbl">حالات حرمان</div></div>
     </div>
-    <div class="stitle">أداء المدربين <span style="font-size:12px;color:var(--muted);font-weight:400">(اضغط للتفاصيل)</span></div>
-    <div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>${trRows}</tbody></table></div>
+    <div class="stitle">🟢 المدربون الحاليون (${current.length}) <span style="font-size:12px;color:var(--muted);font-weight:400">(اضغط للتفاصيل)</span></div>
+    <div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>${current.length?current.map(t=>rowFor(t,false)).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا يوجد مدربون حاليون</td></tr>'}</tbody></table></div>
+    ${old.length?`
+    <div class="stitle" style="margin-top:24px;opacity:.7">⚪ مدربون سابقون (${old.length})</div>
+    <div class="alert" style="background:rgba(150,150,150,.08);border:1px solid rgba(150,150,150,.2);color:var(--muted)"><span class="aicon">📋</span>مدربون من سجلات سابقة — غير نشطين حالياً (للأرشيف)</div>
+    <div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>${old.map(t=>rowFor(t,true)).join('')}</tbody></table></div>`:''}
     <div class="btn-row"><button class="btn btn-b" onclick="printAcademicReport()">🖨️ طباعة التقرير</button></div>`;
   },
     settings:()=>{
@@ -2502,7 +2548,7 @@ function printAcademicReport(){
   const today=new Date().toLocaleDateString('ar-SA');
   const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
   const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
-  const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
+  const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].filter(isCurrentTrainer);
   const secRows=grps.map(g=>{
     const gs=students.filter(s=>s.grp===g);
     const gc=allCourses.filter(c=>gs.map(s=>s.id).includes(c.sid));
