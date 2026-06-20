@@ -220,6 +220,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 .sch-item-v .sch-trainer{font-size:10px;color:var(--muted);margin-top:3px}
 .sch-room-tag{font-size:9px;color:#f4a261;margin-top:3px;background:rgba(244,162,97,.1);border-radius:5px;padding:2px 4px;display:inline-block}
 .sch-time-sm{font-size:9px;color:#6ab8f7;font-weight:600;margin-top:3px}
+.sch-break td{background:rgba(244,162,97,.08)!important;border-color:rgba(244,162,97,.25)!important}
 .cc-footer{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:10px}
 
 /* ===== TABLE ===== */
@@ -740,7 +741,7 @@ const ADMIN=[
 
 let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
-let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5};
+let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakAfter:2, breakHours:1};
 const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
 // معامل/قاعات الأكاديمية (قابلة للتعديل)
 const LABS=['قاعة التدريب','معمل الكمبيوتر','معمل الإلكترونيات','معمل النيوماتك','معمل الهيدروليك'];
@@ -1017,11 +1018,18 @@ function fmtTime(h){
   let h12=hr%12; if(h12===0)h12=12;
   return `${h12}:${String(mn).padStart(2,'0')} ${ampm}`;
 }
-// وقت الحصة رقم p (تبدأ من 0)
+// وقت الحصة رقم p (تبدأ من 0) — مع احتساب البريك
 function periodTime(p){
-  const s=schedConfig.startHour+p*schedConfig.periodHours;
+  let s=schedConfig.startHour+p*schedConfig.periodHours;
+  // بعد حصة البريك، تنزاح الأوقات بمقدار مدة الاستراحة
+  if(schedConfig.breakAfter&&p>=schedConfig.breakAfter)s+=schedConfig.breakHours;
   const e=s+schedConfig.periodHours;
   return fmtTime(s)+' - '+fmtTime(e);
+}
+// وقت البريك نفسه
+function breakTime(){
+  const s=schedConfig.startHour+schedConfig.breakAfter*schedConfig.periodHours;
+  return fmtTime(s)+' - '+fmtTime(s+schedConfig.breakHours);
 }
 // يجلب المواد الحالية لشعبة + مدربيها + يحسب عدد الحصص الأسبوعية
 function coursesForSchedule(grp){
@@ -1043,11 +1051,13 @@ function coursesForSchedule(grp){
 // التحقق من تعارض المدرب في نفس اليوم+الحصة عبر كل الشعب
 function trainerBusy(grp,day,period,trainer){
   if(!trainer||trainer==='—')return false;
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const tn=nrm(trainer);
   const slot=day+'|'+period;
   for(const g in schedule){
     if(g===grp)continue;
     const cell=schedule[g]&&schedule[g][slot];
-    if(cell&&cell.trainer===trainer)return true;
+    if(cell&&nrm(cell.trainer)===tn)return true;
   }
   return false;
 }
@@ -1564,7 +1574,7 @@ const sPgs={
     <div class="alert ab"><span class="aicon">🗓️</span>جدول حصصك الأسبوعي المعتمد</div>
     <div class="sch-wrap"><table class="sch-table">
       <thead><tr><th>الحصة</th>${days.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-      <tbody>${[...Array(P).keys()].map(p=>`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time-sm">${periodTime(p)}</div></td>${days.map(d=>cell(d,p)).join('')}</tr>`).join('')}</tbody>
+      <tbody>${[...Array(P).keys()].map(p=>{const br=(schedConfig.breakAfter&&p===schedConfig.breakAfter)?`<tr class="sch-break"><td class="sch-pnum">☕<div class="sch-time-sm">${breakTime()}</div></td><td colspan="${days.length}" style="text-align:center;color:var(--gold);font-weight:700;font-size:12px">استراحة</td></tr>`:'';return br+`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time-sm">${periodTime(p)}</div></td>${days.map(d=>cell(d,p)).join('')}</tr>`;}).join('')}</tbody>
     </table></div>`:'<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد الجدول بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر جدولك هنا عند اعتماده من الإدارة</div></div>'}`;
   },
   services:()=>{
@@ -1812,7 +1822,7 @@ const tPgs={
     <div class="alert ab"><span class="aicon">🗓️</span>جدول حصصك الأسبوعي عبر كل الشعب</div>
     <div class="sch-wrap"><table class="sch-table">
       <thead><tr><th>الحصة</th>${days.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-      <tbody>${[...Array(P).keys()].map(p=>`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time-sm">${periodTime(p)}</div></td>${days.map(d=>cell(d,p)).join('')}</tr>`).join('')}</tbody>
+      <tbody>${[...Array(P).keys()].map(p=>{const br=(schedConfig.breakAfter&&p===schedConfig.breakAfter)?`<tr class="sch-break"><td class="sch-pnum">☕<div class="sch-time-sm">${breakTime()}</div></td><td colspan="${days.length}" style="text-align:center;color:var(--gold);font-weight:700;font-size:12px">استراحة</td></tr>`:'';return br+`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time-sm">${periodTime(p)}</div></td>${days.map(d=>cell(d,p)).join('')}</tr>`;}).join('')}</tbody>
     </table></div>`:'<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد الجدول بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر جدولك هنا عند اعتماده من الإدارة</div></div>'}`;
   },
   home:()=>{
@@ -2319,7 +2329,10 @@ const aPgs={
       ${cListInfo.length?`<div class="sch-legend">${cListInfo.map(c=>`<span class="sch-tag">${c.course} <b>(${c.sessions} حصص)</b> · ${c.trainer}</span>`).join('')}</div>`:''}
       <div class="sch-wrap"><table class="sch-table">
         <thead><tr><th>الحصة</th>${days.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-        <tbody>${[...Array(P).keys()].map(p=>`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time">${periodTime(p)}</div></td>${days.map(d=>cell(g,d,p)).join('')}</tr>`).join('')}</tbody>
+        <tbody>${[...Array(P).keys()].map(p=>{
+          const breakRow=(schedConfig.breakAfter&&p===schedConfig.breakAfter)?`<tr class="sch-break"><td class="sch-pnum">☕ استراحة<div class="sch-time">${breakTime()}</div></td><td colspan="${days.length}" style="text-align:center;color:var(--gold);font-weight:700">استراحة الطلاب</td></tr>`:'';
+          return breakRow+`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time">${periodTime(p)}</div></td>${days.map(d=>cell(g,d,p)).join('')}</tr>`;
+        }).join('')}</tbody>
       </table></div>`;
     };
     const genBtn=isAll?`<button class="btn btn-b" onclick="genAllSchedule()">⚡ ولّد كل الشعب</button>`:`<button class="btn btn-b" onclick="genSchedule('${cur}')">⚡ ولّد الجدول</button>`;
@@ -2341,6 +2354,10 @@ const aPgs={
         <input type="number" min="1" max="6" step="0.5" value="${schedConfig.periodHours}" onchange="schedConfig.periodHours=parseFloat(this.value)||2;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>بداية الدوام</label>
         <input type="number" min="6" max="14" step="0.5" value="${schedConfig.startHour}" onchange="schedConfig.startHour=parseFloat(this.value)||8;showAPage('schedule',null)"></div>
+      <div class="sch-cfg"><label>استراحة بعد حصة</label>
+        <input type="number" min="0" max="6" value="${schedConfig.breakAfter}" title="0 = بدون استراحة" onchange="schedConfig.breakAfter=parseInt(this.value)||0;showAPage('schedule',null)"></div>
+      <div class="sch-cfg"><label>مدة الاستراحة (ساعة)</label>
+        <input type="number" min="0.5" max="3" step="0.5" value="${schedConfig.breakHours}" onchange="schedConfig.breakHours=parseFloat(this.value)||1;showAPage('schedule',null)"></div>
       ${genBtn}
       <button class="btn btn-g" onclick="saveSchedule()">💾 حفظ الجدول</button>
       <button class="btn btn-out" onclick="printScheduleReport()">🖨️ طباعة تقرير</button>
