@@ -1055,15 +1055,19 @@ function coursesForSchedule(grp){
   return list;
 }
 // التحقق من تعارض المدرب في نفس اليوم+الحصة عبر كل الشعب
-function trainerBusy(grp,day,period,trainer){
+function trainerBusy(grp,day,period,trainer,course){
   if(!trainer||trainer==='—')return false;
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   const tn=nrm(trainer);
+  const cn=nrm(course);
   const slot=day+'|'+period;
   for(const g in schedule){
     if(g===grp)continue;
     const cell=schedule[g]&&schedule[g][slot];
-    if(cell&&nrm(cell.trainer)===tn)return true;
+    // السماح فقط إذا كان نفس المدرب ينادي نفس المادة (sections من نفس المادة)
+    if(cell&&nrm(cell.trainer)===tn){
+      if(nrm(cell.course)!==cn)return true; // تعارض: مادة مختلفة
+    }
   }
   return false;
 }
@@ -1285,9 +1289,26 @@ function schDrop(e,grp,toSlot){
   if(!g||!g[fromSlot])return;
   const moving=g[fromSlot];
   const target=g[toSlot];
+  const [toDay,toP]=toSlot.split('|');
+  
+  // فحص التعارضات قبل النقل
+  if(moving.trainer&&moving.trainer!=='—'){
+    if(trainerBusy(grp,toDay,toP,moving.trainer,moving.course)){
+      showToast(`⛔ تعارض: المدرب ${moving.trainer} مشغول بمادة أخرى في نفس الوقت`,'e');
+      return;
+    }
+  }
+  
+  const [toRoom]=moving.room;
+  if(moving.room&&labBusy(grp,toDay,toP,moving.room)){
+    showToast(`⛔ تعارض: المعمل ${moving.room} محجوز في نفس الوقت`,'e');
+    return;
+  }
+  
   // تبديل أو نقل
   if(target){g[fromSlot]=target;}else{delete g[fromSlot];}
   g[toSlot]=moving;
+  showToast('✅ تم نقل الحصة بنجاح','s');
   showAPage('schedule',null);
 }
 function schClear(grp,slot){
@@ -1899,14 +1920,25 @@ const tPgs={
       const code=ss[0]?.code||'';
       const total=courseTotalHours(code);
       const sessionHrs=schedConfig.periodHours||2;
+      // دوال مساعدة لجمع شعب الطالب الواحد في المادة الواحدة
+      const dedupByCode=(arr,code)=>{
+        const map=new Map();
+        arr.forEach(s=>{
+          if(!map.has(s.sid)||s.grp<map.get(s.sid).grp){ // احتفظ بأول شعبة
+            map.set(s.sid,s);
+          }
+        });
+        return [...map.values()];
+      };
+      const ssDedup=dedupByCode(ss,code);
       return `<div style="margin-bottom:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
           <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course}</div>
-          ${ss.some(s=>attMarks[s.sid])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ss.filter(s=>attMarks[s.sid]).length} علامة معلقة</span>`:''}
+          ${ssDedup.some(s=>attMarks[s.sid])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[s.sid]).length} علامة معلقة</span>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${total?`حصة اليوم تُضاف على الغياب المحفوظ · غائب = حصة كاملة · متأخر = نصف حصة`:'⚠️ لا توجد ساعات لهذه المادة في قاعدة المقررات'}</div>
         <div class="att-grid">
-          ${ss.map(s=>`<div class="att-card">
+          ${ssDedup.map(s=>`<div class="att-card">
             <div class="att-name">${s.name.split(' ').slice(0,3).join(' ')}</div>
             <div class="att-id">${s.sid} · غياب حالي <span style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</span></div>
             <div class="att-marks">
