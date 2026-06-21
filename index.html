@@ -969,7 +969,7 @@ function fillClass(p){return p>=80?'pf-g':p>=60?'pf-y':'pf-r'}
 function ccClass(p){return p>=80?'cc-g':p>=60?'cc-y':'cc-r'}
 // ===== منطق المشاكل الفعلية =====
 // أداء منخفض: فقط للمواد التي اترصدت درجتها (>0) وليست حالية (لسه ما خلصت)
-function isLowPerf(c){return c.status!=='حالي' && c.pct>0 && c.pct<60}
+function isLowPerf(c){return !isActive(c.status) && c.pct>0 && c.pct<60}
 // ===== مستويات الإنذار للغياب =====
 // 10% إنذار أول | 20% إنذار ثاني | 25% محروم
 function absLevel(abs){
@@ -1014,6 +1014,11 @@ function sidKey(s){
   const en=raw.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
   const digits=en.replace(/\D/g,'').trim();
   return digits||raw.replace(/\s+/g,'').trim();
+}
+// فحص موحّد لحالة "حالي" (يتسامح مع المسافات والتشكيل والصيغ المختلفة)
+function isActive(status){
+  const s=String(status||'').replace(/\s+/g,'').replace(/[ًٌٍَُِّْ]/g,'').trim();
+  return s==='حالي'||s==='حالى'||s.startsWith('حالي');
 }
 // إزالة تكرار الطلاب في مادة: طالب واحد لكل رقم أكاديمي (يحتفظ بأول شعبة)
 function uniqStudents(arr){
@@ -1071,7 +1076,7 @@ function coursesForSchedule(grp){
   const list=[];
   allCourses.forEach(c=>{
     if(c.grp!==grp)return;
-    if(c.status!=='حالي')return;
+    if(!isActive(c.status))return;
     if(isCoopTraining(c.code))return; // التدريب التعاوني ميداني — خارج الجدول الأسبوعي
     const key=normCode(c.code)||c.course;
     if(seen[key])return;
@@ -1215,24 +1220,12 @@ async function saveSchedule(){
       records.push({grp,day,period:(parseInt(p)+1),time:periodTime(parseInt(p)),course:c.course,trainer:c.trainer||'',room:c.room||''});
     }
   }
-  // حماية: لا تحفظ جدول فاضي (يمسح القديم بالغلط)
-  if(!records.length){
-    showToast('⛔ الجدول فاضي — ولّد الشعب أولاً قبل الحفظ','e');
-    return;
-  }
-  // تحذير: لو فيه شعب فاضية (موجودة طلاب لكن بدون حصص)
-  const allGrps=[...new Set(students.map(s=>s.grp))].filter(Boolean);
   const filledGrps=Object.keys(schedule).filter(g=>schedule[g]&&Object.keys(schedule[g]).length);
-  const emptyGrps=allGrps.filter(g=>!filledGrps.includes(g));
-  if(emptyGrps.length){
-    if(!confirm(`⚠️ تنبيه: الشعب التالية ما عندها جدول بعد:\\n\\n${emptyGrps.join(' · ')}\\n\\nلو حفظت الآن، جداول هذه الشعب القديمة بتنمسح من الشيت.\\n\\nالأفضل تولّد كل الشعب أولاً (زر "ولّد كل الشعب").\\n\\nهل تبغى تكمل الحفظ على أي حال؟`)){
-      return;
-    }
-  }
+  // حفظ مباشر بدون تأكيد — الشعب الفاضية تظهر "ما عندك جدول" للطالب/المدرب
   showToast('جاري حفظ الجدول...','i');
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveSchedule',records,config:schedConfig}),headers:{'Content-Type':'text/plain'}});
-    showToast('✅ تم حفظ الجدول — يقدر الطلاب والمدربين يشوفونه','s');
+    showToast(`✅ تم حفظ الجدول (${filledGrps.length} شعبة) — يقدر الطلاب والمدربين يشوفونه`,'s');
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
 // قراءة الجدول المحفوظ من الشيت
@@ -1612,7 +1605,7 @@ const sPgs={
   home:()=>{
     const tot=courses.length,avg=tot?Math.round(courses.reduce((a,c)=>a+c.pct,0)/tot):0;
     const done=courses.filter(c=>c.pct>=80).length,warn=courses.filter(hasIssue).length;
-    const current=courses.filter(c=>c.status==='حالي');
+    const current=courses.filter(c=>isActive(c.status));
     const past=courses.filter(c=>c.status==='سابق');
     const gpa=gpaFrom(courses);
     return `
@@ -1625,7 +1618,7 @@ const sPgs={
       ${warn?`<div class="mcard mc-y" onclick="showStudentStat('alerts')" style="cursor:pointer"><div class="micon">⚠️</div><div class="mnum cy" data-target="${warn}">${warn}</div><div class="mlbl">اشعارات</div></div>`:''}
     </div>
     ${absWarnBanner()}
-    ${warn&&!courses.some(c=>c.status==='حالي'&&(parseFloat(c.abs)||0)>=10)?`<div class="alert aw"><span class="aicon">⚠️</span>لديك ${warn} مقرر يحتاج متابعة</div>`:''}
+    ${warn&&!courses.some(c=>isActive(c.status)&&(parseFloat(c.abs)||0)>=10)?`<div class="alert aw"><span class="aicon">⚠️</span>لديك ${warn} مقرر يحتاج متابعة</div>`:''}
     <div class="stitle">📚 موادك الحالية ${current.length?`(${current.length})`:''}</div>
     ${current.length?current.map(c=>courseCardHTML(c)).join(''):'<div class="alert ab"><span class="aicon">📭</span>لا توجد مواد حالية مسجّلة الآن — موادك السابقة مكتملة</div>'}
     ${past.length?`<div style="text-align:center;margin-top:16px"><button class="btn btn-out btn-sm" onclick="showSPage('courses',null)">عرض جميع المواد (${tot}) — حالية وسابقة</button></div>`:''}`;
@@ -1635,7 +1628,7 @@ const sPgs={
     const halves=[...new Set(courses.map(c=>c.half).filter(h=>h&&h!=='غير محدد'))].sort();
     const letters=[...new Set(courses.map(c=>c.letter).filter(l=>l&&l!==''))];
     const statuses=[...new Set(courses.map(c=>c.status).filter(s=>s&&s!==''))];
-    const cur=courses.filter(c=>c.status==='حالي').length;
+    const cur=courses.filter(c=>isActive(c.status)).length;
     const past=courses.filter(c=>c.status==='سابق').length;
     return `
     <div class="stitle">مقرراتي (${courses.length})</div>
@@ -1723,6 +1716,10 @@ const sPgs={
       const c=cell(d,p);
       return (p===bAfter&&bAfter>=0&&bAfter<P-1)?c+`<td style="background:rgba(201,162,39,.15);text-align:center;color:var(--gold)">☕</td>`:c;
     }).join('');
+    const hasCurrentCourses=courses.some(c=>isActive(c.status)&&!isCoopTraining(c.code));
+    const emptyMsg=hasCurrentCourses
+      ? '<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد جدولك بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">عندك مواد حالية — سيظهر جدولك هنا فور اعتماده من الإدارة</div></div>'
+      : '<div class="empty"><div class="empty-icon">📭</div><div>ما عندك جدول حالياً</div><div style="font-size:12px;color:var(--muted);margin-top:8px">لأنه ما عندك مواد مسجّلة هذا الفصل · راجع الإدارة لو تتوقع غير ذلك</div></div>';
     return `
     <div class="stitle">📅 جدولي الأسبوعي — الشعبة ${grp}</div>
     ${hasSchedule?`
@@ -1730,7 +1727,7 @@ const sPgs={
     <div class="sch-wrap"><table class="sch-table">
       <thead><tr><th>اليوم</th>${headCells}</tr></thead>
       <tbody>${days.map(d=>`<tr><td class="sch-pnum">${d}</td>${rowCells(d)}</tr>`).join('')}</tbody>
-    </table></div>`:'<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد الجدول بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر جدولك هنا عند اعتماده من الإدارة</div></div>'}`;
+    </table></div>`:emptyMsg}`;
   },
   services:()=>{
     const myReqs=requests.filter(r=>r.sid===user.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -1756,7 +1753,7 @@ const sPgs={
         <div class="mform-group"><label>المادة (الغياب فيها)</label>
           <select id="rq-course">
             <option value="">— اختر المادة —</option>
-            ${[...new Set(courses.filter(c=>c.status==='حالي').map(c=>c.course))].map(cn=>{
+            ${[...new Set(courses.filter(c=>isActive(c.status)).map(c=>c.course))].map(cn=>{
               const c=courses.find(x=>x.course===cn);
               return `<option value="${cn}" data-code="${normCode(c?.code||'')}">${cn}</option>`;
             }).join('')}
@@ -1842,7 +1839,7 @@ const sPgs={
 
 // بانر تنبيهات الغياب للطالب (من الإنذار الأول 10%) مع زر عذر مباشر
 function absWarnBanner(){
-  const cur=courses.filter(c=>c.status==='حالي'&&(parseFloat(c.abs)||0)>=10);
+  const cur=courses.filter(c=>isActive(c.status)&&(parseFloat(c.abs)||0)>=10);
   if(!cur.length)return '';
   return '<div style="margin-bottom:16px">'+cur.sort((a,b)=>b.abs-a.abs).map(c=>{
     const lv=absLevel(c.abs);
@@ -1874,7 +1871,7 @@ function goExcuse(course){
 function courseCardHTML(c){
   const p=Math.round(c.pct);
   const av=absLevel(c.abs);
-  const showWarn=av.key!=='ok'&&c.status==='حالي';
+  const showWarn=av.key!=='ok'&&isActive(c.status);
   return `<div class="ccard ${ccClass(p)}">
     <div class="cc-top"><div><div class="cc-name">${c.course}</div><div class="cc-meta">${c.code}${c.trainer?' · '+c.trainer:''}${c.half&&c.half!=='غير محدد'?' · '+c.half:''}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
     <div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>
@@ -1991,6 +1988,14 @@ const tPgs={
       const c=cell(d,p);
       return (p===bAfter&&bAfter>=0&&bAfter<P-1)?c+`<td style="background:rgba(201,162,39,.15);text-align:center;color:var(--gold)">☕</td>`:c;
     }).join('');
+    // هل المدرب عنده حصص في الجدول العام؟ (لو لا، يعني ما عنده مواد مسندة)
+    const teachesAny=Object.values(schedule).some(g=>Object.values(g).some(c=>{
+      const nrm=s=>n0(s).replace(/\s+/g,' ').trim();
+      return nrm(c.trainer)===nrm(user.name);
+    }));
+    const emptyMsg=teachesAny
+      ? '<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد الجدول بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر جدولك هنا عند اعتماده من الإدارة</div></div>'
+      : '<div class="empty"><div class="empty-icon">📭</div><div>ما عندك جدول حالياً</div><div style="font-size:12px;color:var(--muted);margin-top:8px">لأنه ما عندك مواد مسندة في الجدول · راجع الإدارة لو تتوقع غير ذلك</div></div>';
     return `
     <div class="stitle">📅 جدولي الأسبوعي</div>
     ${has?`
@@ -1998,7 +2003,7 @@ const tPgs={
     <div class="sch-wrap"><table class="sch-table">
       <thead><tr><th>اليوم</th>${headCells}</tr></thead>
       <tbody>${days.map(d=>`<tr><td class="sch-pnum">${d}</td>${rowCells(d)}</tr>`).join('')}</tbody>
-    </table></div>`:'<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد الجدول بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر جدولك هنا عند اعتماده من الإدارة</div></div>'}`;
+    </table></div>`:emptyMsg}`;
   },
   home:()=>{
     const crs=[...new Set(students.map(s=>s.course))];
@@ -2007,7 +2012,7 @@ const tPgs={
     // تحديد حالة المقرر: حالي إذا فيه ولو متدرب واحد حالته "حالي"
     const courseStatus=course=>{
       const ss=students.filter(s=>s.course===course);
-      return ss.some(s=>s.status==='حالي')?'حالي':(ss.some(s=>s.status==='مستقبلي')?'مستقبلي':'سابق');
+      return ss.some(s=>isActive(s.status))?'حالي':(ss.some(s=>(String(s.status||'').replace(/\s+/g,'')==='مستقبلي'))?'مستقبلي':'سابق');
     };
     const currentCrs=crs.filter(c=>courseStatus(c)==='حالي');
     const pastCrs=crs.filter(c=>courseStatus(c)!=='حالي');
@@ -2055,13 +2060,13 @@ const tPgs={
   },
   attendance:()=>{
     const allCrs=[...new Set(students.map(s=>s.course))];
-    const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>s.status==='حالي'));
+    const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>isActive(s.status)));
     return `
     <div class="stitle">تسجيل حضور اليوم</div>
     <div class="alert ab"><span class="aicon">✅</span>سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> لحصة اليوم — <strong>كل تأخيرين = غياب</strong>، والمنصة تحدّث نسبة الغياب تلقائياً</div>
     ${crs.length?crs.map(course=>{
       // عرض الطلاب الحاليين فقط (نستبعد السجلات السابقة حتى لو نفس المادة لشعبة ثانية)
-      const ssDedup=uniqStudents(students.filter(s=>s.course===course&&s.status==='حالي'));
+      const ssDedup=uniqStudents(students.filter(s=>s.course===course&&isActive(s.status)));
       if(!ssDedup.length)return ''; // لا يوجد طلاب حاليون في هذه المادة
       const code=ssDedup[0]?.code||'';
       const total=courseTotalHours(code);
@@ -2093,7 +2098,7 @@ const tPgs={
   },
   grades:()=>{
     const allCrs=[...new Set(students.map(s=>s.course))];
-    const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>s.status==='حالي'));
+    const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>isActive(s.status)));
     return `
     <div class="stitle">رصد الدرجات والتقييم</div>
     <div class="alert ab"><span class="aicon">📝</span>رصد درجات <strong style="margin:0 4px">المقررات الحالية</strong> فقط</div>
@@ -2165,14 +2170,14 @@ function setMark(sid,mark){
   const b=document.getElementById('mk-'+sid+'-'+mark);if(b)b.classList.add('on');
 }
 function markAll(course,mark){
-  uniqStudents(students.filter(s=>s.course===course&&s.status==='حالي')).forEach(s=>setMark(s.sid,mark));
+  uniqStudents(students.filter(s=>s.course===course&&isActive(s.status))).forEach(s=>setMark(s.sid,mark));
 }
 // حفظ حضور اليوم: غائب=حصة كاملة، متأخر=نصف حصة (تأخيرين=غياب)
 async function saveSession(course,code,sessionHrs){
   const total=courseTotalHours(code);
   if(!total){showToast('لا توجد ساعات لهذه المادة في قاعدة المقررات','w');return;}
   // كل سجلات الطلاب الحاليين بهذه المادة (تشمل الشعب المتعددة)
-  const allRecs=students.filter(s=>s.course===course&&s.status==='حالي');
+  const allRecs=students.filter(s=>s.course===course&&isActive(s.status));
   // العلامة لكل طالب موحّد (بمفتاح الرقم الأكاديمي)
   const markByKey={};
   allRecs.forEach(s=>{const mk=attMarks[s.sid];if(mk)markByKey[sidKey(s)]=mk;});
@@ -2661,7 +2666,7 @@ const aPgs={
     ${done.length?done.map(r=>card(r,false)).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات</div>'}`;
   },
   alerts:()=>{
-    const deprived=allCourses.filter(c=>isDeprived(c.abs)&&c.status==='حالي');
+    const deprived=allCourses.filter(c=>isDeprived(c.abs)&&isActive(c.status));
     const hi=allCourses.filter(c=>isHighAbs(c)&&!isDeprived(c.abs)),lo=allCourses.filter(isLowPerf);
     return `
     <div class="stitle">نظام الاشعارات الأكاديمية</div>
@@ -2952,7 +2957,7 @@ function showTrainerStat(kind){
     ids.forEach(id=>{const s=students.find(x=>x.sid===id);html+=detailRow(s.name.split(' ').slice(0,3).join(' '),'الشعبة '+s.grp);});
     showDetail('إجمالي المتدربين','👥',html);
   }else if(kind==='current'){
-    const cur=[...new Set(students.filter(s=>s.status==='حالي').map(s=>s.course))];
+    const cur=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.course))];
     let html=cur.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">المقررات الحالية:</div>':'<div class="alert ab">لا توجد مقررات حالية</div>';
     cur.forEach(co=>{const cc=students.filter(s=>s.course===co);const a=Math.round(cc.reduce((x,s)=>x+s.pct,0)/cc.length);html+=detailRow(co,cc.length+' متدرب · '+a+'%',a>=70?'var(--green)':'var(--gold)');});
     showDetail('المقررات الحالية','🟢',html);
@@ -2979,7 +2984,7 @@ function showStudentStat(kind){
     courses.forEach(c=>{const p=Math.round(c.pct);html+=detailRow(c.course,p+'%',p>=80?'var(--green)':p>=60?'var(--gold)':'var(--red)');});
     showDetail('متوسط الدرجات','📈',html);
   }else if(kind==='current'){
-    const cur=courses.filter(c=>c.status==='حالي');
+    const cur=courses.filter(c=>isActive(c.status));
     let html=cur.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">موادك الحالية:</div>':'<div class="alert ab">لا توجد مواد حالية</div>';
     cur.forEach(c=>html+=detailRow(c.course,c.trainer||'—'));
     showDetail('المواد الحالية','🟢',html);
