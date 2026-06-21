@@ -1209,13 +1209,13 @@ function buildRoomSchedules(){
 function schReportTable(grid,cellRender){
   const days=activeDays();
   const P=schedConfig.periodsPerDay;
-  const head='<tr><th class="hc">الحصة</th>'+days.map(d=>`<th>${d}</th>`).join('')+'</tr>';
-  const body=[...Array(P).keys()].map(p=>{
-    const cells=days.map(d=>{
+  const head='<tr><th class="hc">اليوم</th>'+[...Array(P).keys()].map(p=>`<th>الحصة ${p+1}<br><small>${periodTime(p)}</small></th>`).join('')+'</tr>';
+  const body=days.map(d=>{
+    const cells=[...Array(P).keys()].map(p=>{
       const c=grid[d+'|'+p];
       return c?`<td class="f">${cellRender(c)}</td>`:'<td class="e">—</td>';
     }).join('');
-    return `<tr><td class="tc">الحصة ${p+1}<br><small>${periodTime(p)}</small></td>${cells}</tr>`;
+    return `<tr><td class="tc">${d}</td>${cells}</tr>`;
   }).join('');
   return `<table class="rt">${head}${body}</table>`;
 }
@@ -2415,10 +2415,10 @@ const aPgs={
       ${cListInfo.length?`<div class="alert ab"><span class="aicon">📚</span>الشعبة ${g}: ${cListInfo.length} مواد حالية · تحتاج ${neededCount} حصة · ${placedCount} موزّعة</div>`:'<div class="alert aw"><span class="aicon">⚠️</span>لا توجد مواد حالية للشعبة '+g+' (تأكد من حالة المواد = حالي)</div>'}
       ${cListInfo.length?`<div class="sch-legend">${cListInfo.map(c=>`<span class="sch-tag">${c.course} <b>(${c.sessions} حصص)</b> · ${c.trainer}</span>`).join('')}</div>`:''}
       <div class="sch-wrap"><table class="sch-table">
-        <thead><tr><th>الحصة</th>${days.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-        <tbody>${[...Array(P).keys()].map(p=>{
-          const breakRow=(schedConfig.breakAfter&&p===schedConfig.breakAfter)?`<tr class="sch-break"><td class="sch-pnum">☕ استراحة<div class="sch-time">${breakTime()}</div></td><td colspan="${days.length}" style="text-align:center;color:var(--gold);font-weight:700">استراحة الطلاب</td></tr>`:'';
-          return breakRow+`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time">${periodTime(p)}</div></td>${days.map(d=>cell(g,d,p)).join('')}</tr>`;
+        <thead><tr><th>اليوم</th>${[...Array(P).keys()].map(p=>`<th>الحصة ${p+1}<div class="sch-time" style="font-size:9px;margin-top:2px">${periodTime(p)}</div></th>`).join('')}</tr></thead>
+        <tbody>${days.map(d=>{
+          const breakRow=(schedConfig.breakAfter)?`<tr class="sch-break"><td colspan="${P+1}" style="text-align:center;color:var(--gold);font-weight:700">☕ استراحة (${breakTime()})</td></tr>`:'';
+          return `<tr><td class="sch-pnum">${d}</td>${[...Array(P).keys()].map(p=>cell(g,d,p)).join('')}</tr>`;
         }).join('')}</tbody>
       </table></div>`;
     };
