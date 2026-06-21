@@ -1008,6 +1008,22 @@ function absHoursToPct(absHours,code){
   return Math.min(Math.round((absHours/total)*1000)/10,100); // خانة عشرية واحدة
 }
 function normCode(c){return String(c||'').replace(/\s+/g,'').trim()}
+// مفتاح موحّد للطالب: يحوّل الأرقام العربية ويزيل الرموز/المسافات لمنع التكرار
+function sidKey(s){
+  const raw=String((s&&s.sid)||'');
+  const en=raw.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+  const digits=en.replace(/\D/g,'').trim();
+  return digits||raw.replace(/\s+/g,'').trim();
+}
+// إزالة تكرار الطلاب في مادة: طالب واحد لكل رقم أكاديمي (يحتفظ بأول شعبة)
+function uniqStudents(arr){
+  const map=new Map();
+  arr.forEach(s=>{
+    const k=sidKey(s);
+    if(!map.has(k)||(s.grp&&map.get(k).grp&&String(s.grp)<String(map.get(k).grp)))map.set(k,s);
+  });
+  return [...map.values()];
+}
 
 // ===== مولّد الجدول الأوتوماتيكي =====
 // ساعات الاتصال الأسبوعية لمادة (من قاعدة المقررات حسب الرمز)
@@ -1220,6 +1236,21 @@ async function loadSchedule(){
     if(!schedule[grp])schedule[grp]={};
     schedule[grp][slot]={course:n0(r[4]),trainer:n0(r[5]),room:n0(r[6])};
   }
+  // تحميل إعدادات الجدول المحفوظة (الاستراحة، الأوقات...) إن وُجدت
+  const cfg=await fetchSheet('إعدادات_الجدول!A:B').catch(()=>[]);
+  if(cfg&&cfg.length>1){
+    const map={};
+    for(let i=1;i<cfg.length;i++){if(n0(cfg[i][0]))map[n0(cfg[i][0])]=cfg[i][1];}
+    const num=(k,d)=>map[k]!==undefined&&map[k]!==''?parseFloat(map[k]):d;
+    schedConfig={
+      periodsPerDay:num('periodsPerDay',5),
+      periodHours:num('periodHours',2),
+      startHour:num('startHour',8),
+      daysCount:num('daysCount',5),
+      breakStart:num('breakStart',12),
+      breakHours:num('breakHours',1)
+    };
+  }
 }
 // ===== تقرير الجدول القابل للطباعة =====
 // جداول المدربين: {مدرب: {يوم|حصة: {course,grp,room}}}
@@ -1263,15 +1294,22 @@ function buildRoomSchedules(){
   }
   return res;
 }
-// بناء جدول HTML من شبكة + دالة عرض الخلية
+// بناء جدول HTML من شبكة + دالة عرض الخلية (مع عمود الاستراحة)
 function schReportTable(grid,cellRender){
   const days=activeDays();
   const P=schedConfig.periodsPerDay;
-  const head='<tr><th class="hc">اليوم</th>'+[...Array(P).keys()].map(p=>`<th>الحصة ${p+1}<br><small>${periodTime(p)}</small></th>`).join('')+'</tr>';
+  const bAfter=breakAfterPeriod();
+  const showBreak=bAfter>=0&&bAfter<P-1;
+  // رؤوس الأعمدة مع إدراج عمود الاستراحة
+  const head='<tr><th class="hc">اليوم</th>'+[...Array(P).keys()].map(p=>{
+    const th=`<th>الحصة ${p+1}<br><small>${periodTime(p)}</small></th>`;
+    return (p===bAfter&&showBreak)?th+`<th class="brk">☕<br><small>${breakTime()}</small></th>`:th;
+  }).join('')+'</tr>';
   const body=days.map(d=>{
     const cells=[...Array(P).keys()].map(p=>{
       const c=grid[d+'|'+p];
-      return c?`<td class="f">${cellRender(c)}</td>`:'<td class="e">—</td>';
+      const cell=c?`<td class="f">${cellRender(c)}</td>`:'<td class="e">—</td>';
+      return (p===bAfter&&showBreak)?cell+`<td class="brk-cell">☕</td>`:cell;
     }).join('');
     return `<tr><td class="tc">${d}</td>${cells}</tr>`;
   }).join('');
@@ -1310,6 +1348,9 @@ function printScheduleReport(){
   table.rt{width:100%;border-collapse:collapse;margin-bottom:6px}
   table.rt th{background:#0a2348;color:#fff;font-size:12px;font-weight:700;padding:8px 4px;border:1px solid #0a2348;text-align:center}
   table.rt th.hc{background:#c9a227;width:90px}
+  table.rt th.brk{background:#c9a227;width:46px;font-size:11px}
+  table.rt th.brk small{font-size:8px;font-weight:500}
+  table.rt td.brk-cell{background:#fdf6e3;color:#c9a227;font-weight:700;width:46px;font-size:14px}
   table.rt td{border:1px solid #c5cfdd;padding:6px 4px;text-align:center;vertical-align:middle;font-size:11px;height:52px}
   table.rt td.tc{background:#f0f3f8;font-weight:700;color:#0a2348;font-size:11px;width:90px}
   table.rt td.tc small{font-weight:500;color:#7a8aa3;font-size:9px}
@@ -1959,7 +2000,7 @@ const tPgs={
     const currentCrs=crs.filter(c=>courseStatus(c)==='حالي');
     const pastCrs=crs.filter(c=>courseStatus(c)!=='حالي');
     const courseCard=(course,faded)=>{
-      const ss=students.filter(s=>s.course===course);
+      const ss=uniqStudents(students.filter(s=>s.course===course));
       const a=Math.round(ss.reduce((x,s)=>x+s.pct,0)/ss.length);
       return `<div class="ccard ${faded?'cc-b':'cc-g'}" ${faded?'style="opacity:.6"':''}>
         <div class="cc-top"><div><div class="cc-name">${course}</div><div class="cc-meta">${ss.length} متدرب · ${ss[0]?.code||''}</div></div><span class="pill ${pillClass(a)}">${a}%</span></div>
@@ -1986,7 +2027,7 @@ const tPgs={
     return `
     <div class="stitle">قوائم الفصول</div>
     ${crs.map(course=>{
-      const ss=students.filter(s=>s.course===course);
+      const ss=uniqStudents(students.filter(s=>s.course===course));
       return `<div style="margin-bottom:24px">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${course} (${ss.length} متدرب)</div>
         <div class="gtable"><table>
@@ -2007,24 +2048,14 @@ const tPgs={
     <div class="stitle">تسجيل حضور اليوم</div>
     <div class="alert ab"><span class="aicon">✅</span>سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> لحصة اليوم — <strong>كل تأخيرين = غياب</strong>، والمنصة تحدّث نسبة الغياب تلقائياً</div>
     ${crs.length?crs.map(course=>{
-      const ss=[...new Map(students.filter(s=>s.course===course).map(s=>[s.sid,s])).values()];
-      const code=ss[0]?.code||'';
+      // إزالة التكرار: طالب واحد لكل رقم أكاديمي حتى لو في عدة شعب
+      const ssDedup=uniqStudents(students.filter(s=>s.course===course));
+      const code=ssDedup[0]?.code||'';
       const total=courseTotalHours(code);
       const sessionHrs=schedConfig.periodHours||2;
-      // دوال مساعدة لجمع شعب الطالب الواحد في المادة الواحدة
-      const dedupByCode=(arr,code)=>{
-        const map=new Map();
-        arr.forEach(s=>{
-          if(!map.has(s.sid)||s.grp<map.get(s.sid).grp){ // احتفظ بأول شعبة
-            map.set(s.sid,s);
-          }
-        });
-        return [...map.values()];
-      };
-      const ssDedup=dedupByCode(ss,code);
       return `<div style="margin-bottom:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
-          <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course}</div>
+          <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب)</span></div>
           ${ssDedup.some(s=>attMarks[s.sid])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[s.sid]).length} علامة معلقة</span>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${total?`حصة اليوم تُضاف على الغياب المحفوظ · غائب = حصة كاملة · متأخر = نصف حصة`:'⚠️ لا توجد ساعات لهذه المادة في قاعدة المقررات'}</div>
@@ -2121,27 +2152,33 @@ function setMark(sid,mark){
   const b=document.getElementById('mk-'+sid+'-'+mark);if(b)b.classList.add('on');
 }
 function markAll(course,mark){
-  const ss=[...new Map(students.filter(s=>s.course===course).map(s=>[s.sid,s])).values()];
-  ss.forEach(s=>setMark(s.sid,mark));
+  uniqStudents(students.filter(s=>s.course===course)).forEach(s=>setMark(s.sid,mark));
 }
 // حفظ حضور اليوم: غائب=حصة كاملة، متأخر=نصف حصة (تأخيرين=غياب)
 async function saveSession(course,code,sessionHrs){
-  const ss=[...new Map(students.filter(s=>s.course===course).map(s=>[s.sid,s])).values()];
   const total=courseTotalHours(code);
   if(!total){showToast('لا توجد ساعات لهذه المادة في قاعدة المقررات','w');return;}
+  // كل سجلات الطلاب بهذه المادة (تشمل الشعب المتعددة)
+  const allRecs=students.filter(s=>s.course===course);
+  // العلامة لكل طالب موحّد (بمفتاح الرقم الأكاديمي)
+  const markByKey={};
+  allRecs.forEach(s=>{const mk=attMarks[s.sid];if(mk)markByKey[sidKey(s)]=mk;});
   const records=[];
   let marked=0, absC=0, lateC=0;
-  ss.forEach(s=>{
-    const mk=attMarks[s.sid];
+  const counted=new Set(); // إحصاء كل طالب مرة واحدة بالعدّاد
+  allRecs.forEach(s=>{
+    const k=sidKey(s);
+    const mk=markByKey[k];
     if(!mk)return;
-    marked++;
+    if(!counted.has(k)){counted.add(k);marked++;if(mk==='absent')absC++;else if(mk==='late')lateC++;}
     let add=0;
-    if(mk==='absent'){add=sessionHrs;absC++;}
-    else if(mk==='late'){add=sessionHrs/2;lateC++;}
+    if(mk==='absent')add=sessionHrs;
+    else if(mk==='late')add=sessionHrs/2;
     if(add>0){
       const curHrs=(parseFloat(s.abs)||0)/100*total;
       const newPct=Math.min(Math.round((curHrs+add)/total*1000)/10,100);
       s.abs=newPct;
+      // حفظ في كل سجل للطالب بهذه المادة (شعب متعددة → كلها تتحدّث)
       records.push({key:s.key,sid:s.sid,absence:newPct});
     }
   });
@@ -2153,7 +2190,7 @@ async function saveSession(course,code,sessionHrs){
     }
     showToast(`✅ تم حفظ الحضور — ${absC} غياب · ${lateC} تأخير`,'s');
     attMarks={}; // مسح الحضور بعد الحفظ الناجح
-    attCurrentCourse=null; // إعادة تعيين المادة الحالية
+    attCurrentCourse=null;
     showTPage('attendance',null);
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
