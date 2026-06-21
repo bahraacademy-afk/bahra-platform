@@ -734,7 +734,7 @@ body{top:0!important}
 <script>
 const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
 const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwQjP4pskzy-UvCkbSEX_HVBF-O_IYUcKee8lIx5CxfjZCfd_-f9ZEuYZd2W2pPD415/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyp5GA2nha4Ak1IWsit7PtXwUOZDRrGJFvCeW0w7E6G5VNmlQR34ExglWG6FgBzX6XV/exec';
 const ADMIN=[
   {id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
   {id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
@@ -1006,6 +1006,41 @@ function absHoursToPct(absHours,code){
   const total=courseTotalHours(code);
   if(!total)return 0;
   return Math.min(Math.round((absHours/total)*1000)/10,100); // خانة عشرية واحدة
+}
+// تحويل تاريخ (YYYY-MM-DD) إلى اسم اليوم بالعربي
+function dateToArDay(dateStr){
+  try{
+    const d=new Date(dateStr+'T00:00:00');
+    const map=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    return map[d.getDay()];
+  }catch(e){return '';}
+}
+// عدد حصص مادة معيّنة في يوم أسبوع معيّن (من الجدول المحفوظ، عبر كل الشعب التي يدرسها الطالب)
+function courseSessionsOnDay(course,grp,day){
+  let count=0;
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const g=schedule[grp];
+  if(g){
+    for(const slot in g){
+      const [d]=slot.split('|');
+      if(d===day&&nrm(g[slot].course)===nrm(course))count++;
+    }
+  }
+  return count;
+}
+// حساب إجمالي ساعات الغياب لقائمة تواريخ في مادة (حصص ذلك اليوم × مدة الحصة)
+function excuseHoursFromDates(course,grp,dates){
+  const perHour=schedConfig.periodHours||2;
+  let totalHrs=0;
+  const breakdown=[];
+  (dates||[]).forEach(dt=>{
+    const day=dateToArDay(dt);
+    const sessions=courseSessionsOnDay(course,grp,day);
+    const hrs=sessions*perHour;
+    totalHrs+=hrs;
+    breakdown.push({date:dt,day,sessions,hrs});
+  });
+  return {totalHrs,breakdown};
 }
 function normCode(c){return String(c||'').replace(/\s+/g,'').trim()}
 // مفتاح موحّد للطالب: يحوّل الأرقام العربية ويزيل الرموز/المسافات لمنع التكرار
@@ -1751,7 +1786,7 @@ const sPgs={
       </div>
       <div id="excuse-fields" style="display:none">
         <div class="mform-group"><label>المادة (الغياب فيها)</label>
-          <select id="rq-course">
+          <select id="rq-course" onchange="renderExcuseDates()">
             <option value="">— اختر المادة —</option>
             ${[...new Set(courses.filter(c=>isActive(c.status)).map(c=>c.course))].map(cn=>{
               const c=courses.find(x=>x.course===cn);
@@ -1759,8 +1794,13 @@ const sPgs={
             }).join('')}
           </select>
         </div>
-        <div class="mform-group"><label>عدد ساعات الغياب المطلوب عذرها</label>
-          <input type="number" id="rq-hours" min="0" step="0.5" placeholder="مثال: 4">
+        <div class="mform-group"><label>أيام الغياب (اختر التاريخ ثم أضف)</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="date" id="rq-date" max="${new Date().toLocaleDateString('en-CA')}" style="flex:1;min-width:160px">
+            <button type="button" class="btn btn-b btn-sm" onclick="addExcuseDate()">➕ أضف اليوم</button>
+          </div>
+          <div id="rq-dates-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
+          <div id="rq-dates-total" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
         </div>
         <div class="mform-group"><label>ملف العذر (PDF)</label>
           <input type="file" id="rq-file" accept="application/pdf,.pdf">
@@ -1923,6 +1963,7 @@ const tPgs={
       const d=r.details||'';
       return {
         course:((d.match(/المادة:\s*([^|]+)/)||[])[1]||'').trim(),
+        days:((d.match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim(),
         hours:((d.match(/ساعات:\s*([\d.]+)/)||[])[1]||'0'),
         reason:((d.match(/السبب:\s*([^|]+)/)||[])[1]||'').trim(),
         file:((d.match(/الملف:\s*(\S+)/)||[])[1]||'').trim()
@@ -1935,6 +1976,7 @@ const tPgs={
         <div class="cc-top"><div><div class="cc-name">عذر غياب — ${r.sname}</div><div class="cc-meta">الشعبة ${r.grp} · ${r.sid} · ${r.date||''}</div></div>${badge}</div>
         <div style="margin:8px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border)">
           <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">المادة</span><span style="font-weight:700">${ex.course}</span></div>
+          ${ex.days?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">أيام الغياب</span><span style="font-weight:700;text-align:left;max-width:60%">${ex.days}</span></div>`:''}
           <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">ساعات الغياب المطلوب عذرها</span><span style="font-weight:700">${ex.hours} ساعة</span></div>
           ${ex.reason&&ex.reason!=='—'?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">السبب</span><span style="font-weight:600;text-align:left;max-width:60%">${ex.reason}</span></div>`:''}
           ${ex.file?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الملف</span><a href="${ex.file}" target="_blank" style="color:#6ab8f7;font-weight:700">📎 فتح الملف</a></div>`:'<div style="font-size:11px;color:var(--gold);padding:4px 0">⚠️ لا يوجد ملف مرفق</div>'}
@@ -2620,10 +2662,11 @@ const aPgs={
     const parseExcuse=(r)=>{
       const d=r.details||'';
       const course=((d.match(/المادة:\s*([^|]+)/)||[])[1]||'').trim();
+      const days=((d.match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim();
       const hours=parseFloat((d.match(/ساعات:\s*([\d.]+)/)||[])[1])||parseFloat(r.exHours)||0;
       const reason=((d.match(/السبب:\s*([^|]+)/)||[])[1]||'').trim();
       const file=((d.match(/الملف:\s*(\S+)/)||[])[1]||'').trim();
-      return {course,hours,reason,file};
+      return {course,days,hours,reason,file};
     };
     // لوحة تفاصيل العذر مع معاينة الخصم
     const excusePanel=(r)=>{
@@ -2635,6 +2678,7 @@ const aPgs={
       const newAbs=Math.max(0,Math.round((curAbs-excusedPct)*10)/10);
       return `<div style="margin:8px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border)">
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">المادة</span><span style="font-weight:700">${ex.course||'—'}</span></div>
+        ${ex.days?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">أيام الغياب</span><span style="font-weight:700;text-align:left;max-width:60%">${ex.days}</span></div>`:''}
         <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">ساعات الغياب المطلوب عذرها</span><span style="font-weight:700">${ex.hours||0} ساعة</span></div>
         ${ex.reason&&ex.reason!=='—'?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">السبب</span><span style="font-weight:600;text-align:left;max-width:60%">${ex.reason}</span></div>`:''}
         ${ex.file?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الملف الداعم</span><a href="${ex.file}" target="_blank" style="color:#6ab8f7;font-weight:700">📎 فتح الملف</a></div>`:'<div style="font-size:11px;color:var(--gold);padding:4px 0">⚠️ لا يوجد ملف داعم مرفق</div>'}
@@ -3237,18 +3281,71 @@ function toggleExcuseFields(){
   const f=document.getElementById('excuse-fields');
   if(f)f.style.display=(t==='عذر غياب')?'block':'none';
 }
+// قائمة تواريخ الغياب المختارة
+let excuseDates=[];
+function addExcuseDate(){
+  const inp=document.getElementById('rq-date');
+  const dt=inp.value;
+  if(!dt){showToast('اختر تاريخ أولاً','w');return;}
+  if(excuseDates.includes(dt)){showToast('هذا اليوم مضاف مسبقاً','w');return;}
+  const day=dateToArDay(dt);
+  if(day==='الجمعة'||day==='السبت'){showToast('عطلة نهاية الأسبوع — اختر يوم دراسي','w');return;}
+  excuseDates.push(dt);
+  excuseDates.sort();
+  inp.value='';
+  renderExcuseDates();
+}
+function removeExcuseDate(dt){
+  excuseDates=excuseDates.filter(d=>d!==dt);
+  renderExcuseDates();
+}
+function renderExcuseDates(){
+  const list=document.getElementById('rq-dates-list');
+  const totalDiv=document.getElementById('rq-dates-total');
+  if(!list)return;
+  if(!excuseDates.length){
+    list.innerHTML='<div style="font-size:12px;color:var(--muted)">لم تضف أيام غياب بعد</div>';
+    if(totalDiv)totalDiv.innerHTML='';
+    return;
+  }
+  // المادة المختارة لحساب الحصص
+  const sel=document.getElementById('rq-course');
+  const course=sel?sel.value:'';
+  const grp=user.grp;
+  list.innerHTML=excuseDates.map(dt=>{
+    const day=dateToArDay(dt);
+    const sessions=course?courseSessionsOnDay(course,grp,day):0;
+    const perHour=schedConfig.periodHours||2;
+    const hrs=sessions*perHour;
+    const info=course?(sessions>0?`${sessions} حصة · ${hrs} ساعة`:'لا حصص لهذه المادة بهذا اليوم'):'اختر المادة أولاً';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--card2);padding:8px 12px;border-radius:6px;border:1px solid var(--border)">
+      <div><span style="font-weight:700">${day}</span> <span style="color:var(--muted);font-size:12px">${dt}</span> <span style="font-size:11px;color:#6ab8f7;margin-right:8px">${info}</span></div>
+      <button type="button" onclick="removeExcuseDate('${dt}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px">✕</button>
+    </div>`;
+  }).join('');
+  if(totalDiv&&course){
+    const {totalHrs}=excuseHoursFromDates(course,grp,excuseDates);
+    totalDiv.innerHTML=`📊 الإجمالي: <strong style="color:#6ab8f7">${excuseDates.length} يوم · ${totalHrs} ساعة غياب</strong> (تُخصم تلقائياً عند الاعتماد)`;
+  }
+}
 
 async function submitRequest(){
   const type=document.getElementById('rq-type').value;
   let details=document.getElementById('rq-details').value.trim();
-  let exCourse='',exCode='',exHours='',fileData='',fileName='';
+  let exCourse='',exCode='',exHours='',fileData='',fileName='',exDates='';
   if(type==='عذر غياب'){
     const sel=document.getElementById('rq-course');
     exCourse=sel.value;
     exCode=sel.options[sel.selectedIndex]?.dataset.code||'';
-    exHours=document.getElementById('rq-hours').value.trim();
     if(!exCourse){showToast('اختر المادة','w');return}
-    if(!exHours||parseFloat(exHours)<=0){showToast('أدخل عدد ساعات الغياب','w');return}
+    if(!excuseDates.length){showToast('أضف يوم غياب واحد على الأقل','w');return}
+    // حساب الساعات تلقائياً من التواريخ (حصص المادة في كل يوم)
+    const {totalHrs,breakdown}=excuseHoursFromDates(exCourse,user.grp,excuseDates);
+    if(totalHrs<=0){showToast('المادة ما عندها حصص في الأيام المختارة — تأكد من الجدول','w');return}
+    exHours=totalHrs;
+    exDates=excuseDates.join(', ');
+    // وصف الأيام بالتفصيل
+    const daysDesc=breakdown.map(b=>`${b.day} (${b.date})`).join(' · ');
     // قراءة ملف PDF إن وُجد
     const fileInput=document.getElementById('rq-file');
     if(fileInput&&fileInput.files&&fileInput.files[0]){
@@ -3265,13 +3362,13 @@ async function submitRequest(){
       }).catch(()=>'');
     }
     // ندمج تفاصيل العذر (رابط الملف يضيفه Apps Script بعد الحفظ في درايف)
-    details=`[عذر غياب] المادة: ${exCourse} | ساعات: ${exHours} | السبب: ${details||'—'}`;
+    details=`[عذر غياب] المادة: ${exCourse} | الأيام: ${daysDesc} | ساعات: ${exHours} | السبب: ${details||'—'}`;
   }
   if(!details){showToast('يرجى كتابة تفاصيل الطلب','w');return}
   const rid='REQ'+Date.now();
   const now=new Date().toLocaleDateString('en-CA');
   const rec={rid,sid:user.id,sname:user.name,grp:user.grp,type,details,date:now,supStatus:'معلق',dirStatus:'معلق',finalStatus:'قيد المراجعة',notes:'',
-    exCode,exHours,trnStatus:type==='عذر غياب'?'معلق':'—',fileData,fileName};
+    exCode,exHours,exDates,trnStatus:type==='عذر غياب'?'معلق':'—',fileData,fileName};
   showToast('جاري إرسال الطلب...','i');
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'addRequest',records:[rec]}),headers:{'Content-Type':'text/plain'}});
@@ -3279,6 +3376,7 @@ async function submitRequest(){
     delete rec.fileData; // ما نحتفظ بالـ base64 بالذاكرة
     requests.unshift(rec);
     document.getElementById('rq-details').value='';
+    excuseDates=[]; // مسح التواريخ بعد الإرسال
     showSPage('services',null);
   }catch(e){showToast('تعذر الإرسال — جرب مرة أخرى','e');}
 }
