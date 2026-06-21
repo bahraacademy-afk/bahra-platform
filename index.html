@@ -2072,7 +2072,7 @@ const tPgs={
         </div>
         <div class="btn-row">
           <button class="btn btn-out btn-sm" onclick="markAll('${course}','present')">✓ تعليم الكل حاضر</button>
-          ${ss.some(s=>attMarks[s.sid])?`<button class="btn btn-sm" style="background:#f4c78a;color:#000;font-weight:700" onclick="if(confirm('🗑️ هل تريد مسح جميع العلامات للمادة: ${course}؟')){Object.keys(attMarks).forEach(k=>{if(document.getElementById('mk-'+k+'-present'))delete attMarks[k]});showTPage('attendance',null)}">🔄 مسح</button>`:''}
+          ${ssDedup.some(s=>attMarks[s.sid])?`<button class="btn btn-sm" style="background:#f4c78a;color:#000;font-weight:700" onclick="if(confirm('🗑️ هل تريد مسح جميع العلامات للمادة: ${course}؟')){Object.keys(attMarks).forEach(k=>{if(document.getElementById('mk-'+k+'-present'))delete attMarks[k]});showTPage('attendance',null)}">🔄 مسح</button>`:''}
           <button class="btn btn-b" onclick="saveSession('${course}','${normCode(code)}',${sessionHrs})">💾 حفظ</button>
         </div>
       </div>`;
