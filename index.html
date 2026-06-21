@@ -1291,7 +1291,12 @@ function schDrop(e,grp,toSlot){
   showAPage('schedule',null);
 }
 function schClear(grp,slot){
-  if(schedule[grp]&&schedule[grp][slot]){delete schedule[grp][slot];showAPage('schedule',null);}
+  if(!schedule[grp]||!schedule[grp][slot])return;
+  const c=schedule[grp][slot];
+  if(!confirm(`⚠️ هل تريد حذف: ${c.course}\\nالمدرب: ${c.trainer}\\n\\nسيتم حذفها من الجدول بشكل نهائي`))return;
+  delete schedule[grp][slot];
+  showToast('✅ تم حذف الحصة من الجدول','s');
+  showAPage('schedule',null);
 }
 // تغيير معمل خانة مع تنبيه التعارض
 function schSetRoom(grp,slot,room){
@@ -1895,7 +1900,10 @@ const tPgs={
       const total=courseTotalHours(code);
       const sessionHrs=schedConfig.periodHours||2;
       return `<div style="margin-bottom:24px">
-        <div style="font-size:14px;font-weight:700;margin-bottom:4px;color:#6ab8f7">📚 ${course}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
+          <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course}</div>
+          ${ss.some(s=>attMarks[s.sid])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ss.filter(s=>attMarks[s.sid]).length} علامة معلقة</span>`:''}
+        </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${total?`حصة اليوم تُضاف على الغياب المحفوظ · غائب = حصة كاملة · متأخر = نصف حصة`:'⚠️ لا توجد ساعات لهذه المادة في قاعدة المقررات'}</div>
         <div class="att-grid">
           ${ss.map(s=>`<div class="att-card">
@@ -1910,7 +1918,8 @@ const tPgs={
         </div>
         <div class="btn-row">
           <button class="btn btn-out btn-sm" onclick="markAll('${course}','present')">✓ تعليم الكل حاضر</button>
-          <button class="btn btn-b" onclick="saveSession('${course}','${normCode(code)}',${sessionHrs})">💾 حفظ حضور اليوم</button>
+          ${ss.some(s=>attMarks[s.sid])?`<button class="btn btn-sm" style="background:#f4c78a;color:#000;font-weight:700" onclick="if(confirm('🗑️ هل تريد مسح جميع العلامات للمادة: ${course}؟')){Object.keys(attMarks).forEach(k=>{if(document.getElementById('mk-'+k+'-present'))delete attMarks[k]});showTPage('attendance',null)}">🔄 مسح</button>`:''}
+          <button class="btn btn-b" onclick="saveSession('${course}','${normCode(code)}',${sessionHrs})">💾 حفظ</button>
         </div>
       </div>`;
     }).join(''):'<div class="empty"><div class="empty-icon">📅</div>لا توجد مقررات حالية لتسجيل الحضور</div>'}`;
@@ -1982,6 +1991,7 @@ function onAbsHours(sid,code,val){
 
 // ===== تسجيل الحضور (حاضر/متأخر/غائب) =====
 let attMarks={};
+let attCurrentCourse=null; // تتبّع المادة الحالية لتجنب التضارب
 function setMark(sid,mark){
   attMarks[sid]=mark;
   ['present','late','absent'].forEach(k=>{const b=document.getElementById('mk-'+sid+'-'+k);if(b)b.classList.remove('on');});
@@ -2019,7 +2029,8 @@ async function saveSession(course,code,sessionHrs){
       await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveAttendance',records}),headers:{'Content-Type':'text/plain'}});
     }
     showToast(`✅ تم حفظ الحضور — ${absC} غياب · ${lateC} تأخير`,'s');
-    attMarks={};
+    attMarks={}; // مسح الحضور بعد الحفظ الناجح
+    attCurrentCourse=null; // إعادة تعيين المادة الحالية
     showTPage('attendance',null);
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
