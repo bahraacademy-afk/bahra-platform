@@ -1215,8 +1215,20 @@ async function saveSchedule(){
       records.push({grp,day,period:(parseInt(p)+1),time:periodTime(parseInt(p)),course:c.course,trainer:c.trainer||'',room:c.room||''});
     }
   }
-  if(!records.length){showToast('ولّد الجدول أولاً','w');return;}
-  // حفظ الإعدادات مع الجدول (أول صف خاص)
+  // حماية: لا تحفظ جدول فاضي (يمسح القديم بالغلط)
+  if(!records.length){
+    showToast('⛔ الجدول فاضي — ولّد الشعب أولاً قبل الحفظ','e');
+    return;
+  }
+  // تحذير: لو فيه شعب فاضية (موجودة طلاب لكن بدون حصص)
+  const allGrps=[...new Set(students.map(s=>s.grp))].filter(Boolean);
+  const filledGrps=Object.keys(schedule).filter(g=>schedule[g]&&Object.keys(schedule[g]).length);
+  const emptyGrps=allGrps.filter(g=>!filledGrps.includes(g));
+  if(emptyGrps.length){
+    if(!confirm(`⚠️ تنبيه: الشعب التالية ما عندها جدول بعد:\\n\\n${emptyGrps.join(' · ')}\\n\\nلو حفظت الآن، جداول هذه الشعب القديمة بتنمسح من الشيت.\\n\\nالأفضل تولّد كل الشعب أولاً (زر "ولّد كل الشعب").\\n\\nهل تبغى تكمل الحفظ على أي حال؟`)){
+      return;
+    }
+  }
   showToast('جاري حفظ الجدول...','i');
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveSchedule',records,config:schedConfig}),headers:{'Content-Type':'text/plain'}});
@@ -2048,8 +2060,9 @@ const tPgs={
     <div class="stitle">تسجيل حضور اليوم</div>
     <div class="alert ab"><span class="aicon">✅</span>سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> لحصة اليوم — <strong>كل تأخيرين = غياب</strong>، والمنصة تحدّث نسبة الغياب تلقائياً</div>
     ${crs.length?crs.map(course=>{
-      // إزالة التكرار: طالب واحد لكل رقم أكاديمي حتى لو في عدة شعب
-      const ssDedup=uniqStudents(students.filter(s=>s.course===course));
+      // عرض الطلاب الحاليين فقط (نستبعد السجلات السابقة حتى لو نفس المادة لشعبة ثانية)
+      const ssDedup=uniqStudents(students.filter(s=>s.course===course&&s.status==='حالي'));
+      if(!ssDedup.length)return ''; // لا يوجد طلاب حاليون في هذه المادة
       const code=ssDedup[0]?.code||'';
       const total=courseTotalHours(code);
       const sessionHrs=schedConfig.periodHours||2;
@@ -2152,14 +2165,14 @@ function setMark(sid,mark){
   const b=document.getElementById('mk-'+sid+'-'+mark);if(b)b.classList.add('on');
 }
 function markAll(course,mark){
-  uniqStudents(students.filter(s=>s.course===course)).forEach(s=>setMark(s.sid,mark));
+  uniqStudents(students.filter(s=>s.course===course&&s.status==='حالي')).forEach(s=>setMark(s.sid,mark));
 }
 // حفظ حضور اليوم: غائب=حصة كاملة، متأخر=نصف حصة (تأخيرين=غياب)
 async function saveSession(course,code,sessionHrs){
   const total=courseTotalHours(code);
   if(!total){showToast('لا توجد ساعات لهذه المادة في قاعدة المقررات','w');return;}
-  // كل سجلات الطلاب بهذه المادة (تشمل الشعب المتعددة)
-  const allRecs=students.filter(s=>s.course===course);
+  // كل سجلات الطلاب الحاليين بهذه المادة (تشمل الشعب المتعددة)
+  const allRecs=students.filter(s=>s.course===course&&s.status==='حالي');
   // العلامة لكل طالب موحّد (بمفتاح الرقم الأكاديمي)
   const markByKey={};
   allRecs.forEach(s=>{const mk=attMarks[s.sid];if(mk)markByKey[sidKey(s)]=mk;});
