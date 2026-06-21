@@ -747,7 +747,7 @@ const ADMIN=[
 
 let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
-let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakAfter:2, breakHours:1};
+let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakStart:12, breakHours:1};
 const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
 // معامل/قاعات الأكاديمية (قابلة للتعديل)
 const LABS=['قاعة التدريب','معمل الكمبيوتر','معمل الإلكترونيات','معمل النيوماتك','معمل الهيدروليك'];
@@ -1024,18 +1024,30 @@ function fmtTime(h){
   let h12=hr%12; if(h12===0)h12=12;
   return `${h12}:${String(mn).padStart(2,'0')} ${ampm}`;
 }
-// وقت الحصة رقم p (تبدأ من 0) — مع احتساب البريك
+// وقت الحصة رقم p (تبدأ من 0) — مع تخطّي وقت الاستراحة الثابت (12-1 ظهراً)
 function periodTime(p){
   let s=schedConfig.startHour+p*schedConfig.periodHours;
-  // بعد حصة البريك، تنزاح الأوقات بمقدار مدة الاستراحة
-  if(schedConfig.breakAfter&&p>=schedConfig.breakAfter)s+=schedConfig.breakHours;
+  // الاستراحة ثابتة: إذا تجاوزت الحصة وقت بداية الاستراحة، تنزاح بمقدار مدتها
+  const bStart=schedConfig.breakStart||12;  // بداية الاستراحة (12 ظهراً)
+  const bHrs=schedConfig.breakHours||1;     // مدة الاستراحة (ساعة)
+  if(schedConfig.breakStart&&s>=bStart)s+=bHrs;
   const e=s+schedConfig.periodHours;
   return fmtTime(s)+' - '+fmtTime(e);
 }
-// وقت البريك نفسه
+// وقت الاستراحة الثابت (12-1 ظهراً افتراضياً)
 function breakTime(){
-  const s=schedConfig.startHour+schedConfig.breakAfter*schedConfig.periodHours;
-  return fmtTime(s)+' - '+fmtTime(s+schedConfig.breakHours);
+  const s=schedConfig.breakStart||12;
+  return fmtTime(s)+' - '+fmtTime(s+(schedConfig.breakHours||1));
+}
+// تحديد الحصة التي تأتي الاستراحة بعدها (للعرض في الجدول)
+function breakAfterPeriod(){
+  if(!schedConfig.breakStart)return -1;
+  const bStart=schedConfig.breakStart;
+  for(let p=0;p<schedConfig.periodsPerDay;p++){
+    const pEnd=schedConfig.startHour+(p+1)*schedConfig.periodHours;
+    if(pEnd>=bStart)return p; // الاستراحة بعد هذه الحصة
+  }
+  return schedConfig.periodsPerDay-1;
 }
 // يجلب المواد الحالية لشعبة + مدربيها + يحسب عدد الحصص الأسبوعية
 function coursesForSchedule(grp){
@@ -1072,12 +1084,19 @@ function trainerBusy(grp,day,period,trainer,course){
   return false;
 }
 // التحقق من تعارض المعمل في نفس اليوم+الحصة عبر كل الشعب
-function labBusy(grp,day,period,room){
+// السماح بنفس القاعة فقط إذا كانت شعب مدمجة (نفس مادة + نفس مدرب)
+function labBusy(grp,day,period,room,course,trainer){
   if(!room)return false;
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   const slot=day+'|'+period;
   for(const g in schedule){
+    if(g===grp)continue;
     const cell=schedule[g]&&schedule[g][slot];
-    if(cell&&cell.room===room&&!(g===grp))return true;
+    if(cell&&cell.room===room){
+      // إذا كانت شعب مدمجة (نفس مادة + نفس مدرب) → مسموح مشاركة القاعة
+      if(course&&trainer&&nrm(cell.course)===nrm(course)&&nrm(cell.trainer)===nrm(trainer))continue;
+      return true; // قاعة محجوزة بمادة/مدرب مختلف
+    }
   }
   return false;
 }
@@ -1094,6 +1113,7 @@ function generateScheduleFor(grp){
   const grid={};
   const P=schedConfig.periodsPerDay;
   const days=activeDays();
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   // بناء قائمة حصص بترتيب round-robin (حصة من كل مادة بالتناوب)
   const queue=[];
   const maxSess=Math.max(0,...courses.map(c=>c.sessions));
@@ -1107,20 +1127,43 @@ function generateScheduleFor(grp){
   const courseDayCount={};
   queue.forEach(c=>{
     let bestSlot=null;
+    let fallback=null;
     // مرّ على الخانات بالترتيب، اختر أول خانة متاحة تحقق الشروط
     for(const s of slots){
       const slot=s.day+'|'+s.p;
       if(grid[slot])continue;
-      // ملاحظة: مسموح نفس المدرب/القاعة لشعبتين (حصص مدمجة) — لا نمنع التعارض
+      // فحص تعارض المدرب عالمياً: مسموح فقط إذا كان يعلّم نفس المادة (شعب مدمجة)
+      let trainerConflict=false;
+      if(c.trainer&&c.trainer!=='—'){
+        for(const og in schedule){
+          if(og===grp)continue;
+          const oc=schedule[og]&&schedule[og][slot];
+          if(oc&&nrm(oc.trainer)===nrm(c.trainer)&&nrm(oc.course)!==nrm(c.course)){
+            trainerConflict=true;break;
+          }
+        }
+      }
+      if(trainerConflict)continue; // تخطّ هذه الخانة — المدرب مشغول بمادة مختلفة
       const dk=c.code+'|'+s.day;
-      if(courseDayCount[dk]){if(!bestSlot)bestSlot=s;continue;}
+      if(courseDayCount[dk]){if(!fallback)fallback=s;continue;}
       bestSlot=s;break;
     }
-    if(bestSlot){
-      const slot=bestSlot.day+'|'+bestSlot.p;
+    const chosen=bestSlot||fallback;
+    if(chosen){
+      const slot=chosen.day+'|'+chosen.p;
       if(!grid[slot]){
-        grid[slot]={code:c.code,course:c.course,trainer:c.trainer,room:freeLab(grp,bestSlot.day,bestSlot.p)};
-        courseDayCount[c.code+'|'+bestSlot.day]=(courseDayCount[c.code+'|'+bestSlot.day]||0)+1;
+        // محاولة استخدام نفس القاعة إذا كانت الشعبة المدمجة بنفس المادة/الوقت
+        let room=null;
+        for(const og in schedule){
+          if(og===grp)continue;
+          const oc=schedule[og]&&schedule[og][slot];
+          if(oc&&nrm(oc.trainer)===nrm(c.trainer)&&nrm(oc.course)===nrm(c.course)&&oc.room){
+            room=oc.room;break; // نفس القاعة للشعب المدمجة
+          }
+        }
+        if(!room)room=freeLab(grp,chosen.day,chosen.p);
+        grid[slot]={code:c.code,course:c.course,trainer:c.trainer,room};
+        courseDayCount[c.code+'|'+chosen.day]=(courseDayCount[c.code+'|'+chosen.day]||0)+1;
       }
     }
   });
@@ -1182,25 +1225,40 @@ async function loadSchedule(){
 // جداول المدربين: {مدرب: {يوم|حصة: {course,grp,room}}}
 function buildTrainerSchedules(){
   const res={};
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   for(const grp in schedule){
     for(const slot in schedule[grp]){
       const c=schedule[grp][slot];
       if(!c.trainer||c.trainer==='—')continue;
       if(!res[c.trainer])res[c.trainer]={};
-      res[c.trainer][slot]={course:c.course,grp,room:c.room};
+      // دمج الشعب: نفس وقت + نفس مادة → نجمع الشعب
+      const ex=res[c.trainer][slot];
+      if(ex&&nrm(ex.course)===nrm(c.course)){
+        if(!ex.grps.includes(grp))ex.grps.push(grp);
+        if(c.room&&!ex.rooms.includes(c.room))ex.rooms.push(c.room);
+      }else{
+        res[c.trainer][slot]={course:c.course,grps:[grp],rooms:c.room?[c.room]:[]};
+      }
     }
   }
   return res;
 }
-// جداول القاعات: {قاعة: {يوم|حصة: {course,grp,trainer}}}
+// جداول القاعات: {قاعة: {يوم|حصة: {course,grps,trainer}}}
 function buildRoomSchedules(){
   const res={};
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   for(const grp in schedule){
     for(const slot in schedule[grp]){
       const c=schedule[grp][slot];
       const room=c.room||'غير محدد';
       if(!res[room])res[room]={};
-      res[room][slot]={course:c.course,grp,trainer:c.trainer};
+      // دمج الشعب: نفس وقت + نفس مادة + نفس مدرب → نجمع الشعب
+      const ex=res[room][slot];
+      if(ex&&nrm(ex.course)===nrm(c.course)&&nrm(ex.trainer)===nrm(c.trainer)){
+        if(!ex.grps.includes(grp))ex.grps.push(grp);
+      }else{
+        res[room][slot]={course:c.course,grps:[grp],trainer:c.trainer};
+      }
     }
   }
   return res;
@@ -1229,12 +1287,13 @@ function printScheduleReport(){
   const grps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
   // 1) جداول الشعب (المتدربين)
   const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<b>${c.course}</b><span>${c.trainer||''}</span><i>${c.room||''}</i>`)}</div>`).join('');
-  // 2) جداول المدربين
+  // 2) جداول المدربين — مع دمج الشعب المشتركة
   const tSched=buildTrainerSchedules();
-  const trHtml=Object.keys(tSched).map(t=>`<div class="block"><h3>👨‍🏫 المدرب: ${t}</h3>${schReportTable(tSched[t],c=>`<b>${c.course}</b><span>الشعبة ${c.grp}</span><i>${c.room||''}</i>`)}</div>`).join('');
-  // 3) جداول القاعات
+  const grpLbl=c=>c.grps&&c.grps.length>1?`الشعب ${c.grps.sort().join(' و ')}`:`الشعبة ${(c.grps&&c.grps[0])||c.grp||''}`;
+  const trHtml=Object.keys(tSched).map(t=>`<div class="block"><h3>👨‍🏫 المدرب: ${t}</h3>${schReportTable(tSched[t],c=>`<b>${c.course}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i>`)}</div>`).join('');
+  // 3) جداول القاعات — مع دمج الشعب المشتركة
   const rSched=buildRoomSchedules();
-  const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<b>${c.course}</b><span>الشعبة ${c.grp}</span><i>${c.trainer||''}</i>`)}</div>`).join('');
+  const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<b>${c.course}</b><span>${grpLbl(c)}</span><i>${c.trainer||''}</i>`)}</div>`).join('');
   const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الجدول الدراسي</title>
   <style>
   @page{size:A4 landscape;margin:12mm}
@@ -1299,8 +1358,7 @@ function schDrop(e,grp,toSlot){
     }
   }
   
-  const [toRoom]=moving.room;
-  if(moving.room&&labBusy(grp,toDay,toP,moving.room)){
+  if(moving.room&&labBusy(grp,toDay,toP,moving.room,moving.course,moving.trainer)){
     showToast(`⛔ تعارض: المعمل ${moving.room} محجوز في نفس الوقت`,'e');
     return;
   }
@@ -1323,8 +1381,12 @@ function schClear(grp,slot){
 function schSetRoom(grp,slot,room){
   if(!schedule[grp]||!schedule[grp][slot])return;
   const [day,p]=slot.split('|');
+  const c=schedule[grp][slot];
+  if(labBusy(grp,day,p,room,c.course,c.trainer)){
+    showToast('⛔ المعمل محجوز بمادة أخرى بنفس الوقت','e');
+    showAPage('schedule',null);return;
+  }
   schedule[grp][slot].room=room;
-  if(labBusy(grp,day,p,room))showToast('⚠️ تنبيه: المعمل محجوز بشعبة أخرى بنفس الوقت','w');
 }
 function gradeToGPA(g){
   g=parseFloat(g)||0;
@@ -1599,13 +1661,22 @@ const sPgs={
       const c=grid[day+'|'+p];
       return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${c.course}</div>${c.trainer?`<div class="sch-trainer">${c.trainer}</div>`:''}${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
     };
+    const bAfter=breakAfterPeriod();
+    const headCells=[...Array(P).keys()].map(p=>{
+      const th=`<th>الحصة ${p+1}<div class="sch-time-sm">${periodTime(p)}</div></th>`;
+      return (p===bAfter&&bAfter>=0&&bAfter<P-1)?th+`<th style="background:var(--gold);color:#000;width:46px">☕<div style="font-size:8px">${breakTime()}</div></th>`:th;
+    }).join('');
+    const rowCells=(d)=>[...Array(P).keys()].map(p=>{
+      const c=cell(d,p);
+      return (p===bAfter&&bAfter>=0&&bAfter<P-1)?c+`<td style="background:rgba(201,162,39,.15);text-align:center;color:var(--gold)">☕</td>`:c;
+    }).join('');
     return `
     <div class="stitle">📅 جدولي الأسبوعي — الشعبة ${grp}</div>
     ${hasSchedule?`
     <div class="alert ab"><span class="aicon">🗓️</span>جدول حصصك الأسبوعي المعتمد</div>
     <div class="sch-wrap"><table class="sch-table">
-      <thead><tr><th>الحصة</th>${days.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-      <tbody>${[...Array(P).keys()].map(p=>{const br=(schedConfig.breakAfter&&p===schedConfig.breakAfter)?`<tr class="sch-break"><td class="sch-pnum">☕<div class="sch-time-sm">${breakTime()}</div></td><td colspan="${days.length}" style="text-align:center;color:var(--gold);font-weight:700;font-size:12px">استراحة</td></tr>`:'';return br+`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time-sm">${periodTime(p)}</div></td>${days.map(d=>cell(d,p)).join('')}</tr>`;}).join('')}</tbody>
+      <thead><tr><th>اليوم</th>${headCells}</tr></thead>
+      <tbody>${days.map(d=>`<tr><td class="sch-pnum">${d}</td>${rowCells(d)}</tr>`).join('')}</tbody>
     </table></div>`:'<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد الجدول بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر جدولك هنا عند اعتماده من الإدارة</div></div>'}`;
   },
   services:()=>{
@@ -1829,13 +1900,21 @@ const tPgs={
     ${done.length?`<div class="stitle" style="margin-top:24px">السجل (${done.length})</div>${done.map(r=>card(r,false)).join('')}`:''}`;
   },
   schedule:()=>{
-    // جدول المدرب: نجمع كل حصصه من كل الشعب
+    // جدول المدرب: نجمع كل حصصه من كل الشعب — مع دمج الشعب المشتركة
     const tSched={};
     for(const grp in schedule){
       for(const slot in schedule[grp]){
         const c=schedule[grp][slot];
         const nrm=s=>n0(s).replace(/\s+/g,' ').trim();
-        if(nrm(c.trainer)===nrm(user.name)){tSched[slot]={course:c.course,grp,room:c.room};}
+        if(nrm(c.trainer)===nrm(user.name)){
+          // إذا فيه حصة بنفس الوقت ونفس المادة، نجمع الشعب
+          if(tSched[slot]&&nrm(tSched[slot].course)===nrm(c.course)){
+            tSched[slot].grps.push(grp);
+            if(c.room&&!tSched[slot].rooms.includes(c.room))tSched[slot].rooms.push(c.room);
+          }else{
+            tSched[slot]={course:c.course,grps:[grp],rooms:c.room?[c.room]:[]};
+          }
+        }
       }
     }
     const has=Object.keys(tSched).length>0;
@@ -1845,15 +1924,27 @@ const tPgs={
     const P=has?maxP:5;
     const cell=(day,p)=>{
       const c=tSched[day+'|'+p];
-      return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${c.course}</div><div class="sch-trainer">الشعبة ${c.grp}</div>${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
+      if(!c)return '<td class="sch-cell"><span class="sch-empty">—</span></td>';
+      const grpLabel=c.grps.length>1?`الشعب ${c.grps.sort().join(' و ')}`:`الشعبة ${c.grps[0]}`;
+      const roomLabel=c.rooms.join(' / ');
+      return `<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${c.course}</div><div class="sch-trainer">${grpLabel}</div>${roomLabel?`<div class="sch-room-tag">${roomLabel}</div>`:''}</div></td>`;
     };
+    const bAfter=breakAfterPeriod();
+    const headCells=[...Array(P).keys()].map(p=>{
+      const th=`<th>الحصة ${p+1}<div class="sch-time-sm">${periodTime(p)}</div></th>`;
+      return (p===bAfter&&bAfter>=0&&bAfter<P-1)?th+`<th style="background:var(--gold);color:#000;width:46px">☕<div style="font-size:8px">${breakTime()}</div></th>`:th;
+    }).join('');
+    const rowCells=(d)=>[...Array(P).keys()].map(p=>{
+      const c=cell(d,p);
+      return (p===bAfter&&bAfter>=0&&bAfter<P-1)?c+`<td style="background:rgba(201,162,39,.15);text-align:center;color:var(--gold)">☕</td>`:c;
+    }).join('');
     return `
     <div class="stitle">📅 جدولي الأسبوعي</div>
     ${has?`
     <div class="alert ab"><span class="aicon">🗓️</span>جدول حصصك الأسبوعي عبر كل الشعب</div>
     <div class="sch-wrap"><table class="sch-table">
-      <thead><tr><th>الحصة</th>${days.map(d=>`<th>${d}</th>`).join('')}</tr></thead>
-      <tbody>${[...Array(P).keys()].map(p=>{const br=(schedConfig.breakAfter&&p===schedConfig.breakAfter)?`<tr class="sch-break"><td class="sch-pnum">☕<div class="sch-time-sm">${breakTime()}</div></td><td colspan="${days.length}" style="text-align:center;color:var(--gold);font-weight:700;font-size:12px">استراحة</td></tr>`:'';return br+`<tr><td class="sch-pnum">الحصة ${p+1}<div class="sch-time-sm">${periodTime(p)}</div></td>${days.map(d=>cell(d,p)).join('')}</tr>`;}).join('')}</tbody>
+      <thead><tr><th>اليوم</th>${headCells}</tr></thead>
+      <tbody>${days.map(d=>`<tr><td class="sch-pnum">${d}</td>${rowCells(d)}</tr>`).join('')}</tbody>
     </table></div>`:'<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد الجدول بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">سيظهر جدولك هنا عند اعتماده من الإدارة</div></div>'}`;
   },
   home:()=>{
@@ -2410,16 +2501,24 @@ const aPgs={
       const cListInfo=coursesForSchedule(g);
       const placedCount=Object.keys(schedule[g]||{}).length;
       const neededCount=cListInfo.reduce((a,c)=>a+c.sessions,0);
+      const bAfter=breakAfterPeriod(); // الحصة التي تأتي بعدها الاستراحة
+      // بناء رؤوس الأعمدة مع إدراج عمود الاستراحة
+      const headCells=[...Array(P).keys()].map(p=>{
+        const th=`<th>الحصة ${p+1}<div class="sch-time" style="font-size:9px;margin-top:2px">${periodTime(p)}</div></th>`;
+        return (p===bAfter&&bAfter>=0&&bAfter<P-1)?th+`<th class="sch-break-col" style="background:var(--gold);color:#000;width:50px">☕<div style="font-size:8px;margin-top:2px">${breakTime()}</div></th>`:th;
+      }).join('');
+      // بناء خلايا كل يوم مع إدراج خلية الاستراحة
+      const rowCells=(g,d)=>[...Array(P).keys()].map(p=>{
+        const c=cell(g,d,p);
+        return (p===bAfter&&bAfter>=0&&bAfter<P-1)?c+`<td class="sch-break-col" style="background:rgba(201,162,39,.15);text-align:center;color:var(--gold);font-weight:700;font-size:10px">☕</td>`:c;
+      }).join('');
       return `
       ${isAll?`<div class="stitle" style="margin-top:20px">📋 الشعبة ${g}</div>`:''}
       ${cListInfo.length?`<div class="alert ab"><span class="aicon">📚</span>الشعبة ${g}: ${cListInfo.length} مواد حالية · تحتاج ${neededCount} حصة · ${placedCount} موزّعة</div>`:'<div class="alert aw"><span class="aicon">⚠️</span>لا توجد مواد حالية للشعبة '+g+' (تأكد من حالة المواد = حالي)</div>'}
       ${cListInfo.length?`<div class="sch-legend">${cListInfo.map(c=>`<span class="sch-tag">${c.course} <b>(${c.sessions} حصص)</b> · ${c.trainer}</span>`).join('')}</div>`:''}
       <div class="sch-wrap"><table class="sch-table">
-        <thead><tr><th>اليوم</th>${[...Array(P).keys()].map(p=>`<th>الحصة ${p+1}<div class="sch-time" style="font-size:9px;margin-top:2px">${periodTime(p)}</div></th>`).join('')}</tr></thead>
-        <tbody>${days.map(d=>{
-          const breakRow=(schedConfig.breakAfter)?`<tr class="sch-break"><td colspan="${P+1}" style="text-align:center;color:var(--gold);font-weight:700">☕ استراحة (${breakTime()})</td></tr>`:'';
-          return `<tr><td class="sch-pnum">${d}</td>${[...Array(P).keys()].map(p=>cell(g,d,p)).join('')}</tr>`;
-        }).join('')}</tbody>
+        <thead><tr><th>اليوم</th>${headCells}</tr></thead>
+        <tbody>${days.map(d=>`<tr><td class="sch-pnum">${d}</td>${rowCells(g,d)}</tr>`).join('')}</tbody>
       </table></div>`;
     };
     const genBtn=isAll?`<button class="btn btn-b" onclick="genAllSchedule()">⚡ ولّد كل الشعب</button>`:`<button class="btn btn-b" onclick="genSchedule('${cur}')">⚡ ولّد الجدول</button>`;
@@ -2441,8 +2540,8 @@ const aPgs={
         <input type="number" min="1" max="6" step="0.5" value="${schedConfig.periodHours}" onchange="schedConfig.periodHours=parseFloat(this.value)||2;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>بداية الدوام</label>
         <input type="number" min="6" max="14" step="0.5" value="${schedConfig.startHour}" onchange="schedConfig.startHour=parseFloat(this.value)||8;showAPage('schedule',null)"></div>
-      <div class="sch-cfg"><label>استراحة بعد حصة</label>
-        <input type="number" min="0" max="6" value="${schedConfig.breakAfter}" title="0 = بدون استراحة" onchange="schedConfig.breakAfter=parseInt(this.value)||0;showAPage('schedule',null)"></div>
+      <div class="sch-cfg"><label>بداية الاستراحة</label>
+        <input type="number" min="9" max="15" step="0.5" value="${schedConfig.breakStart}" title="وقت بداية الاستراحة (12 = الظهر)" onchange="schedConfig.breakStart=parseFloat(this.value)||12;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>مدة الاستراحة (ساعة)</label>
         <input type="number" min="0.5" max="3" step="0.5" value="${schedConfig.breakHours}" onchange="schedConfig.breakHours=parseFloat(this.value)||1;showAPage('schedule',null)"></div>
       ${genBtn}
