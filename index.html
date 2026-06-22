@@ -1733,13 +1733,22 @@ const sPgs={
     const grp=user.grp;
     const grid=schedule[grp]||{};
     const hasSchedule=Object.keys(grid).length>0;
-    // استنتاج الأيام والحصص الموجودة فعلاً
-    const usedDays=DAYS.filter(d=>Object.keys(grid).some(s=>s.startsWith(d+'|')));
+    // مواد الطالب الحالية فقط (عشان مادة الإعادة ما تظهر لكل الشعبة)
+    const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+    const myCourses=new Set(courses.filter(c=>isActive(c.status)).map(c=>nrm(c.course)));
+    // هل المادة في الخانة من ضمن مواد الطالب؟
+    const isMine=(c)=>c&&myCourses.has(nrm(c.course));
+    // الشبكة المفلترة (حصص الطالب فقط)
+    const myGrid={};
+    for(const slot in grid){if(isMine(grid[slot]))myGrid[slot]=grid[slot];}
+    const hasMine=Object.keys(myGrid).length>0;
+    // استنتاج الأيام والحصص من حصص الطالب فقط
+    const usedDays=DAYS.filter(d=>Object.keys(myGrid).some(s=>s.startsWith(d+'|')));
     const days=usedDays.length?usedDays:DAYS;
-    const maxP=Math.max(1,...Object.keys(grid).map(s=>parseInt(s.split('|')[1])+1));
-    const P=hasSchedule?maxP:5;
+    const maxP=Math.max(1,...Object.keys(myGrid).map(s=>parseInt(s.split('|')[1])+1));
+    const P=hasMine?maxP:5;
     const cell=(day,p)=>{
-      const c=grid[day+'|'+p];
+      const c=myGrid[day+'|'+p];
       return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${c.course}</div>${c.trainer?`<div class="sch-trainer">${c.trainer}</div>`:''}${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
     };
     const bAfter=breakAfterPeriod();
@@ -1757,8 +1766,8 @@ const sPgs={
       : '<div class="empty"><div class="empty-icon">📭</div><div>ما عندك جدول حالياً</div><div style="font-size:12px;color:var(--muted);margin-top:8px">لأنه ما عندك مواد مسجّلة هذا الفصل · راجع الإدارة لو تتوقع غير ذلك</div></div>';
     return `
     <div class="stitle">📅 جدولي الأسبوعي — الشعبة ${grp}</div>
-    ${hasSchedule?`
-    <div class="alert ab"><span class="aicon">🗓️</span>جدول حصصك الأسبوعي المعتمد</div>
+    ${hasMine?`
+    <div class="alert ab"><span class="aicon">🗓️</span>جدول حصصك الأسبوعي المعتمد (موادك المسجّلة فقط)</div>
     <div class="sch-wrap"><table class="sch-table">
       <thead><tr><th>اليوم</th>${headCells}</tr></thead>
       <tbody>${days.map(d=>`<tr><td class="sch-pnum">${d}</td>${rowCells(d)}</tr>`).join('')}</tbody>
