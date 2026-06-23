@@ -734,7 +734,7 @@ body{top:0!important}
 <script>
 const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
 const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyp5GA2nha4Ak1IWsit7PtXwUOZDRrGJFvCeW0w7E6G5VNmlQR34ExglWG6FgBzX6XV/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby_6_yf8_ev5gp2UREB0MoTmI5j8e3erLqCQJS-cjpxFwcui9-TLMxoRSLVJ12HN0Up/exec';
 const ADMIN=[
   {id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
   {id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
@@ -767,6 +767,57 @@ async function fetchSheet(range){
     const d=await r.json();
     return d.values||[];
   }catch(e){clearTimeout(t);throw e;}
+}
+
+// ===== JSONP عام (للطلبات التي تحتاج رد من Apps Script) =====
+function jsonpCall(params){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},15000);
+    window[cb]=(d)=>{
+      clearTimeout(timer);
+      delete window[cb];
+      document.getElementById('jsonp_'+cb)?.remove();
+      resolve(d);
+    };
+    const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+    const s=document.createElement('script');
+    s.id='jsonp_'+cb;
+    s.src=SCRIPT_URL+'?'+qs+'&callback='+cb;
+    s.onerror=()=>{clearTimeout(timer);delete window[cb];reject(new Error('network'))};
+    document.head.appendChild(s);
+  });
+}
+
+// ===== التحقق بخطوتين (2FA) — أول مرة لكل جهاز =====
+// مُعرّف فريد للجهاز (يُحفظ في المتصفح)
+function getDeviceId(){
+  let id=localStorage.getItem('bla_device_id');
+  if(!id){id='dev_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);localStorage.setItem('bla_device_id',id);}
+  return id;
+}
+// هل هذا الجهاز موثوق لهذا المستخدم؟
+function isDeviceTrusted(userId){
+  try{
+    const trusted=JSON.parse(localStorage.getItem('bla_trusted_devices')||'{}');
+    return trusted[String(userId)]===getDeviceId();
+  }catch(e){return false;}
+}
+// حفظ الجهاز كموثوق لهذا المستخدم
+function trustDevice(userId){
+  try{
+    const trusted=JSON.parse(localStorage.getItem('bla_trusted_devices')||'{}');
+    trusted[String(userId)]=getDeviceId();
+    localStorage.setItem('bla_trusted_devices',JSON.stringify(trusted));
+  }catch(e){}
+}
+// إرسال رمز التحقق لإيميل المستخدم
+async function sendOTP(userId,email,name){
+  return jsonpCall({action:'sendOTP',uid:userId,email:email,name:name||''});
+}
+// التحقق من الرمز
+async function verifyOTP(userId,code){
+  return jsonpCall({action:'verifyOTP',uid:userId,code:code});
 }
 
 // ===== ROLE =====
@@ -815,7 +866,6 @@ async function doLogin(){
       }
       if(!f)throw new Error('not found');
       user=f;
-      await loadAdmin();
     } else if(role==='t'){
       const rows=await fetchSheet('قاعدة بيانات المدربين!A:E');
       let f=null;
@@ -828,7 +878,6 @@ async function doLogin(){
       }
       if(!f)throw new Error('not found');
       user=f;
-      await loadTrainer();
     } else {
       const rows=await fetchSheet('قاعدة بيانات مركزي!A:G');
       let f=null;
@@ -841,15 +890,129 @@ async function doLogin(){
       }
       if(!f)throw new Error('not found');
       user=f;
-      await loadStudent();
     }
-    // حفظ الجلسة
-    localStorage.setItem('bla_user', JSON.stringify(user));
-    localStorage.setItem('bla_role', role);
-    showApp();
+    // ✅ نجح التحقق من كلمة السر — الآن نتحقق من الجهاز (2FA)
+    if(isDeviceTrusted(user.id)){
+      // جهاز موثوق → دخول مباشر
+      await loadUserData();
+      finishLogin();
+    }else{
+      // جهاز جديد → أرسل رمز للإيميل
+      if(!user.email||!user.email.includes('@')){
+        // ما عنده إيميل صالح → دخول بدون 2FA (مع تنبيه)
+        await loadUserData();
+        finishLogin();
+        setTimeout(()=>showToast('⚠️ ما عندك إيميل مسجّل — يُنصح بإضافته للأمان','w'),800);
+      }else{
+        pendingUser={user:JSON.parse(JSON.stringify(user)),role};
+        document.getElementById('lbtn').disabled=false;
+        document.getElementById('ldg').style.display='none';
+        await startOTPFlow();
+      }
+    }
+    return;
   }catch(e){showErr('بيانات الدخول غير صحيحة');}
   document.getElementById('lbtn').disabled=false;
   document.getElementById('ldg').style.display='none';
+}
+
+// تحميل بيانات المستخدم حسب الدور
+async function loadUserData(){
+  if(role==='a')await loadAdmin();
+  else if(role==='t')await loadTrainer();
+  else await loadStudent();
+}
+// إتمام تسجيل الدخول (حفظ الجلسة وعرض التطبيق)
+function finishLogin(){
+  localStorage.setItem('bla_user', JSON.stringify(user));
+  localStorage.setItem('bla_role', role);
+  showApp();
+}
+
+// ===== تدفق إرسال وإدخال رمز 2FA =====
+let pendingUser=null; // المستخدم المنتظر تأكيد الرمز
+async function startOTPFlow(){
+  const u=pendingUser.user;
+  showOTPModal(u.email);
+  try{
+    const res=await sendOTP(u.id,u.email,u.name);
+    if(res&&res.status==='ok'){
+      document.getElementById('otp-status').innerHTML='<span style="color:var(--green)">✅ تم إرسال الرمز لإيميلك</span>';
+    }else{
+      document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">⚠️ '+((res&&res.msg)||'تعذر الإرسال')+'</span>';
+    }
+  }catch(e){
+    document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">⚠️ تعذر إرسال الرمز — تحقق من الاتصال</span>';
+  }
+}
+// نافذة إدخال الرمز
+function showOTPModal(email){
+  const masked=email.replace(/^(.{2}).*(@.*)$/,'$1***$2');
+  const html=`
+  <div id="otp-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:380px;width:100%;text-align:center">
+      <div style="font-size:42px;margin-bottom:10px">🔐</div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:6px">التحقق بخطوتين</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:4px">أرسلنا رمز من 6 أرقام إلى</div>
+      <div style="font-size:13px;font-weight:700;color:#6ab8f7;margin-bottom:16px">${masked}</div>
+      <div id="otp-status" style="font-size:12px;margin-bottom:14px;min-height:18px"><span style="color:var(--muted)">جاري الإرسال...</span></div>
+      <input type="text" id="otp-input" inputmode="numeric" maxlength="6" placeholder="● ● ● ● ● ●" 
+        style="width:100%;text-align:center;font-size:24px;letter-spacing:8px;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);margin-bottom:16px"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+      <button class="btn btn-b" style="width:100%;margin-bottom:10px" onclick="confirmOTP()">✅ تأكيد ودخول</button>
+      <div style="display:flex;gap:8px;justify-content:center">
+        <button class="btn btn-out btn-sm" onclick="resendOTP()">🔄 إعادة إرسال</button>
+        <button class="btn btn-out btn-sm" onclick="cancelOTP()">إلغاء</button>
+      </div>
+    </div>
+  </div>`;
+  const div=document.createElement('div');
+  div.id='otp-wrap';
+  div.innerHTML=html;
+  document.body.appendChild(div);
+  setTimeout(()=>document.getElementById('otp-input')?.focus(),200);
+}
+function closeOTPModal(){document.getElementById('otp-wrap')?.remove();}
+async function confirmOTP(){
+  const code=document.getElementById('otp-input').value.trim();
+  if(code.length!==6){document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">أدخل 6 أرقام</span>';return;}
+  document.getElementById('otp-status').innerHTML='<span style="color:var(--muted)">جاري التحقق...</span>';
+  try{
+    const res=await verifyOTP(pendingUser.user.id,code);
+    if(res&&res.status==='ok'){
+      // ✅ رمز صحيح
+      user=pendingUser.user;
+      role=pendingUser.role;
+      trustDevice(user.id); // احفظ الجهاز كموثوق
+      closeOTPModal();
+      document.getElementById('ldg').style.display='block';
+      await loadUserData();
+      finishLogin();
+      pendingUser=null;
+    }else{
+      document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">❌ '+((res&&res.msg)||'رمز غير صحيح')+'</span>';
+    }
+  }catch(e){
+    document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">تعذر التحقق — جرب مرة أخرى</span>';
+  }
+}
+async function resendOTP(){
+  document.getElementById('otp-status').innerHTML='<span style="color:var(--muted)">جاري إعادة الإرسال...</span>';
+  await startOTPResend();
+}
+async function startOTPResend(){
+  const u=pendingUser.user;
+  try{
+    const res=await sendOTP(u.id,u.email,u.name);
+    if(res&&res.status==='ok')document.getElementById('otp-status').innerHTML='<span style="color:var(--green)">✅ تم إرسال رمز جديد</span>';
+    else document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">⚠️ تعذر الإرسال</span>';
+  }catch(e){document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">⚠️ تعذر الإرسال</span>';}
+}
+function cancelOTP(){
+  closeOTPModal();
+  pendingUser=null;
+  user=null;
+  showToast('تم إلغاء تسجيل الدخول','i');
 }
 
 function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.style.display='block'}
