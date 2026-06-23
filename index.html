@@ -2419,9 +2419,18 @@ async function saveSession(course,code,sessionHrs){
   showToast('جاري حفظ الحضور...','i');
   try{
     if(records.length){
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveAttendance',records}),headers:{'Content-Type':'text/plain'}});
+      // إرسال عبر JSONP عشان نقرأ الرد ونعرف كم سجل تحدّث فعلياً
+      const res=await jsonpCall({action:'saveAttendance',data:JSON.stringify(records)});
+      const upd=(res&&typeof res.updated!=='undefined')?res.updated:null;
+      if(upd!==null && upd===0){
+        // ما تحدّث ولا سجل → المفتاح/الرقم ما تطابق بالشيت
+        showToast('⚠️ ما تحدّث أي سجل بالشيت — تأكد من بيانات الطلاب','e');
+        return;
+      }
+      showToast(`✅ تم حفظ الحضور — ${absC} غياب · ${lateC} تأخير`+(upd!==null?` (${upd} سجل)`:''),'s');
+    }else{
+      showToast(`✅ تم حفظ الحضور — ${absC} غياب · ${lateC} تأخير`,'s');
     }
-    showToast(`✅ تم حفظ الحضور — ${absC} غياب · ${lateC} تأخير`,'s');
     attMarks={}; // مسح الحضور بعد الحفظ الناجح
     attCurrentCourse=null;
     showTPage('attendance',null);
