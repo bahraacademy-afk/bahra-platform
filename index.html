@@ -2930,7 +2930,22 @@ const aPgs={
     <div class="stitle" style="margin-top:24px;opacity:.7">⚪ مدربون سابقون (${old.length})</div>
     <div class="alert" style="background:rgba(150,150,150,.08);border:1px solid rgba(150,150,150,.2);color:var(--muted)"><span class="aicon">📋</span>مدربون من سجلات سابقة — غير نشطين حالياً (للأرشيف)</div>
     <div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>${old.map(t=>rowFor(t,true)).join('')}</tbody></table></div>`:''}
-    <div class="btn-row"><button class="btn btn-b" onclick="printAcademicReport()">🖨️ طباعة التقرير</button></div>`;
+    <div class="stitle" style="margin-top:24px">🖨️ التقارير القابلة للطباعة</div>
+    <div class="alert ab"><span class="aicon">📄</span>كل تقرير يفتح في نافذة جديدة جاهز للطباعة أو الحفظ PDF</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+      <button class="btn btn-b" onclick="printAcademicReport()">📊 تقرير الأداء العام</button>
+      <button class="btn btn-b" onclick="printAbsenceReport()">📉 تقرير الغياب الشامل</button>
+      <button class="btn btn-b" onclick="printGradesReport()">📝 تقرير الدرجات المفصّل</button>
+      <button class="btn btn-b" onclick="printRequestsReport()">📋 تقرير الأعذار والطلبات</button>
+    </div>
+    <div class="stitle" style="margin-top:8px">👤 تقرير طالب فردي</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <select id="rep-student" style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+        <option value="">— اختر المتدرب —</option>
+        ${uniqStudents(students).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>`<option value="${s.id}">${s.name} (${s.sid}) · شعبة ${s.grp}</option>`).join('')}
+      </select>
+      <button class="btn btn-b" onclick="(function(){const v=document.getElementById('rep-student').value;if(!v){showToast('اختر متدرب أولاً','w');return}printStudentReport(v)})()">🖨️ اطبع كشف الطالب</button>
+    </div>`;
   },
     settings:()=>{
     const totSt=students.length;
@@ -3273,6 +3288,175 @@ function printAcademicReport(){
   w.document.write(html);w.document.close();
 }
 
+// ===== قالب طباعة موحّد لكل التقارير =====
+function reportShell(title,subtitle,bodyHtml){
+  const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
+  const today=new Date().toLocaleDateString('ar-SA');
+  return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${title}</title>
+  <style>
+  @page{size:A4;margin:14mm}*{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box}
+  body{margin:0;color:#1a2942}
+  .hdr{display:flex;align-items:center;gap:16px;border-bottom:3px solid #c9a227;padding-bottom:14px;margin-bottom:18px}
+  .hdr img{width:62px;height:62px;border-radius:50%}.hdr .t1{font-size:21px;font-weight:800;color:#0a2348}.hdr .t2{font-size:12px;color:#5a6b85;margin-top:2px}
+  .hdr .meta{margin-right:auto;text-align:left;font-size:12px;color:#5a6b85}
+  .kpis{display:flex;gap:12px;margin-bottom:22px;flex-wrap:wrap}
+  .kpi{flex:1;min-width:110px;border:1px solid #c5cfdd;border-radius:10px;padding:14px;text-align:center}
+  .kpi .n{font-size:24px;font-weight:800;color:#0a2348}.kpi .l{font-size:11px;color:#5a6b85;margin-top:3px}
+  .sec-title{font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:9px 14px;border-radius:8px;margin:20px 0 12px}
+  table{width:100%;border-collapse:collapse;margin-bottom:8px}
+  th{background:#0a2348;color:#fff;font-size:12px;padding:8px;border:1px solid #0a2348}
+  td{border:1px solid #c5cfdd;padding:7px;text-align:center;font-size:12px}
+  tr:nth-child(even) td{background:#f6f8fb}
+  .danger{color:#c0392b;font-weight:700}.warn{color:#d68910;font-weight:700}.ok{color:#1e8449;font-weight:700}
+  .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
+  .b-r{background:#fdecea;color:#c0392b}.b-y{background:#fef5e7;color:#d68910}.b-g{background:#eafaf1;color:#1e8449}
+  .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700}
+  @media print{.noprint{display:none}}
+  .grp-block{page-break-inside:avoid}
+  </style></head><body>
+  <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">أكاديمية بحرة التعليمية</div><div class="t2">${subtitle}</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
+  ${bodyHtml}
+  </body></html>`;
+}
+function openReport(html){
+  const w=window.open('','_blank');
+  if(!w){showToast('فعّل النوافذ المنبثقة للطباعة','w');return;}
+  w.document.write(html);w.document.close();
+}
+function absBadge(pct){
+  const p=Math.round(pct);
+  if(p>=25)return `<span class="badge b-r">${p}% محروم</span>`;
+  if(p>=20)return `<span class="badge b-y">${p}% إنذار ثانٍ</span>`;
+  if(p>=10)return `<span class="badge b-y">${p}% إنذار أول</span>`;
+  return `<span class="badge b-g">${p}%</span>`;
+}
+
+// ===== 1) تقرير الغياب الشامل =====
+function printAbsenceReport(){
+  const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
+  const deprived=allCourses.filter(c=>c.abs>=25);
+  const warn2=allCourses.filter(c=>c.abs>=20&&c.abs<25);
+  const warn1=allCourses.filter(c=>c.abs>=10&&c.abs<20);
+  let body=`<div class="kpis">
+    <div class="kpi"><div class="n">${students.length}</div><div class="l">إجمالي المتدربين</div></div>
+    <div class="kpi"><div class="n" style="color:#c0392b">${deprived.length}</div><div class="l">حالات حرمان (≥25%)</div></div>
+    <div class="kpi"><div class="n" style="color:#d68910">${warn2.length}</div><div class="l">إنذار ثانٍ (≥20%)</div></div>
+    <div class="kpi"><div class="n" style="color:#d68910">${warn1.length}</div><div class="l">إنذار أول (≥10%)</div></div>
+  </div>`;
+  grps.forEach(g=>{
+    const gs=uniqStudents(students.filter(s=>s.grp===g&&isActive(s.status)));
+    if(!gs.length)return;
+    const rows=gs.map(s=>{
+      const sc=allCourses.filter(c=>c.sid===s.id&&isActive(c.status));
+      const maxAbs=sc.length?Math.max(...sc.map(c=>c.abs)):0;
+      const worst=sc.find(c=>c.abs===maxAbs);
+      return `<tr><td>${s.sid}</td><td style="text-align:right">${s.name}</td><td>${absBadge(maxAbs)}</td><td>${worst?worst.course:'—'}</td><td>${sc.length}</td></tr>`;
+    }).join('');
+    body+=`<div class="grp-block"><div class="sec-title">📋 الشعبة ${g} (${gs.length} متدرب)</div>
+    <table><thead><tr><th>الرقم</th><th>الاسم</th><th>أعلى نسبة غياب</th><th>في مادة</th><th>عدد المواد</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  });
+  openReport(reportShell('تقرير الغياب الشامل','تقرير الغياب الشامل لجميع المتدربين',body));
+}
+
+// ===== 2) تقرير الدرجات المفصّل (لكل شعبة/مادة) =====
+function printGradesReport(){
+  const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
+  let body=`<div class="kpis">
+    <div class="kpi"><div class="n">${students.length}</div><div class="l">متدرب</div></div>
+    <div class="kpi"><div class="n">${allCourses.filter(c=>c.pct>=60).length}</div><div class="l">ناجح</div></div>
+    <div class="kpi"><div class="n" style="color:#c0392b">${allCourses.filter(c=>c.pct<60&&c.pct>0).length}</div><div class="l">راسب</div></div>
+    <div class="kpi"><div class="n">${[...new Set(allCourses.map(c=>c.course))].filter(Boolean).length}</div><div class="l">مادة</div></div>
+  </div>`;
+  grps.forEach(g=>{
+    const gs=students.filter(s=>s.grp===g);
+    const sids=gs.map(s=>s.id);
+    const courses=[...new Set(allCourses.filter(c=>sids.includes(c.sid)&&isActive(c.status)).map(c=>c.course))].filter(Boolean);
+    if(!courses.length)return;
+    body+=`<div class="sec-title">📋 الشعبة ${g}</div>`;
+    courses.forEach(course=>{
+      const cc=allCourses.filter(c=>sids.includes(c.sid)&&c.course===course&&isActive(c.status));
+      const uniq=uniqStudents(cc.map(c=>{const st=students.find(s=>s.id===c.sid);return{...c,sid:c.sid,name:st?st.name:c.sname,grp:g};}));
+      const rows=uniq.map(c=>{
+        const st=students.find(s=>s.id===c.sid);
+        const grade=Math.round(c.pct);
+        const cls=grade>=60?'ok':(grade>0?'danger':'');
+        return `<tr><td>${c.sid}</td><td style="text-align:right">${st?st.name:c.sname||''}</td><td class="${cls}">${grade}%</td><td>${c.letter||'—'}</td><td>${grade>=60?'ناجح':(grade>0?'راسب':'—')}</td></tr>`;
+      }).join('');
+      const avg=uniq.length?Math.round(uniq.reduce((a,c)=>a+c.pct,0)/uniq.length):0;
+      body+=`<div class="grp-block" style="margin-bottom:14px"><div style="font-weight:700;color:#0a2348;padding:6px 0">📚 ${course} <span style="font-size:11px;color:#5a6b85">(متوسط: ${avg}%)</span></div>
+      <table><thead><tr><th>الرقم</th><th>الاسم</th><th>الدرجة</th><th>التقدير</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    });
+  });
+  openReport(reportShell('تقرير الدرجات المفصّل','كشف الدرجات المفصّل لكل شعبة ومادة',body));
+}
+
+// ===== 3) تقرير طالب فردي (كشف كامل) =====
+function printStudentReport(sid){
+  const st=students.find(s=>s.id===sid);
+  if(!st){showToast('الطالب غير موجود','w');return;}
+  const sc=allCourses.filter(c=>c.sid===sid);
+  const current=sc.filter(c=>isActive(c.status));
+  const avg=sc.length?Math.round(sc.reduce((a,c)=>a+c.pct,0)/sc.length):0;
+  const gpa=gpaFrom(sc);
+  const maxAbs=current.length?Math.max(...current.map(c=>c.abs)):0;
+  let body=`<div class="kpis">
+    <div class="kpi"><div class="n">${gpa}</div><div class="l">المعدل التراكمي /5</div></div>
+    <div class="kpi"><div class="n">${avg}%</div><div class="l">متوسط الدرجات</div></div>
+    <div class="kpi"><div class="n">${sc.length}</div><div class="l">إجمالي المواد</div></div>
+    <div class="kpi"><div class="n">${absBadge(maxAbs)}</div><div class="l">أعلى غياب</div></div>
+  </div>
+  <div class="sec-title">بيانات المتدرب</div>
+  <table><tbody>
+    <tr><th style="width:30%">الاسم</th><td style="text-align:right">${st.name}</td></tr>
+    <tr><th>الرقم الأكاديمي</th><td>${st.id}</td></tr>
+    <tr><th>الشعبة</th><td>${st.grp}</td></tr>
+    <tr><th>التخصص</th><td style="text-align:right">${st.spec||'—'}</td></tr>
+    <tr><th>الجوال</th><td>${st.ph||'—'}</td></tr>
+    <tr><th>البريد</th><td>${st.email||'—'}</td></tr>
+  </tbody></table>`;
+  if(current.length){
+    const rows=current.map(c=>`<tr><td style="text-align:right">${c.course}</td><td>${c.code||'—'}</td><td class="${c.pct>=60?'ok':c.pct>0?'danger':''}">${Math.round(c.pct)}%</td><td>${c.letter||'—'}</td><td>${absBadge(c.abs)}</td></tr>`).join('');
+    body+=`<div class="sec-title">المواد الحالية (${current.length})</div>
+    <table><thead><tr><th>المادة</th><th>الرمز</th><th>الدرجة</th><th>التقدير</th><th>الغياب</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  const prev=sc.filter(c=>!isActive(c.status));
+  if(prev.length){
+    const rows=prev.map(c=>`<tr><td style="text-align:right">${c.course}</td><td>${c.code||'—'}</td><td class="${c.pct>=60?'ok':c.pct>0?'danger':''}">${Math.round(c.pct)}%</td><td>${c.letter||'—'}</td><td>${c.pct>=60?'ناجح':'راسب'}</td></tr>`).join('');
+    body+=`<div class="sec-title">المواد السابقة (${prev.length})</div>
+    <table><thead><tr><th>المادة</th><th>الرمز</th><th>الدرجة</th><th>التقدير</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  openReport(reportShell('كشف درجات المتدرب','كشف المتدرب الكامل — '+st.name,body));
+}
+
+// ===== 4) تقرير الأعذار والطلبات =====
+function printRequestsReport(){
+  const reqs=requests||[];
+  const excuses=reqs.filter(r=>r.type==='عذر غياب');
+  const approved=reqs.filter(r=>r.finalStatus==='معتمد'||r.dirStatus==='معتمد');
+  const pending=reqs.filter(r=>r.finalStatus==='قيد المراجعة'||(!r.dirStatus||r.dirStatus==='معلق'));
+  const rejected=reqs.filter(r=>r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'||r.finalStatus==='مرفوض');
+  const statusOf=r=>{
+    if(r.finalStatus==='معتمد'||r.dirStatus==='معتمد')return '<span class="badge b-g">معتمد</span>';
+    if(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')return '<span class="badge b-r">مرفوض</span>';
+    return '<span class="badge b-y">قيد المراجعة</span>';
+  };
+  const rows=reqs.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(r=>{
+    const days=((String(r.details||'').match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim();
+    const hours=((String(r.details||'').match(/ساعات:\s*([\d.]+)/)||[])[1]||'');
+    return `<tr><td>${r.date||'—'}</td><td style="text-align:right">${r.sname||''}</td><td>${r.grp||''}</td><td>${r.type||''}</td><td style="font-size:10px">${days||'—'}</td><td>${hours||'—'}</td><td>${statusOf(r)}</td></tr>`;
+  }).join('');
+  const body=`<div class="kpis">
+    <div class="kpi"><div class="n">${reqs.length}</div><div class="l">إجمالي الطلبات</div></div>
+    <div class="kpi"><div class="n" style="color:#1e8449">${approved.length}</div><div class="l">معتمدة</div></div>
+    <div class="kpi"><div class="n" style="color:#d68910">${pending.length}</div><div class="l">قيد المراجعة</div></div>
+    <div class="kpi"><div class="n" style="color:#c0392b">${rejected.length}</div><div class="l">مرفوضة</div></div>
+  </div>
+  <div class="sec-title">سجل الطلبات والأعذار</div>
+  <table><thead><tr><th>التاريخ</th><th>المتدرب</th><th>الشعبة</th><th>النوع</th><th>أيام الغياب</th><th>ساعات</th><th>الحالة</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center">لا توجد طلبات</td></tr>'}</tbody></table>`;
+  openReport(reportShell('تقرير الأعذار والطلبات','تقرير الأعذار والطلبات',body));
+}
+
 function showStudentDetail(sid){
   const st=students.find(s=>s.id===sid);
   if(!st)return;
@@ -3335,6 +3519,7 @@ function showStudentDetail(sid){
         </div>`;
       }).join(''):'<div class="empty">لا توجد مقررات</div>'}
     </div>
+    <div class="btn-row" style="margin-top:16px"><button class="btn btn-b" onclick="printStudentReport('${sid}')">🖨️ اطبع كشف الطالب الكامل</button></div>
   `;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
