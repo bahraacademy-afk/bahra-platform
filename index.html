@@ -728,7 +728,7 @@ body{top:0!important}
 <script>
 const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
 const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzdfuJTa994P-VN4txPed0FLiPXymdvIlw_cN5pIMAcWqeXDyY_z1_AGU2TWAMMxmU3/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbznXWmarDvv_E_tXHD-WOFaGJBv3re3DU-ujW_WL9utyuE7H9C7AvLRIS3bAfdT_o5y/exec';
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
 const OTP_ENABLED=false;
 const ADMIN=[
@@ -2412,7 +2412,7 @@ async function saveSession(course,code,sessionHrs){
       const newPct=Math.min(Math.round((curHrs+add)/total*1000)/10,100);
       s.abs=newPct;
       // حفظ في كل سجل للطالب بهذه المادة (شعب متعددة → كلها تتحدّث)
-      records.push({key:s.key,sid:s.sid,absence:newPct});
+      records.push({key:s.key,sid:s.sid,code:s.code,grp:s.grp,absence:newPct});
     }
   });
   if(!marked){showToast('سجّل حضور المتدربين أولاً','w');return;}
