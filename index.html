@@ -2272,7 +2272,7 @@ const tPgs={
     const allCrs=[...new Set(students.map(s=>s.course))];
     const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>isActive(s.status)));
     return `
-    <div class="stitle">تسجيل حضور اليوم</div>
+    <div class="stitle">تسجيل حضور اليوم <span style="font-size:.62em;font-weight:600;color:var(--gold,#c9a227);background:rgba(201,162,39,.12);padding:3px 12px;border-radius:20px;margin-right:8px;vertical-align:middle">📅 ${new Date().toLocaleDateString('en-GB')} · ${new Date().toLocaleDateString('ar-EG',{weekday:'long'})}</span></div>
     <div class="alert ab"><span class="aicon">✅</span>سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> لحصة اليوم — <strong>كل تأخيرين = غياب</strong>، والمنصة تحدّث نسبة الغياب تلقائياً</div>
     ${crs.length?crs.map(course=>{
       // عرض الطلاب الحاليين فقط (نستبعد السجلات السابقة حتى لو نفس المادة لشعبة ثانية)
@@ -3036,14 +3036,18 @@ async function restoreSession(){
     currentUser=u;
     user=u;
     const st=document.getElementById('splashStatus');if(st)st.textContent='جاري جلب بياناتك...';
-    if(role==='s') await loadStudent();
-    else if(role==='t') await loadTrainer();
-    else await loadAdmin();
+    // حماية: لو التحميل علّق أكثر من 12 ثانية، نوقف ونعرض صفحة الدخول
+    const loadPromise=(role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000));
+    await Promise.race([loadPromise,timeout]);
     showApp();
     hideSplash();
   }catch(e){
+    // فشل أو علّق التحميل → امسح الجلسة وارجع لصفحة الدخول
     localStorage.removeItem('bla_user');
     localStorage.removeItem('bla_role');
+    user=null;currentUser=null;
+    const st=document.getElementById('splashStatus');if(st)st.textContent='تعذّر تحميل البيانات — جاري فتح صفحة الدخول...';
     hideSplash();
   }
 }
