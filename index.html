@@ -1520,7 +1520,7 @@ function printScheduleReport(){
     showToast('ولّد الجدول أولاً','w');return;
   }
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
-  const today=new Date().toLocaleDateString('ar-SA');
+  const today=new Date().toLocaleDateString('en-GB');
   const grps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
   // 1) جداول الشعب (المتدربين)
   const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<b>${c.course}</b><span>${c.trainer||''}</span><i>${c.room||''}</i>`)}</div>`).join('');
@@ -3230,7 +3230,7 @@ function showStudentStat(kind){
 // طباعة تقرير الأداء الأكاديمي
 function printAcademicReport(){
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
-  const today=new Date().toLocaleDateString('ar-SA');
+  const today=new Date().toLocaleDateString('en-GB');
   const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
   const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
   const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].filter(isCurrentTrainer);
@@ -3285,7 +3285,7 @@ function printAcademicReport(){
 // ===== قالب طباعة موحّد لكل التقارير =====
 function reportShell(title,subtitle,bodyHtml){
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
-  const today=new Date().toLocaleDateString('ar-SA');
+  const today=new Date().toLocaleDateString('en-GB');
   return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${title}</title>
   <style>
   @page{size:A4;margin:14mm}*{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box}
