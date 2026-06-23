@@ -1187,6 +1187,54 @@ function courseSessionsOnDay(course,grp,day){
   }
   return count;
 }
+
+// ===== نظام الغياب الجديد (بالأيام · مربوط بالجدول) =====
+// كم يوم بالأسبوع فيه حصص لهذه المادة في جدول الشعبة (مثال: نظم اتصالات = أحد+خميس = 2)
+function courseDaysPerWeek(course,grp){
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const daysSet=new Set();
+  const g=schedule[grp];
+  if(g){
+    for(const slot in g){
+      const [d]=slot.split('|');
+      if(nrm(g[slot].course)===nrm(course))daysSet.add(d);
+    }
+  }
+  return daysSet.size;
+}
+// إجمالي أيام المادة في الترم = أيام الأسبوع × عدد الأسابيع (افتراضي 8)
+function courseTotalDays(course,grp){
+  const dpw=courseDaysPerWeek(course,grp);
+  return dpw*(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
+}
+// تحويل أيام الغياب إلى نسبة مئوية (غياب يوم=1 · متأخر=0.5)
+function absDaysToPct(absDays,course,grp){
+  const total=courseTotalDays(course,grp);
+  if(!total)return 0;
+  return Math.min(Math.round(absDays/total*1000)/10,100);
+}
+// تحويل النسبة المئوية إلى أيام غياب (للعرض/التعديل)
+function pctToAbsDays(pct,course,grp){
+  const total=courseTotalDays(course,grp);
+  return Math.round(pct/100*total*2)/2; // تقريب لأقرب نص يوم
+}
+// ما هي مواد اليوم (حسب الجدول) لمدرب معيّن — تُرجع المواد التي لها حصة اليوم
+function todayCoursesForTrainer(trainerName,dayName){
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const found=new Map(); // course → {course, grps:Set}
+  for(const grp in schedule){
+    const g=schedule[grp];
+    for(const slot in g){
+      const [d]=slot.split('|');
+      if(d===dayName && nrm(g[slot].trainer)===nrm(trainerName)){
+        const c=g[slot].course;
+        if(!found.has(c))found.set(c,{course:c,code:g[slot].code,grps:new Set()});
+        found.get(c).grps.add(grp);
+      }
+    }
+  }
+  return [...found.values()];
+}
 // حساب إجمالي ساعات الغياب لقائمة تواريخ في مادة (حصص ذلك اليوم × مدة الحصة)
 function excuseHoursFromDates(course,grp,dates){
   const perHour=schedConfig.periodHours||2;
@@ -2269,24 +2317,39 @@ const tPgs={
     }).join('')}`;
   },
   attendance:()=>{
-    const allCrs=[...new Set(students.map(s=>s.course))];
-    const crs=allCrs.filter(c=>students.filter(s=>s.course===c).some(s=>isActive(s.status)));
-    return `
-    <div class="stitle">تسجيل حضور اليوم <span style="font-size:.62em;font-weight:600;color:var(--gold,#c9a227);background:rgba(201,162,39,.12);padding:3px 12px;border-radius:20px;margin-right:8px;vertical-align:middle">📅 ${new Date().toLocaleDateString('en-GB')} · ${new Date().toLocaleDateString('ar-EG',{weekday:'long'})}</span></div>
-    <div class="alert ab"><span class="aicon">✅</span>سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> لحصة اليوم — <strong>كل تأخيرين = غياب</strong>، والمنصة تحدّث نسبة الغياب تلقائياً</div>
-    ${crs.length?crs.map(course=>{
-      // عرض الطلاب الحاليين فقط (نستبعد السجلات السابقة حتى لو نفس المادة لشعبة ثانية)
+    const today=new Date();
+    const todayName=DAYS[today.getDay()===0?0:(today.getDay()<=4?today.getDay():-1)]; // 0=أحد..4=خميس
+    const isWeekend=(today.getDay()===5||today.getDay()===6); // جمعة/سبت
+    const dateStr=today.toLocaleDateString('en-GB');
+    const dayLabel=today.toLocaleDateString('ar-EG',{weekday:'long'});
+    const header=`<div class="stitle">تسجيل حضور اليوم <span style="font-size:.62em;font-weight:600;color:var(--gold,#c9a227);background:rgba(201,162,39,.12);padding:3px 12px;border-radius:20px;margin-right:8px;vertical-align:middle">📅 ${dateStr} · ${dayLabel}</span></div>`;
+    // عطلة نهاية الأسبوع
+    if(isWeekend){
+      return header+`<div class="empty"><div class="empty-icon">🕌</div>اليوم ${dayLabel} — عطلة نهاية الأسبوع، لا توجد حصص</div>`;
+    }
+    // مواد المدرب اليوم (من الجدول)
+    const myName=(currentUser&&(currentUser.name||currentUser.sname))||'';
+    const todayCourses=todayCoursesForTrainer(myName,todayName);
+    if(!todayCourses.length){
+      return header+`<div class="alert ab"><span class="aicon">📅</span>المواد تظهر حسب جدولك المعتمد لليوم</div>
+      <div class="empty"><div class="empty-icon">📭</div>ما عندك حصص اليوم (${dayLabel}) في الجدول</div>`;
+    }
+    return header+`
+    <div class="alert ab"><span class="aicon">✅</span>مواد <strong>${dayLabel}</strong> حسب جدولك — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
+    ${todayCourses.map(tc=>{
+      const course=tc.course, code=tc.code||'';
+      // طلاب هذه المادة (من كل الشعب التي للمدرب اليوم)
       const ssDedup=uniqStudents(students.filter(s=>s.course===course&&isActive(s.status)));
-      if(!ssDedup.length)return ''; // لا يوجد طلاب حاليون في هذه المادة
-      const code=ssDedup[0]?.code||'';
-      const total=courseTotalHours(code);
-      const sessionHrs=schedConfig.periodHours||2;
+      if(!ssDedup.length)return '';
+      const grp=ssDedup[0]?.grp||[...tc.grps][0];
+      const totalDays=courseTotalDays(course,grp);
+      const dpw=courseDaysPerWeek(course,grp);
       return `<div style="margin-bottom:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
           <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب)</span></div>
           ${ssDedup.some(s=>attMarks[s.sid])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[s.sid]).length} علامة معلقة</span>`:''}
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${total?`حصة اليوم تُضاف على الغياب المحفوظ · غائب = حصة كاملة · متأخر = نصف حصة`:'⚠️ لا توجد ساعات لهذه المادة في قاعدة المقررات'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:'⚠️ هذه المادة غير موجودة في الجدول المعتمد'}</div>
         <div class="att-grid">
           ${ssDedup.map(s=>`<div class="att-card">
             <div class="att-name">${s.name.split(' ').slice(0,3).join(' ')}</div>
@@ -2301,10 +2364,10 @@ const tPgs={
         <div class="btn-row">
           <button class="btn btn-out btn-sm" onclick="markAll('${course}','present')">✓ تعليم الكل حاضر</button>
           ${ssDedup.some(s=>attMarks[s.sid])?`<button class="btn btn-sm" style="background:#f4c78a;color:#000;font-weight:700" onclick="if(confirm('🗑️ هل تريد مسح جميع العلامات للمادة: ${course}؟')){Object.keys(attMarks).forEach(k=>{if(document.getElementById('mk-'+k+'-present'))delete attMarks[k]});showTPage('attendance',null)}">🔄 مسح</button>`:''}
-          <button class="btn btn-b" onclick="saveSession('${course}','${normCode(code)}',${sessionHrs})">💾 حفظ</button>
+          <button class="btn btn-b" onclick="saveSessionV2('${course}','${normCode(code)}','${grp}','${dateStr}')">💾 حفظ غياب اليوم</button>
         </div>
       </div>`;
-    }).join(''):'<div class="empty"><div class="empty-icon">📅</div>لا توجد مقررات حالية لتسجيل الحضور</div>'}`;
+    }).join('')}`;
   },
   grades:()=>{
     const allCrs=[...new Set(students.map(s=>s.course))];
@@ -2433,6 +2496,66 @@ async function saveSession(course,code,sessionHrs){
     }
     attMarks={}; // مسح الحضور بعد الحفظ الناجح
     attCurrentCourse=null;
+    showTPage('attendance',null);
+  }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
+}
+
+// ===== حفظ الغياب الجديد (بالأيام · مربوط بالجدول) =====
+async function saveSessionV2(course,code,grp,dateStr){
+  const totalDays=courseTotalDays(course,grp);
+  if(!totalDays){showToast('⚠️ هذه المادة غير موجودة في الجدول المعتمد — تأكد من الجدول','e');return;}
+  // طلاب هذه المادة (الحاليون)
+  const allRecs=students.filter(s=>s.course===course&&isActive(s.status));
+  const markByKey={};
+  allRecs.forEach(s=>{const mk=attMarks[s.sid];if(mk)markByKey[sidKey(s)]=mk;});
+  const records=[];   // لتحديث نسبة الغياب في سجل المقررات
+  const dailyLog=[];  // لتسجيل الغياب اليومي في التبويب الجديد
+  let marked=0, absC=0, lateC=0;
+  const counted=new Set();
+  allRecs.forEach(s=>{
+    const k=sidKey(s);
+    const mk=markByKey[k];
+    if(!mk)return;
+    if(!counted.has(k)){counted.add(k);marked++;if(mk==='absent')absC++;else if(mk==='late')lateC++;}
+    // أيام الغياب المضافة اليوم: غائب=1 · متأخر=0.5 · حاضر=0
+    let addDays=0;
+    if(mk==='absent')addDays=1;
+    else if(mk==='late')addDays=0.5;
+    // سجل يومي لكل من غاب/تأخر (حتى نمنع التكرار في التبويب)
+    if(mk==='absent'||mk==='late'){
+      dailyLog.push({sid:s.sid,name:s.name,course,code:normCode(code),grp,date:dateStr,status:mk==='absent'?'غائب':'متأخر',days:addDays});
+    }
+    if(addDays>0){
+      // الأيام المحفوظة سابقاً = النسبة الحالية × إجمالي الأيام ÷ 100
+      const curDays=(parseFloat(s.abs)||0)/100*totalDays;
+      const newDays=curDays+addDays;
+      const newPct=Math.min(Math.round(newDays/totalDays*1000)/10,100);
+      s.abs=newPct;
+      records.push({key:s.key,sid:s.sid,code:normCode(code),grp,absence:newPct});
+    }
+  });
+  if(!marked){showToast('سجّل حضور المتدربين أولاً','w');return;}
+  showToast('جاري حفظ غياب اليوم...','i');
+  try{
+    // 1) تحديث نسبة الغياب في سجل المقررات
+    let upd=null;
+    if(records.length){
+      const res=await jsonpCall({action:'saveAttendance',data:JSON.stringify(records)});
+      upd=(res&&typeof res.updated!=='undefined')?res.updated:null;
+      if(upd!==null && upd===0){
+        showToast('⚠️ ما تحدّث أي سجل — تأكد إن الطلاب في سجل المقررات','e');
+        return;
+      }
+    }
+    // 2) تسجيل الغياب اليومي في التبويب الجديد (منع التكرار: نفس اليوم/المادة يُحدّث)
+    if(dailyLog.length){
+      await jsonpCall({action:'saveDailyAbsence',data:JSON.stringify(dailyLog)}).catch(()=>{});
+    }
+    showToast(`✅ تم حفظ غياب ${dateStr} — ${absC} غياب · ${lateC} تأخير`+(upd!==null?` (${upd} سجل)`:''),'s');
+    attMarks={};
+    attCurrentCourse=null;
+    // إعادة تحميل البيانات عشان النسب تظهر محدّثة
+    if(typeof loadTrainer==='function'){await loadTrainer().catch(()=>{});}
     showTPage('attendance',null);
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
