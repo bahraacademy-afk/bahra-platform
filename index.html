@@ -728,7 +728,7 @@ body{top:0!important}
 <script>
 const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
 const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxy8uI7vMHWdxLuSPcevbOVNRO8Rf8nfkOC2BbmoroDMqWZ1AETNDXDnTHKujFaKjbp/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwqb4TXOaZducbYNcu6XKrJjIBQ55hzZ00Zxx1gzqKKbPmT_EaeUFamxgNXx5MLcAwl/exec';
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
 const OTP_ENABLED=false;
 const ADMIN=[
@@ -2554,9 +2554,11 @@ async function saveSessionV2(course,code,grp,dateStr){
     showToast(`✅ تم حفظ غياب ${dateStr} — ${absC} غياب · ${lateC} تأخير`+(upd!==null?` (${upd} سجل)`:''),'s');
     attMarks={};
     attCurrentCourse=null;
-    // إعادة تحميل البيانات عشان النسب تظهر محدّثة
-    if(typeof loadTrainer==='function'){await loadTrainer().catch(()=>{});}
+    // s.abs تحدّثت في الذاكرة قبل الإرسال → نعرض الصفحة فوراً بالقيم الجديدة
+    // (لا نعيد التحميل من الشيت لأن الكتابة قد تتأخر ثانية فتعود القيم القديمة)
     showTPage('attendance',null);
+    // إعادة تحميل صامتة بعد 3 ثوانٍ لمزامنة أي تغييرات أخرى (دون مسح ما يظهر)
+    setTimeout(()=>{if(typeof loadTrainer==='function')loadTrainer().catch(()=>{});},3000);
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
 
