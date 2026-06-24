@@ -1031,8 +1031,11 @@ async function loadStudent(){
     const r=cat[i];
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4])});
   }
-  await loadRequests();
   await loadSchedule();
+  // ⭐ احسب نسبة الغياب من "قاعدة الغياب"
+  await loadAbsenceBase();
+  courses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
+  await loadRequests();
 }
 
 async function loadTrainer(){
@@ -1052,6 +1055,9 @@ async function loadTrainer(){
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0});
   }
   await loadSchedule();
+  // ⭐ المصدر الوحيد للحقيقة: احسب نسبة الغياب من "قاعدة الغياب" (يتطلب الجدول محمّلاً)
+  await loadAbsenceBase();
+  students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
   await loadRequests();
 }
 
@@ -1084,8 +1090,11 @@ async function loadAdmin(){
     const r=td[i];
     if(n0(r[1]))trainersDB.push({id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4])});
   }
-  await loadRequests();
   await loadSchedule();
+  // ⭐ احسب نسب الغياب لكل السجلات من "قاعدة الغياب"
+  await loadAbsenceBase();
+  allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
+  await loadRequests();
 }
 // هل المدرب حالي (مسجّل في القاعدة)؟
 function isCurrentTrainer(name){
@@ -1235,7 +1244,38 @@ function todayCoursesForTrainer(trainerName,dayName){
   }
   return [...found.values()];
 }
-// حساب إجمالي ساعات الغياب لقائمة تواريخ في مادة (حصص ذلك اليوم × مدة الحصة)
+
+// ===== المصدر الوحيد للحقيقة: حساب نسب الغياب من تبويب "قاعدة الغياب" =====
+// خريطة عامة: مفتاح "sidDigits|codeDigits" → مجموع أيام الغياب
+let absenceDaysMap={};
+// تحميل "قاعدة الغياب" وبناء خريطة أيام الغياب لكل طالب/مادة
+async function loadAbsenceBase(){
+  absenceDaysMap={};
+  try{
+    const rows=await fetchSheet('قاعدة الغياب!A:G').catch(()=>[]);
+    const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
+    // الأعمدة: A=الرقم · B=الاسم · C=المادة · D=رمز · E=شعبة · F=التاريخ · G=الحالة
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      const sid=onlyDigits(r[0]);
+      const code=onlyDigits(r[3]);
+      if(!sid)continue;
+      const status=String(r[6]||'').trim();
+      const days=(status==='متأخر')?0.5:1; // غائب=1 · متأخر=0.5
+      const key=sid+'|'+code;
+      absenceDaysMap[key]=(absenceDaysMap[key]||0)+days;
+    }
+  }catch(e){}
+}
+// حساب نسبة الغياب لطالب في مادة من الخريطة (تعتمد على الجدول لإجمالي الأيام)
+function absPctFromBase(sid,code,course,grp){
+  const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
+  const key=onlyDigits(sid)+'|'+onlyDigits(code);
+  const absDays=absenceDaysMap[key]||0;
+  const total=courseTotalDays(course,grp);
+  if(!total)return 0;
+  return Math.min(Math.round(absDays/total*1000)/10,100);
+}
 function excuseHoursFromDates(course,grp,dates){
   const perHour=schedConfig.periodHours||2;
   let totalHrs=0;
