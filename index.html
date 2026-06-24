@@ -1198,15 +1198,23 @@ function courseSessionsOnDay(course,grp,day){
 }
 
 // ===== نظام الغياب الجديد (بالأيام · مربوط بالجدول) =====
-// كم يوم بالأسبوع فيه حصص لهذه المادة في جدول الشعبة (مثال: نظم اتصالات = أحد+خميس = 2)
+// كم يوم بالأسبوع فيه حصص لهذه المادة (يبحث في الشعبة المحددة، وإن لم يجد ففي كل الشعب)
 function courseDaysPerWeek(course,grp){
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
-  const daysSet=new Set();
-  const g=schedule[grp];
-  if(g){
-    for(const slot in g){
-      const [d]=slot.split('|');
-      if(nrm(g[slot].course)===nrm(course))daysSet.add(d);
+  const target=nrm(course);
+  // دالة مساعدة: تجمع أيام المادة في شعبة معيّنة
+  const daysInGrp=(g)=>{
+    const set=new Set();
+    if(g)for(const slot in g){const [d]=slot.split('|');if(nrm(g[slot].course)===target)set.add(d);}
+    return set;
+  };
+  // أولاً: ابحث في الشعبة المحددة
+  let daysSet=daysInGrp(schedule[grp]);
+  // إن لم نجد في الشعبة المحددة، ابحث في كل الشعب (قد يكون grp مختلفاً)
+  if(daysSet.size===0){
+    for(const g in schedule){
+      const s=daysInGrp(schedule[g]);
+      if(s.size>0){daysSet=s;break;}
     }
   }
   return daysSet.size;
@@ -2389,7 +2397,7 @@ const tPgs={
           <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب)</span></div>
           ${ssDedup.some(s=>attMarks[s.sid])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[s.sid]).length} علامة معلقة</span>`:''}
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:'⚠️ هذه المادة غير موجودة في الجدول المعتمد'}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:`ℹ️ المادة غير مجدولة بالكامل — ستُحسب بيوم/أسبوع (${WEEKS_PER_HALF} يوم) · المحروم عند ${Math.ceil(WEEKS_PER_HALF*0.25)} أيام`}</div>
         <div class="att-grid">
           ${ssDedup.map(s=>`<div class="att-card">
             <div class="att-name">${s.name.split(' ').slice(0,3).join(' ')}</div>
@@ -2542,8 +2550,12 @@ async function saveSession(course,code,sessionHrs){
 
 // ===== حفظ الغياب الجديد (بالأيام · مربوط بالجدول) =====
 async function saveSessionV2(course,code,grp,dateStr){
-  const totalDays=courseTotalDays(course,grp);
-  if(!totalDays){showToast('⚠️ هذه المادة غير موجودة في الجدول المعتمد — تأكد من الجدول','e');return;}
+  let totalDays=courseTotalDays(course,grp);
+  // احتياطي: لو المادة مو موجودة بالجدول، نفترض يوم واحد بالأسبوع (8 أيام) بدل منع الحفظ
+  if(!totalDays){
+    totalDays=(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
+    showToast('ℹ️ المادة غير مجدولة — حُسبت بيوم/أسبوع افتراضياً','i');
+  }
   // طلاب هذه المادة (الحاليون)
   const allRecs=students.filter(s=>s.course===course&&isActive(s.status));
   const markByKey={};
