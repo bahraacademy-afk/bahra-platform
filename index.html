@@ -1617,25 +1617,30 @@ async function printScheduleReport(){
   }
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
   const today=new Date().toLocaleDateString('en-GB');
-  // الترم تلقائياً: نقرأ عمود "النصف المجزأ" (K) من سجل المقررات مباشرة — أضمن مصدر
+  // الترم الحالي تلقائياً: من الصفوف النشطة فقط (حالتها "حالي" في عمود L)
   let term='';
   try{
-    const cr=await fetchSheet('سجل المقررات!K:K').catch(()=>[]);
+    const cr=await fetchSheet('سجل المقررات!A:L').catch(()=>[]);
     const termCount={};
     for(let i=1;i<cr.length;i++){
-      const h=String((cr[i]&&cr[i][0])||'').trim();
-      if(h&&h!=='غير محدد')termCount[h]=(termCount[h]||0)+1;
+      const row=cr[i]||[];
+      const half=String(row[10]||'').trim();   // عمود K = النصف المجزأ (الترم)
+      const status=String(row[11]||'').trim(); // عمود L = الحالة
+      // نحسب فقط الصفوف الحالية النشطة
+      if(half && half!=='غير محدد' && isActive(status)){
+        termCount[half]=(termCount[half]||0)+1;
+      }
     }
     term=Object.keys(termCount).sort((a,b)=>termCount[b]-termCount[a])[0]||'';
   }catch(e){}
-  // احتياطي: من البيانات المحمّلة في الذاكرة
+  // احتياطي: من البيانات المحمّلة في الذاكرة (النشطة فقط)
   if(!term){
     const termSources=[];
     if(typeof students!=='undefined'&&students.length)termSources.push(...students);
     if(typeof allCourses!=='undefined'&&allCourses.length)termSources.push(...allCourses);
     if(typeof courses!=='undefined'&&courses.length)termSources.push(...courses);
     const tc={};
-    termSources.forEach(s=>{const h=(s.half||'').trim();if(h&&h!=='غير محدد')tc[h]=(tc[h]||0)+1;});
+    termSources.forEach(s=>{const h=(s.half||'').trim();if(h&&h!=='غير محدد'&&isActive(s.status))tc[h]=(tc[h]||0)+1;});
     term=Object.keys(tc).sort((a,b)=>tc[b]-tc[a])[0]||'';
   }
   term=term.replace(/-/g,' ').trim(); // "ترم صيفي-2025/2026" → "ترم صيفي 2025/2026"
