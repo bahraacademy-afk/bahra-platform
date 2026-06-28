@@ -1617,6 +1617,12 @@ function printScheduleReport(){
   }
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
   const today=new Date().toLocaleDateString('en-GB');
+  // الترم تلقائياً: الأكثر تكراراً في بيانات الطلاب/المقررات (عمود half)
+  const termSrc=(typeof students!=='undefined'&&students.length?students:(typeof allCourses!=='undefined'?allCourses:[]))||[];
+  const termCount={};
+  termSrc.forEach(s=>{const h=(s.half||'').trim();if(h&&h!=='غير محدد')termCount[h]=(termCount[h]||0)+1;});
+  let term=Object.keys(termCount).sort((a,b)=>termCount[b]-termCount[a])[0]||'';
+  term=term.replace(/-/g,' ').trim(); // "ترم صيفي-2025/2026" → "ترم صيفي 2025/2026"
   const grps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
   // 1) جداول الشعب (المتدربين)
   const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<b>${c.course}</b><span>${c.trainer||''}</span><i>${c.room||''}</i>`)}</div>`).join('');
@@ -1627,6 +1633,20 @@ function printScheduleReport(){
   // 3) جداول القاعات — مع دمج الشعب المشتركة
   const rSched=buildRoomSchedules();
   const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<b>${c.course}</b><span>${grpLbl(c)}</span><i>${c.trainer||''}</i>`)}</div>`).join('');
+  // 4) الجدول العام الشامل (كل الشعب في جدول واحد)
+  const generalGrid={};
+  for(const g of grps){
+    for(const slot in schedule[g]){
+      const c=schedule[g][slot];
+      if(!generalGrid[slot])generalGrid[slot]=[];
+      // دمج: نفس مادة+مدرب في نفس الوقت → نجمع الشعب
+      const ex=generalGrid[slot].find(x=>x.course===c.course&&x.trainer===c.trainer);
+      if(ex){if(!ex.grps.includes(g))ex.grps.push(g);}
+      else generalGrid[slot].push({course:c.course,trainer:c.trainer,room:c.room,grps:[g]});
+    }
+  }
+  const genCell=arr=>arr.map(c=>`<b>${c.course}</b><span>${c.grps.length>1?'الشعب '+c.grps.sort().join('،'):'الشعبة '+c.grps[0]}</span><i>${c.trainer||''}${c.room?' · '+c.room:''}</i>`).join('<hr style="border:none;border-top:1px dashed #d5dce6;margin:4px 0">');
+  const genHtml=`<div class="block">${schReportTable(generalGrid,genCell)}</div>`;
   const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الجدول الدراسي</title>
   <style>
   @page{size:A4 landscape;margin:12mm}
@@ -1636,6 +1656,7 @@ function printScheduleReport(){
   .hdr img{width:64px;height:64px;border-radius:50%}
   .hdr .t1{font-size:22px;font-weight:800;color:#0a2348}
   .hdr .t2{font-size:13px;color:#5a6b85;margin-top:2px}
+  .hdr .t3{font-size:12px;color:#c9a227;font-weight:700;margin-top:3px}
   .hdr .meta{margin-right:auto;text-align:left;font-size:12px;color:#5a6b85}
   .sec-title{font-size:18px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:10px 16px;border-radius:8px;margin:24px 0 14px}
   .block{margin-bottom:20px;page-break-inside:avoid}
@@ -1655,18 +1676,30 @@ function printScheduleReport(){
   table.rt td.f i{display:block;color:#c9a227;font-size:9px;font-style:normal;margin-top:1px}
   table.rt td.e{color:#cfd6e0}
   .page-break{page-break-before:always}
-  @media print{.noprint{display:none}}
-  .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700}
+  /* شعار صغير متكرر أعلى كل صفحة عند الطباعة */
+  .pg-logo{display:none}
+  @media print{
+    .noprint{display:none}
+    .pg-logo{display:flex;align-items:center;gap:8px;border-bottom:2px solid #c9a227;padding-bottom:6px;margin-bottom:12px}
+    .pg-logo img{width:32px;height:32px;border-radius:50%}
+    .pg-logo span{font-size:12px;font-weight:700;color:#0a2348}
+    .pg-logo small{font-size:9px;color:#c9a227;margin-right:auto;font-weight:700}
+  }
+  .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;z-index:99}
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
   <div class="hdr">
     ${logo?`<img src="${logo}" alt="logo">`:''}
-    <div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div></div>
+    <div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div>
     <div class="meta">تاريخ الإصدار: ${today}<br>الدوام: ${fmtTime(schedConfig.startHour)} · ${schedConfig.periodsPerDay} حصص</div>
   </div>
-  <div class="sec-title">أولاً: جداول الشعب (المتدربين)</div>${secHtml}
-  <div class="sec-title page-break">ثانياً: جداول المدربين</div>${trHtml}
-  <div class="sec-title page-break">ثالثاً: جداول القاعات والمعامل</div>${rmHtml}
+  <div class="sec-title">📊 الجدول العام الشامل (كل الشعب)</div>${genHtml}
+  <div class="sec-title page-break">أولاً: جداول الشعب (المتدربين)</div>
+  <div class="pg-logo">${logo?`<img src="${logo}">`:''}<span>معهد المعرفة والإبداع العالي للتدريب</span>${term?`<small>${term}</small>`:''}</div>${secHtml}
+  <div class="sec-title page-break">ثانياً: جداول المدربين</div>
+  <div class="pg-logo">${logo?`<img src="${logo}">`:''}<span>معهد المعرفة والإبداع العالي للتدريب</span>${term?`<small>${term}</small>`:''}</div>${trHtml}
+  <div class="sec-title page-break">ثالثاً: جداول القاعات والمعامل</div>
+  <div class="pg-logo">${logo?`<img src="${logo}">`:''}<span>معهد المعرفة والإبداع العالي للتدريب</span>${term?`<small>${term}</small>`:''}</div>${rmHtml}
   </body></html>`;
   const w=window.open('','_blank');
   if(!w){showToast('فعّل النوافذ المنبثقة للطباعة','w');return;}
