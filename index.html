@@ -1708,8 +1708,11 @@ async function printScheduleReport(){
     .noprint{display:none}
   }
   .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;z-index:99}
+  .closebtn{position:fixed;top:10px;right:10px;background:#e74c3c;color:#fff;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:22px;font-weight:700;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;line-height:1}
+  @media print{.closebtn{display:none}}
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <button class="closebtn" onclick="window.close()" title="إغلاق">✕</button>
   <div class="hdr">
     ${logo?`<img src="${logo}" alt="logo">`:''}
     <div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div>
@@ -3515,9 +3518,11 @@ function printAcademicReport(){
   td{border:1px solid #c5cfdd;padding:7px;text-align:center;font-size:12px}
   tr:nth-child(even) td{background:#f6f8fb}
   .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700}
-  @media print{.noprint{display:none}}
+  .closebtn{position:fixed;top:10px;right:10px;background:#e74c3c;color:#fff;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:22px;font-weight:700;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;line-height:1}
+  @media print{.noprint{display:none}.closebtn{display:none}}
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <button class="closebtn" onclick="window.close()" title="إغلاق">✕</button>
   <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">تقرير الأداء الأكاديمي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
   <div class="kpis">
     <div class="kpi"><div class="n">${students.length}</div><div class="l">متدرب</div></div>
@@ -3558,10 +3563,12 @@ function reportShell(title,subtitle,bodyHtml){
   .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
   .b-r{background:#fdecea;color:#c0392b}.b-y{background:#fef5e7;color:#d68910}.b-g{background:#eafaf1;color:#1e8449}
   .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700}
-  @media print{.noprint{display:none}}
+  .closebtn{position:fixed;top:10px;right:10px;background:#e74c3c;color:#fff;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:22px;font-weight:700;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;line-height:1}
+  @media print{.noprint{display:none}.closebtn{display:none}}
   .grp-block{page-break-inside:avoid}
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <button class="closebtn" onclick="window.close()" title="إغلاق">✕</button>
   <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">${subtitle}</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
   ${bodyHtml}
   </body></html>`;
