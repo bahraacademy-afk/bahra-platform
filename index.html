@@ -3064,26 +3064,34 @@ function buildTVContent(){
   </div>`;
 }
 function openTVMode(){
-  let tv=document.getElementById('tvMode');
-  if(!tv){
-    tv=document.createElement('div');
-    tv.id='tvMode';
-    tv.className='tv-mode';
-    document.body.appendChild(tv);
+  try{
+    let tv=document.getElementById('tvMode');
+    if(!tv){
+      tv=document.createElement('div');
+      tv.id='tvMode';
+      tv.className='tv-mode';
+      document.body.appendChild(tv);
+    }
+    let content='';
+    try{content=buildTVContent();}
+    catch(err){content='<div style="color:#fff;text-align:center;padding:40px">تعذّر تحميل شاشة العرض<br><small style="color:#b8c5d8">'+err.message+'</small></div>';}
+    tv.innerHTML='<button class="tv-close" onclick="closeTVMode()" title="خروج (ESC)">✕</button>'+content;
+    tv.style.display='flex';
+    // ملء الشاشة الحقيقي (اختياري — لو فشل نكمل عادي)
+    try{
+      if(tv.requestFullscreen)tv.requestFullscreen().catch(()=>{});
+      else if(tv.webkitRequestFullscreen)tv.webkitRequestFullscreen();
+    }catch(e){}
+    // تحديث تلقائي كل 30 ثانية
+    if(window._tvTimer)clearInterval(window._tvTimer);
+    window._tvTimer=setInterval(async()=>{
+      if(!document.getElementById('tvMode')||tv.style.display==='none'){clearInterval(window._tvTimer);return;}
+      try{await loadAdmin();tv.innerHTML='<button class="tv-close" onclick="closeTVMode()" title="خروج (ESC)">✕</button>'+buildTVContent();}catch(e){}
+    },30000);
+    document.addEventListener('keydown',tvEscHandler);
+  }catch(e){
+    if(typeof showToast==='function')showToast('تعذّر فتح شاشة العرض: '+e.message,'e');
   }
-  tv.innerHTML=`<button class="tv-close" onclick="closeTVMode()" title="خروج (ESC)">✕</button>${buildTVContent()}`;
-  tv.style.display='flex';
-  // ملء الشاشة الحقيقي
-  if(tv.requestFullscreen)tv.requestFullscreen().catch(()=>{});
-  else if(tv.webkitRequestFullscreen)tv.webkitRequestFullscreen();
-  // تحديث تلقائي كل 30 ثانية + الساعة كل دقيقة
-  if(window._tvTimer)clearInterval(window._tvTimer);
-  window._tvTimer=setInterval(async()=>{
-    if(!document.getElementById('tvMode')||tv.style.display==='none'){clearInterval(window._tvTimer);return;}
-    try{await loadAdmin();tv.innerHTML=`<button class="tv-close" onclick="closeTVMode()" title="خروج (ESC)">✕</button>${buildTVContent()}`;}catch(e){}
-  },30000);
-  // خروج بـ ESC
-  document.addEventListener('keydown',tvEscHandler);
 }
 function tvEscHandler(e){if(e.key==='Escape')closeTVMode();}
 function closeTVMode(){
@@ -3091,7 +3099,7 @@ function closeTVMode(){
   if(tv)tv.style.display='none';
   if(window._tvTimer){clearInterval(window._tvTimer);window._tvTimer=null;}
   document.removeEventListener('keydown',tvEscHandler);
-  if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{});
+  try{if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{});}catch(e){}
 }
 
 const aPgs={
