@@ -3029,7 +3029,7 @@ function buildTVContent(){
   <div class="tv-head">
     <img src="${(document.querySelector('link[rel="icon"]')||{}).href||''}" class="tv-logo">
     <div class="tv-title">معهد المعرفة والإبداع العالي للتدريب</div>
-    <div class="tv-sub">🏆 لوحة شرف الأوائل · <span id="tvClock">${new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span></div>
+    <div class="tv-sub">🏆 لوحة شرف الأوائل · <span id="tvClock">${new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span> · <span style="color:#2ecc71;font-weight:700"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#2ecc71;animation:pulse 1.5s infinite;margin-left:4px"></span>مباشر — يتحدّث تلقائياً</span></div>
   </div>
   <div class="tv-stats">
     <div class="tv-stat"><div class="tv-snum">${totStudents}</div><div class="tv-slbl">🎓 المتدربون</div></div>
@@ -3153,12 +3153,7 @@ const aPgs={
     const podiumC=['#c0c0c0','#ffd700','#cd7f32'];
     return `
     <div class="banner"><div><div class="btitle">📈 الداشبورد الشامل والأوائل</div><div class="bsub">${user.title} — ${user.name}</div></div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <span id="dashUpdated" style="font-size:11px;color:var(--muted)">آخر تحديث: ${new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span>
-        <button id="liveBtn" onclick="toggleLiveDash(this)" style="background:${window._liveDash?'#2ecc71':'rgba(255,255,255,.1)'};color:${window._liveDash?'#fff':'var(--text)'};border:1px solid var(--border);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${window._liveDash?'#fff':'#888'};${window._liveDash?'animation:pulse 1.5s infinite':''}"></span>${window._liveDash?'مباشر':'تفعيل المباشر'}</button>
-        <button onclick="refreshDash()" style="background:rgba(106,184,247,.15);color:#6ab8f7;border:1px solid var(--border);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700">🔄 تحديث</button>
-        <button id="tvModeBtn" onclick="try{openTVMode()}catch(e){alert('خطأ: '+e.message)}" style="background:linear-gradient(135deg,#0a2348,#1a3a6b);color:#fff;border:none;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700">🖥️ شاشة العرض</button>
-      </div>
+      <button id="tvModeBtn" onclick="try{openTVMode()}catch(e){alert('خطأ: '+e.message)}" style="background:linear-gradient(135deg,#c9a227,#e0b83a);color:#0a2348;border:none;padding:10px 24px;border-radius:24px;cursor:pointer;font-size:14px;font-weight:800;box-shadow:0 4px 16px rgba(201,162,39,.35);display:flex;align-items:center;gap:8px;transition:transform .2s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">🖥️ شاشة العرض</button>
     </div>
 
     <div class="stitle">📊 معطيات الأكاديمية</div>
