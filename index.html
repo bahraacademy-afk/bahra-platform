@@ -2965,13 +2965,16 @@ function stopLiveDash(){
 
 const aPgs={
   dashboard:()=>{
-    // ===== حساب معدّل كل طالب (متوسط درجاته في كل المواد الحالية) =====
-    const actives=allCourses.filter(c=>isActive(c.status));
+    // ===== حساب معدّل كل طالب =====
+    // نعتمد على الطلاب المسجّلين في students (الحاليون)، ونجيب مقرراتهم من allCourses بالمطابقة بالرقم الأكاديمي
+    // (نفس طريقة صفحة المتدربين showStudentDetail التي تعمل بشكل صحيح)
     const byStudent={};
-    actives.forEach(c=>{
-      if(!byStudent[c.sid])byStudent[c.sid]={sid:c.sid,name:c.sname,grp:c.grp,courses:[],sumPct:0,sumAbs:0,n:0};
-      const st=byStudent[c.sid];
-      st.courses.push(c);st.sumPct+=c.pct;st.sumAbs+=(c.abs||0);st.n++;
+    students.forEach(st=>{
+      const stCourses=allCourses.filter(c=>c.sid===st.id);
+      if(!stCourses.length)return;
+      const sumPct=stCourses.reduce((a,c)=>a+c.pct,0);
+      const sumAbs=stCourses.reduce((a,c)=>a+(c.abs||0),0);
+      byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,n:stCourses.length};
     });
     let ranked=Object.values(byStudent).map(s=>({
       sid:s.sid,name:s.name,grp:s.grp,coursesCount:s.n,
@@ -2982,6 +2985,8 @@ const aPgs={
     // إعطاء رتبة (مع التعادل)
     ranked.forEach((s,i)=>{s.rank=i+1;});
     const top3=ranked.slice(0,3);
+    // للإحصائيات: كل المقررات
+    const actives=allCourses;
     // ===== معطيات عامة =====
     const totStudents=students.length;
     const totCourses=[...new Set(allCourses.map(c=>c.course))].length;
