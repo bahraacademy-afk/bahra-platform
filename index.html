@@ -50,6 +50,12 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes gridMove{0%{transform:translateY(0)}100%{transform:translateY(50px)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+/* ===== قائمة المزيد المنبثقة (جوال) ===== */
+.more-menu{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:12px;right:12px;background:rgba(10,18,33,.97);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:12px;z-index:300;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;box-shadow:0 16px 48px rgba(0,0,0,.5);animation:fadeUp .25s cubic-bezier(.2,.8,.3,1)}
+.more-menu button{display:flex;flex-direction:column;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:14px 8px;cursor:pointer;color:#e8eef7;font-size:12px;font-weight:600;font-family:inherit;transition:all .2s}
+.more-menu button:active{transform:scale(.95);background:rgba(255,255,255,.1)}
+body.light-mode .more-menu{background:rgba(255,255,255,.97);border:1px solid rgba(26,58,107,.12);box-shadow:0 16px 48px rgba(26,58,107,.2)}
+body.light-mode .more-menu button{background:rgba(26,58,107,.05);border-color:rgba(26,58,107,.08);color:#1a2942}
 /* ===== شاشة العرض (TV Mode) ===== */
 .tv-mode{display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#050d1a,#0a2348 60%,#0d1b30);color:#fff;overflow:hidden;padding:2vh 2.5vw;flex-direction:column;font-family:'Tajawal','Segoe UI',sans-serif}
 .tv-close{position:fixed;top:16px;left:16px;width:48px;height:48px;border-radius:50%;background:rgba(231,76,60,.85);color:#fff;border:none;font-size:24px;cursor:pointer;z-index:100000;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:transform .2s}
@@ -1987,18 +1993,40 @@ function navHTML(r,pages){
 }
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل'};
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات'};
   const ac=r==='s'?'as':r==='t'?'at':'aa';
   const mn=document.getElementById('mobNav');
   mn.style.display='';
-  mn.innerHTML=`<div class="mob-nav-items">${pages.map((p,i)=>`<button class="mni ${i===0?ac:''}" onclick="mobNav('${p}',this,'${r}')"><span class="mni-icon">${map[p]||'📌'}</span><span>${lbls[p]||p}</span></button>`).join('')}</div>`;
+  // لو العناصر 5 أو أقل: نعرضها كلها. لو أكثر: نعرض 4 + زر "المزيد"
+  let visible=pages, overflow=[];
+  if(pages.length>5){visible=pages.slice(0,4);overflow=pages.slice(4);}
+  const btns=visible.map((p,i)=>`<button class="mni ${i===0?ac:''}" onclick="mobNav('${p}',this,'${r}')"><span class="mni-icon">${map[p]||'📌'}</span><span>${lbls[p]||p}</span></button>`).join('');
+  const moreBtn=overflow.length?`<button class="mni" onclick="toggleMoreMenu(event,'${r}')"><span class="mni-icon">⋯</span><span>المزيد</span></button>`:'';
+  // القائمة المنبثقة للخدمات الإضافية
+  window._mobOverflow={items:overflow,role:r,map,lbls};
+  mn.innerHTML=`<div class="mob-nav-items">${btns}${moreBtn}</div>`;
 }
+// قائمة "المزيد" المنبثقة
+function toggleMoreMenu(e,r){
+  e.stopPropagation();
+  let m=document.getElementById('moreMenu');
+  if(m){m.remove();return;}
+  const o=window._mobOverflow||{items:[]};
+  m=document.createElement('div');
+  m.id='moreMenu';
+  m.className='more-menu';
+  m.innerHTML=o.items.map(p=>`<button onclick="mobNav('${p}',null,'${r}');document.getElementById('moreMenu')?.remove()"><span style="font-size:20px">${o.map[p]||'📌'}</span><span>${o.lbls[p]||p}</span></button>`).join('');
+  document.body.appendChild(m);
+  // إغلاق عند الضغط خارجها
+  setTimeout(()=>{document.addEventListener('click',function closeMore(ev){if(!m.contains(ev.target)){m.remove();document.removeEventListener('click',closeMore);}});},50);
+}
+window.toggleMoreMenu=toggleMoreMenu;
 
 function mobNav(page,btn,r){
   document.querySelectorAll('.mni').forEach(b=>b.className='mni');
   const ac=r==='s'?'as':r==='t'?'at':'aa';
-  btn.classList.add(ac);
+  if(btn)btn.classList.add(ac);
   if(r==='s')showSPage(page,null);
   else if(r==='t')showTPage(page,null);
   else showAPage(page,null);
@@ -2857,7 +2885,7 @@ function refreshFileList(course){
 // ===== ADMIN APP =====
 function buildAdminApp(){
   document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
-  buildMobNav('a',['overview','all_students','requests','reports','dashboard']);
+  buildMobNav('a',['overview','all_students','requests','reports','dashboard','accounts','all_courses','schedule','alerts','settings']);
   showAPage('overview',null);
 }
 
