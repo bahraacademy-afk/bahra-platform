@@ -382,6 +382,7 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 @media(max-width:768px){
   .mob-nav{display:block}
   .sidebar{display:none!important}
+  .dash-charts{grid-template-columns:1fr!important}
   .mcontent{padding:14px 12px 110px!important}
   .topbar{padding:10px 12px;gap:6px}
   .metrics{grid-template-columns:1fr 1fr;gap:10px}
@@ -752,6 +753,18 @@ let activeFilters={half:'all',letter:'all',status:'all'};
 
 function norm(p){return String(p||'').replace(/^0/,'').trim()}
 function n0(v){return String(v||'').trim()}
+// قراءة رقم مرنة: تحوّل الأرقام العربية، تشيل المسافات والفواصل، وتستخرج الرقم
+function num(v){
+  if(v==null||v==='')return 0;
+  let s=String(v).trim();
+  // تحويل الأرقام العربية-الهندية إلى لاتينية
+  const ar='٠١٢٣٤٥٦٧٨٩',fa='۰۱۲۳۴۵۶۷۸۹';
+  s=s.replace(/[٠-٩]/g,d=>ar.indexOf(d)).replace(/[۰-۹]/g,d=>fa.indexOf(d));
+  // فاصلة عربية أو عادية → نقطة عشرية · إزالة أي شيء غير رقمي
+  s=s.replace(/٫/g,'.').replace(/,/g,'.').replace(/[^\d.\-]/g,'');
+  const n=parseFloat(s);
+  return isNaN(n)?0:n;
+}
 
 async function fetchSheet(range){
   const ctrl=new AbortController();
@@ -1023,7 +1036,7 @@ async function loadStudent(){
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(n0(r[1])===user.id)
-      courses.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
+      courses.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
   }
   // قاعدة بيانات المقررات الكاملة (الخطة الدراسية)
   catalog=[];
@@ -1047,7 +1060,7 @@ async function loadTrainer(){
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
     if(n0(r[6])===user.name)
-      students.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
+      students.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
   }
   catalog=[];
   for(let i=1;i<cat.length;i++){
@@ -1077,7 +1090,7 @@ async function loadAdmin(){
   allCourses=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
-    if(r[1])allCourses.push({key:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:parseFloat(r[7])||0,abs:parseFloat(r[8])||0,letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
+    if(r[1])allCourses.push({key:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
   }
   catalog=[];
   for(let i=1;i<cat.length;i++){
@@ -2920,6 +2933,36 @@ function renderKPI(grp,btn){
   }
 }
 
+// ===== التحديث المباشر (live) للداشبورد =====
+window._liveDash=window._liveDash||false;
+window._liveDashTimer=window._liveDashTimer||null;
+async function refreshDash(){
+  try{
+    await loadAdmin();
+    if(document.getElementById('dashUpdated')){
+      showAPage('dashboard',document.getElementById('sn-dashboard'));
+    }
+  }catch(e){}
+}
+function toggleLiveDash(btn){
+  window._liveDash=!window._liveDash;
+  if(window._liveDash){
+    // تحديث كل 30 ثانية
+    window._liveDashTimer=setInterval(()=>{
+      // فقط لو الداشبورد لا يزال معروضاً
+      if(document.getElementById('dashUpdated'))refreshDash();
+      else stopLiveDash();
+    },30000);
+  }else{
+    stopLiveDash();
+  }
+  showAPage('dashboard',document.getElementById('sn-dashboard'));
+}
+function stopLiveDash(){
+  window._liveDash=false;
+  if(window._liveDashTimer){clearInterval(window._liveDashTimer);window._liveDashTimer=null;}
+}
+
 const aPgs={
   dashboard:()=>{
     // ===== حساب معدّل كل طالب (متوسط درجاته في كل المواد الحالية) =====
@@ -2955,7 +2998,13 @@ const aPgs={
     const podiumH=[130,170,105];
     const podiumC=['#c0c0c0','#ffd700','#cd7f32'];
     return `
-    <div class="banner"><div><div class="btitle">📈 الداشبورد الشامل والأوائل</div><div class="bsub">${user.title} — ${user.name}</div></div><div class="bpill bp-y">إداري</div></div>
+    <div class="banner"><div><div class="btitle">📈 الداشبورد الشامل والأوائل</div><div class="bsub">${user.title} — ${user.name}</div></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="dashUpdated" style="font-size:11px;color:var(--muted)">آخر تحديث: ${new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span>
+        <button id="liveBtn" onclick="toggleLiveDash(this)" style="background:${window._liveDash?'#2ecc71':'rgba(255,255,255,.1)'};color:${window._liveDash?'#fff':'var(--text)'};border:1px solid var(--border);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${window._liveDash?'#fff':'#888'};${window._liveDash?'animation:pulse 1.5s infinite':''}"></span>${window._liveDash?'مباشر':'تفعيل المباشر'}</button>
+        <button onclick="refreshDash()" style="background:rgba(106,184,247,.15);color:#6ab8f7;border:1px solid var(--border);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700">🔄 تحديث</button>
+      </div>
+    </div>
 
     <div class="stitle">📊 معطيات الأكاديمية</div>
     <div class="metrics">
@@ -2967,6 +3016,56 @@ const aPgs={
       <div class="mcard mc-g"><div class="micon">⭐</div><div class="mnum cg" data-target="${excellentCount}">${excellentCount}</div><div class="mlbl">متفوقون (90%+)</div></div>
       <div class="mcard ${passRate>=70?'mc-g':'mc-y'}"><div class="micon">✅</div><div class="mnum ${passRate>=70?'cg':'cy'}" data-target="${passRate}" data-suffix="%">${passRate}%</div><div class="mlbl">نسبة النجاح</div></div>
       <div class="mcard ${bannedCount?'mc-r':'mc-g'}"><div class="micon">🚫</div><div class="mnum ${bannedCount?'cr':'cg'}" data-target="${bannedCount}">${bannedCount}</div><div class="mlbl">محرومون بالغياب</div></div>
+    </div>
+
+    <div class="stitle">📊 التحليل البياني</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px" class="dash-charts">
+      ${(()=>{
+        // توزيع الدرجات على فئات
+        const bands=[
+          {lbl:'ممتاز 90+',min:90,max:101,c:'#2ecc71'},
+          {lbl:'جيد جداً 80-89',min:80,max:90,c:'#6ab8f7'},
+          {lbl:'جيد 70-79',min:70,max:80,c:'#c9a227'},
+          {lbl:'مقبول 60-69',min:60,max:70,c:'#e67e22'},
+          {lbl:'ضعيف <60',min:0,max:60,c:'#e74c3c'}
+        ];
+        const counts=bands.map(b=>ranked.filter(s=>s.avg>=b.min&&s.avg<b.max).length);
+        const maxC=Math.max(1,...counts);
+        const bars=bands.map((b,i)=>{
+          const h=Math.round(counts[i]/maxC*130);
+          return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px">
+            <div style="font-size:12px;font-weight:700;color:${b.c}">${counts[i]}</div>
+            <div style="width:70%;height:${h}px;min-height:4px;background:linear-gradient(180deg,${b.c},${b.c}aa);border-radius:5px 5px 0 0;transition:height .6s"></div>
+            <div style="font-size:9px;color:var(--muted);text-align:center;line-height:1.2">${b.lbl}</div>
+          </div>`;
+        }).join('');
+        return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">📈 توزيع المعدلات</div>
+          <div style="display:flex;align-items:flex-end;gap:6px;height:170px">${bars}</div>
+        </div>`;
+      })()}
+      ${(()=>{
+        // مؤشرات تحليلية سريعة
+        const totRanked=ranked.length||1;
+        const topAvg=ranked.length?Math.round(ranked.slice(0,Math.ceil(totRanked*0.1)).reduce((a,s)=>a+s.avg,0)/Math.ceil(totRanked*0.1)):0;
+        const median=ranked.length?ranked[Math.floor(ranked.length/2)].avg:0;
+        const highAbsCount=ranked.filter(s=>s.avgAbs>=15).length;
+        const perfectAtt=ranked.filter(s=>s.avgAbs===0).length;
+        const rows=[
+          ['🏅','معدّل أعلى 10%',topAvg+'%','#2ecc71'],
+          ['📊','الوسيط (median)',median+'%','#6ab8f7'],
+          ['📉','غياب مرتفع (15%+)',highAbsCount+' متدرب',highAbsCount?'#e74c3c':'#2ecc71'],
+          ['✅','حضور كامل',perfectAtt+' متدرب','#2ecc71'],
+          ['🎯','إجمالي المصنّفين',totRanked+' متدرب','#c9a227']
+        ];
+        return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:14px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">🎯 مؤشرات تحليلية</div>
+          ${rows.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border)">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">${r[0]}</span><span style="font-size:12px;color:var(--muted)">${r[1]}</span></div>
+            <span style="font-size:14px;font-weight:800;color:${r[3]}">${r[2]}</span>
+          </div>`).join('')}
+        </div>`;
+      })()}
     </div>
 
     ${top3.length?`
