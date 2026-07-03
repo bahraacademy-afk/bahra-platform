@@ -50,6 +50,36 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes gridMove{0%{transform:translateY(0)}100%{transform:translateY(50px)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+/* ===== شاشة العرض (TV Mode) ===== */
+.tv-mode{display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#050d1a,#0a2348 60%,#0d1b30);color:#fff;overflow:hidden;padding:2vh 2.5vw;flex-direction:column;font-family:'Tajawal','Segoe UI',sans-serif}
+.tv-close{position:fixed;top:16px;left:16px;width:48px;height:48px;border-radius:50%;background:rgba(231,76,60,.85);color:#fff;border:none;font-size:24px;cursor:pointer;z-index:100000;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:transform .2s}
+.tv-close:hover{transform:scale(1.1);background:#e74c3c}
+.tv-head{display:flex;flex-direction:column;align-items:center;gap:4px;padding-bottom:1.5vh;border-bottom:3px solid #c9a227;margin-bottom:2vh}
+.tv-logo{width:8vh;height:8vh;border-radius:50%;margin-bottom:.5vh}
+.tv-title{font-size:3.2vh;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.tv-sub{font-size:2vh;color:#c9a227;font-weight:700}
+.tv-stats{display:flex;justify-content:center;gap:1.5vw;margin-bottom:2.5vh}
+.tv-stat{flex:1;max-width:16vw;background:rgba(255,255,255,.06);border:1px solid rgba(201,162,39,.3);border-radius:16px;padding:1.5vh 1vw;text-align:center;backdrop-filter:blur(10px)}
+.tv-snum{font-size:4vh;font-weight:900;color:#6ab8f7;line-height:1}
+.tv-slbl{font-size:1.6vh;color:#b8c5d8;margin-top:.5vh;font-weight:600}
+.tv-body{display:flex;gap:2.5vw;flex:1;min-height:0}
+.tv-podium-wrap{flex:1.1;display:flex;flex-direction:column}
+.tv-list-wrap{flex:1;display:flex;flex-direction:column;min-height:0}
+.tv-section-title{font-size:2.4vh;font-weight:800;color:#c9a227;margin-bottom:1.5vh;text-align:center}
+.tv-podium{display:flex;justify-content:center;align-items:flex-end;gap:1.5vw;flex:1;padding-bottom:2vh}
+.tv-pod-col{display:flex;flex-direction:column;align-items:center;flex:1;max-width:12vw}
+.tv-pod-medal{font-size:4vh;margin-bottom:.5vh;animation:float 3s ease-in-out infinite}
+.tv-pod-name{font-size:2vh;font-weight:800;text-align:center;color:#fff;margin-bottom:.3vh}
+.tv-pod-info{font-size:1.6vh;color:#b8c5d8;margin-bottom:1vh}
+.tv-pod-bar{width:100%;border-radius:12px 12px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:1.5vh;transition:height .8s cubic-bezier(.2,.8,.3,1)}
+.tv-pod-rank{font-size:5vh;font-weight:900;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.4)}
+.tv-list{display:flex;flex-direction:column;gap:.8vh;overflow:hidden}
+.tv-row{display:flex;align-items:center;gap:1vw;background:rgba(255,255,255,.05);border-radius:12px;padding:1.1vh 1.2vw;border:1px solid rgba(255,255,255,.06)}
+.tv-row-top{background:rgba(201,162,39,.14);border-color:rgba(201,162,39,.4)}
+.tv-rank{font-size:2.4vh;font-weight:900;min-width:3vw;text-align:center}
+.tv-name{flex:1;font-size:2vh;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tv-grp{font-size:1.7vh;color:#b8c5d8;min-width:6vw}
+.tv-avg{font-size:2.4vh;font-weight:900;min-width:5vw;text-align:left}
 @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
 @keyframes progressFill{from{width:0}to{width:var(--w)}}
 @keyframes particleRise{0%{transform:translateY(100vh) rotate(0deg);opacity:0}10%{opacity:.6}90%{opacity:.6}100%{transform:translateY(-100px) rotate(720deg);opacity:0}}
@@ -2963,6 +2993,107 @@ function stopLiveDash(){
   if(window._liveDashTimer){clearInterval(window._liveDashTimer);window._liveDashTimer=null;}
 }
 
+// ===== شاشة العرض (TV Mode) — ملء الشاشة للعرض على شاشة كبيرة =====
+window._tvTimer=null;
+function buildTVContent(){
+  // حساب الترتيب (نفس منطق الداشبورد)
+  const byStudent={};
+  students.forEach(st=>{
+    const stCourses=allCourses.filter(c=>c.sid===st.id);
+    if(!stCourses.length)return;
+    const sumPct=stCourses.reduce((a,c)=>a+c.pct,0);
+    byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,n:stCourses.length};
+  });
+  let ranked=Object.values(byStudent).map(s=>({
+    name:s.name,grp:s.grp,avg:s.n?Math.round(s.sumPct/s.n*10)/10:0,gpa:parseFloat(gpaFrom(s.courses))
+  })).sort((a,b)=>b.avg-a.avg||b.gpa-a.gpa);
+  ranked.forEach((s,i)=>s.rank=i+1);
+  const top3=ranked.slice(0,3);
+  const rest=ranked.slice(3,13); // البقية حتى 13
+  // معطيات
+  const totStudents=students.length;
+  const totCourses=[...new Set(allCourses.map(c=>c.course))].length;
+  const totTrainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
+  const grps=[...new Set(students.map(s=>s.grp))].length;
+  const avgAll=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
+  const podiumOrder=[top3[1],top3[0],top3[2]].filter(Boolean);
+  const podiumH=[150,200,120];
+  const podiumC=['#c0c0c0','#ffd700','#cd7f32'];
+  const nm=n=>n.split(' ').slice(0,3).join(' ');
+  return `
+  <div class="tv-head">
+    <img src="${(document.querySelector('link[rel="icon"]')||{}).href||''}" class="tv-logo">
+    <div class="tv-title">معهد المعرفة والإبداع العالي للتدريب</div>
+    <div class="tv-sub">🏆 لوحة شرف الأوائل · <span id="tvClock">${new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span></div>
+  </div>
+  <div class="tv-stats">
+    <div class="tv-stat"><div class="tv-snum">${totStudents}</div><div class="tv-slbl">🎓 المتدربون</div></div>
+    <div class="tv-stat"><div class="tv-snum">${totCourses}</div><div class="tv-slbl">📚 المقررات</div></div>
+    <div class="tv-stat"><div class="tv-snum">${totTrainers}</div><div class="tv-slbl">👨‍🏫 المدربون</div></div>
+    <div class="tv-stat"><div class="tv-snum">${grps}</div><div class="tv-slbl">🏫 الشعب</div></div>
+    <div class="tv-stat"><div class="tv-snum" style="color:${avgAll>=70?'#2ecc71':avgAll>=50?'#ffd700':'#e74c3c'}">${avgAll}%</div><div class="tv-slbl">📊 متوسط الإنجاز</div></div>
+  </div>
+  <div class="tv-body">
+    <div class="tv-podium-wrap">
+      <div class="tv-section-title">🏆 منصة التتويج</div>
+      <div class="tv-podium">
+        ${podiumOrder.map((s,i)=>{
+          const h=podiumH[i],clr=podiumC[i],r=s.rank;
+          return `<div class="tv-pod-col">
+            <div class="tv-pod-medal">${r===1?'🥇':r===2?'🥈':'🥉'}</div>
+            <div class="tv-pod-name">${nm(s.name)}</div>
+            <div class="tv-pod-info">شعبة ${s.grp} · ${s.avg}%</div>
+            <div class="tv-pod-bar" style="height:${h}px;background:linear-gradient(180deg,${clr},${clr}bb);box-shadow:0 -4px 24px ${clr}66">
+              <span class="tv-pod-rank">${r}</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+    <div class="tv-list-wrap">
+      <div class="tv-section-title">📋 الترتيب العام</div>
+      <div class="tv-list">
+        ${ranked.slice(0,10).map(s=>`<div class="tv-row${s.rank<=3?' tv-row-top':''}">
+          <div class="tv-rank">${s.rank<=3?['🥇','🥈','🥉'][s.rank-1]:s.rank}</div>
+          <div class="tv-name">${nm(s.name)}</div>
+          <div class="tv-grp">شعبة ${s.grp}</div>
+          <div class="tv-avg" style="color:${s.avg>=80?'#2ecc71':s.avg>=60?'#ffd700':'#e74c3c'}">${s.avg}%</div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function openTVMode(){
+  let tv=document.getElementById('tvMode');
+  if(!tv){
+    tv=document.createElement('div');
+    tv.id='tvMode';
+    tv.className='tv-mode';
+    document.body.appendChild(tv);
+  }
+  tv.innerHTML=`<button class="tv-close" onclick="closeTVMode()" title="خروج (ESC)">✕</button>${buildTVContent()}`;
+  tv.style.display='flex';
+  // ملء الشاشة الحقيقي
+  if(tv.requestFullscreen)tv.requestFullscreen().catch(()=>{});
+  else if(tv.webkitRequestFullscreen)tv.webkitRequestFullscreen();
+  // تحديث تلقائي كل 30 ثانية + الساعة كل دقيقة
+  if(window._tvTimer)clearInterval(window._tvTimer);
+  window._tvTimer=setInterval(async()=>{
+    if(!document.getElementById('tvMode')||tv.style.display==='none'){clearInterval(window._tvTimer);return;}
+    try{await loadAdmin();tv.innerHTML=`<button class="tv-close" onclick="closeTVMode()" title="خروج (ESC)">✕</button>${buildTVContent()}`;}catch(e){}
+  },30000);
+  // خروج بـ ESC
+  document.addEventListener('keydown',tvEscHandler);
+}
+function tvEscHandler(e){if(e.key==='Escape')closeTVMode();}
+function closeTVMode(){
+  const tv=document.getElementById('tvMode');
+  if(tv)tv.style.display='none';
+  if(window._tvTimer){clearInterval(window._tvTimer);window._tvTimer=null;}
+  document.removeEventListener('keydown',tvEscHandler);
+  if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{});
+}
+
 const aPgs={
   dashboard:()=>{
     // ===== حساب معدّل كل طالب =====
@@ -3008,6 +3139,7 @@ const aPgs={
         <span id="dashUpdated" style="font-size:11px;color:var(--muted)">آخر تحديث: ${new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span>
         <button id="liveBtn" onclick="toggleLiveDash(this)" style="background:${window._liveDash?'#2ecc71':'rgba(255,255,255,.1)'};color:${window._liveDash?'#fff':'var(--text)'};border:1px solid var(--border);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:${window._liveDash?'#fff':'#888'};${window._liveDash?'animation:pulse 1.5s infinite':''}"></span>${window._liveDash?'مباشر':'تفعيل المباشر'}</button>
         <button onclick="refreshDash()" style="background:rgba(106,184,247,.15);color:#6ab8f7;border:1px solid var(--border);padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700">🔄 تحديث</button>
+        <button onclick="openTVMode()" style="background:linear-gradient(135deg,#0a2348,#1a3a6b);color:#fff;border:none;padding:6px 14px;border-radius:20px;cursor:pointer;font-size:12px;font-weight:700">🖥️ شاشة العرض</button>
       </div>
     </div>
 
