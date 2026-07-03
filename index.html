@@ -774,7 +774,7 @@ const ADMIN=[
   {id:'admin5',ph:'000000004',name:'إداري احتياط 4',title:'مدير الأكاديمية',level:'director'}
 ];
 
-let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[];
+let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
 let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakStart:12, breakHours:1};
 const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
@@ -908,24 +908,30 @@ async function doLogin(){
       if(!f)throw new Error('not found');
       user=f;
     } else if(role==='t'){
-      const rows=await fetchSheet('قاعدة بيانات المدربين!A:E');
+      const rows=await fetchSheet('قاعدة بيانات المدربين!A:F');
       let f=null;
       for(let i=1;i<rows.length;i++){
         const r=rows[i];
         if(!r[0])continue;
-        if(n0(r[0])===sid&&(norm(r[3])===sph||norm(r[3])===norm('0'+sph))){
+        const secret=norm(r[5]); // العمود F = الرمز السري
+        const phone=norm(r[3]);  // العمود D = الجوال
+        const pwOK=secret?(secret===sph||secret===norm('0'+sph)):(phone===sph||phone===norm('0'+sph));
+        if(n0(r[0])===sid&&pwOK){
           f={id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),role:'t'};break;
         }
       }
       if(!f)throw new Error('not found');
       user=f;
     } else {
-      const rows=await fetchSheet('قاعدة بيانات مركزي!A:G');
+      const rows=await fetchSheet('قاعدة بيانات مركزي!A:H');
       let f=null;
       for(let i=1;i<rows.length;i++){
         const r=rows[i];
         if(!r[0])continue;
-        if(n0(r[0])===sid&&(norm(r[4])===sph||norm(r[4])===norm('0'+sph))){
+        const secret=norm(r[7]); // العمود H = الرمز السري
+        const phone=norm(r[4]);  // العمود E = الجوال
+        const pwOK=secret?(secret===sph||secret===norm('0'+sph)):(phone===sph||phone===norm('0'+sph));
+        if(n0(r[0])===sid&&pwOK){
           f={id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),role:'s'};break;
         }
       }
@@ -1107,17 +1113,18 @@ async function loadTrainer(){
 }
 
 async function loadAdmin(){
-  const [sr,cr,cat,td]=await Promise.all([
-    fetchSheet('قاعدة بيانات مركزي!A:G'),
+  const [sr,cr,cat,td,ad]=await Promise.all([
+    fetchSheet('قاعدة بيانات مركزي!A:H'),
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[]),
-    fetchSheet('قاعدة بيانات المدربين!A:E').catch(()=>[])
+    fetchSheet('قاعدة بيانات المدربين!A:F').catch(()=>[]),
+    fetchSheet('قاعدة بيانات الاداريين!A:G').catch(()=>[])
   ]);
   students=[];
   for(let i=1;i<sr.length;i++){
     const r=sr[i];
     if(!r[0])continue;
-    students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6])});
+    students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),pw:n0(r[7])});
   }
   allCourses=[];
   for(let i=1;i<cr.length;i++){
@@ -1133,7 +1140,13 @@ async function loadAdmin(){
   trainersDB=[];
   for(let i=1;i<td.length;i++){
     const r=td[i];
-    if(n0(r[1]))trainersDB.push({id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4])});
+    if(n0(r[1]))trainersDB.push({id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5])});
+  }
+  // قاعدة الإداريين: A=الرقم B=الاسم C=المسمى D=الجوال E=البريد F=الرقم السري G=الصلاحية
+  adminsDB=[];
+  for(let i=1;i<ad.length;i++){
+    const r=ad[i];
+    if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6])});
   }
   await loadSchedule();
   // ⭐ احسب نسب الغياب لكل السجلات من "قاعدة الغياب"
@@ -1962,6 +1975,7 @@ function navHTML(r,pages){
     alerts:{icon:'🔔',lbl:'الاشعارات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     dashboard:{icon:'📈',lbl:'الداشبورد والأوائل'},
+    accounts:{icon:'👥',lbl:'إضافة الحسابات'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
     settings:{icon:'⚙️',lbl:'الإعدادات'},
     record:{icon:'🏅',lbl:'السجل التدريبي'},
@@ -1973,8 +1987,8 @@ function navHTML(r,pages){
 }
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات'};
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل'};
   const ac=r==='s'?'as':r==='t'?'at':'aa';
   const mn=document.getElementById('mobNav');
   mn.style.display='';
@@ -2842,8 +2856,8 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','dashboard','all_students','all_courses','schedule','requests','alerts','reports','settings']);
-  buildMobNav('a',['overview','all_students','requests','alerts','reports']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
+  buildMobNav('a',['overview','all_students','requests','reports','dashboard']);
   showAPage('overview',null);
 }
 
@@ -3000,6 +3014,63 @@ function stopLiveDash(){
   if(window._liveDashTimer){clearInterval(window._liveDashTimer);window._liveDashTimer=null;}
 }
 
+// ===== إدارة الحسابات (إضافة/تعديل/حذف) =====
+function accountFormFields(type,data){
+  data=data||{};
+  const f=(id,lbl,val,ph)=>`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">${lbl}</label><input id="acc_${id}" value="${(val||'').toString().replace(/"/g,'&quot;')}" placeholder="${ph||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"></div>`;
+  if(type==='student')return f('id','الرقم الأكاديمي *',data.id)+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
+  if(type==='trainer')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
+  // admin
+  return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('title','المسمى الوظيفي',data.title)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرقم السري *',data.pw)+`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الصلاحية</label><select id="acc_level" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"><option value="مشرف"${data.level==='مشرف'?' selected':''}>مشرف</option><option value="مدير"${(data.level||'').includes('مدير')?' selected':''}>مدير</option></select></div>`;
+}
+function accountModal(type,mode,data){
+  const tLbl=type==='student'?'متدرب':type==='trainer'?'مدرب':'إداري';
+  const title=(mode==='edit'?'✏️ تعديل ':'➕ إضافة ')+tLbl;
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';overlay.id='accModal';
+  overlay.innerHTML=`<div class="modal" style="max-width:480px;max-height:88vh;overflow-y:auto">
+    <div class="modal-title"><span>${title}</span><button class="modal-close" onclick="document.getElementById('accModal').remove()">✕</button></div>
+    <div style="padding:8px 0">${accountFormFields(type,data)}</div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="btn btn-out" style="flex:1" onclick="document.getElementById('accModal').remove()">إلغاء</button>
+      <button class="btn btn-b" style="flex:1" onclick="saveAccount('${type}','${mode}')">${mode==='edit'?'حفظ التعديل':'إضافة'}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+function addAccount(type){accountModal(type,'add',{});}
+function editAccount(type,data){accountModal(type,'edit',data);}
+async function saveAccount(type,mode){
+  const g=id=>{const el=document.getElementById('acc_'+id);return el?el.value.trim():'';};
+  const rec={type,id:g('id'),name:g('name'),ph:g('ph'),email:g('email')};
+  if(type==='student'){rec.grp=g('grp');rec.spec=g('spec');rec.pw=g('pw');}
+  else if(type==='trainer'){rec.spec=g('spec');rec.pw=g('pw');}
+  else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');}
+  if(!rec.id||!rec.name){showToast('الرقم والاسم مطلوبان','w');return;}
+  if(type==='admin'&&!rec.pw){showToast('الرقم السري مطلوب للإداري','w');return;}
+  showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
+  try{
+    const action=mode==='edit'?'updateUser':'addUser';
+    const res=await jsonpCall({action,data:JSON.stringify([rec])});
+    document.getElementById('accModal')?.remove();
+    showToast(mode==='edit'?'✅ تم حفظ التعديل':'✅ تمت الإضافة','s');
+    await loadAdmin();
+    showAPage('accounts',document.getElementById('sn-accounts'));
+  }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى','e');}
+}
+async function deleteAccount(type,id,name){
+  const tLbl=type==='student'?'المتدرب':type==='trainer'?'المدرب':'الإداري';
+  if(!confirm(`⚠️ هل تريد حذف ${tLbl}: ${name}؟\nلا يمكن التراجع عن هذا الإجراء.`))return;
+  showToast('جاري الحذف...','i');
+  try{
+    await jsonpCall({action:'deleteUser',data:JSON.stringify([{type,id}])});
+    showToast('✅ تم الحذف','s');
+    await loadAdmin();
+    showAPage('accounts',document.getElementById('sn-accounts'));
+  }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
+}
+window.addAccount=addAccount;window.editAccount=editAccount;window.deleteAccount=deleteAccount;window.saveAccount=saveAccount;
+
 // ===== شاشة العرض (TV Mode) — ملء الشاشة للعرض على شاشة كبيرة =====
 window._tvTimer=null;
 function buildTVContent(){
@@ -3140,6 +3211,50 @@ window.buildTVContent=buildTVContent;
 console.log('%c✅ شاشة العرض جاهزة - النسخة الجديدة v51','color:#2ecc71;font-size:14px;font-weight:bold');
 
 const aPgs={
+  accounts:()=>{
+    const t=window._accTab||'student';
+    // مصادر البيانات لكل نوع
+    const tabBtn=(id,lbl,icon)=>`<button onclick="window._accTab='${id}';showAPage('accounts',document.getElementById('sn-accounts'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${t===id?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${t===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
+    // بناء صفوف الجدول حسب النوع
+    let rows='',cols='';
+    if(t==='student'){
+      cols=`<th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>التخصص</th><th>الجوال</th><th>البريد</th><th>إجراءات</th>`;
+      const seen=new Set();
+      const uniq=students.filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;});
+      rows=uniq.map(s=>`<tr>
+        <td>${s.id}</td><td style="font-weight:600">${s.name}</td><td>${s.grp||'-'}</td><td>${s.spec||'-'}</td><td>${s.ph||'-'}</td><td style="font-size:11px">${s.email||'-'}</td>
+        <td><button onclick='editAccount("student",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("student","${s.id}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
+      </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد متدربون</td></tr>`;
+    }else if(t==='trainer'){
+      cols=`<th>الرقم</th><th>الاسم</th><th>التخصص</th><th>الجوال</th><th>البريد</th><th>إجراءات</th>`;
+      rows=(trainersDB||[]).map(s=>`<tr>
+        <td>${s.id}</td><td style="font-weight:600">${s.name}</td><td>${s.spec||'-'}</td><td>${s.ph||'-'}</td><td style="font-size:11px">${s.email||'-'}</td>
+        <td><button onclick='editAccount("trainer",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("trainer","${s.id}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
+      </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مدربون</td></tr>`;
+    }else{
+      cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الجوال</th><th>البريد</th><th>الصلاحية</th><th>إجراءات</th>`;
+      rows=(adminsDB||[]).map(s=>`<tr>
+        <td>${s.id}</td><td style="font-weight:600">${s.name}</td><td>${s.title||'-'}</td><td>${s.ph||'-'}</td><td style="font-size:11px">${s.email||'-'}</td><td>${s.level||'-'}</td>
+        <td><button onclick='editAccount("admin",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("admin","${s.id}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
+      </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
+    }
+    const tLbl=t==='student'?'متدرب':t==='trainer'?'مدرب':'إداري';
+    return `
+    <div class="banner"><div><div class="btitle">👥 إدارة الحسابات</div><div class="bsub">إضافة وتعديل وحذف حسابات المتدربين والمدربين والإداريين</div></div></div>
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      ${tabBtn('student','المتدربون','🎓')}
+      ${tabBtn('trainer','المدربون','👨‍🏫')}
+      ${tabBtn('admin','الإداريون','⚙️')}
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="stitle" style="margin:0">${t==='student'?'🎓 المتدربون':t==='trainer'?'👨‍🏫 المدربون':'⚙️ الإداريون'}</div>
+      <button class="btn btn-b" onclick='addAccount("${t}")'>➕ إضافة ${tLbl}</button>
+    </div>
+    <div class="gtable"><table>
+      <thead><tr>${cols}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+  },
   dashboard:()=>{
     // ===== حساب معدّل كل طالب =====
     // نعتمد على الطلاب المسجّلين في students (الحاليون)، ونجيب مقرراتهم من allCourses بالمطابقة بالرقم الأكاديمي
