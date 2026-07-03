@@ -1916,6 +1916,7 @@ function navHTML(r,pages){
     attendance:{icon:'✅',lbl:'تسجيل الحضور'},grades:{icon:'📝',lbl:'رصد الدرجات'},
     alerts:{icon:'🔔',lbl:'الاشعارات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
+    dashboard:{icon:'📈',lbl:'الداشبورد والأوائل'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
     settings:{icon:'⚙️',lbl:'الإعدادات'},
     record:{icon:'🏅',lbl:'السجل التدريبي'},
@@ -2796,7 +2797,7 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','schedule','requests','alerts','reports','settings']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','dashboard','all_students','all_courses','schedule','requests','alerts','reports','settings']);
   buildMobNav('a',['overview','all_students','requests','alerts','reports']);
   showAPage('overview',null);
 }
@@ -2920,6 +2921,102 @@ function renderKPI(grp,btn){
 }
 
 const aPgs={
+  dashboard:()=>{
+    // ===== حساب معدّل كل طالب (متوسط درجاته في كل المواد الحالية) =====
+    const actives=allCourses.filter(c=>isActive(c.status));
+    const byStudent={};
+    actives.forEach(c=>{
+      if(!byStudent[c.sid])byStudent[c.sid]={sid:c.sid,name:c.sname,grp:c.grp,courses:[],sumPct:0,sumAbs:0,n:0};
+      const st=byStudent[c.sid];
+      st.courses.push(c);st.sumPct+=c.pct;st.sumAbs+=(c.abs||0);st.n++;
+    });
+    let ranked=Object.values(byStudent).map(s=>({
+      sid:s.sid,name:s.name,grp:s.grp,coursesCount:s.n,
+      avg:s.n?Math.round(s.sumPct/s.n*10)/10:0,
+      gpa:parseFloat(gpaFrom(s.courses)),
+      avgAbs:s.n?Math.round(s.sumAbs/s.n):0
+    })).sort((a,b)=>b.avg-a.avg||b.gpa-a.gpa);
+    // إعطاء رتبة (مع التعادل)
+    ranked.forEach((s,i)=>{s.rank=i+1;});
+    const top3=ranked.slice(0,3);
+    // ===== معطيات عامة =====
+    const totStudents=students.length;
+    const totCourses=[...new Set(allCourses.map(c=>c.course))].length;
+    const totTrainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
+    const grps=[...new Set(students.map(s=>s.grp))].sort();
+    const avgAll=actives.length?Math.round(actives.reduce((a,c)=>a+c.pct,0)/actives.length):0;
+    const bannedCount=actives.filter(c=>(c.abs||0)>=25).length;
+    const excellentCount=ranked.filter(s=>s.avg>=90).length;
+    const passCount=actives.filter(c=>c.pct>=60).length;
+    const passRate=actives.length?Math.round(passCount/actives.length*100):0;
+    // ميداليات
+    const medal=r=>r===1?'🥇':r===2?'🥈':r===3?'🥉':`<span style="font-weight:800;color:var(--muted)">${r}</span>`;
+    const podiumOrder=[top3[1],top3[0],top3[2]].filter(Boolean); // فضي-ذهبي-برونزي
+    const podiumH=[130,170,105];
+    const podiumC=['#c0c0c0','#ffd700','#cd7f32'];
+    return `
+    <div class="banner"><div><div class="btitle">📈 الداشبورد الشامل والأوائل</div><div class="bsub">${user.title} — ${user.name}</div></div><div class="bpill bp-y">إداري</div></div>
+
+    <div class="stitle">📊 معطيات الأكاديمية</div>
+    <div class="metrics">
+      <div class="mcard mc-b"><div class="micon">🎓</div><div class="mnum cb" data-target="${totStudents}">${totStudents}</div><div class="mlbl">المتدربون</div></div>
+      <div class="mcard mc-g"><div class="micon">📚</div><div class="mnum cg" data-target="${totCourses}">${totCourses}</div><div class="mlbl">المقررات</div></div>
+      <div class="mcard mc-y"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${totTrainers}">${totTrainers}</div><div class="mlbl">المدربون</div></div>
+      <div class="mcard mc-b"><div class="micon">🏫</div><div class="mnum cb" data-target="${grps.length}">${grps.length}</div><div class="mlbl">الشعب</div></div>
+      <div class="mcard ${avgAll>=70?'mc-g':avgAll>=50?'mc-y':'mc-r'}"><div class="micon">📊</div><div class="mnum ${avgAll>=70?'cg':avgAll>=50?'cy':'cr'}" data-target="${avgAll}" data-suffix="%">${avgAll}%</div><div class="mlbl">متوسط الإنجاز</div></div>
+      <div class="mcard mc-g"><div class="micon">⭐</div><div class="mnum cg" data-target="${excellentCount}">${excellentCount}</div><div class="mlbl">متفوقون (90%+)</div></div>
+      <div class="mcard ${passRate>=70?'mc-g':'mc-y'}"><div class="micon">✅</div><div class="mnum ${passRate>=70?'cg':'cy'}" data-target="${passRate}" data-suffix="%">${passRate}%</div><div class="mlbl">نسبة النجاح</div></div>
+      <div class="mcard ${bannedCount?'mc-r':'mc-g'}"><div class="micon">🚫</div><div class="mnum ${bannedCount?'cr':'cg'}" data-target="${bannedCount}">${bannedCount}</div><div class="mlbl">محرومون بالغياب</div></div>
+    </div>
+
+    ${top3.length?`
+    <div class="stitle">🏆 منصة تتويج الأوائل (عام)</div>
+    <div style="display:flex;justify-content:center;align-items:flex-end;gap:12px;margin:24px 0 8px;padding:20px 10px;background:linear-gradient(135deg,rgba(201,162,39,.08),rgba(106,184,247,.06));border-radius:16px">
+      ${podiumOrder.map((s,i)=>{
+        const realRank=s.rank;const h=podiumH[i];const clr=podiumC[i];
+        return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;max-width:180px">
+          <div style="font-size:32px;margin-bottom:4px">${realRank===1?'🥇':realRank===2?'🥈':'🥉'}</div>
+          <div style="font-weight:700;font-size:13px;text-align:center;margin-bottom:2px;color:var(--text)">${s.name.split(' ').slice(0,2).join(' ')}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">شعبة ${s.grp} · ${s.avg}%</div>
+          <div style="width:100%;height:${h}px;background:linear-gradient(180deg,${clr},${clr}bb);border-radius:8px 8px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:8px;box-shadow:0 -2px 12px ${clr}55">
+            <span style="font-size:26px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.3)">${realRank}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`:''}
+
+    <div class="stitle">📋 الترتيب الكامل (كل الأكاديمية)</div>
+    <div class="gtable"><table>
+      <thead><tr><th>الترتيب</th><th>الاسم</th><th>الشعبة</th><th>المعدّل %</th><th>GPA /5</th><th>المقررات</th><th>متوسط الغياب</th></tr></thead>
+      <tbody>${ranked.map(s=>`<tr${s.rank<=3?' style="background:rgba(201,162,39,.06)"':''}>
+        <td>${medal(s.rank)}</td>
+        <td style="font-weight:${s.rank<=3?'700':'500'}">${s.name}</td>
+        <td>شعبة ${s.grp}</td>
+        <td><span class="pill ${pillClass(s.avg)}">${s.avg}%</span></td>
+        <td><span style="font-weight:700;color:${gpaColor(s.gpa)}">${s.gpa.toFixed(2)}</span></td>
+        <td>${s.coursesCount}</td>
+        <td><span style="color:${s.avgAbs>=25?'var(--red)':s.avgAbs>=15?'var(--gold)':'var(--muted)'}">${s.avgAbs}%</span></td>
+      </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد متدربون نشطون</td></tr>'}</tbody>
+    </table></div>
+
+    <div class="stitle">🥇 أوائل كل شعبة</div>
+    ${grps.map(g=>{
+      const gRanked=ranked.filter(s=>s.grp===g).slice(0,3);
+      if(!gRanked.length)return '';
+      return `<div style="margin-bottom:16px">
+        <div style="font-size:14px;font-weight:700;color:#6ab8f7;margin-bottom:8px;padding:6px 12px;background:rgba(106,184,247,.1);border-radius:6px">🏫 الشعبة ${g}</div>
+        <div class="gtable"><table>
+          <thead><tr><th>الترتيب</th><th>الاسم</th><th>المعدّل %</th><th>GPA /5</th></tr></thead>
+          <tbody>${gRanked.map((s,i)=>`<tr>
+            <td>${i===0?'🥇':i===1?'🥈':'🥉'}</td>
+            <td style="font-weight:${i===0?'700':'500'}">${s.name}</td>
+            <td><span class="pill ${pillClass(s.avg)}">${s.avg}%</span></td>
+            <td><span style="font-weight:700;color:${gpaColor(s.gpa)}">${s.gpa.toFixed(2)}</span></td>
+          </tr>`).join('')}</tbody>
+        </table></div>
+      </div>`;
+    }).join('')}`;
+  },
   overview:()=>{
     const tot=students.length,crs=[...new Set(allCourses.map(c=>c.course))].length;
     const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
