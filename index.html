@@ -3897,8 +3897,8 @@ const aPgs={
     ${done.length?done.map(r=>card(r,false)).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات</div>'}`;
   },
   alerts:()=>{
-    // المواد الحالية فقط
-    const active=allCourses.filter(c=>isActive(c.status));
+    // كل المواد (بدون فلتر الحالة — لأن حالة الشيت قد لا تكون "حالي" بالضبط)
+    const active=allCourses;
     // دالة: هل الطالب راسب في المادة ولم يجتزها بعد؟
     const stillFailed=c=>isFailed(c)&&!allCourses.some(o=>o.sid===c.sid&&normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
     // تجميع الحالات حسب المادة
