@@ -767,7 +767,7 @@ body{top:0!important}
 <script>
 const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
 const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycby58Ub4ZT06j2ca4RTpCTdp6FVhrn8Z_alXhtFw9em_413TOmgdKQaxUmz5_X2gyxMR/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbw981-6c5Yg4YfrmhI4tJnHpikjucmnjueUZnBdlkgkJqF75d3wfiKicYyIebZ1_J0S/exec';
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
 const OTP_ENABLED=false;
 const ADMIN=[
@@ -1982,6 +1982,7 @@ function navHTML(r,pages){
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     dashboard:{icon:'📈',lbl:'الداشبورد والأوائل'},
     accounts:{icon:'👥',lbl:'إضافة الحسابات'},
+    manage_courses:{icon:'📖',lbl:'إدارة المقررات'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
     settings:{icon:'⚙️',lbl:'الإعدادات'},
     record:{icon:'🏅',lbl:'السجل التدريبي'},
@@ -2884,7 +2885,7 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','manage_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
   buildMobNav('a',['overview','all_students','requests','reports','dashboard','accounts','all_courses','schedule','alerts','settings']);
   showAPage('overview',null);
 }
@@ -3041,6 +3042,78 @@ function stopLiveDash(){
   window._liveDash=false;
   if(window._liveDashTimer){clearInterval(window._liveDashTimer);window._liveDashTimer=null;}
 }
+
+// ===== إدارة المقررات (الخطة الدراسية) =====
+function courseModal(mode,data){
+  data=data||{};
+  const f=(id,lbl,val,ph)=>`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">${lbl}</label><input id="crs_${id}" value="${(val||'').toString().replace(/"/g,'&quot;')}" placeholder="${ph||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"></div>`;
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';overlay.id='crsModal';
+  overlay.innerHTML=`<div class="modal" style="max-width:460px;max-height:88vh;overflow-y:auto">
+    <div class="modal-title"><span>${mode==='edit'?'✏️ تعديل مقرر':'➕ إضافة مقرر'}</span><button class="modal-close" onclick="document.getElementById('crsModal').remove()">✕</button></div>
+    <div style="padding:8px 0">
+      ${f('code','رمز المقرر *',data.code,'مثال: الكت 101')}
+      ${f('name','اسم المقرر *',data.name,'مثال: سلامة صناعية')}
+      ${f('term','الترم',data.term,'مثال: ترم أول')}
+      ${f('units','عدد الوحدات',data.units)}
+      ${f('hours','عدد الساعات',data.hours)}
+    </div>
+    <input type="hidden" id="crs_oldCode" value="${(data.code||'').replace(/"/g,'&quot;')}">
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="btn btn-out" style="flex:1" onclick="document.getElementById('crsModal').remove()">إلغاء</button>
+      <button class="btn btn-b" style="flex:1" onclick="saveCourse('${mode}')">${mode==='edit'?'حفظ التعديل':'إضافة'}</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+function addCourse(){courseModal('add',{});}
+function editCourse(data){courseModal('edit',data);}
+async function saveCourse(mode){
+  const g=id=>{const el=document.getElementById('crs_'+id);return el?el.value.trim():'';};
+  const rec={code:g('code'),name:g('name'),term:g('term'),units:g('units'),hours:g('hours')};
+  if(mode==='edit')rec.oldCode=g('oldCode');
+  if(!rec.code||!rec.name){showToast('الرمز واسم المقرر مطلوبان','w');return;}
+  showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
+  try{
+    const action=mode==='edit'?'updateCourse':'addCourse';
+    await jsonpCall({action,data:JSON.stringify([rec])});
+    document.getElementById('crsModal')?.remove();
+    showToast(mode==='edit'?'✅ تم حفظ التعديل':'✅ تمت الإضافة','s');
+    await loadAdmin();
+    showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+  }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى','e');}
+}
+async function deleteCourse(code,name){
+  if(!confirm(`⚠️ هل تريد حذف المقرر: ${name}؟\nملاحظة: هذا يحذفه من الخطة فقط، ولا يحذف تسجيلات الطلاب.`))return;
+  showToast('جاري الحذف...','i');
+  try{
+    await jsonpCall({action:'deleteCourse',data:JSON.stringify([{code}])});
+    showToast('✅ تم الحذف','s');
+    await loadAdmin();
+    showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+  }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
+}
+async function enrollStudent(){
+  const sid=document.getElementById('enr_student')?.value;
+  const crsVal=document.getElementById('enr_course')?.value;
+  const trainer=document.getElementById('enr_trainer')?.value||'';
+  if(!sid||!crsVal){showToast('اختر المتدرب والمقرر','w');return;}
+  const [code,course]=crsVal.split('|');
+  const st=students.find(s=>s.id===sid);
+  if(!st){showToast('المتدرب غير موجود','e');return;}
+  // منع التكرار: لو مسجّل مسبقاً بنفس المقرر
+  const already=allCourses.some(c=>c.sid===sid&&normCode(c.code)===normCode(code));
+  if(already){showToast('⚠️ المتدرب مسجّل مسبقاً في هذا المقرر','w');return;}
+  showToast('جاري التسجيل...','i');
+  try{
+    const rec={sid,name:st.name,grp:st.grp,code,course,trainer,term:st.half||'',status:'حالي'};
+    await jsonpCall({action:'enrollStudent',data:JSON.stringify([rec])});
+    showToast('✅ تم تسجيل المتدرب في المقرر','s');
+    await loadAdmin();
+    showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+  }catch(e){showToast('تعذّر التسجيل — جرب مرة أخرى','e');}
+}
+window.addCourse=addCourse;window.editCourse=editCourse;window.deleteCourse=deleteCourse;window.saveCourse=saveCourse;window.enrollStudent=enrollStudent;
 
 // ===== إدارة الحسابات (إضافة/تعديل/حذف) =====
 function accountFormFields(type,data){
@@ -3239,6 +3312,53 @@ window.buildTVContent=buildTVContent;
 console.log('%c✅ شاشة العرض جاهزة - النسخة الجديدة v51','color:#2ecc71;font-size:14px;font-weight:bold');
 
 const aPgs={
+  manage_courses:()=>{
+    const tab=window._mcTab||'plan';
+    const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${id}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
+    let body='';
+    if(tab==='plan'){
+      // إدارة الخطة الدراسية (المقررات)
+      const rows=(catalog||[]).map(c=>`<tr>
+        <td style="font-weight:600">${c.code}</td><td>${c.name}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td>
+        <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${c.code}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
+      </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
+      body=`
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="stitle" style="margin:0">📖 الخطة الدراسية (${(catalog||[]).length} مقرر)</div>
+        <button class="btn btn-b" onclick="addCourse()">➕ إضافة مقرر</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 المقررات هنا تصلح لأي تخصص — أضف رمز التخصص في اسم المقرر للتمييز بين التخصصات</div>
+      <div class="gtable"><table>
+        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>إجراءات</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+    }else{
+      // تسجيل طالب في مقررات
+      const seen=new Set();
+      const uniqStudents2=students.filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;});
+      const stOpts=uniqStudents2.map(s=>`<option value="${s.id}">${s.name} (${s.id}) - شعبة ${s.grp}</option>`).join('');
+      const crsOpts=(catalog||[]).map(c=>`<option value="${c.code}|${c.name}">${c.name} (${c.code})</option>`).join('');
+      const trOpts=(trainersDB||[]).map(tr=>`<option value="${tr.name}">${tr.name}</option>`).join('');
+      body=`
+      <div class="stitle">🔗 تسجيل متدرب في مقرر</div>
+      <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:20px;max-width:600px">
+        <div style="margin-bottom:14px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">المتدرب</label>
+          <select id="enr_student" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"><option value="">— اختر المتدرب —</option>${stOpts}</select></div>
+        <div style="margin-bottom:14px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">المقرر</label>
+          <select id="enr_course" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"><option value="">— اختر المقرر —</option>${crsOpts}</select></div>
+        <div style="margin-bottom:14px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">المدرب</label>
+          <select id="enr_trainer" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"><option value="">— اختر المدرب —</option>${trOpts}</select></div>
+        <button class="btn btn-b" style="width:100%" onclick="enrollStudent()">🔗 تسجيل المتدرب في المقرر</button>
+      </div>`;
+    }
+    return `
+    <div class="banner"><div><div class="btitle">📖 إدارة المقررات</div><div class="bsub">الخطة الدراسية وتسجيل المتدربين — يدعم تخصصات متعددة</div></div></div>
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      ${tabBtn('plan','الخطة الدراسية','📖')}
+      ${tabBtn('enroll','تسجيل متدرب','🔗')}
+    </div>
+    ${body}`;
+  },
   accounts:()=>{
     const t=window._accTab||'student';
     // مصادر البيانات لكل نوع
