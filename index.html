@@ -1203,6 +1203,16 @@ function ccClass(p){return p>=80?'cc-g':p>=60?'cc-y':'cc-r'}
 // ===== منطق المشاكل الفعلية =====
 // أداء منخفض: فقط للمواد التي اترصدت درجتها (>0) وليست حالية (لسه ما خلصت)
 function isLowPerf(c){return !isActive(c.status) && c.pct>0 && c.pct<60}
+// ===== رصد الرسوب (متطلبات) =====
+// راسب = درجة أقل من 60 (ومرصودة) أو الحرفي راسب (F/هـ/راسب/محروم)
+function isFailed(c){
+  const g=parseFloat(c.pct)||0;
+  const L=String(c.letter||'').replace(/\s+/g,'').trim();
+  const failLetters=['F','f','هـ','ه','راسب','محروم','ر'];
+  const letterFail=failLetters.some(x=>L===x||L.includes('راسب')||L.includes('محروم'));
+  // نعتبره راسباً لو الدرجة مرصودة (>0) وأقل من 60، أو الحرفي راسب
+  return (g>0&&g<60)||letterFail;
+}
 // ===== مستويات الإنذار للغياب =====
 // 10% إنذار أول | 20% إنذار ثاني | 25% محروم
 function absLevel(abs){
@@ -2084,6 +2094,19 @@ const sPgs={
   },
   performance:()=>{
     const tot=courses.length,avg=tot?Math.round(courses.reduce((a,c)=>a+c.pct,0)/tot):0;
+    // ===== تنبيه الرسوب (متطلبات لم تُجتَز) =====
+    const failedCourses=courses.filter(isFailed).filter(c=>{
+      // لم ينجح فيها في سجل آخر
+      return !courses.some(o=>normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
+    });
+    let failSection='';
+    if(failedCourses.length){
+      failSection=`<div class="alert ad" style="border:2px solid #e74c3c;margin-bottom:16px">
+        <span class="aicon">📕</span>
+        <div><strong>تنبيه: لديك ${failedCourses.length} مادة راسب فيها (متطلب)</strong><br>
+        <span style="font-size:12px">يجب إعادة هذه المواد لأنها متطلبات: ${failedCourses.map(c=>c.course+((parseFloat(c.pct)||0)>0?` (${Math.round(c.pct)}%)`:'')).join(' · ')}</span></div>
+      </div>`;
+    }
     // مقارنة مع الخطة الدراسية الكاملة (قاعدة بيانات المقررات)
     const norm=s=>String(s||'').replace(/\s/g,'');
     const takenCodes=new Set(courses.map(c=>norm(c.code)));
@@ -2117,6 +2140,7 @@ const sPgs={
     }
     return `
     <div class="banner anim-up"><div><div class="btitle">تقرير الأداء 📊</div><div class="bsub">نظرة شاملة على مستواك الأكاديمي</div></div><div class="bpill bp-b" style="font-size:18px;font-weight:900;text-align:center;line-height:1.2">${gpaFrom(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5</div></div></div>
+    ${failSection}
     <div class="metrics">
       <div class="mcard mc-p"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpaFrom(courses))}">${gpaFrom(courses)}<span style="font-size:13px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
       <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
@@ -3875,8 +3899,19 @@ const aPgs={
   alerts:()=>{
     const deprived=allCourses.filter(c=>isDeprived(c.abs)&&isActive(c.status));
     const hi=allCourses.filter(c=>isHighAbs(c)&&!isDeprived(c.abs)),lo=allCourses.filter(isLowPerf);
+    // ===== رصد الرسوب (متطلبات): راسب في مادة ولم ينجح فيها في أي سجل آخر =====
+    const failedList=[];
+    allCourses.filter(isFailed).forEach(c=>{
+      // هل نجح في نفس المادة في سجل آخر؟ (درجة ≥60 وغير راسب)
+      const passedLater=allCourses.some(o=>o.sid===c.sid&&normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
+      if(!passedLater)failedList.push(c);
+    });
     return `
     <div class="stitle">نظام الاشعارات الأكاديمية</div>
+    ${failedList.length?`<div style="margin-bottom:20px">
+      <div class="alert ad" style="border:2px solid #e74c3c;margin-bottom:10px"><span class="aicon">📕</span><strong>${failedList.length} حالة رسوب في متطلبات</strong> — طلاب راسبون في مواد ولم يجتازوها بعد</div>
+      ${failedList.map(c=>`<div class="alert ad" onclick="showStudentDetail('${c.sid}')" style="cursor:pointer"><span class="aicon">❌</span>${c.sname} — راسب في <strong>${c.course}</strong> ${(parseFloat(c.pct)||0)>0?`(درجة ${Math.round(c.pct)}%)`:''} <span style="font-size:10px;background:#e74c3c;color:#fff;padding:2px 8px;border-radius:10px;margin-right:6px">متطلب</span><span style="margin-right:auto;font-size:11px;color:#6ab8f7">عرض التفاصيل ←</span></div>`).join('')}
+    </div>`:''}
     ${deprived.length?`<div style="margin-bottom:20px">
       <div class="alert ad" style="border:2px solid var(--red);margin-bottom:10px"><span class="aicon">⛔</span><strong>${deprived.length} حالة حرمان تحتاج إجراء فوري</strong> — طلاب وصلوا 25% غياب أو أكثر</div>
       ${deprived.map(c=>`<div class="alert ad" onclick="showStudentDetail('${c.sid}')" style="cursor:pointer"><span class="aicon">🚫</span>${c.sname} — غياب <strong>${Math.round(c.abs)}%</strong> في ${c.course} <span style="margin-right:auto;font-size:11px;color:#6ab8f7">عرض التفاصيل ←</span></div>`).join('')}
@@ -3889,7 +3924,7 @@ const aPgs={
       <div style="font-size:13px;font-weight:700;color:#ff8a92;margin-bottom:10px">🔴 أداء منخفض (${lo.length} حالة)</div>
       ${lo.slice(0,15).map(c=>`<div class="alert ad"><span class="aicon">📉</span>${c.sname} — درجة ${Math.round(c.pct)}% في ${c.course}</div>`).join('')}
     </div>`:''}
-    ${!deprived.length&&!hi.length&&!lo.length?'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات حرجة</div>':''}`;
+    ${!failedList.length&&!deprived.length&&!hi.length&&!lo.length?'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات حرجة</div>':''}`;
   },
   reports:()=>{
     const tot=students.length;
