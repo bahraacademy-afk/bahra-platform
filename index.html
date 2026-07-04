@@ -421,6 +421,7 @@ body.light-mode .more-menu button{background:rgba(26,58,107,.05);border-color:rg
   .mob-nav{display:block}
   .sidebar{display:none!important}
   .dash-charts{grid-template-columns:1fr!important}
+  .enr-grid{grid-template-columns:1fr!important}
   .mcontent{padding:14px 12px 110px!important}
   .topbar{padding:10px 12px;gap:6px}
   .metrics{grid-template-columns:1fr 1fr;gap:10px}
@@ -3093,27 +3094,56 @@ async function deleteCourse(code,name){
     showAPage('manage_courses',document.getElementById('sn-manage_courses'));
   }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
 }
-async function enrollStudent(){
-  const sid=document.getElementById('enr_student')?.value;
-  const crsVal=document.getElementById('enr_course')?.value;
+// تحديد/إلغاء كل طلاب شعبة
+function toggleGrpStudents(grp,checked){
+  document.querySelectorAll('.grp-'+grp).forEach(cb=>cb.checked=checked);
+  updateEnrCounts();
+}
+// تحديث عدّادات المحددين
+function updateEnrCounts(){
+  const st=document.querySelectorAll('.enr-student-cb:checked').length;
+  const cr=document.querySelectorAll('.enr-course-cb:checked').length;
+  const se=document.getElementById('stCount');if(se)se.textContent='('+st+' محدد)';
+  const ce=document.getElementById('crsCount');if(ce)ce.textContent='('+cr+' محدد)';
+}
+// ربط التحديث بأي تغيير في الصناديق
+document.addEventListener('change',function(e){
+  if(e.target&&(e.target.classList.contains('enr-student-cb')||e.target.classList.contains('enr-course-cb')))updateEnrCounts();
+});
+// التسجيل الجماعي: كل طالب محدد × كل مقرر محدد
+async function enrollBatch(){
+  const sids=[...document.querySelectorAll('.enr-student-cb:checked')].map(c=>c.value);
+  const crs=[...document.querySelectorAll('.enr-course-cb:checked')].map(c=>c.value);
   const trainer=document.getElementById('enr_trainer')?.value||'';
-  if(!sid||!crsVal){showToast('اختر المتدرب والمقرر','w');return;}
-  const [code,course]=crsVal.split('|');
-  const st=students.find(s=>s.id===sid);
-  if(!st){showToast('المتدرب غير موجود','e');return;}
-  // منع التكرار: لو مسجّل مسبقاً بنفس المقرر
-  const already=allCourses.some(c=>c.sid===sid&&normCode(c.code)===normCode(code));
-  if(already){showToast('⚠️ المتدرب مسجّل مسبقاً في هذا المقرر','w');return;}
-  showToast('جاري التسجيل...','i');
+  if(!sids.length){showToast('اختر متدرباً واحداً على الأقل','w');return;}
+  if(!crs.length){showToast('اختر مقرراً واحداً على الأقل','w');return;}
+  const total=sids.length*crs.length;
+  if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nهل تريد المتابعة؟`))return;
+  // بناء السجلات (مع تخطي المسجّلين مسبقاً)
+  const records=[];let skipped=0;
+  sids.forEach(sid=>{
+    const st=students.find(s=>s.id===sid);if(!st)return;
+    crs.forEach(cv=>{
+      const [code,course]=cv.split('|');
+      const already=allCourses.some(c=>c.sid===sid&&normCode(c.code)===normCode(code));
+      if(already){skipped++;return;}
+      records.push({sid,name:st.name,grp:st.grp,code,course,trainer,term:st.half||'',status:'حالي'});
+    });
+  });
+  if(!records.length){showToast('⚠️ كل التسجيلات موجودة مسبقاً','w');return;}
+  showToast(`جاري تسجيل ${records.length} تسجيل...`,'i');
   try{
-    const rec={sid,name:st.name,grp:st.grp,code,course,trainer,term:st.half||'',status:'حالي'};
-    await jsonpCall({action:'enrollStudent',data:JSON.stringify([rec])});
-    showToast('✅ تم تسجيل المتدرب في المقرر','s');
+    // نرسل على دفعات (كل دفعة 40 سجل) لتجنّب حدود الرابط
+    for(let i=0;i<records.length;i+=40){
+      const batch=records.slice(i,i+40);
+      await jsonpCall({action:'enrollStudent',data:JSON.stringify(batch)});
+    }
+    showToast(`✅ تم تسجيل ${records.length} تسجيل`+(skipped?` · تخطّى ${skipped} مسجّل مسبقاً`:''),'s');
     await loadAdmin();
     showAPage('manage_courses',document.getElementById('sn-manage_courses'));
   }catch(e){showToast('تعذّر التسجيل — جرب مرة أخرى','e');}
 }
-window.addCourse=addCourse;window.editCourse=editCourse;window.deleteCourse=deleteCourse;window.saveCourse=saveCourse;window.enrollStudent=enrollStudent;
+window.toggleGrpStudents=toggleGrpStudents;window.updateEnrCounts=updateEnrCounts;window.enrollBatch=enrollBatch;
 
 // ===== إدارة الحسابات (إضافة/تعديل/حذف) =====
 function accountFormFields(type,data){
@@ -3333,29 +3363,54 @@ const aPgs={
         <tbody>${rows}</tbody>
       </table></div>`;
     }else{
-      // تسجيل طالب في مقررات
+      // ===== تسجيل جماعي مرن =====
       const seen=new Set();
       const uniqStudents2=students.filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;});
-      const stOpts=uniqStudents2.map(s=>`<option value="${s.id}">${s.name} (${s.id}) - شعبة ${s.grp}</option>`).join('');
-      const crsOpts=(catalog||[]).map(c=>`<option value="${c.code}|${c.name}">${c.name} (${c.code})</option>`).join('');
+      const grps=[...new Set(uniqStudents2.map(s=>s.grp))].filter(Boolean).sort();
       const trOpts=(trainersDB||[]).map(tr=>`<option value="${tr.name}">${tr.name}</option>`).join('');
+      // صناديق اختيار الطلاب (مجمّعة حسب الشعبة)
+      const studentBoxes=grps.map(g=>{
+        const gStudents=uniqStudents2.filter(s=>s.grp===g);
+        return `<div style="margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:6px 10px;background:rgba(106,184,247,.1);border-radius:6px">
+            <input type="checkbox" onchange="toggleGrpStudents('${g}',this.checked)" id="grp_${g}" style="width:18px;height:18px;cursor:pointer">
+            <label for="grp_${g}" style="font-weight:700;color:#6ab8f7;cursor:pointer;font-size:13px">🏫 الشعبة ${g} (${gStudents.length} متدرب) — تحديد الكل</label>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;padding:0 4px">
+            ${gStudents.map(s=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:4px"><input type="checkbox" class="enr-student-cb grp-${g}" value="${s.id}" style="cursor:pointer">${s.name.split(' ').slice(0,3).join(' ')}</label>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+      // صناديق اختيار المقررات
+      const courseBoxes=(catalog||[]).map(c=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:5px;border:1px solid var(--border);border-radius:6px"><input type="checkbox" class="enr-course-cb" value="${c.code}|${c.name}" style="cursor:pointer"><span><b>${c.code}</b> · ${c.name}</span></label>`).join('');
       body=`
-      <div class="stitle">🔗 تسجيل متدرب في مقرر</div>
-      <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:20px;max-width:600px">
-        <div style="margin-bottom:14px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">المتدرب</label>
-          <select id="enr_student" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"><option value="">— اختر المتدرب —</option>${stOpts}</select></div>
-        <div style="margin-bottom:14px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">المقرر</label>
-          <select id="enr_course" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"><option value="">— اختر المقرر —</option>${crsOpts}</select></div>
-        <div style="margin-bottom:14px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">المدرب</label>
-          <select id="enr_trainer" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"><option value="">— اختر المدرب —</option>${trOpts}</select></div>
-        <button class="btn btn-b" style="width:100%" onclick="enrollStudent()">🔗 تسجيل المتدرب في المقرر</button>
+      <div class="stitle">🔗 تسجيل جماعي (متدربين × مقررات)</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:16px">💡 اختر المتدربين (شعبة كاملة أو أفراد) + المقررات + المدرب، ويتم تسجيل الجميع دفعة واحدة مع منع التكرار</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="enr-grid">
+        <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text)">👥 المتدربون <span id="stCount" style="font-size:11px;color:#6ab8f7">(0 محدد)</span></div>
+          <div style="max-height:340px;overflow-y:auto">${studentBoxes||'<div style="color:var(--muted)">لا يوجد متدربون</div>'}</div>
+        </div>
+        <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text)">📚 المقررات <span id="crsCount" style="font-size:11px;color:#6ab8f7">(0 محدد)</span></div>
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button class="btn btn-out btn-sm" onclick="document.querySelectorAll('.enr-course-cb').forEach(c=>c.checked=true);updateEnrCounts()">تحديد الكل</button>
+            <button class="btn btn-out btn-sm" onclick="document.querySelectorAll('.enr-course-cb').forEach(c=>c.checked=false);updateEnrCounts()">إلغاء الكل</button>
+          </div>
+          <div style="max-height:290px;overflow-y:auto;display:grid;gap:6px">${courseBoxes||'<div style="color:var(--muted)">لا توجد مقررات</div>'}</div>
+        </div>
+      </div>
+      <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;max-width:500px">
+        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">👨‍🏫 المدرب (لكل المقررات المختارة)</label>
+        <select id="enr_trainer" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"><option value="">— اختر المدرب —</option>${trOpts}</select>
+        <button class="btn btn-b" style="width:100%;font-size:15px;padding:14px" onclick="enrollBatch()">🔗 تسجيل المحددين دفعة واحدة</button>
       </div>`;
     }
     return `
     <div class="banner"><div><div class="btitle">📖 إدارة المقررات</div><div class="bsub">الخطة الدراسية وتسجيل المتدربين — يدعم تخصصات متعددة</div></div></div>
     <div style="display:flex;gap:10px;margin-bottom:20px">
       ${tabBtn('plan','الخطة الدراسية','📖')}
-      ${tabBtn('enroll','تسجيل متدرب','🔗')}
+      ${tabBtn('enroll','تسجيل جماعي','🔗')}
     </div>
     ${body}`;
   },
@@ -3613,17 +3668,44 @@ const aPgs={
       </tr>`).join('')}</tbody>
     </table></div>`,
   all_courses:()=>{
-    const crs=[...new Set(allCourses.map(c=>c.course))];
+    // المواد الحالية فقط (المسجّل فيها طلاب نشطون هذا الترم)
+    const active=allCourses.filter(c=>isActive(c.status));
+    // تجميع حسب المادة
+    const byCourse={};
+    active.forEach(c=>{
+      const k=c.course;
+      if(!byCourse[k])byCourse[k]={course:k,code:c.code,trainer:c.trainer,students:[],grps:new Set()};
+      byCourse[k].students.push(c);
+      if(c.grp)byCourse[k].grps.add(c.grp);
+    });
+    const courses=Object.values(byCourse);
+    if(!courses.length)return `<div class="stitle">📚 المقررات الحالية</div><div class="empty"><div class="empty-icon">📭</div>لا توجد مقررات حالية (لا يوجد طلاب مسجّلون هذا الترم)</div>`;
+    // ملخّص علوي
+    const totStudents=new Set(active.map(c=>c.sid)).size;
+    const avgAll=active.length?Math.round(active.reduce((a,c)=>a+c.pct,0)/active.length):0;
     return `
-    <div class="stitle">المقررات النشطة (${crs.length})</div>
-    ${crs.map(name=>{
-      const cs=allCourses.filter(c=>c.course===name);
-      const avg=Math.round(cs.reduce((a,c)=>a+c.pct,0)/cs.length);
-      return `<div class="ccard cc-y" data-course="${name}" onclick="showCourseDetail(this.dataset.course)" style="cursor:pointer">
-        <div class="cc-top"><div><div class="cc-name">${name}</div><div class="cc-meta">المدرب: ${cs[0]?.trainer||'—'} · ${cs.length} متدرب</div></div><span class="pill ${pillClass(avg)}">${avg}%</span></div>
-        <div class="prog"><div class="pfill ${fillClass(avg)}" style="width:${avg}%"></div></div>
-      </div>`;
-    }).join('')}`;
+    <div class="banner"><div><div class="btitle">📚 المقررات الحالية</div><div class="bsub">المواد التي يدرسها المتدربون هذا الترم — ${courses.length} مقرر · ${totStudents} متدرب</div></div><div class="bpill bp-b">${avgAll}% متوسط</div></div>
+    <div class="gtable"><table>
+      <thead><tr><th>المقرر</th><th>الرمز</th><th>المدرب</th><th>الشعب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>متوسط الغياب</th><th>محرومون</th></tr></thead>
+      <tbody>${courses.map(c=>{
+        const n=c.students.length;
+        const avg=Math.round(c.students.reduce((a,s)=>a+s.pct,0)/n);
+        const avgAbs=Math.round(c.students.reduce((a,s)=>a+(s.abs||0),0)/n);
+        const banned=c.students.filter(s=>(s.abs||0)>=25).length;
+        const grpsLbl=[...c.grps].sort().join('، ');
+        return `<tr style="cursor:pointer" onclick="showCourseDetail('${c.course.replace(/'/g,"")}')">
+          <td style="font-weight:700;color:#6ab8f7">${c.course}</td>
+          <td>${c.code||'-'}</td>
+          <td>${c.trainer||'—'}</td>
+          <td>${grpsLbl||'-'}</td>
+          <td style="text-align:center;font-weight:700">${n}</td>
+          <td><span class="pill ${pillClass(avg)}">${avg}%</span></td>
+          <td><span style="color:${avgAbs>=25?'var(--red)':avgAbs>=15?'var(--gold)':'var(--muted)'}">${avgAbs}%</span></td>
+          <td style="text-align:center">${banned?`<span style="color:var(--red);font-weight:700">${banned}</span>`:'0'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اضغط على أي مقرر لعرض تفاصيل المتدربين المسجّلين فيه</div>`;
   },
   schedule:()=>{
     const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
@@ -5122,6 +5204,6 @@ document.addEventListener('click',function(e){
   }
 });
 </script>
-  
+
 </body>
 </html>
