@@ -3897,34 +3897,69 @@ const aPgs={
     ${done.length?done.map(r=>card(r,false)).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات</div>'}`;
   },
   alerts:()=>{
-    const deprived=allCourses.filter(c=>isDeprived(c.abs)&&isActive(c.status));
-    const hi=allCourses.filter(c=>isHighAbs(c)&&!isDeprived(c.abs)),lo=allCourses.filter(isLowPerf);
-    // ===== رصد الرسوب (متطلبات): راسب في مادة ولم ينجح فيها في أي سجل آخر =====
-    const failedList=[];
-    allCourses.filter(isFailed).forEach(c=>{
-      // هل نجح في نفس المادة في سجل آخر؟ (درجة ≥60 وغير راسب)
-      const passedLater=allCourses.some(o=>o.sid===c.sid&&normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
-      if(!passedLater)failedList.push(c);
+    // المواد الحالية فقط
+    const active=allCourses.filter(c=>isActive(c.status));
+    // دالة: هل الطالب راسب في المادة ولم يجتزها بعد؟
+    const stillFailed=c=>isFailed(c)&&!allCourses.some(o=>o.sid===c.sid&&normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
+    // تجميع الحالات حسب المادة
+    const byCourse={};
+    active.forEach(c=>{
+      const failed=stillFailed(c);
+      const deprived=isDeprived(c.abs);
+      const weak=!failed&&(parseFloat(c.pct)||0)>0&&(parseFloat(c.pct)||0)<60; // ضعيف (درجة منخفضة غير راسب رسمي)
+      const highAbs=!deprived&&isHighAbs(c);
+      if(!failed&&!deprived&&!weak&&!highAbs)return; // لا مشكلة
+      const k=c.course;
+      if(!byCourse[k])byCourse[k]={course:k,trainer:c.trainer,failed:[],deprived:[],weak:[],highAbs:[]};
+      if(failed)byCourse[k].failed.push(c);
+      else if(deprived)byCourse[k].deprived.push(c);
+      else if(weak)byCourse[k].weak.push(c);
+      if(highAbs&&!deprived)byCourse[k].highAbs.push(c);
     });
+    const courses=Object.values(byCourse).sort((a,b)=>
+      (b.failed.length+b.deprived.length+b.weak.length+b.highAbs.length)-(a.failed.length+a.deprived.length+a.weak.length+a.highAbs.length));
+    // إحصائيات علوية
+    const totFail=courses.reduce((a,c)=>a+c.failed.length,0);
+    const totDep=courses.reduce((a,c)=>a+c.deprived.length,0);
+    const totWeak=courses.reduce((a,c)=>a+c.weak.length,0);
+    const totAbs=courses.reduce((a,c)=>a+c.highAbs.length,0);
+    // صف حالة
+    const caseRow=(c,type)=>{
+      const cfg={
+        failed:{icon:'❌',color:'#e74c3c',bg:'rgba(231,76,60,.08)',lbl:`راسب${(parseFloat(c.pct)||0)>0?` (${Math.round(c.pct)}%)`:''}`,badge:'متطلب'},
+        deprived:{icon:'🚫',color:'#e74c3c',bg:'rgba(231,76,60,.08)',lbl:`محروم — غياب ${Math.round(c.abs)}%`,badge:'حرمان'},
+        weak:{icon:'📉',color:'#ff8a3c',bg:'rgba(255,138,60,.08)',lbl:`ضعيف — درجة ${Math.round(c.pct)}%`,badge:''},
+        highAbs:{icon:'⚠️',color:'#f4c78a',bg:'rgba(244,199,138,.08)',lbl:`غياب ${Math.round(c.abs)}% · ${absLevel(c.abs).label}`,badge:''}
+      }[type];
+      return `<div onclick="showStudentDetail('${c.sid}')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${cfg.bg};border-radius:8px;cursor:pointer;margin-bottom:5px">
+        <span style="font-size:16px">${cfg.icon}</span>
+        <span style="flex:1;font-size:13px;font-weight:600">${c.sname.split(' ').slice(0,3).join(' ')}</span>
+        <span style="font-size:12px;color:${cfg.color}">${cfg.lbl}</span>
+        ${cfg.badge?`<span style="font-size:9px;background:${cfg.color};color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">${cfg.badge}</span>`:''}
+        <span style="font-size:11px;color:#6ab8f7">←</span>
+      </div>`;
+    };
     return `
-    <div class="stitle">نظام الاشعارات الأكاديمية</div>
-    ${failedList.length?`<div style="margin-bottom:20px">
-      <div class="alert ad" style="border:2px solid #e74c3c;margin-bottom:10px"><span class="aicon">📕</span><strong>${failedList.length} حالة رسوب في متطلبات</strong> — طلاب راسبون في مواد ولم يجتازوها بعد</div>
-      ${failedList.map(c=>`<div class="alert ad" onclick="showStudentDetail('${c.sid}')" style="cursor:pointer"><span class="aicon">❌</span>${c.sname} — راسب في <strong>${c.course}</strong> ${(parseFloat(c.pct)||0)>0?`(درجة ${Math.round(c.pct)}%)`:''} <span style="font-size:10px;background:#e74c3c;color:#fff;padding:2px 8px;border-radius:10px;margin-right:6px">متطلب</span><span style="margin-right:auto;font-size:11px;color:#6ab8f7">عرض التفاصيل ←</span></div>`).join('')}
-    </div>`:''}
-    ${deprived.length?`<div style="margin-bottom:20px">
-      <div class="alert ad" style="border:2px solid var(--red);margin-bottom:10px"><span class="aicon">⛔</span><strong>${deprived.length} حالة حرمان تحتاج إجراء فوري</strong> — طلاب وصلوا 25% غياب أو أكثر</div>
-      ${deprived.map(c=>`<div class="alert ad" onclick="showStudentDetail('${c.sid}')" style="cursor:pointer"><span class="aicon">🚫</span>${c.sname} — غياب <strong>${Math.round(c.abs)}%</strong> في ${c.course} <span style="margin-right:auto;font-size:11px;color:#6ab8f7">عرض التفاصيل ←</span></div>`).join('')}
-    </div>`:''}
-    ${hi.length?`<div style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:#f4c78a;margin-bottom:10px">⚠️ تحت المراقبة — إنذار غياب (${hi.length} حالة)</div>
-      ${hi.slice(0,15).map(c=>`<div class="alert aw"><span class="aicon">👤</span>${c.sname} — غياب ${Math.round(c.abs)}% في ${c.course} · ${absLevel(c.abs).label}</div>`).join('')}
-    </div>`:''}
-    ${lo.length?`<div>
-      <div style="font-size:13px;font-weight:700;color:#ff8a92;margin-bottom:10px">🔴 أداء منخفض (${lo.length} حالة)</div>
-      ${lo.slice(0,15).map(c=>`<div class="alert ad"><span class="aicon">📉</span>${c.sname} — درجة ${Math.round(c.pct)}% في ${c.course}</div>`).join('')}
-    </div>`:''}
-    ${!failedList.length&&!deprived.length&&!hi.length&&!lo.length?'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات حرجة</div>':''}`;
+    <div class="banner"><div><div class="btitle">🔔 الاشعارات الأكاديمية</div><div class="bsub">حالات المتدربين مجمّعة حسب المواد</div></div></div>
+    <div class="metrics" style="margin-bottom:20px">
+      <div class="mcard mc-r"><div class="micon">❌</div><div class="mnum cr">${totFail}</div><div class="mlbl">راسبون (متطلبات)</div></div>
+      <div class="mcard mc-r"><div class="micon">🚫</div><div class="mnum cr">${totDep}</div><div class="mlbl">محرومون (غياب)</div></div>
+      <div class="mcard mc-y"><div class="micon">📉</div><div class="mnum cy">${totWeak}</div><div class="mlbl">ضعفاء</div></div>
+      <div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy">${totAbs}</div><div class="mlbl">إنذار غياب</div></div>
+    </div>
+    ${courses.length?courses.map(c=>{
+      const total=c.failed.length+c.deprived.length+c.weak.length+c.highAbs.length;
+      return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+          <div><span style="font-size:15px;font-weight:800;color:#6ab8f7">📚 ${c.course}</span> <span style="font-size:11px;color:var(--muted)">· ${c.trainer||'—'}</span></div>
+          <span style="font-size:11px;background:rgba(231,76,60,.15);color:#e74c3c;padding:3px 10px;border-radius:12px;font-weight:700">${total} حالة</span>
+        </div>
+        ${c.failed.length?`<div style="font-size:11px;font-weight:700;color:#e74c3c;margin:8px 0 4px">❌ راسبون (${c.failed.length})</div>${c.failed.map(x=>caseRow(x,'failed')).join('')}`:''}
+        ${c.deprived.length?`<div style="font-size:11px;font-weight:700;color:#e74c3c;margin:8px 0 4px">🚫 محرومون (${c.deprived.length})</div>${c.deprived.map(x=>caseRow(x,'deprived')).join('')}`:''}
+        ${c.weak.length?`<div style="font-size:11px;font-weight:700;color:#ff8a3c;margin:8px 0 4px">📉 ضعفاء (${c.weak.length})</div>${c.weak.map(x=>caseRow(x,'weak')).join('')}`:''}
+        ${c.highAbs.length?`<div style="font-size:11px;font-weight:700;color:#f4c78a;margin:8px 0 4px">⚠️ إنذار غياب (${c.highAbs.length})</div>${c.highAbs.map(x=>caseRow(x,'highAbs')).join('')}`:''}
+      </div>`;
+    }).join(''):'<div class="alert as"><span class="aicon">✅</span>ممتاز! لا توجد حالات تحتاج متابعة</div>'}`;
   },
   reports:()=>{
     const tot=students.length;
