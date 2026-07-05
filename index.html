@@ -2037,10 +2037,11 @@ function showNotifs(){
 function getReviewCases(){
   const list=[];
   const src=user.role==='s'?courses:allCourses;
+  const grpTxt=c=>(user.role!=='s'&&c.grp)?` · شعبة ${c.grp}`:'';
   src.forEach(c=>{
     const nm=user.role==='s'?c.course:c.sname;
-    if(isHighAbs(c))list.push({type:'aw',icon:'⚠️',msg:`${nm} — غياب ${Math.round(c.abs)}% في ${c.course}`});
-    if(isLowPerf(c))list.push({type:'ad',icon:'📉',msg:`${nm} — درجة ${Math.round(c.pct)}% في ${c.course}`});
+    if(isHighAbs(c))list.push({type:'aw',icon:'⚠️',msg:`${nm} — غياب ${Math.round(c.abs)}% في ${c.course}${grpTxt(c)}`});
+    if(isLowPerf(c))list.push({type:'ad',icon:'📉',msg:`${nm} — درجة ${Math.round(c.pct)}% في ${c.course}${grpTxt(c)}`});
   });
   return list;
 }
@@ -2706,13 +2707,27 @@ const tPgs={
   alerts:()=>{
     const hi=students.filter(isHighAbs);
     const lo=students.filter(isLowPerf);
+    const nm=n=>String(n||'').split(' ').slice(0,3).join(' ');
+    // كل الشعب التي فيها حالات
+    const grps=[...new Set([...hi,...lo].map(s=>s.grp))].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
     return `
     <div class="stitle">الاشعارات والمتابعة</div>
-    ${hi.length?`<div style="margin-bottom:20px"><div style="font-size:13px;font-weight:700;color:#f4c78a;margin-bottom:10px">⚠️ غياب عالي (${hi.length} حالة)</div>
-    ${hi.map(s=>`<div class="alert aw"><span class="aicon">👤</span>${s.name.split(' ').slice(0,3).join(' ')} — غياب ${Math.round(s.abs)}% في ${s.course}</div>`).join('')}</div>`:''}
-    ${lo.length?`<div><div style="font-size:13px;font-weight:700;color:#ff8a92;margin-bottom:10px">🔴 أداء منخفض (${lo.length} حالة)</div>
-    ${lo.map(s=>`<div class="alert ad"><span class="aicon">📉</span>${s.name.split(' ').slice(0,3).join(' ')} — درجة ${Math.round(s.pct)}% في ${s.course}</div>`).join('')}</div>`:''}
-    ${!hi.length&&!lo.length?'<div class="alert as"><span class="aicon">✅</span>جميع المتدربين بحالة جيدة — لا توجد اشعارات</div>':''}`;
+    ${(!hi.length&&!lo.length)?'<div class="alert as"><span class="aicon">✅</span>جميع المتدربين بحالة جيدة — لا توجد اشعارات</div>':
+      grps.map(g=>{
+        const gHi=hi.filter(s=>String(s.grp)===String(g));
+        const gLo=lo.filter(s=>String(s.grp)===String(g));
+        if(!gHi.length&&!gLo.length)return '';
+        return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <span style="font-size:15px;font-weight:800;color:#6ab8f7">🏫 شعبة ${g}</span>
+            <span style="font-size:11px;background:rgba(231,76,60,.15);color:#e74c3c;padding:3px 10px;border-radius:12px;font-weight:700">${gHi.length+gLo.length} حالة</span>
+          </div>
+          ${gHi.length?`<div style="font-size:12px;font-weight:700;color:#f4c78a;margin:8px 0 6px">⚠️ غياب عالي (${gHi.length})</div>
+            ${gHi.map(s=>`<div class="alert aw"><span class="aicon">👤</span>${nm(s.name)} — غياب ${Math.round(s.abs)}% في ${s.course}</div>`).join('')}`:''}
+          ${gLo.length?`<div style="font-size:12px;font-weight:700;color:#ff8a92;margin:8px 0 6px">🔴 أداء منخفض (${gLo.length})</div>
+            ${gLo.map(s=>`<div class="alert ad"><span class="aicon">📉</span>${nm(s.name)} — درجة ${Math.round(s.pct)}% في ${s.course}</div>`).join('')}`:''}
+        </div>`;
+      }).join('')}`;
   },
   attachments:()=>`
     <div class="stitle">رفع المرفقات للمتدربين</div>
@@ -4062,7 +4077,7 @@ const aPgs={
     const active=allCourses;
     // دالة: هل الطالب راسب في المادة ولم يجتزها بعد؟
     const stillFailed=c=>isFailed(c)&&!allCourses.some(o=>o.sid===c.sid&&normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
-    // تجميع الحالات حسب المادة
+    // تجميع الحالات حسب المادة + الشعبة (لتمييز الشعب عن بعضها — نفس المادة قد تُدرّس لعدة شعب)
     const byCourse={};
     active.forEach(c=>{
       const failed=stillFailed(c);
@@ -4070,15 +4085,18 @@ const aPgs={
       const weak=!failed&&(parseFloat(c.pct)||0)>0&&(parseFloat(c.pct)||0)<60; // ضعيف (درجة منخفضة غير راسب رسمي)
       const highAbs=!deprived&&isHighAbs(c);
       if(!failed&&!deprived&&!weak&&!highAbs)return; // لا مشكلة
-      const k=c.course;
-      if(!byCourse[k])byCourse[k]={course:k,trainer:c.trainer,failed:[],deprived:[],weak:[],highAbs:[]};
+      const k=c.course+' ⟨شعبة '+(c.grp||'—')+'⟩';
+      if(!byCourse[k])byCourse[k]={course:c.course,grp:c.grp||'—',trainer:c.trainer,failed:[],deprived:[],weak:[],highAbs:[]};
       if(failed)byCourse[k].failed.push(c);
       else if(deprived)byCourse[k].deprived.push(c);
       else if(weak)byCourse[k].weak.push(c);
       if(highAbs&&!deprived)byCourse[k].highAbs.push(c);
     });
-    const courses=Object.values(byCourse).sort((a,b)=>
-      (b.failed.length+b.deprived.length+b.weak.length+b.highAbs.length)-(a.failed.length+a.deprived.length+a.weak.length+a.highAbs.length));
+    const courses=Object.values(byCourse).sort((a,b)=>{
+      const byGrp=String(a.grp).localeCompare(String(b.grp),'ar',{numeric:true});
+      if(byGrp!==0)return byGrp; // رتّب حسب الشعبة أولاً لتجميعها بصرياً
+      return (b.failed.length+b.deprived.length+b.weak.length+b.highAbs.length)-(a.failed.length+a.deprived.length+a.weak.length+a.highAbs.length);
+    });
     // إحصائيات علوية
     const totFail=courses.reduce((a,c)=>a+c.failed.length,0);
     const totDep=courses.reduce((a,c)=>a+c.deprived.length,0);
@@ -4112,7 +4130,7 @@ const aPgs={
       const total=c.failed.length+c.deprived.length+c.weak.length+c.highAbs.length;
       return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-          <div><span style="font-size:15px;font-weight:800;color:#6ab8f7">📚 ${c.course}</span> <span style="font-size:11px;color:var(--muted)">· ${c.trainer||'—'}</span></div>
+          <div><span style="font-size:15px;font-weight:800;color:#6ab8f7">📚 ${c.course}</span> <span style="font-size:12px;background:rgba(106,184,247,.15);color:#6ab8f7;padding:2px 10px;border-radius:10px;font-weight:700;margin-inline-start:6px">🏫 شعبة ${c.grp}</span> <span style="font-size:11px;color:var(--muted)">· ${c.trainer||'—'}</span></div>
           <span style="font-size:11px;background:rgba(231,76,60,.15);color:#e74c3c;padding:3px 10px;border-radius:12px;font-weight:700">${total} حالة</span>
         </div>
         ${c.failed.length?`<div style="font-size:11px;font-weight:700;color:#e74c3c;margin:8px 0 4px">❌ راسبون (${c.failed.length})</div>${c.failed.map(x=>caseRow(x,'failed')).join('')}`:''}
