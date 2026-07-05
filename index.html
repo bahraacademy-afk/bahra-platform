@@ -160,6 +160,8 @@ body.light-mode .more-menu button{background:rgba(26,58,107,.05);border-color:rg
 .notif-btn{width:36px;height:36px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .2s;position:relative}
 .notif-btn:hover{background:rgba(255,255,255,.1)}
 .notif-dot{position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--red);border-radius:50%;animation:pulse 1.5s ease-in-out infinite}
+.notif-badge{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;background:var(--red);color:#fff;border-radius:9px;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.35);animation:pulse 1.5s ease-in-out infinite}
+.notif-badge.nb-y{background:#e0a02a;color:#1a1000}
 .out-btn{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 16px;border-radius:9px;font-family:'Tajawal',sans-serif;font-size:12px;cursor:pointer;transition:all .2s}
 .out-btn:hover{border-color:var(--red);color:var(--red)}
 
@@ -762,7 +764,8 @@ body{top:0!important}
     </div>
     <div class="tb-right">
       <button id="themeBtn" onclick="toggleTheme()" title="تبديل الوضع">🌙</button>
-      <div class="notif-btn" onclick="showNotifs()" title="الاشعارات">🔔<div class="notif-dot" id="notifDot"></div></div>
+      <div class="notif-btn" onclick="showReviewCases()" title="الحالات التي تحتاج مراجعة">⚠️<span class="notif-badge nb-y" id="reviewBadge" style="display:none"></span></div>
+      <div class="notif-btn" onclick="showNotifs()" title="الاشعارات">🔔<span class="notif-badge" id="notifBadge" style="display:none"></span></div>
       <span class="role-badge" id="rbadge"></span>
       <div class="av" id="topAv"></div>
       <span class="uname" id="topName"></span>
@@ -1207,6 +1210,7 @@ function showApp(){
   else if(user.role==='t') buildTrainerApp();
   else buildAdminApp();
   initParticles();
+  updateNotifBadges();
 }
 
 // ===== UTILS =====
@@ -1966,20 +1970,58 @@ function initParticles(){
   }
 }
 
-function showNotifs(){
-  const alerts=getAlerts();
-  if(!alerts.length){showToast('لا توجد اشعارات','s');return}
+// ===== نافذة عامة لعرض قائمة (اشعارات / حالات) =====
+function renderListModal(title,items,emptyMsg){
+  if(!items.length){showToast(emptyMsg,'s');return}
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';
   overlay.innerHTML=`<div class="modal">
-    <div class="modal-title">🔔 الاشعارات <span style="font-size:12px;font-weight:600;color:var(--muted);margin-inline-start:auto;margin-inline-end:10px">${alerts.length}</span><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="modal-body">${alerts.map(a=>`<div class="alert ${a.type}"><span class="aicon">${a.icon}</span>${a.msg}</div>`).join('')}</div>
+    <div class="modal-title">${title} <span style="font-size:12px;font-weight:600;color:var(--muted);margin-inline-start:auto;margin-inline-end:10px">${items.length}</span><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">${items.map(a=>`<div class="alert ${a.type}"><span class="aicon">${a.icon}</span>${a.msg}</div>`).join('')}</div>
     <div class="btn-row" style="flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)"><button class="btn btn-out btn-sm" onclick="this.closest('.modal-overlay').remove()">إغلاق</button></div>
   </div>`;
   document.body.appendChild(overlay);
 }
 
-function getAlerts(){
+// ===== الاشعارات: أشياء تحتاج إجراء الآن (طلبات وأعذار معلّقة حسب الصلاحية) =====
+function getNotifications(){
+  const list=[];
+  if(!requests||!requests.length)return list;
+  if(user.role==='s'){
+    // المتدرب: تحديثات على طلباته (اعتماد/رفض) + طلبات ما زالت قيد المراجعة
+    const mine=requests.filter(r=>String(r.sid)===String(user.id));
+    mine.forEach(r=>{
+      const decided=r.finalStatus==='معتمد'||r.dirStatus==='معتمد';
+      const rejected=r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'||r.finalStatus==='مرفوض';
+      if(decided)list.push({type:'as',icon:'✅',msg:`تم اعتماد طلبك: ${r.type}${r.date?' · '+r.date:''}`});
+      else if(rejected)list.push({type:'ad',icon:'❌',msg:`تم رفض طلبك: ${r.type}${r.date?' · '+r.date:''}`});
+      else list.push({type:'ab',icon:'⏳',msg:`طلبك قيد المراجعة: ${r.type}${r.date?' · '+r.date:''}`});
+    });
+  } else if(user.role==='t'){
+    // المدرب: أعذار غياب تنتظر اعتماده
+    requests.filter(r=>r.type==='عذر غياب'&&r.trnStatus==='معلق').forEach(r=>{
+      list.push({type:'aw',icon:'📩',msg:`عذر غياب ينتظر اعتمادك — ${r.sname||''} · شعبة ${r.grp||''}${r.date?' · '+r.date:''}`});
+    });
+  } else {
+    // الإداري: مشرف أو مدير
+    const isDir=user.level==='director';
+    requests.filter(r=>{
+      if(isDir)return r.supStatus==='معتمد'&&r.dirStatus==='معلق';
+      if(r.type==='عذر غياب')return r.trnStatus==='معتمد'&&r.supStatus==='معلق';
+      return r.supStatus==='معلق';
+    }).forEach(r=>{
+      list.push({type:'aw',icon:'📩',msg:`${r.type} ينتظر اعتمادك — ${r.sname||''} · شعبة ${r.grp||''}${r.date?' · '+r.date:''}`});
+    });
+  }
+  return list;
+}
+
+function showNotifs(){
+  renderListModal('🔔 الاشعارات',getNotifications(),'لا توجد اشعارات جديدة');
+}
+
+// ===== الحالات التي تحتاج مراجعة: مؤشرات أكاديمية (غياب عالٍ / درجات منخفضة) =====
+function getReviewCases(){
   const list=[];
   const src=user.role==='s'?courses:allCourses;
   src.forEach(c=>{
@@ -1989,6 +2031,25 @@ function getAlerts(){
   });
   return list;
 }
+
+function showReviewCases(){
+  renderListModal('⚠️ الحالات التي تحتاج مراجعة',getReviewCases(),'لا توجد حالات تحتاج مراجعة');
+}
+
+// توافق خلفي: أي استدعاء قديم لـ getAlerts يرجع الحالات
+function getAlerts(){return getReviewCases();}
+
+// ===== تحديث عدّادات الأزرار (اشعارات + حالات) =====
+function updateNotifBadges(){
+  try{
+    const nb=document.getElementById('notifBadge');
+    const rb=document.getElementById('reviewBadge');
+    if(nb){const n=getNotifications().length;nb.textContent=n>99?'99+':n;nb.style.display=n?'flex':'none';}
+    if(rb){const r=getReviewCases().length;rb.textContent=r>99?'99+':r;rb.style.display=r?'flex':'none';}
+  }catch(e){}
+}
+window.showReviewCases=showReviewCases;
+window.updateNotifBadges=updateNotifBadges;
 
 // ===== STUDENT APP =====
 function buildStudentApp(){
