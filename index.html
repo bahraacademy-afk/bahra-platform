@@ -1890,11 +1890,23 @@ function gradeToGPA(g){
   if(g>=60)return 2.00;
   return 1.00;
 }
+// ⭐ المقررات المكتملة فقط (المواد السابقة التي رُصدت لها درجات) — تُستثنى المواد الحالية من حساب المعدل
+// المنطق: مثل الجامعات، الترم الحالي ما يُحسب في المعدل التراكمي حتى ترصد درجاته النهائية
+function completedCourses(list){return (list||[]).filter(c=>!isActive(c.status));}
+function hasCompleted(list){return completedCourses(list).length>0;}
+// متوسط الدرجات من المكتملة فقط (رقم، 0 لو ما فيه مكتمل)
+function avgPct(list){const d=completedCourses(list);if(!d.length)return 0;return Math.round(d.reduce((a,c)=>a+c.pct,0)/d.length);}
+// متوسط الدرجات للعرض (يظهر — لو ما فيه مواد مكتملة)
+function avgPctDisplay(list){const d=completedCourses(list);return d.length?Math.round(d.reduce((a,c)=>a+c.pct,0)/d.length)+'%':'—';}
+
 function gpaFrom(list){
-  if(!list||!list.length)return 0;
-  const sum=list.reduce((a,c)=>a+gradeToGPA(c.pct),0);
-  return (sum/list.length).toFixed(2);
+  const done=completedCourses(list); // المواد المكتملة فقط
+  if(!done.length)return '0.00';
+  const sum=done.reduce((a,c)=>a+gradeToGPA(c.pct),0);
+  return (sum/done.length).toFixed(2);
 }
+// المعدل للعرض (يظهر — لو ما خلّص ولا مادة)
+function gpaDisplay(list){return hasCompleted(list)?gpaFrom(list):'—';}
 function gpaColor(gpa){gpa=parseFloat(gpa);return gpa>=4.5?'var(--green)':gpa>=3.5?'#6ab8f7':gpa>=2.5?'var(--gold)':'var(--red)'}
 // تحويل الدرجة لنقاط المعدل (من 5) حسب نظام التدريب التقني
 function gpaPoint(g){
@@ -1910,9 +1922,10 @@ function gpaPoint(g){
 }
 // حساب المعدل التراكمي من 5 لقائمة مقررات
 function calcGPA(list){
-  if(!list||!list.length)return 0;
-  const sum=list.reduce((a,c)=>a+gpaPoint(c.pct),0);
-  return (sum/list.length).toFixed(2);
+  const done=completedCourses(list); // المواد المكتملة فقط
+  if(!done.length)return 0;
+  const sum=done.reduce((a,c)=>a+gpaPoint(c.pct),0);
+  return (sum/done.length).toFixed(2);
 }
 // لون المعدل من 5
 function gpaColor(g){g=parseFloat(g);return g>=4?'var(--green)':g>=2.5?'var(--gold)':'var(--red)'}
@@ -2129,11 +2142,11 @@ function showSPage(pg,el){
 
 const sPgs={
   home:()=>{
-    const tot=courses.length,avg=tot?Math.round(courses.reduce((a,c)=>a+c.pct,0)/tot):0;
+    const tot=courses.length,avg=avgPct(courses);
     const done=courses.filter(c=>c.pct>=80).length,warn=courses.filter(hasIssue).length;
     const current=courses.filter(c=>isActive(c.status));
     const past=courses.filter(c=>c.status==='سابق');
-    const gpa=gpaFrom(courses);
+    const gpa=gpaDisplay(courses);
     return `
     <div class="banner anim-up"><div><div class="btitle">مرحباً، ${user.name.split(' ')[0]} 👋</div><div class="bsub">${user.spec} — الشعبة ${user.grp}</div></div><div class="bpill bp-r">الشعبة ${user.grp}</div></div>
     <div class="metrics">
@@ -2168,7 +2181,7 @@ const sPgs={
     <div id="coursesList">${courses.length?courses.map(c=>courseCardHTML(c)).join(''):'<div class="empty"><div class="empty-icon">📚</div>لا توجد مقررات مسجلة</div>'}</div>`;
   },
   performance:()=>{
-    const tot=courses.length,avg=tot?Math.round(courses.reduce((a,c)=>a+c.pct,0)/tot):0;
+    const tot=courses.length,avg=avgPct(courses);
     // ===== تنبيه الرسوب (متطلبات لم تُجتَز) =====
     const failedCourses=courses.filter(isFailed).filter(c=>{
       // لم ينجح فيها في سجل آخر
@@ -2214,10 +2227,10 @@ const sPgs={
       </table></div>`:'<div class="alert as"><span class="aicon">🎓</span>أكملت جميع مواد الخطة الدراسية!</div>'}`;
     }
     return `
-    <div class="banner anim-up"><div><div class="btitle">تقرير الأداء 📊</div><div class="bsub">نظرة شاملة على مستواك الأكاديمي</div></div><div class="bpill bp-b" style="font-size:18px;font-weight:900;text-align:center;line-height:1.2">${gpaFrom(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5</div></div></div>
+    <div class="banner anim-up"><div><div class="btitle">تقرير الأداء 📊</div><div class="bsub">نظرة شاملة على مستواك الأكاديمي</div></div><div class="bpill bp-b" style="font-size:18px;font-weight:900;text-align:center;line-height:1.2">${gpaDisplay(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5</div></div></div>
     ${failSection}
     <div class="metrics">
-      <div class="mcard mc-p"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpaFrom(courses))}">${gpaFrom(courses)}<span style="font-size:13px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
+      <div class="mcard mc-p"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpaFrom(courses))}">${gpaDisplay(courses)}<span style="font-size:13px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
       <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
       <div class="mcard mc-b"><div class="micon">📚</div><div class="mnum cb">${tot}</div><div class="mlbl">مقرر مأخوذ</div></div>
       <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${courses.filter(c=>c.pct>=60).length}</div><div class="mlbl">ناجح</div></div>
@@ -2375,7 +2388,7 @@ const sPgs={
     return html2;
   },
   profile:()=>`
-    <div class="banner anim-up"><div><div class="btitle">المعدّل التراكمي 🏆</div><div class="bsub">${user.name.split(' ').slice(0,3).join(' ')}</div></div><div class="bpill" style="font-size:22px;font-weight:900;text-align:center;line-height:1.1;background:rgba(155,89,182,.15);color:${gpaColor(gpaFrom(courses))};border:1px solid rgba(155,89,182,.3)">${gpaFrom(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5.00</div></div></div>
+    <div class="banner anim-up"><div><div class="btitle">المعدّل التراكمي 🏆</div><div class="bsub">${user.name.split(' ').slice(0,3).join(' ')}</div></div><div class="bpill" style="font-size:22px;font-weight:900;text-align:center;line-height:1.1;background:rgba(155,89,182,.15);color:${gpaColor(gpaFrom(courses))};border:1px solid rgba(155,89,182,.3)">${gpaDisplay(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5.00</div></div></div>
     <div class="stitle">بياناتي الشخصية</div>
     <div class="igrid">
       <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${user.id}</div></div>
@@ -2383,7 +2396,7 @@ const sPgs={
       <div class="iitem"><div class="ilbl">التخصص</div><div class="ival">${user.spec}</div></div>
       <div class="iitem"><div class="ilbl">الشعبة</div><div class="ival">${user.grp}</div></div>
       <div class="iitem"><div class="ilbl">رقم الجوال</div><div class="ival">${user.ph}</div></div>
-      <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival">${courses.length?Math.round(courses.reduce((a,c)=>a+c.pct,0)/courses.length):0}%</div></div>
+      <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival">${avgPct(courses)}%</div></div>
     </div>
     <div class="stitle">ملخص الأداء</div>
     <div class="ccard cc-b">
@@ -3008,7 +3021,7 @@ function computeKPI(grp){
   const ids = new Set(gs.map(s=>s.id));
   const gc = allCourses.filter(c=>ids.has(c.sid));
   const traineeCount = gs.length;
-  const avg = gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
+  const avg = avgPct(gc);
   // نسبة إكمال الخطة = المواد المأخوذة ÷ إجمالي مواد الخطة الدراسية
   let planTotal = catalog.length;
   if(!planTotal){
@@ -3340,12 +3353,13 @@ function buildTVContent(){
     const k=sidKey({sid:st.id});
     const stCourses=allCourses.filter(c=>sidKey(c)===k);
     if(!stCourses.length)return;
-    const sumPct=stCourses.reduce((a,c)=>a+c.pct,0);
+    const done=completedCourses(stCourses); // المعدل من المكتملة فقط
+    const sumPct=done.reduce((a,c)=>a+c.pct,0);
     const sumAbs=stCourses.reduce((a,c)=>a+(c.abs||0),0);
-    byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,n:stCourses.length};
+    byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,nDone:done.length,n:stCourses.length};
   });
   let ranked=Object.values(byStudent).map(s=>({
-    name:s.name,grp:s.grp,avg:s.n?Math.round(s.sumPct/s.n*10)/10:0,gpa:parseFloat(gpaFrom(s.courses)),
+    name:s.name,grp:s.grp,avg:s.nDone?Math.round(s.sumPct/s.nDone*10)/10:0,gpa:parseFloat(gpaFrom(s.courses)),
     avgAbs:s.n?Math.round(s.sumAbs/s.n):0
   })).sort((a,b)=>b.avg-a.avg||b.gpa-a.gpa);
   ranked.forEach((s,i)=>s.rank=i+1);
@@ -3355,7 +3369,7 @@ function buildTVContent(){
   const totCourses=[...new Set(allCourses.map(c=>c.course))].length;
   const totTrainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
   const grps=[...new Set(students.map(s=>s.grp))].length;
-  const avgAll=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
+  const avgAll=avgPct(allCourses);
   const excellentCount=ranked.filter(s=>s.avg>=90).length;
   const passRate=ranked.length?Math.round(ranked.filter(s=>s.avg>=60).length/ranked.length*100):0;
   const podiumOrder=[top3[1],top3[0],top3[2]].filter(Boolean);
@@ -3661,13 +3675,14 @@ const aPgs={
     students.forEach(st=>{
       const stCourses=allCourses.filter(c=>c.sid===st.id);
       if(!stCourses.length)return;
-      const sumPct=stCourses.reduce((a,c)=>a+c.pct,0);
+      const done=completedCourses(stCourses); // المعدل من المكتملة فقط
+      const sumPct=done.reduce((a,c)=>a+c.pct,0);
       const sumAbs=stCourses.reduce((a,c)=>a+(c.abs||0),0);
-      byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,n:stCourses.length};
+      byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,nDone:done.length,n:stCourses.length};
     });
     let ranked=Object.values(byStudent).map(s=>({
       sid:s.sid,name:s.name,grp:s.grp,coursesCount:s.n,
-      avg:s.n?Math.round(s.sumPct/s.n*10)/10:0,
+      avg:s.nDone?Math.round(s.sumPct/s.nDone*10)/10:0,
       gpa:parseFloat(gpaFrom(s.courses)),
       avgAbs:s.n?Math.round(s.sumAbs/s.n):0
     })).sort((a,b)=>b.avg-a.avg||b.gpa-a.gpa);
@@ -3681,7 +3696,7 @@ const aPgs={
     const totCourses=[...new Set(allCourses.map(c=>c.course))].length;
     const totTrainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
     const grps=[...new Set(students.map(s=>s.grp))].sort();
-    const avgAll=actives.length?Math.round(actives.reduce((a,c)=>a+c.pct,0)/actives.length):0;
+    const avgAll=avgPct(actives);
     const bannedCount=actives.filter(c=>(c.abs||0)>=25).length;
     const excellentCount=ranked.filter(s=>s.avg>=90).length;
     const passCount=actives.filter(c=>c.pct>=60).length;
@@ -3809,7 +3824,7 @@ const aPgs={
   overview:()=>{
     const tot=students.length,crs=[...new Set(allCourses.map(c=>c.course))].length;
     const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
-    const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
+    const avg=avgPct(allCourses);
     const warns=allCourses.filter(hasIssue).length;
     const grps=[...new Set(students.map(s=>s.grp))];
     return `
@@ -3833,7 +3848,7 @@ const aPgs={
       <tbody>${grps.map(g=>{
         const gs=students.filter(s=>s.grp===g);
         const gc=allCourses.filter(c=>gs.some(s=>s.id===c.sid));
-        const ga=gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
+        const ga=avgPct(gc);
         const ggpa=gpaFrom(gc);
         const gw=gc.filter(hasIssue).length;
         return `<tr data-grp="${g}" onclick="showGroupDetail(this.dataset.grp)" style="cursor:pointer"><td>الشعبة ${g}</td><td>${gs.length}</td><td><span style="font-weight:700;color:${gpaColor(ggpa)}">${ggpa}</span></td><td><span class="pill ${pillClass(ga)}">${ga}%</span></td><td>${gw?`<span class="pill pr">${gw}</span>`:'<span class="pill pg">0</span>'}</td></tr>`;
@@ -3877,7 +3892,7 @@ const aPgs={
     if(!courses.length)return `<div class="stitle">📚 المقررات الحالية</div><div class="empty"><div class="empty-icon">📭</div>لا توجد مقررات حالية (لا يوجد طلاب مسجّلون هذا الترم)</div>`;
     // ملخّص علوي
     const totStudents=new Set(active.map(c=>c.sid)).size;
-    const avgAll=active.length?Math.round(active.reduce((a,c)=>a+c.pct,0)/active.length):0;
+    const avgAll=avgPct(active);
     return `
     <div class="banner"><div><div class="btitle">📚 المقررات الحالية</div><div class="bsub">المواد التي يدرسها المتدربون هذا الترم — ${courses.length} مقرر · ${totStudents} متدرب</div></div><div class="bpill bp-b">${avgAll}% متوسط</div></div>
     <div class="gtable"><table>
@@ -4109,7 +4124,7 @@ const aPgs={
   },
   reports:()=>{
     const tot=students.length;
-    const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
+    const avg=avgPct(allCourses);
     const completed=allCourses.filter(c=>c.pct>=80).length;
     const deprived=allCourses.filter(c=>c.abs>=25).length;
     const allTrainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
@@ -4117,7 +4132,7 @@ const aPgs={
     const old=allTrainers.filter(t=>!isCurrentTrainer(t));
     const rowFor=(t,faded)=>{
       const tc=allCourses.filter(c=>c.trainer===t);
-      const ta=tc.length?Math.round(tc.reduce((a,c)=>a+c.pct,0)/tc.length):0;
+      const ta=avgPct(tc);
       const tw=tc.filter(hasIssue).length;
       return `<tr onclick="showTrainerDetail('${t}')" style="cursor:pointer${faded?';opacity:.6':''}"><td>${t}${faded?' <span style="font-size:10px;color:var(--muted)">(سابق)</span>':''}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td><span class="pill ${pillClass(ta)}">${ta}%</span></td><td>${tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>'}</td></tr>`;
     };
@@ -4446,7 +4461,7 @@ function showStudentStat(kind){
 function printAcademicReport(){
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
   const today=new Date().toLocaleDateString('en-GB');
-  const avg=allCourses.length?Math.round(allCourses.reduce((a,c)=>a+c.pct,0)/allCourses.length):0;
+  const avg=avgPct(allCourses);
   const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
   const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].filter(isCurrentTrainer);
   const secRows=grps.map(g=>{
@@ -4596,7 +4611,7 @@ function printGradesReport(){
         const cls=grade>=60?'ok':(grade>0?'danger':'');
         return `<tr><td>${c.sid}</td><td style="text-align:right">${st?st.name:c.sname||''}</td><td class="${cls}">${grade}%</td><td>${c.letter||'—'}</td><td>${grade>=60?'ناجح':(grade>0?'راسب':'—')}</td></tr>`;
       }).join('');
-      const avg=uniq.length?Math.round(uniq.reduce((a,c)=>a+c.pct,0)/uniq.length):0;
+      const avg=avgPct(uniq);
       body+=`<div class="grp-block" style="margin-bottom:14px"><div style="font-weight:700;color:#0a2348;padding:6px 0">📚 ${course} <span style="font-size:11px;color:#5a6b85">(متوسط: ${avg}%)</span></div>
       <table><thead><tr><th>الرقم</th><th>الاسم</th><th>الدرجة</th><th>التقدير</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table></div>`;
     });
@@ -4610,7 +4625,7 @@ function printStudentReport(sid){
   if(!st){showToast('الطالب غير موجود','w');return;}
   const sc=allCourses.filter(c=>c.sid===sid);
   const current=sc.filter(c=>isActive(c.status));
-  const avg=sc.length?Math.round(sc.reduce((a,c)=>a+c.pct,0)/sc.length):0;
+  const avg=avgPct(sc);
   const gpa=gpaFrom(sc);
   const maxAbs=current.length?Math.max(...current.map(c=>c.abs)):0;
   let body=`<div class="kpis">
@@ -4674,7 +4689,7 @@ function showStudentDetail(sid){
   const st=students.find(s=>s.id===sid);
   if(!st)return;
   const stCourses=allCourses.filter(c=>c.sid===sid);
-  const avg=stCourses.length?Math.round(stCourses.reduce((a,c)=>a+c.pct,0)/stCourses.length):0;
+  const avg=avgPct(stCourses);
   
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';
@@ -4695,7 +4710,7 @@ function showStudentDetail(sid){
       <div class="igrid" style="margin-bottom:16px">
         <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${st.id}</div></div>
         <div class="iitem"><div class="ilbl">الجوال</div><div class="ival">${st.ph||'—'}</div></div>
-        <div class="iitem"><div class="ilbl">المعدّل التراكمي</div><div class="ival" style="color:${gpaColor(gpaFrom(stCourses))};font-weight:700">${gpaFrom(stCourses)} <span style="font-size:11px;color:var(--muted);font-weight:400">/ 5</span></div></div>
+        <div class="iitem"><div class="ilbl">المعدّل التراكمي</div><div class="ival" style="color:${gpaColor(gpaFrom(stCourses))};font-weight:700">${gpaDisplay(stCourses)} <span style="font-size:11px;color:var(--muted);font-weight:400">/ 5</span></div></div>
         <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival" style="color:${avg>=70?'var(--green)':avg>=60?'var(--gold)':'var(--red)'}">${avg}%</div></div>
       </div>
       
@@ -4741,7 +4756,7 @@ function showStudentDetail(sid){
 // ===== COURSE DETAIL MODAL =====
 function showCourseDetail(courseName){
   const cs=allCourses.filter(c=>c.course===courseName);
-  const avg=cs.length?Math.round(cs.reduce((a,c)=>a+c.pct,0)/cs.length):0;
+  const avg=avgPct(cs);
   const trainer=cs[0]?.trainer||'—';
   
   const overlay=document.createElement('div');
@@ -5033,7 +5048,7 @@ function toggleTheme(){
 function showGroupDetail(grp){
   const gs = students.filter(s=>s.grp===grp);
   const gc = allCourses.filter(c=>gs.some(s=>s.id===c.sid));
-  const ga = gc.length?Math.round(gc.reduce((a,c)=>a+c.pct,0)/gc.length):0;
+  const ga = avgPct(gc);
   
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';
@@ -5079,7 +5094,7 @@ document.addEventListener('click', function(e){
         <button class="modal-close" onclick="document.getElementById('trainersModal').remove()">✕</button></div>
         ${trainerNames.map(t=>{
           const tc=allCourses.filter(c=>c.trainer===t);
-          const ta=tc.length?Math.round(tc.reduce((a,c)=>a+c.pct,0)/tc.length):0;
+          const ta=avgPct(tc);
           return `<div class="iitem" style="margin-bottom:8px"><div class="ilbl">${t}</div><div class="ival">${tc.length} مقرر · متوسط ${ta}%</div></div>`;
         }).join('')}
       </div>`;
