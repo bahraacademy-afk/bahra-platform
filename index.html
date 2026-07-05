@@ -3139,10 +3139,12 @@ async function enrollBatch(){
   const sids=[...document.querySelectorAll('.enr-student-cb:checked')].map(c=>c.value);
   const crs=[...document.querySelectorAll('.enr-course-cb:checked')].map(c=>c.value);
   const trainer=document.getElementById('enr_trainer')?.value||'';
+  const term=document.getElementById('enr_term')?.value||'';
+  const half=document.getElementById('enr_half')?.value||'';
   if(!sids.length){showToast('اختر متدرباً واحداً على الأقل','w');return;}
   if(!crs.length){showToast('اختر مقرراً واحداً على الأقل','w');return;}
   const total=sids.length*crs.length;
-  if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nهل تريد المتابعة؟`))return;
+  if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nالترم: ${term} · ${half}\nهل تريد المتابعة؟`))return;
   // بناء السجلات (مع تخطي المسجّلين مسبقاً)
   const records=[];let skipped=0;
   sids.forEach(sid=>{
@@ -3151,7 +3153,7 @@ async function enrollBatch(){
       const [code,course]=cv.split('|');
       const already=allCourses.some(c=>c.sid===sid&&normCode(c.code)===normCode(code));
       if(already){skipped++;return;}
-      records.push({sid,name:st.name,grp:st.grp,code,course,trainer,term:st.half||'',status:'حالي'});
+      records.push({sid,name:st.name,grp:st.grp,code,course,trainer,term,half,status:'حالي'});
     });
   });
   if(!records.length){showToast('⚠️ كل التسجيلات موجودة مسبقاً','w');return;}
@@ -3452,6 +3454,26 @@ const aPgs={
       <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;max-width:500px">
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">👨‍🏫 المدرب (لكل المواد المختارة)</label>
         <select id="enr_trainer" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"><option value="">— اختر المدرب —</option>${trOpts}</select>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div>
+            <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 الترم</label>
+            <select id="enr_term" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
+              <option value="ترم أول-2025/2026">ترم أول 2025/2026</option>
+              <option value="ترم ثاني-2025/2026">ترم ثاني 2025/2026</option>
+              <option value="ترم صيفي-2025/2026">ترم صيفي 2025/2026</option>
+              <option value="ترم أول-2026/2027">ترم أول 2026/2027</option>
+              <option value="ترم ثاني-2026/2027">ترم ثاني 2026/2027</option>
+              <option value="ترم صيفي-2026/2027">ترم صيفي 2026/2027</option>
+            </select>
+          </div>
+          <div>
+            <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📖 النصف المجزأ</label>
+            <select id="enr_half" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
+              <option value="النصف الأول">النصف الأول</option>
+              <option value="النصف الثاني">النصف الثاني</option>
+            </select>
+          </div>
+        </div>
         <button class="btn btn-b" style="width:100%;font-size:15px;padding:14px" onclick="enrollBatch()">🔗 تسجيل المحددين دفعة واحدة</button>
       </div>`;
     }
