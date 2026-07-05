@@ -3135,16 +3135,44 @@ document.addEventListener('change',function(e){
   if(e.target&&(e.target.classList.contains('enr-student-cb')||e.target.classList.contains('enr-course-cb')))updateEnrCounts();
 });
 // التسجيل الجماعي: كل طالب محدد × كل مقرر محدد
+// إنهاء ترم: تحويل كل مواده لسابق
+async function endTerm(){
+  const term=document.getElementById('endTermSel')?.value;
+  if(!term){showToast('اختر الترم','w');return;}
+  const termLbl=term.replace(/-/g,' ');
+  if(!confirm(`⚠️ هل تريد إنهاء الترم: ${termLbl}؟\n\nسيتم تحويل كل مواد هذا الترم إلى "سابق" (منتهية).\nلن تظهر بعدها في المواد الحالية.`))return;
+  showToast('جاري إنهاء الترم...','i');
+  try{
+    const res=await jsonpCall({action:'endTerm',data:JSON.stringify([{term}])});
+    const n=(res&&res.updated)||0;
+    showToast(`✅ تم إنهاء الترم — حُوّلت ${n} مادة إلى سابق`,'s');
+    await loadAdmin();
+    showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+  }catch(e){showToast('تعذّر إنهاء الترم — جرب مرة أخرى','e');}
+}
+window.endTerm=endTerm;
+
+// إخفاء النصف المجزأ للترم الصيفي (ما ينقسم)، وإظهاره للتروم العادية
+function toggleHalfField(){
+  const term=document.getElementById('enr_term')?.value||'';
+  const wrap=document.getElementById('halfFieldWrap');
+  if(!wrap)return;
+  const isSummer=term.includes('صيفي');
+  wrap.style.display=isSummer?'none':'';
+}
+window.toggleHalfField=toggleHalfField;
+
 async function enrollBatch(){
   const sids=[...document.querySelectorAll('.enr-student-cb:checked')].map(c=>c.value);
   const crs=[...document.querySelectorAll('.enr-course-cb:checked')].map(c=>c.value);
   const trainer=document.getElementById('enr_trainer')?.value||'';
   const term=document.getElementById('enr_term')?.value||'';
-  const half=document.getElementById('enr_half')?.value||'';
+  // الترم الصيفي ما له نصف مجزأ
+  const half=term.includes('صيفي')?'':(document.getElementById('enr_half')?.value||'');
   if(!sids.length){showToast('اختر متدرباً واحداً على الأقل','w');return;}
   if(!crs.length){showToast('اختر مقرراً واحداً على الأقل','w');return;}
   const total=sids.length*crs.length;
-  if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nالترم: ${term} · ${half}\nهل تريد المتابعة؟`))return;
+  if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nالترم: ${term}${half?' · '+half:''}\nهل تريد المتابعة؟`))return;
   // بناء السجلات (مع تخطي المسجّلين مسبقاً)
   const records=[];let skipped=0;
   sids.forEach(sid=>{
@@ -3378,7 +3406,24 @@ const aPgs={
         <td style="font-weight:600">${c.code}</td><td>${c.name}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td>
         <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${c.code}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
+      // التروم الموجودة فعلاً في سجل المقررات (النشطة فقط)
+      const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>{
+        // نأخذ الجزء قبل " · " (الترم بدون النصف) لتجميع النصفين
+        return String(c.half||'').split(' · ')[0].trim();
+      }).filter(Boolean))].sort();
+      const termOpts=activeTerms.map(t=>`<option value="${t}">${t.replace(/-/g,' ')}</option>`).join('');
       body=`
+      <div style="background:linear-gradient(135deg,rgba(231,76,60,.08),rgba(201,162,39,.06));border:1px solid rgba(231,76,60,.25);border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)">🏁 إنهاء ترم دراسي</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">عند انتهاء ترم، حوّل كل مواده إلى "سابق" (منتهية) بضغطة — تنتقل للتاريخ الأكاديمي وتخرج من المواد الحالية</div>
+        ${activeTerms.length?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+          <div style="flex:1;min-width:200px">
+            <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">اختر الترم المنتهي</label>
+            <select id="endTermSel" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">${termOpts}</select>
+          </div>
+          <button class="btn btn-sm" style="background:#e74c3c;color:#fff;font-weight:700;padding:11px 20px" onclick="endTerm()">🏁 إنهاء الترم المحدد</button>
+        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد تروم حالية نشطة</div>'}
+      </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div class="stitle" style="margin:0">📖 الخطة الدراسية (${(catalog||[]).length} مقرر)</div>
         <button class="btn btn-b" onclick="addCourse()">➕ إضافة مقرر</button>
@@ -3457,16 +3502,17 @@ const aPgs={
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
           <div>
             <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 الترم</label>
-            <select id="enr_term" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
-              <option value="ترم أول-2025/2026">ترم أول 2025/2026</option>
-              <option value="ترم ثاني-2025/2026">ترم ثاني 2025/2026</option>
+            <select id="enr_term" onchange="toggleHalfField()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
               <option value="ترم صيفي-2025/2026">ترم صيفي 2025/2026</option>
               <option value="ترم أول-2026/2027">ترم أول 2026/2027</option>
               <option value="ترم ثاني-2026/2027">ترم ثاني 2026/2027</option>
               <option value="ترم صيفي-2026/2027">ترم صيفي 2026/2027</option>
+              <option value="ترم أول-2027/2028">ترم أول 2027/2028</option>
+              <option value="ترم ثاني-2027/2028">ترم ثاني 2027/2028</option>
+              <option value="ترم صيفي-2027/2028">ترم صيفي 2027/2028</option>
             </select>
           </div>
-          <div>
+          <div id="halfFieldWrap">
             <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📖 النصف المجزأ</label>
             <select id="enr_half" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
               <option value="النصف الأول">النصف الأول</option>
