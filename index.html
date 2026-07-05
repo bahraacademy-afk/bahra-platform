@@ -57,7 +57,8 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 body.light-mode .more-menu{background:rgba(255,255,255,.97);border:1px solid rgba(26,58,107,.12);box-shadow:0 16px 48px rgba(26,58,107,.2)}
 body.light-mode .more-menu button{background:rgba(26,58,107,.05);border-color:rgba(26,58,107,.08);color:#1a2942}
 /* ===== شاشة العرض (TV Mode) ===== */
-.tv-mode{display:none;position:fixed;inset:0;z-index:99999;background:linear-gradient(135deg,#050d1a,#0a2348 60%,#0d1b30);color:#fff;overflow:hidden;padding:2vh 2.5vw;flex-direction:column;font-family:'Tajawal','Segoe UI',sans-serif}
+.tv-mode{display:none;position:fixed;inset:0;z-index:100000;background:linear-gradient(135deg,#050d1a,#0a2348 60%,#0d1b30);color:#fff;overflow:hidden;padding:2vh 2.5vw;flex-direction:column;font-family:'Tajawal','Segoe UI',sans-serif}
+.tv-mode[style*="flex"]{display:flex!important}
 .tv-close{position:fixed;top:16px;left:16px;width:48px;height:48px;border-radius:50%;background:rgba(231,76,60,.85);color:#fff;border:none;font-size:24px;cursor:pointer;z-index:100000;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:transform .2s}
 .tv-close:hover{transform:scale(1.1);background:#e74c3c}
 .tv-head{display:flex;flex-direction:column;align-items:center;gap:4px;padding-bottom:1.5vh;border-bottom:3px solid #c9a227;margin-bottom:2vh}
@@ -352,13 +353,24 @@ body.light-mode .more-menu button{background:rgba(26,58,107,.05);border-color:rg
 .sbar-val{font-size:12px;color:var(--muted);min-width:38px;text-align:left}
 
 /* ===== NOTIFICATION TOAST ===== */
-.toast-container{position:fixed;top:20px;left:20px;z-index:500;display:flex;flex-direction:column;gap:8px}
-.toast{background:#0d1d30;border:1px solid var(--border);border-radius:12px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.3);animation:notifSlide .4s ease}
+.toast-container{position:fixed;top:20px;left:20px;z-index:100002;display:flex;flex-direction:column;gap:8px}
+.toast{background:#0d1d30;color:#eef4fc;border:1px solid var(--border);border-radius:12px;padding:13px 18px;font-size:14px;font-weight:600;line-height:1.5;display:flex;align-items:center;gap:10px;min-width:260px;max-width:min(420px,90vw);box-shadow:0 10px 40px rgba(0,0,0,.5);animation:notifSlide .4s ease}
 .toast.out{animation:notifOut .3s ease forwards}
-.toast-icon{font-size:18px}
-.toast-s{border-color:rgba(46,204,113,.3);background:rgba(13,40,25,.9)}
-.toast-e{border-color:rgba(230,57,70,.3);background:rgba(40,13,13,.9)}
-.toast-i{border-color:rgba(26,122,191,.3);background:rgba(13,25,40,.9)}
+.toast-icon{font-size:19px;flex-shrink:0}
+.toast-s{border-color:rgba(46,204,113,.45);background:#0f2e1c;color:#d9ffe9}
+.toast-e{border-color:rgba(230,57,70,.45);background:#331214;color:#ffe0e2}
+.toast-i{border-color:rgba(26,122,191,.45);background:#0e2236;color:#e0efff}
+.toast-w{border-color:rgba(244,162,97,.5);background:#33230f;color:#ffedd6}
+body.light-mode .toast{background:#ffffff;color:#1a2a4a;border-color:rgba(26,58,107,.2);box-shadow:0 10px 40px rgba(26,58,107,.18)}
+body.light-mode .toast-s{background:#eafcf1;color:#0d5c32;border-color:rgba(46,204,113,.4)}
+body.light-mode .toast-e{background:#fdecec;color:#8a1b23;border-color:rgba(230,57,70,.35)}
+body.light-mode .toast-i{background:#eaf3fc;color:#12446e;border-color:rgba(26,122,191,.35)}
+body.light-mode .toast-w{background:#fdf3e7;color:#7a4a12;border-color:rgba(244,162,97,.45)}
+/* ⭐ تنسيق خيارات القوائم المنسدلة لتتناسق مع الثيم الداكن (المتصفح افتراضياً يعرضها بيضاء) */
+select{color-scheme:dark}
+select option{background:#0d1d30;color:#eef4fc;padding:8px}
+body.light-mode select{color-scheme:light}
+body.light-mode select option{background:#ffffff;color:#1a2a4a}
 
 /* ===== GRADE INPUT ===== */
 .grade-input{width:70px;padding:6px 10px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--text);outline:none;text-align:center;transition:border-color .2s}
@@ -1375,7 +1387,8 @@ function excuseHoursFromDates(course,grp,dates){
 function normCode(c){return String(c||'').replace(/\s+/g,'').trim()}
 // مفتاح موحّد للطالب: يحوّل الأرقام العربية ويزيل الرموز/المسافات لمنع التكرار
 function sidKey(s){
-  const raw=String((s&&s.sid)||'');
+  // ⭐ إصلاح: بيانات طلاب الإداري تستخدم حقل id بينما سجلات المقررات تستخدم sid — نقبل الاثنين
+  const raw=String((s&&(s.sid||s.id))||'');
   const en=raw.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d));
   const digits=en.replace(/\D/g,'').trim();
   return digits||raw.replace(/\s+/g,'').trim();
@@ -3262,7 +3275,8 @@ function buildTVContent(){
   // حساب الترتيب (نفس منطق الداشبورد)
   const byStudent={};
   students.forEach(st=>{
-    const stCourses=allCourses.filter(c=>c.sid===st.id);
+    const k=sidKey({sid:st.id});
+    const stCourses=allCourses.filter(c=>sidKey(c)===k);
     if(!stCourses.length)return;
     const sumPct=stCourses.reduce((a,c)=>a+c.pct,0);
     const sumAbs=stCourses.reduce((a,c)=>a+(c.abs||0),0);
@@ -3353,6 +3367,8 @@ function buildTVContent(){
 }
 function openTVMode(){
   try{
+    // ⭐ إزالة شاشة البداية نهائياً حتى لا تغطي شاشة العرض (نفس طبقة z-index سابقاً)
+    const sp=document.getElementById('splash');if(sp)sp.remove();
     let tv=document.getElementById('tvMode');
     if(!tv){
       tv=document.createElement('div');
@@ -4069,7 +4085,7 @@ const aPgs={
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="rep-student" style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
         <option value="">— اختر المتدرب —</option>
-        ${uniqStudents(students).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>`<option value="${s.id}">${s.name} (${s.sid}) · شعبة ${s.grp}</option>`).join('')}
+        ${uniqStudents(students).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>`<option value="${s.id||s.sid}">${s.name} (${s.sid||s.id||''}) · شعبة ${s.grp}</option>`).join('')}
       </select>
       <button class="btn btn-b" onclick="(function(){const v=document.getElementById('rep-student').value;if(!v){showToast('اختر متدرب أولاً','w');return}printStudentReport(v)})()">🖨️ اطبع كشف الطالب</button>
     </div>`;
