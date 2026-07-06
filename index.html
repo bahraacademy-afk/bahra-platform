@@ -330,7 +330,8 @@ body.light-mode .more-menu button{background:rgba(26,58,107,.05);border-color:rg
 
 /* ===== MODAL ===== */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;animation:fadeIn .3s ease}
-.modal{background:#0d1d30;border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;animation:modalIn .4s cubic-bezier(.16,1,.3,1)}
+.modal{background:#0d1d30;border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:480px;animation:modalIn .4s cubic-bezier(.16,1,.3,1)}
+.modal.mlist{max-height:85vh;display:flex;flex-direction:column}
 .modal-title{font-size:17px;font-weight:700;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .modal-body{overflow-y:auto;flex:1;margin:-4px -6px 0;padding:4px 6px;display:flex;flex-direction:column;gap:8px}
 .modal-close{background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;transition:color .2s}
@@ -1091,7 +1092,7 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 async function loadStudent(){
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[])
+    fetchSheet('قاعدة بيانات المقررات!A:F').catch(()=>[])
   ]);
   courses=[];
   for(let i=1;i<cr.length;i++){
@@ -1103,7 +1104,7 @@ async function loadStudent(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4])});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5])});
   }
   await loadSchedule();
   // ⭐ احسب نسبة الغياب من "قاعدة الغياب"
@@ -1115,7 +1116,7 @@ async function loadStudent(){
 async function loadTrainer(){
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[])
+    fetchSheet('قاعدة بيانات المقررات!A:F').catch(()=>[])
   ]);
   students=[];
   for(let i=1;i<cr.length;i++){
@@ -1126,7 +1127,7 @@ async function loadTrainer(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5])});
   }
   await loadSchedule();
   // ⭐ المصدر الوحيد للحقيقة: احسب نسبة الغياب من "قاعدة الغياب" (يتطلب الجدول محمّلاً)
@@ -1139,7 +1140,7 @@ async function loadAdmin(){
   const [sr,cr,cat,td,ad]=await Promise.all([
     fetchSheet('قاعدة بيانات مركزي!A:H'),
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:E').catch(()=>[]),
+    fetchSheet('قاعدة بيانات المقررات!A:F').catch(()=>[]),
     fetchSheet('قاعدة بيانات المدربين!A:F').catch(()=>[]),
     fetchSheet('قاعدة بيانات الاداريين!A:G').catch(()=>[])
   ]);
@@ -1157,7 +1158,7 @@ async function loadAdmin(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4])});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5])});
   }
   // قاعدة المدربين المسجّلين (لهم حسابات): A=الرقم B=الاسم C=التخصص D=الجوال E=البريد
   trainersDB=[];
@@ -1988,7 +1989,7 @@ function renderListModal(title,items,emptyMsg){
   if(!items.length){showToast(emptyMsg,'s');return}
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';
-  overlay.innerHTML=`<div class="modal">
+  overlay.innerHTML=`<div class="modal mlist">
     <div class="modal-title">${title} <span style="font-size:12px;font-weight:600;color:var(--muted);margin-inline-start:auto;margin-inline-end:10px">${items.length}</span><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
     <div class="modal-body">${items.map(a=>`<div class="alert ${a.type}"><span class="aicon">${a.icon}</span>${a.msg}</div>`).join('')}</div>
     <div class="btn-row" style="flex-shrink:0;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)"><button class="btn btn-out btn-sm" onclick="this.closest('.modal-overlay').remove()">إغلاق</button></div>
@@ -3175,6 +3176,10 @@ function stopLiveDash(){
 function courseModal(mode,data){
   data=data||{};
   const f=(id,lbl,val,ph)=>`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">${lbl}</label><input id="crs_${id}" value="${(val||'').toString().replace(/"/g,'&quot;')}" placeholder="${ph||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"></div>`;
+  // ⭐ تجهيز التخصصات كمصفوفة (نفصل على | أو , أو ؛)
+  window._crsSpecs=String(data.specs||'').split(/[|,؛;]/).map(x=>x.trim()).filter(Boolean);
+  // اقتراحات من تخصصات الطلاب والمدربين الموجودة
+  const suggestions=[...new Set([...(students||[]).map(s=>s.spec),...(trainersDB||[]).map(t=>t.spec)].map(x=>String(x||'').trim()).filter(Boolean))];
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';overlay.id='crsModal';
   overlay.innerHTML=`<div class="modal" style="max-width:460px;max-height:88vh;overflow-y:auto">
@@ -3185,6 +3190,13 @@ function courseModal(mode,data){
       ${f('term','الترم',data.term,'مثال: ترم أول')}
       ${f('units','عدد الوحدات',data.units)}
       ${f('hours','عدد الساعات',data.hours)}
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصصات (يمكن أكثر من تخصص)</label>
+        <div id="crsSpecChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <input id="crs_specInput" placeholder="اكتب تخصص واضغط Enter لإضافته" onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();crsAddSpec(this.value);this.value='';}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
+        ${suggestions.length?`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${suggestions.map(sp=>`<button type="button" onclick="crsAddSpec('${sp.replace(/'/g,"\\'")}')" style="background:rgba(106,184,247,.12);color:#6ab8f7;border:1px solid rgba(106,184,247,.3);border-radius:14px;padding:4px 12px;font-size:11px;cursor:pointer">+ ${sp}</button>`).join('')}</div>`:''}
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">💡 اتركها فارغة = المقرر يصلح لكل التخصصات</div>
+      </div>
     </div>
     <input type="hidden" id="crs_oldCode" value="${(data.code||'').replace(/"/g,'&quot;')}">
     <div style="display:flex;gap:10px;margin-top:12px">
@@ -3193,12 +3205,34 @@ function courseModal(mode,data){
     </div>
   </div>`;
   document.body.appendChild(overlay);
+  renderCrsSpecs();
 }
+// ===== إدارة رقائق التخصصات =====
+function renderCrsSpecs(){
+  const box=document.getElementById('crsSpecChips');if(!box)return;
+  const specs=window._crsSpecs||[];
+  box.innerHTML=specs.length?specs.map((sp,i)=>`<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,.15);color:#2ecc71;border:1px solid rgba(46,204,113,.35);border-radius:14px;padding:4px 10px;font-size:12px;font-weight:600">${sp}<span onclick="crsRemoveSpec(${i})" style="cursor:pointer;font-weight:800;opacity:.8">✕</span></span>`).join(''):'<span style="font-size:11px;color:var(--muted)">لا توجد تخصصات — المقرر عام</span>';
+}
+function crsAddSpec(val){
+  val=String(val||'').trim();if(!val)return;
+  window._crsSpecs=window._crsSpecs||[];
+  if(!window._crsSpecs.some(x=>x===val))window._crsSpecs.push(val);
+  const inp=document.getElementById('crs_specInput');if(inp)inp.value='';
+  renderCrsSpecs();
+}
+function crsRemoveSpec(i){
+  (window._crsSpecs||[]).splice(i,1);
+  renderCrsSpecs();
+}
+window.crsAddSpec=crsAddSpec;window.crsRemoveSpec=crsRemoveSpec;
 function addCourse(){courseModal('add',{});}
 function editCourse(data){courseModal('edit',data);}
 async function saveCourse(mode){
   const g=id=>{const el=document.getElementById('crs_'+id);return el?el.value.trim():'';};
-  const rec={code:g('code'),name:g('name'),term:g('term'),units:g('units'),hours:g('hours')};
+  // ⭐ ضم أي نص متبقٍ في خانة الإدخال ثم تجميع التخصصات بفاصل |
+  const pending=g('specInput');if(pending)crsAddSpec(pending);
+  const specs=(window._crsSpecs||[]).join(' | ');
+  const rec={code:g('code'),name:g('name'),term:g('term'),units:g('units'),hours:g('hours'),specs};
   if(mode==='edit')rec.oldCode=g('oldCode');
   if(!rec.code||!rec.name){showToast('الرمز واسم المقرر مطلوبان','w');return;}
   showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
@@ -3457,6 +3491,10 @@ function buildTVContent(){
   </div>`;
 }
 function openTVMode(){
+  // ⭐ حاجز يمنع الاستدعاء المزدوج (onclick المباشر + المعالج الاحتياطي) الذي كان يخرّب ملء الشاشة
+  if(window._tvBusy)return;
+  window._tvBusy=true;
+  setTimeout(()=>{window._tvBusy=false;},700);
   try{
     // ⭐ إزالة شاشة البداية نهائياً حتى لا تغطي شاشة العرض (نفس طبقة z-index سابقاً)
     const sp=document.getElementById('splash');if(sp)sp.remove();
@@ -3472,11 +3510,13 @@ function openTVMode(){
     catch(err){content='<div style="color:#fff;text-align:center;padding:40px">تعذّر تحميل شاشة العرض<br><small style="color:#b8c5d8">'+err.message+'</small></div>';}
     tv.innerHTML='<button class="tv-close" onclick="closeTVMode()" title="خروج (ESC)">✕</button>'+content;
     tv.style.display='flex';
-    // ملء الشاشة الحقيقي (اختياري — لو فشل نكمل عادي)
-    try{
-      if(tv.requestFullscreen)tv.requestFullscreen().catch(()=>{});
-      else if(tv.webkitRequestFullscreen)tv.webkitRequestFullscreen();
-    }catch(e){}
+    // ملء الشاشة الحقيقي (اختياري تماماً — الشاشة تظهر كطبقة كاملة حتى لو فشل ملء الشاشة)
+    setTimeout(()=>{
+      try{
+        const rq=tv.requestFullscreen||tv.webkitRequestFullscreen||tv.msRequestFullscreen;
+        if(rq){const p=rq.call(tv);if(p&&p.catch)p.catch(()=>{});}
+      }catch(e){}
+    },50);
     // تحديث تلقائي كل 30 ثانية
     if(window._tvTimer)clearInterval(window._tvTimer);
     window._tvTimer=setInterval(async()=>{
@@ -3509,10 +3549,11 @@ const aPgs={
     let body='';
     if(tab==='plan'){
       // إدارة الخطة الدراسية (المقررات)
+      const specChip=sp=>String(sp||'').split(/[|,؛;]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span style="display:inline-block;background:rgba(106,184,247,.12);color:#6ab8f7;border-radius:10px;padding:2px 8px;font-size:10px;margin:1px">${x}</span>`).join('')||'<span style="color:var(--muted);font-size:11px">عام</span>';
       const rows=(catalog||[]).map(c=>`<tr>
-        <td style="font-weight:600">${c.code}</td><td>${c.name}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td>
+        <td style="font-weight:600">${c.code}</td><td>${c.name}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${specChip(c.specs)}</td>
         <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${c.code}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
-      </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
+      </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
       // التروم الموجودة فعلاً في سجل المقررات (النشطة فقط)
       const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>{
         // نأخذ الجزء قبل " · " (الترم بدون النصف) لتجميع النصفين
@@ -3535,9 +3576,9 @@ const aPgs={
         <div class="stitle" style="margin:0">📖 الخطة الدراسية (${(catalog||[]).length} مقرر)</div>
         <button class="btn btn-b" onclick="addCourse()">➕ إضافة مقرر</button>
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 المقررات هنا تصلح لأي تخصص — أضف رمز التخصص في اسم المقرر للتمييز بين التخصصات</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ — واتركه فارغاً ليصلح لكل التخصصات</div>
       <div class="gtable"><table>
-        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>التخصصات</th><th>إجراءات</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`;
     }else{
@@ -4797,9 +4838,10 @@ function showCourseDetail(courseName){
       </div>
       
       <div class="gtable">
-        <table>
-          <thead><tr><th>الاسم</th><th>الإنجاز</th><th>الغياب</th><th>الحالة</th></tr></thead>
-          <tbody>${cs.map(c=>{
+        ${(()=>{
+          // تجميع الطلاب حسب الشعبة
+          const grps=[...new Set(cs.map(c=>c.grp))].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+          const rowFor=c=>{
             const st=students.find(s=>s.id===c.sid);
             const dispName=st?st.name:(c.sname||c.sid);
             const p=Math.round(c.pct);
@@ -4810,8 +4852,20 @@ function showCourseDetail(courseName){
               <td style="color:${isDeprived(c.abs)?'var(--red)':'var(--muted)'}">${Math.round(c.abs)}%</td>
               <td>${status}</td>
             </tr>`;
-          }).join('')}</tbody>
-        </table>
+          };
+          return grps.map(g=>{
+            const gc=cs.filter(c=>c.grp===g);
+            const gAvg=avgPct(gc);
+            return `<div style="display:flex;align-items:center;justify-content:space-between;margin:14px 2px 8px;padding:8px 12px;background:rgba(106,184,247,.1);border-radius:8px">
+                <span style="font-size:13px;font-weight:800;color:#6ab8f7">🏫 شعبة ${g}</span>
+                <span style="font-size:11px;color:var(--muted)">${gc.length} متدرب · متوسط ${gAvg}%</span>
+              </div>
+              <table>
+                <thead><tr><th>الاسم</th><th>الإنجاز</th><th>الغياب</th><th>الحالة</th></tr></thead>
+                <tbody>${gc.map(rowFor).join('')}</tbody>
+              </table>`;
+          }).join('');
+        })()}
       </div>
     </div>
   `;
