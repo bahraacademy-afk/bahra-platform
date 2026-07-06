@@ -1092,7 +1092,7 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 async function loadStudent(){
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:F').catch(()=>[])
+    fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[])
   ]);
   courses=[];
   for(let i=1;i<cr.length;i++){
@@ -1104,7 +1104,7 @@ async function loadStudent(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5])});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
   await loadSchedule();
   // ⭐ احسب نسبة الغياب من "قاعدة الغياب"
@@ -1116,7 +1116,7 @@ async function loadStudent(){
 async function loadTrainer(){
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:F').catch(()=>[])
+    fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[])
   ]);
   students=[];
   for(let i=1;i<cr.length;i++){
@@ -1127,7 +1127,7 @@ async function loadTrainer(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5])});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
   await loadSchedule();
   // ⭐ المصدر الوحيد للحقيقة: احسب نسبة الغياب من "قاعدة الغياب" (يتطلب الجدول محمّلاً)
@@ -1140,7 +1140,7 @@ async function loadAdmin(){
   const [sr,cr,cat,td,ad]=await Promise.all([
     fetchSheet('قاعدة بيانات مركزي!A:H'),
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:F').catch(()=>[]),
+    fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[]),
     fetchSheet('قاعدة بيانات المدربين!A:F').catch(()=>[]),
     fetchSheet('قاعدة بيانات الاداريين!A:G').catch(()=>[])
   ]);
@@ -1158,7 +1158,7 @@ async function loadAdmin(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5])});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
   // قاعدة المدربين المسجّلين (لهم حسابات): A=الرقم B=الاسم C=التخصص D=الجوال E=البريد
   trainersDB=[];
@@ -1391,6 +1391,33 @@ function excuseHoursFromDates(course,grp,dates){
   return {totalHrs,breakdown};
 }
 function normCode(c){return String(c||'').replace(/\s+/g,'').trim()}
+// ===== المواد العلمية المرتبطة بالمقرر (مستدامة — محفوظة مع المقرر في الخطة) =====
+// الصيغة المخزّنة: كل مادة "العنوان @@ الرابط"، والمواد مفصولة بـ " ||| "
+function parseMaterials(str){
+  return String(str||'').split('|||').map(x=>x.trim()).filter(Boolean).map(x=>{
+    const i=x.indexOf('@@');
+    if(i>-1)return {title:x.slice(0,i).trim(),url:x.slice(i+2).trim()};
+    return {title:'',url:x.trim()};
+  }).filter(m=>m.url);
+}
+function serializeMaterials(arr){
+  return (arr||[]).filter(m=>m&&m.url).map(m=>(m.title?m.title+' @@ ':'')+m.url).join(' ||| ');
+}
+// جلب المواد العلمية لمقرر من الخطة (نظري + عملي) بالمطابقة على الرمز
+function getCourseMaterials(code){
+  const cat=(catalog||[]).find(c=>normCode(c.code)===normCode(code));
+  return {
+    theory: cat?parseMaterials(cat.matTheory):[],
+    practical: cat?parseMaterials(cat.matPractical):[]
+  };
+}
+// عنصر عرض واحد للمادة: رابط قابل للضغط لو يبدأ بـ http، وإلا نص عادي (اسم مرجع)
+function matChipHTML(m){
+  const isLink=/^https?:\/\//i.test(m.url||'');
+  const label=m.title||(isLink?'فتح المادة':m.url);
+  if(isLink)return `<a href="${m.url}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,.12);color:#2ecc71;border:1px solid rgba(46,204,113,.3);border-radius:14px;padding:5px 12px;font-size:12px;font-weight:600">📄 ${label}</a>`;
+  return `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:5px 12px;font-size:12px">📄 ${label}${m.title&&m.url&&m.title!==m.url?` — ${m.url}`:''}</span>`;
+}
 // مفتاح موحّد للطالب: يحوّل الأرقام العربية ويزيل الرموز/المسافات لمنع التكرار
 function sidKey(s){
   // ⭐ إصلاح: بيانات طلاب الإداري تستخدم حقل id بينما سجلات المقررات تستخدم sid — نقبل الاثنين
@@ -2441,10 +2468,17 @@ function courseCardHTML(c){
   const p=Math.round(c.pct);
   const av=absLevel(c.abs);
   const showWarn=av.key!=='ok'&&isActive(c.status);
+  const mats=getCourseMaterials(c.code); // المواد العلمية (نظري + عملي)
+  const matSection=(lbl,arr)=>arr.length?`<div style="margin-top:8px"><div style="font-size:11px;color:var(--muted);margin-bottom:5px">${lbl}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${arr.map(matChipHTML).join('')}</div></div>`:'';
+  const matsHTML=(mats.theory.length||mats.practical.length)?`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)">
+    <div style="font-size:11px;color:#6ab8f7;font-weight:700;margin-bottom:4px">📚 المادة العلمية</div>
+    ${matSection('📘 نظري',mats.theory)}${matSection('🔧 عملي',mats.practical)}
+  </div>`:'';
   return `<div class="ccard ${ccClass(p)}">
     <div class="cc-top"><div><div class="cc-name">${c.course}</div><div class="cc-meta">${c.code}${c.trainer?' · '+c.trainer:''}${c.half&&c.half!=='غير محدد'?' · '+c.half:''}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
     <div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>
     <div class="cc-footer"><span>الإنجاز: ${p}%</span><span style="color:${av.color}">الغياب: ${Math.round(c.abs)}%${showWarn?' · '+av.label:''}</span>${c.letter?'<span>التقدير: '+c.letter+'</span>':''}</div>
+    ${matsHTML}
   </div>`;
 }
 
@@ -3197,6 +3231,25 @@ function courseModal(mode,data){
         ${suggestions.length?`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${suggestions.map(sp=>`<button type="button" onclick="crsAddSpec('${sp.replace(/'/g,"\\'")}')" style="background:rgba(106,184,247,.12);color:#6ab8f7;border:1px solid rgba(106,184,247,.3);border-radius:14px;padding:4px 12px;font-size:11px;cursor:pointer">+ ${sp}</button>`).join('')}</div>`:''}
         <div style="font-size:11px;color:var(--muted);margin-top:6px">💡 اتركها فارغة = المقرر يصلح لكل التخصصات</div>
       </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;color:#6ab8f7;font-weight:700;margin-bottom:6px">📘 المادة العلمية — نظري</label>
+        <div id="crsMatTheoryList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:6px">
+          <input id="crs_matTheoryTitle" placeholder="الاسم (اختياري)" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px">
+          <input id="crs_matTheoryUrl" placeholder="الرابط" onkeydown="if(event.key==='Enter'){event.preventDefault();crsAddMat('theory');}" style="flex:2;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px">
+          <button type="button" onclick="crsAddMat('theory')" class="btn btn-b btn-sm">➕</button>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="display:block;font-size:12px;color:#f4a261;font-weight:700;margin-bottom:6px">🔧 المادة العلمية — عملي</label>
+        <div id="crsMatPracticalList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+        <div style="display:flex;gap:6px">
+          <input id="crs_matPracticalTitle" placeholder="الاسم (اختياري)" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px">
+          <input id="crs_matPracticalUrl" placeholder="الرابط" onkeydown="if(event.key==='Enter'){event.preventDefault();crsAddMat('practical');}" style="flex:2;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px">
+          <button type="button" onclick="crsAddMat('practical')" class="btn btn-b btn-sm">➕</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">💡 الرابط من Google Drive أو أي رابط — يبقى مربوطاً بالمقرر دائماً</div>
+      </div>
     </div>
     <input type="hidden" id="crs_oldCode" value="${(data.code||'').replace(/"/g,'&quot;')}">
     <div style="display:flex;gap:10px;margin-top:12px">
@@ -3206,7 +3259,36 @@ function courseModal(mode,data){
   </div>`;
   document.body.appendChild(overlay);
   renderCrsSpecs();
+  // ⭐ تجهيز المواد العلمية (نظري + عملي)
+  window._crsMatTheory=parseMaterials(data.matTheory||'');
+  window._crsMatPractical=parseMaterials(data.matPractical||'');
+  renderCrsMats('theory');renderCrsMats('practical');
 }
+// ===== إدارة روابط المادة العلمية (نظري/عملي) =====
+function renderCrsMats(type){
+  const box=document.getElementById(type==='theory'?'crsMatTheoryList':'crsMatPracticalList');if(!box)return;
+  const mats=(type==='theory'?window._crsMatTheory:window._crsMatPractical)||[];
+  box.innerHTML=mats.length?mats.map((m,i)=>`<div style="display:flex;align-items:center;gap:8px;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:8px 10px">
+      <span style="font-size:15px">📄</span>
+      <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">${m.title||'مادة علمية'}</div><div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.url}</div></div>
+      <span onclick="crsRemoveMat('${type}',${i})" style="cursor:pointer;color:var(--red);font-weight:800">✕</span>
+    </div>`).join(''):'<span style="font-size:11px;color:var(--muted)">لا توجد مواد بعد</span>';
+}
+function crsAddMat(type){
+  const pre=type==='theory'?'matTheory':'matPractical';
+  const t=document.getElementById('crs_'+pre+'Title'),u=document.getElementById('crs_'+pre+'Url');
+  const url=(u?u.value:'').trim();if(!url){showToast('الصق رابط المادة أولاً','w');return;}
+  const key=type==='theory'?'_crsMatTheory':'_crsMatPractical';
+  window[key]=window[key]||[];
+  window[key].push({title:(t?t.value:'').trim(),url});
+  if(t)t.value='';if(u)u.value='';
+  renderCrsMats(type);
+}
+function crsRemoveMat(type,i){
+  const key=type==='theory'?'_crsMatTheory':'_crsMatPractical';
+  (window[key]||[]).splice(i,1);renderCrsMats(type);
+}
+window.crsAddMat=crsAddMat;window.crsRemoveMat=crsRemoveMat;
 // ===== إدارة رقائق التخصصات =====
 function renderCrsSpecs(){
   const box=document.getElementById('crsSpecChips');if(!box)return;
@@ -3232,7 +3314,12 @@ async function saveCourse(mode){
   // ⭐ ضم أي نص متبقٍ في خانة الإدخال ثم تجميع التخصصات بفاصل |
   const pending=g('specInput');if(pending)crsAddSpec(pending);
   const specs=(window._crsSpecs||[]).join(' | ');
-  const rec={code:g('code'),name:g('name'),term:g('term'),units:g('units'),hours:g('hours'),specs};
+  // ضم أي رابط متبقٍ في الخانتين
+  const pt=g('matTheoryUrl');if(pt){window._crsMatTheory=window._crsMatTheory||[];window._crsMatTheory.push({title:g('matTheoryTitle'),url:pt});}
+  const pp=g('matPracticalUrl');if(pp){window._crsMatPractical=window._crsMatPractical||[];window._crsMatPractical.push({title:g('matPracticalTitle'),url:pp});}
+  const matTheory=serializeMaterials(window._crsMatTheory||[]);
+  const matPractical=serializeMaterials(window._crsMatPractical||[]);
+  const rec={code:g('code'),name:g('name'),term:g('term'),units:g('units'),hours:g('hours'),specs,matTheory,matPractical};
   if(mode==='edit')rec.oldCode=g('oldCode');
   if(!rec.code||!rec.name){showToast('الرمز واسم المقرر مطلوبان','w');return;}
   showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
@@ -3550,10 +3637,11 @@ const aPgs={
     if(tab==='plan'){
       // إدارة الخطة الدراسية (المقررات)
       const specChip=sp=>String(sp||'').split(/[|,؛;]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span style="display:inline-block;background:rgba(106,184,247,.12);color:#6ab8f7;border-radius:10px;padding:2px 8px;font-size:10px;margin:1px">${x}</span>`).join('')||'<span style="color:var(--muted);font-size:11px">عام</span>';
+      const matBadge=c=>{const n=parseMaterials(c.matTheory).length,p=parseMaterials(c.matPractical).length;const parts=[];if(n)parts.push('📘'+n);if(p)parts.push('🔧'+p);return parts.length?`<span style="background:rgba(46,204,113,.15);color:#2ecc71;border-radius:10px;padding:2px 8px;font-size:10px">${parts.join(' ')}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>';};
       const rows=(catalog||[]).map(c=>`<tr>
-        <td style="font-weight:600">${c.code}</td><td>${c.name}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${specChip(c.specs)}</td>
+        <td style="font-weight:600">${c.code}</td><td>${c.name}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
         <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${c.code}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
-      </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
+      </tr>`).join('')||`<tr><td colspan="8" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
       // التروم الموجودة فعلاً في سجل المقررات (النشطة فقط)
       const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>{
         // نأخذ الجزء قبل " · " (الترم بدون النصف) لتجميع النصفين
@@ -3578,7 +3666,7 @@ const aPgs={
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ — واتركه فارغاً ليصلح لكل التخصصات</div>
       <div class="gtable"><table>
-        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>التخصصات</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>التخصصات</th><th>المادة العلمية</th><th>إجراءات</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div>`;
     }else{
@@ -4224,6 +4312,20 @@ const aPgs={
         ${uniqStudents(students).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>`<option value="${s.id||s.sid}">${s.name} (${s.sid||s.id||''}) · شعبة ${s.grp}</option>`).join('')}
       </select>
       <button class="btn btn-b" onclick="(function(){const v=document.getElementById('rep-student').value;if(!v){showToast('اختر متدرب أولاً','w');return}printStudentReport(v)})()">🖨️ اطبع كشف الطالب</button>
+    </div>
+    <div class="stitle" style="margin-top:24px">⚠️ إنذارات الغياب (10%+)</div>
+    <div class="alert aw"><span class="aicon">📩</span>خطاب إنذار رسمي قابل للطباعة، مع خيار إرساله مباشرة لإيميل المتدرب — حسب التدرّج (10% إنذار أول · 20% ثانٍ · 25% حرمان)</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+      <select id="warn-student" style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
+        <option value="">— اختر متدرب لديه غياب مرتفع —</option>
+        ${studentsHighAbs().map(({s,courses})=>`<option value="${s.id||s.sid}">${s.name} · شعبة ${s.grp||'—'} · ${courses.length} مقرر · أعلى ${Math.round(Math.max(...courses.map(c=>parseFloat(c.abs)||0)))}%</option>`).join('')||'<option value="" disabled>لا يوجد طلاب تجاوزوا 10%</option>'}
+      </select>
+      <button class="btn btn-b" onclick="printWarningLetter(document.getElementById('warn-student').value)">🖨️ اطبع الخطاب</button>
+      <button class="btn" style="background:#16a34a;color:#fff" onclick="sendWarningEmail(document.getElementById('warn-student').value)">📧 أرسل بالإيميل</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-out" onclick="printAllWarnings()">📋 كشف كل الإنذارات (طباعة)</button>
+      <button class="btn" style="background:#0a7d34;color:#fff" onclick="sendAllWarningEmails()">📨 إرسال جماعي لكل المتجاوزين</button>
     </div>`;
   },
     settings:()=>{
@@ -4618,6 +4720,143 @@ function absBadge(pct){
   if(p>=10)return `<span class="badge b-y">${p}% إنذار أول</span>`;
   return `<span class="badge b-g">${p}%</span>`;
 }
+
+// ===== إنذارات الغياب: خطاب رسمي + إرسال بالإيميل =====
+// المقررات الحالية ذات الغياب المرتفع (≥10%) لمتدرب معيّن
+function highAbsCourses(sid){
+  const k=sidKey({sid});
+  return allCourses.filter(c=>sidKey(c)===k && isActive(c.status) && (parseFloat(c.abs)||0)>=10)
+    .sort((a,b)=>(parseFloat(b.abs)||0)-(parseFloat(a.abs)||0));
+}
+// كل الطلاب الذين لديهم غياب مرتفع في مقرر واحد على الأقل
+function studentsHighAbs(){
+  return uniqStudents(students)
+    .map(s=>({s, courses:highAbsCourses(s.id||s.sid)}))
+    .filter(x=>x.courses.length)
+    .sort((a,b)=>{
+      const ma=Math.max(...a.courses.map(c=>parseFloat(c.abs)||0));
+      const mb=Math.max(...b.courses.map(c=>parseFloat(c.abs)||0));
+      return mb-ma;
+    });
+}
+// خطاب إنذار رسمي لمتدرب واحد (يجمع كل مواده ذات الغياب المرتفع)
+// ===== قالب الخطاب الرسمي (يطابق ترويسة الإفادة) =====
+function officialLetterShell(title,bodyHtml){
+  const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
+  return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${title}</title>
+  <style>
+  @page{size:A4;margin:16mm}*{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box}
+  body{margin:0;color:#1a1a1a}
+  .doc-hdr{display:flex;justify-content:space-between;align-items:center;direction:ltr;margin-bottom:6px}
+  .inst{display:flex;align-items:center;gap:12px}
+  .inst img{width:78px;height:78px;object-fit:contain}
+  .inst .ar{font-weight:800;color:#8a1a2b;font-size:13px;line-height:1.4}
+  .inst .en{font-size:7.5px;color:#8a1a2b;letter-spacing:.3px;text-transform:uppercase}
+  .tvtc{text-align:right;direction:rtl;max-width:300px}
+  .tvtc .ar{font-size:12px;color:#1f7a4d;font-weight:700;line-height:1.5}
+  .tvtc .en{font-size:8px;color:#1f7a4d;margin-top:2px}
+  .hr{border:none;border-top:1px solid #cfcfcf;margin:6px 0 14px}
+  .datebox{text-align:right;font-size:13px;margin:6px 2px 26px}
+  .title{text-align:center;font-size:22px;font-weight:800;text-decoration:underline;text-underline-offset:6px;margin:8px 0 30px}
+  .body{font-size:14px;line-height:2.1;max-width:760px;margin:0 auto}
+  table{width:100%;border-collapse:collapse;margin:14px 0}
+  th{background:#0a2348;color:#fff;font-size:12px;padding:8px;border:1px solid #0a2348}
+  td{border:1px solid #b9c2d0;padding:7px;text-align:center;font-size:12.5px}
+  tr:nth-child(even) td{background:#f6f8fb}
+  .badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
+  .b-r{background:#fdecea;color:#c0392b}.b-y{background:#fef5e7;color:#d68910}.b-g{background:#eafaf1;color:#1e8449}
+  .sign{margin-top:56px;text-align:center;font-weight:800;font-size:15px}
+  .noprint{position:fixed;top:10px;left:10px;background:#0a2348;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:700}
+  .closebtn{position:fixed;top:10px;right:10px;background:#e74c3c;color:#fff;border:none;width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:22px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  @media print{.noprint,.closebtn{display:none}}
+  .grp-block{page-break-inside:avoid}
+  </style></head><body>
+  <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <button class="closebtn" onclick="window.close()">✕</button>
+  <div class="doc-hdr">
+    <div class="inst">${logo?`<img src="${logo}">`:''}<div><div class="ar">معهد المعرفة والإبداع العالي للتدريب</div><div class="en">Training Institute for Higher Knowledge and Creativity</div></div></div>
+    <div class="tvtc"><div class="ar">تمت الإشراف من المؤسسة العامة للتدريب التقني والمهني</div><div class="en">Supervised by the Technical and Vocational Training Corp.</div></div>
+  </div>
+  <hr class="hr">
+  <div class="datebox">في : &nbsp; /&nbsp; /&nbsp; &nbsp;14هـ</div>
+  <div class="title">${title}</div>
+  <div class="body">${bodyHtml}</div>
+  </body></html>`;
+}
+
+function buildWarningLetter(sid){
+  const st=students.find(s=>String(s.id)===String(sid)||String(s.sid)===String(sid))||{};
+  const courses=highAbsCourses(sid);
+  const rows=courses.map(c=>`<tr>
+      <td style="text-align:right">${c.course}</td>
+      <td>${c.trainer||'—'}</td>
+      <td>${absBadge(c.abs)}</td>
+    </tr>`).join('');
+  const body=`
+    <p><b>المكرم المتدرب /</b> ${st.name||'.....................'} &nbsp;&nbsp; المحترم</p>
+    <p style="margin-top:4px;color:#444">${st.grp?`الشعبة: ${st.grp}`:''}${(st.id||st.sid)?` &nbsp;·&nbsp; الرقم التدريبي: ${st.id||st.sid}`:''}${st.spec?` &nbsp;·&nbsp; ${st.spec}`:''}</p>
+    <p style="margin-top:14px">السلام عليكم ورحمة الله وبركاته،،</p>
+    <p>يفيد معهد المعرفة والإبداع العالي للتدريب بأنه وفقاً لسجلات الحضور والغياب، فقد بلغت نسبة غيابك في المقررات التالية الحدود الموضحة أدناه، وذلك حسب لائحة الحضور والغياب المعتمدة (10% إنذار أول · 20% إنذار ثانٍ · 25% حرمان):</p>
+    <table>
+      <thead><tr><th>المقرر</th><th>المدرب</th><th>نسبة الغياب والمستوى</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="3">لا يوجد غياب مرتفع</td></tr>'}</tbody>
+    </table>
+    <p>وعليه نأمل منك تدارك الأمر والانتظام في الحضور، علماً بأنه عند بلوغ نسبة الغياب <b style="color:#c0392b">25%</b> في أي مقرر يُحرم المتدرب من دخول الاختبار النهائي لذلك المقرر، ولك تقديم الأعذار الرسمية عبر المنصة إن وُجدت.</p>
+    <p style="font-weight:700;text-align:center;margin-top:18px">وهذه إفادة منا بذلك،،</p>
+    <div class="sign">إدارة المعهد</div>`;
+  return officialLetterShell('إشعار غياب',body);
+}
+function printWarningLetter(sid){
+  if(!sid){showToast('اختر متدرب أولاً','w');return;}
+  if(!highAbsCourses(sid).length){showToast('هذا المتدرب ليس لديه غياب مرتفع (10%+)','i');return;}
+  openReport(buildWarningLetter(sid));
+}
+// تقرير مجمّع بكل الطلاب المتجاوزين 10% (لكل مادة على حدة)
+function printAllWarnings(){
+  const list=studentsHighAbs();
+  if(!list.length){showToast('لا يوجد طلاب تجاوزوا 10% في المقررات الحالية','s');return;}
+  const blocks=list.map(({s,courses})=>{
+    const rows=courses.map(c=>`<tr><td style="text-align:right">${c.course}</td><td>${c.trainer||'—'}</td><td>${absBadge(c.abs)}</td></tr>`).join('');
+    return `<div class="grp-block"><div class="sec-title">${s.name} · شعبة ${s.grp||'—'} · الرقم ${s.id||s.sid||''}</div>
+      <table><thead><tr><th>المقرر</th><th>المدرب</th><th>نسبة الغياب والمستوى</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }).join('');
+  const kpis=`<div class="kpis">
+    <div class="kpi"><div class="n">${list.length}</div><div class="l">متدرب لديه إنذار</div></div>
+    <div class="kpi"><div class="n">${list.filter(x=>x.courses.some(c=>(parseFloat(c.abs)||0)>=25)).length}</div><div class="l">وصلوا للحرمان (25%+)</div></div>
+    <div class="kpi"><div class="n">${list.reduce((a,x)=>a+x.courses.length,0)}</div><div class="l">إجمالي حالات الغياب</div></div>
+  </div>`;
+  openReport(reportShell('كشف إنذارات الغياب','كشف إنذارات الغياب للمقررات الحالية',kpis+blocks));
+}
+// إرسال خطاب الإنذار بالإيميل للمتدرب عبر Apps Script
+async function sendWarningEmail(sid){
+  const st=students.find(s=>String(s.id)===String(sid)||String(s.sid)===String(sid))||{};
+  if(!st.email||!String(st.email).includes('@')){showToast('لا يوجد إيميل مسجّل لهذا المتدرب','w');return;}
+  const courses=highAbsCourses(sid);
+  if(!courses.length){showToast('هذا المتدرب ليس لديه غياب مرتفع','i');return;}
+  const maxAbs=Math.max(...courses.map(c=>parseFloat(c.abs)||0));
+  const level=absLevel(maxAbs).label;
+  const details=courses.map(c=>`${c.course}~${Math.round(c.abs)}~${absLevel(c.abs).label}`).join('|');
+  showToast('جاري إرسال الإيميل...','i');
+  try{
+    const r=await jsonpCall({action:'sendAbsenceWarning',email:st.email,name:st.name||'',grp:st.grp||'',level,details});
+    if(r&&r.status==='ok')showToast('✅ تم إرسال إشعار الغياب لإيميل المتدرب','s');
+    else showToast('تعذّر الإرسال: '+((r&&r.msg)||'خطأ'),'e');
+  }catch(e){showToast('تعذّر الإرسال — تأكد من نشر Apps Script الجديد','e');}
+}
+// إرسال جماعي لكل المتجاوزين
+async function sendAllWarningEmails(){
+  const list=studentsHighAbs().filter(x=>x.s.email&&String(x.s.email).includes('@'));
+  if(!list.length){showToast('لا يوجد طلاب لديهم إيميل مسجّل وغياب مرتفع','i');return;}
+  if(!confirm(`سيتم إرسال إشعار غياب لـ ${list.length} متدرب. متابعة؟`))return;
+  let ok=0,fail=0;
+  for(const {s} of list){
+    try{await sendWarningEmail(s.id||s.sid);ok++;}catch(e){fail++;}
+    await new Promise(r=>setTimeout(r,400));
+  }
+  showToast(`تم الإرسال — نجح ${ok}${fail?` · فشل ${fail}`:''}`,ok?'s':'e');
+}
+window.printWarningLetter=printWarningLetter;window.printAllWarnings=printAllWarnings;
+window.sendWarningEmail=sendWarningEmail;window.sendAllWarningEmails=sendAllWarningEmails;
 
 // ===== 1) تقرير الغياب الشامل =====
 function printAbsenceReport(){
