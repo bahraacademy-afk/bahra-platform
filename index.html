@@ -4813,11 +4813,19 @@ function showStudentDetail(sid){
 }
 
 // ===== COURSE DETAIL MODAL =====
-function showCourseDetail(courseName){
-  const cs=allCourses.filter(c=>c.course===courseName);
+function showCourseDetail(courseName,mode){
+  mode=mode||'current'; // افتراضياً: الطلاب الحاليون
+  const allRecs=allCourses.filter(c=>c.course===courseName);
+  const currentRecs=allRecs.filter(c=>isActive(c.status)); // المسجّلون في الترم الحالي
+  const pastRecs=allRecs.filter(c=>!isActive(c.status));
+  // نعرض الحاليين افتراضياً؛ ولو ما فيه حاليين نرجع للكل حتى لا تكون النافذة فارغة
+  const cs=(mode==='current'&&currentRecs.length)?currentRecs:(mode==='all'?allRecs:(currentRecs.length?currentRecs:allRecs));
   const avg=avgPct(cs);
   const trainer=cs[0]?.trainer||'—';
-  
+  const cn=courseName.replace(/'/g,"\\'");
+  const hasBoth=currentRecs.length&&pastRecs.length;
+  const showingCurrent=(cs===currentRecs);
+
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';
   overlay.id='courseModal';
@@ -4826,7 +4834,7 @@ function showCourseDetail(courseName){
       <div class="modal-title">
         <div>
           <div style="font-size:16px;font-weight:700">📚 ${courseName}</div>
-          <div style="font-size:12px;color:var(--muted);font-weight:400">المدرب: ${trainer} · ${cs.length} متدرب · متوسط ${avg}%</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:400">المدرب: ${trainer} · ${cs.length} متدرب · متوسط ${avg}% ${showingCurrent?'· <span style="color:#2ecc71">الحاليون</span>':(pastRecs.length&&!currentRecs.length?'· <span style="color:var(--muted)">أرشيف</span>':'')}</div>
         </div>
         <button class="modal-close" onclick="document.getElementById('courseModal').remove()">✕</button>
       </div>
@@ -4836,7 +4844,10 @@ function showCourseDetail(courseName){
         <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${cs.filter(c=>c.pct>=60&&c.abs<=25).length}</div><div class="mlbl">ناجح</div></div>
         <div class="mcard mc-r"><div class="micon">❌</div><div class="mnum cr">${cs.filter(c=>c.pct<60||isDeprived(c.abs)).length}</div><div class="mlbl">راسب/محروم</div></div>
       </div>
-      
+      ${hasBoth?`<div style="display:flex;gap:8px;margin-bottom:14px">
+        <button onclick="document.getElementById('courseModal').remove();showCourseDetail('${cn}','current')" style="flex:1;padding:9px;border:1px solid ${showingCurrent?'#2ecc71':'var(--border)'};border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;background:${showingCurrent?'rgba(46,204,113,.15)':'transparent'};color:${showingCurrent?'#2ecc71':'var(--muted)'}">🟢 الحاليون (${currentRecs.length})</button>
+        <button onclick="document.getElementById('courseModal').remove();showCourseDetail('${cn}','all')" style="flex:1;padding:9px;border:1px solid ${!showingCurrent?'#6ab8f7':'var(--border)'};border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;background:${!showingCurrent?'rgba(106,184,247,.15)':'transparent'};color:${!showingCurrent?'#6ab8f7':'var(--muted)'}">📋 الكل (${allRecs.length})</button>
+      </div>`:''}
       <div class="gtable">
         ${(()=>{
           // تجميع الطلاب حسب الشعبة
