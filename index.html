@@ -4882,7 +4882,8 @@ async function sendWarningEmail(sid){
   showToast('جاري إرسال الإيميل...','i');
   try{
     const r=await jsonpCall({action:'sendAbsenceWarning',email:st.email,name:st.name||'',grp:st.grp||'',level,details});
-    if(r&&r.status==='ok')showToast('✅ تم إرسال إشعار الغياب لإيميل المتدرب','s');
+    if(r&&r.emailed)showToast('✅ تم إرسال إشعار الغياب لإيميل المتدرب','s');
+    else if(r&&r.status==='ok')showToast('⚠️ لم يُرسل — الكود القديم لا يزال منشوراً. انشر نسخة جديدة من Apps Script (Manage deployments > Edit > New version)','w');
     else showToast('تعذّر الإرسال: '+((r&&r.msg)||'خطأ'),'e');
   }catch(e){showToast('تعذّر الإرسال — تأكد من نشر Apps Script الجديد','e');}
 }
