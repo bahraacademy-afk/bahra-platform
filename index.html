@@ -168,6 +168,12 @@ body.light-mode .more-menu button{background:rgba(26,58,107,.05);border-color:rg
 /* ===== LAYOUT ===== */
 .app{display:flex;min-height:calc(100vh - 62px);position:relative;z-index:1}
 .sidebar{width:220px;background:rgba(11,22,38,.6);border-left:1px solid var(--border);padding:16px 0;flex-shrink:0;backdrop-filter:blur(10px);transition:transform .3s}
+/* ===== وضع الإنجليزية LTR: انعكاس اتجاهي احترافي ===== */
+[dir="ltr"] .sidebar{border-left:none;border-right:1px solid var(--border)}
+[dir="ltr"] th,[dir="ltr"] td{text-align:left}
+[dir="ltr"] input,[dir="ltr"] textarea,[dir="ltr"] select{text-align:left}
+[dir="ltr"] .ccard:hover{transform:translateX(3px) translateY(-1px)}
+body.lang-en,body.lang-en *{letter-spacing:.1px}
 .sitem{display:flex;align-items:center;gap:10px;padding:11px 18px;font-size:13px;color:var(--muted);cursor:pointer;transition:all .2s;border-right:3px solid transparent;margin-bottom:2px;border-radius:0 8px 8px 0;margin-left:8px}
 .sitem:hover{color:var(--text);background:rgba(100,160,220,.05)}
 .sitem.active{color:var(--text);background:rgba(100,160,220,.08);border-right-color:var(--red)}
@@ -5766,42 +5772,148 @@ const TRANSLATIONS = {
   }
 };
 
+
+// ===== قاموس موسّع: كل الميزات الجديدة + عبارات النظام =====
+const EXTRA_EN = {
+  'الحالات التي تحتاج مراجعة':'Cases Needing Review','⚠️ الحالات التي تحتاج مراجعة':'⚠️ Cases Needing Review',
+  'المادة العلمية':'Course Materials','📚 المادة العلمية':'📚 Course Materials',
+  '📘 نظري':'📘 Theory','🔧 عملي':'🔧 Practical','نظري':'Theory','عملي':'Practical',
+  'المادة العلمية — نظري':'Course Material — Theory','المادة العلمية — عملي':'Course Material — Practical',
+  'فتح المادة':'Open Material','لا توجد مواد بعد':'No materials yet','مادة علمية':'Course material',
+  'إنذارات الغياب (10%+)':'Absence Warnings (10%+)','إنذار أول':'First Warning','إنذار ثانٍ':'Second Warning','إنذار ثاني':'Second Warning',
+  'حرمان':'Deprivation','درجة منخفضة':'Low Grade',
+  'اطبع الخطاب':'Print Letter','🖨️ اطبع الخطاب':'🖨️ Print Letter','أرسل بالإيميل':'Send by Email','📧 أرسل بالإيميل':'📧 Send by Email',
+  'كشف كل الإنذارات (طباعة)':'All Warnings Report (Print)','إرسال جماعي لكل المتجاوزين':'Bulk Send to All Exceeding',
+  '📨 إرسال جماعي لكل المتجاوزين':'📨 Bulk Send to All Exceeding','📋 كشف كل الإنذارات (طباعة)':'📋 All Warnings Report (Print)',
+  'اطبع إفادة تعريف':'Print Enrollment Letter','📄 اطبع إفادة تعريف':'📄 Print Enrollment Letter',
+  'اطبع ورقة التعريف (الإفادة)':'Print Enrollment Letter','🖨️ اطبع ورقة التعريف (الإفادة)':'🖨️ Print Enrollment Letter',
+  'اطبع كشف الطالب':'Print Student Report','🖨️ اطبع كشف الطالب':'🖨️ Print Student Report','اطبع كشف الطالب الكامل':'Print Full Student Report',
+  'التخصصات':'Specializations','التخصصات (يمكن أكثر من تخصص)':'Specializations (multiple allowed)',
+  'لا توجد تخصصات — المقرر عام':'No specializations — general course','عام':'General',
+  'تاريخ الالتحاق':'Enrollment Date','تقرير طالب فردي':'Individual Student Report','— اختر المتدرب —':'— Select Trainee —',
+  '— اختر متدرب لديه غياب مرتفع —':'— Select trainee with high absence —',
+  'تقرير الأداء العام':'General Performance Report','تقرير الغياب الشامل':'Full Absence Report',
+  'تقرير الدرجات المفصّل':'Detailed Grades Report','تقرير الأعذار والطلبات':'Excuses & Requests Report',
+  'التقارير القابلة للطباعة':'Printable Reports','🖨️ التقارير القابلة للطباعة':'🖨️ Printable Reports',
+  'كل تقرير يفتح في نافذة جديدة جاهز للطباعة أو الحفظ PDF':'Each report opens in a new window ready to print or save as PDF',
+  'الاشعارات والمتابعة':'Alerts & Follow-up','أداء منخفض':'Low Performance','غياب عالي':'High Absence',
+  'جميع المتدربين بحالة جيدة — لا توجد اشعارات':'All trainees in good standing — no alerts',
+  'لا توجد اشعارات جديدة':'No new alerts','لا توجد حالات تحتاج مراجعة':'No cases need review',
+  'حالة':'case','حالات':'cases','شعبة':'Section','الشعبة':'Section','الشعب':'Sections',
+  'المقررات الحالية':'Current Courses','الحاليون':'Current','الكل':'All','أرشيف':'Archive',
+  '🟢 الحاليون':'🟢 Current','📋 الكل':'📋 All',
+  'مرحباً،':'Welcome,','المعدل التراكمي':'GPA','متوسط الدرجات':'Average Grade','من 5':'out of 5','من 5.00':'out of 5.00',
+  'الشهادة الإلكترونية':'E-Certificate','فتح الشهادة':'Open Certificate',
+  'الاشعارات':'Notifications','🔔 الاشعارات':'🔔 Notifications','إغلاق':'Close',
+  'طلبك قيد المراجعة:':'Your request is under review:','تم اعتماد طلبك:':'Your request was approved:','تم رفض طلبك:':'Your request was rejected:',
+  'عذر غياب ينتظر اعتمادك':'Absence excuse awaiting your approval','ينتظر اعتمادك':'awaiting your approval',
+  'إنهاء ترم دراسي':'End Academic Term','إنهاء الترم المحدد':'End Selected Term','اختر الترم المنتهي':'Select term to end',
+  'الخطة الدراسية':'Study Plan','تسجيل جماعي':'Bulk Enrollment','إضافة مقرر':'Add Course','➕ إضافة مقرر':'➕ Add Course',
+  'تعديل مقرر':'Edit Course','✏️ تعديل مقرر':'✏️ Edit Course','رمز المقرر *':'Course Code *','اسم المقرر *':'Course Name *',
+  'الترم':'Term','عدد الوحدات':'Units','عدد الساعات':'Hours','حفظ التعديل':'Save Changes','إضافة':'Add','إلغاء':'Cancel',
+  'الرمز':'Code','اسم المقرر':'Course Name','الوحدات':'Units','الساعات':'Hours','إجراءات':'Actions',
+  'لا توجد مقررات في الخطة':'No courses in plan',
+  'شاشة العرض':'Display Screen','🖥️ شاشة العرض':'🖥️ Display Screen','لوحة الشرف والإحصائيات':'Honor Board & Statistics','مباشر':'Live',
+  'الداشبورد الشامل والأوائل':'Dashboard & Top Performers','معطيات الأكاديمية':'Academy Metrics','التحليل البياني':'Analytics',
+  'توزيع المعدلات':'Grade Distribution','مؤشرات تحليلية':'Analytical Indicators','الوسيط (median)':'Median',
+  'معدل أعلى 10%':'Top 10% Average','غياب مرتفع (15%+)':'High Absence (15%+)','محرومون بالغياب':'Deprived by Absence',
+  'متفوقون (90%+)':'Excellent (90%+)','نسبة النجاح':'Pass Rate','متوسط الإنجاز':'Average Achievement',
+  'المتدربون':'Trainees','المدربون':'Trainers','المقررات':'Courses','متدرب':'Trainee','مقرر':'Course',
+  'المكرم المتدرب /':'Dear Trainee /','المحترم':'','السلام عليكم ورحمة الله وبركاته،،':'Greetings,',
+  'إشعار غياب':'Absence Notice','افادة':'Certificate','إفادة':'Certificate',
+  'الى من يهمه الأمر :':'To Whom It May Concern:','وهذه افادة منا بذلك ،،':'This is our official certification.',
+  'ادارة المعهد':'Institute Administration','التوقيع / الختم الرسمي':'Signature / Official Stamp','التاريخ :':'Date:',
+  'اطبع الآن':'Print Now','🖨️ اطبع الآن':'🖨️ Print Now',
+  'جاري إرسال الإيميل...':'Sending email...','✅ تم إرسال إشعار الغياب لإيميل المتدرب':'✅ Absence notice sent to trainee email',
+  'لا يوجد إيميل مسجّل لهذا المتدرب':'No email registered for this trainee',
+  'هذا المتدرب ليس لديه غياب مرتفع (10%+)':'This trainee has no high absence (10%+)',
+  'لا يوجد طلاب تجاوزوا 10% في المقررات الحالية':'No students exceeded 10% in current courses',
+  'اختر متدرب أولاً':'Select a trainee first','متدرب غير موجود':'Trainee not found',
+  'خطاب إنذار رسمي قابل للطباعة. مع خيار إرساله مباشرة لإيميل المتدرب — حسب التدرّج (10% إنذار أول · 20% ثانٍ · 25% حرمان)':'Official printable warning letter, with option to email it directly — per policy (10% first warning · 20% second · 25% deprivation)',
+  'المدرب':'Trainer','عدد المتدربين':'Trainees Count','اشعارات':'Alerts',
+  'الاسم':'Name','الإنجاز':'Achievement','الغياب':'Absence','الحالة':'Status','ناجح':'Pass','راسب':'Fail','منتظم':'Regular',
+  'مدربون سابقون':'Former Trainers','سابق':'Former',
+  'إضافة الحسابات':'Manage Accounts','الإعدادات':'Settings','لوحة المتابعة':'Dashboard','إدارة المقررات':'Course Management',
+  'الطلبات والموافقات':'Requests & Approvals','التقارير':'Reports','الجدول':'Schedule','الرئيسية':'Home',
+  'مقرراتي':'My Courses','أدائي':'My Performance','الخدمات':'Services','السجل التدريبي':'Training Record','المرفقات':'Attachments','ملفي':'My Profile',
+  'قوائم الفصول':'Class Lists','تسجيل الحضور':'Attendance','رصد الدرجات':'Grades Entry',
+  'تقديم طلب جديد':'Submit New Request','نوع الطلب':'Request Type','التفاصيل / السبب':'Details / Reason',
+  'اكتب تفاصيل طلبك هنا...':'Write your request details here...','إرسال الطلب':'Submit Request','طلباتي':'My Requests',
+  'لا توجد طلبات سابقة':'No previous requests','معتمد نهائياً':'Fully Approved','قيد المراجعة':'Under Review','مرفوض':'Rejected',
+  'ورقة تعريف بالمتدرب':'Trainee Enrollment Letter','ورقة تعريف':'Enrollment Letter','عذر غياب':'Absence Excuse',
+  'قدّم طلبك وسيمر على المشرف الأكاديمي ثم مدير الأكاديمية للاعتماد':'Submit your request; it will pass to the academic supervisor then the academy director for approval',
+  'المشرف: معتمد':'Supervisor: Approved','المدير: معتمد':'Director: Approved','آخر إجراء:':'Last action:',
+  'تم إرسال الطلب':'Request submitted','خروج':'Logout','دخول':'Login','إداري':'Admin','مدرب':'Trainer','متدرب':'Trainee'
+};
+Object.assign(TRANSLATIONS.en, EXTRA_EN);
+// أنماط مركّبة (نص + رقم)
+const EN_PATTERNS = [
+  [/^شعبة\s+(.+)$/,'Section $1'],[/^🏫 شعبة\s+(.+)$/,'🏫 Section $1'],
+  [/^غياب\s+(\d+)%$/,'Absence $1%'],[/^درجة\s+(\d+)%$/,'Grade $1%'],
+  [/^(\d+)\s*حالة$/,'$1 cases'],[/^(\d+)\s*متدرب$/,'$1 trainees'],[/^(\d+)\s*مقرر$/,'$1 courses'],
+  [/^متوسط\s+(\d+)%$/,'Average $1%'],[/^أعلى\s+(\d+)%$/,'Highest $1%'],
+  [/^الإنجاز:\s*(\d+)%$/,'Achievement: $1%'],[/^الغياب:\s*(\d+)%(.*)$/,'Absence: $1%$2'],[/^التقدير:\s*(.+)$/,'Grade: $1']
+];
+
 let currentLang = 'ar';
 
+function txText(txt){
+  const t=TRANSLATIONS[currentLang]||{};
+  if(t[txt]!==undefined)return t[txt];
+  if(currentLang==='en'){
+    for(const [re,rep] of EN_PATTERNS){const m=txt.match(re);if(m)return txt.replace(re,rep);}
+  }
+  return null;
+}
+function translateNode(root){
+  if(currentLang!=='en')return;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null);
+  let n;const nodes=[];
+  while(n=walker.nextNode())nodes.push(n);
+  nodes.forEach(node=>{
+    const raw=node.textContent;const txt=raw.trim();
+    if(!txt)return;
+    const tr=txText(txt);
+    if(tr!==null)node.textContent=raw.replace(txt,tr);
+  });
+  (root.querySelectorAll?[...root.querySelectorAll('[placeholder],[title]')]:[]).forEach(el=>{
+    ['placeholder','title'].forEach(a=>{
+      const v=el.getAttribute&&el.getAttribute(a);
+      if(v){const tr=txText(v.trim());if(tr!==null)el.setAttribute(a,tr);}
+    });
+  });
+}
+let _txObserver=null;
+function startTxObserver(){
+  if(_txObserver)return;
+  _txObserver=new MutationObserver(muts=>{
+    if(currentLang!=='en')return;
+    muts.forEach(m=>{
+      m.addedNodes.forEach(nd=>{
+        if(nd.nodeType===1)translateNode(nd);
+        else if(nd.nodeType===3){const txt=nd.textContent.trim();if(txt){const tr=txText(txt);if(tr!==null)nd.textContent=nd.textContent.replace(txt,tr);}}
+      });
+    });
+  });
+  _txObserver.observe(document.body,{childList:true,subtree:true});
+}
 function translateTo(lang){
   currentLang = lang;
-  const t = TRANSLATIONS[lang];
-  // ترجمة شاملة لكل النصوص
-  document.querySelectorAll('*').forEach(el=>{
-    if(el.children.length === 0 && el.textContent.trim()){
-      const txt = el.textContent.trim();
-      if(t[txt] !== undefined) el.textContent = t[txt];
-    }
-  });
-  // ترجمة placeholders
-  document.querySelectorAll('input[placeholder]').forEach(el=>{
-    const ph = el.getAttribute('placeholder');
-    if(t[ph]) el.setAttribute('placeholder', t[ph]);
-  });
-  // غير اتجاه الصفحة
   document.documentElement.dir = lang==='en' ? 'ltr' : 'rtl';
   document.documentElement.lang = lang;
-  // حفظ اللغة
+  document.body.classList.toggle('lang-en', lang==='en');
   localStorage.setItem('bla_lang', lang);
-  // أغلق القائمة
-  document.getElementById('txMenu').style.display='none';
+  const menu=document.getElementById('txMenu');if(menu)menu.style.display='none';
   const btn=document.getElementById('txBtn');
-  btn.innerHTML = lang==='en' ? '🇸🇦' : '🌐';
-  btn.style.background='rgba(13,29,48,0.95)';
-  btn.style.borderColor='rgba(100,160,220,0.25)';
-  // إعادة بناء الصفحة بالترجمة
+  if(btn){btn.innerHTML = lang==='en' ? '🇸🇦' : '🌐';btn.style.background='rgba(13,29,48,0.95)';btn.style.borderColor='rgba(100,160,220,0.25)';}
+  // إعادة بناء الواجهة ثم ترجمتها بالكامل
   try{if(typeof user !== 'undefined' && user && typeof showApp === 'function') showApp();}catch(e){}
+  if(lang==='en'){startTxObserver();translateNode(document.body);}
 }
 
-// استرجاع اللغة
 document.addEventListener('DOMContentLoaded',()=>{
   const savedLang = localStorage.getItem('bla_lang');
-  if(savedLang && savedLang !== 'ar') setTimeout(()=>translateTo(savedLang), 500);
+  if(savedLang==='en') setTimeout(()=>translateTo('en'), 500);
 });
 
 function toggleTx(){
