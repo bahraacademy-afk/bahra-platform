@@ -5855,6 +5855,46 @@ const EN_PATTERNS = [
   [/^الإنجاز:\s*(\d+)%$/,'Achievement: $1%'],[/^الغياب:\s*(\d+)%(.*)$/,'Absence: $1%$2'],[/^التقدير:\s*(.+)$/,'Grade: $1']
 ];
 
+
+Object.assign(TRANSLATIONS.en, {
+  'لوحة المتابعة المركزية':'Central Dashboard','⚙️ لوحة المتابعة المركزية':'⚙️ Central Dashboard',
+  'مشرف أكاديمي':'Academic Supervisor','مدير الأكاديمية':'Academy Director','مشرف أكاديمي – براء الفران':'Academic Supervisor – Baraa Alfarran',
+  'مؤشرات الأداء (KPI)':'Performance Indicators (KPI)','كل الشعب':'All Sections',
+  'حالة تحتاج متابعة فورية':'cases need immediate follow-up','الداشبورد والأوائل':'Dashboard & Top Performers',
+  'متوسط الدرجات حسب الشعبة':'Average Grade by Section','أفضل 5 متدربين':'Top 5 Trainees','الأوائل':'Top Performers',
+  'توزيع الحالات':'Cases Distribution','معدل الغياب':'Absence Rate','نسبة الحضور':'Attendance Rate',
+  'إحصائيات عامة':'General Statistics','آخر تحديث':'Last updated','تحديث':'Refresh','بحث':'Search','بحث...':'Search...',
+  'الكل':'All','عرض':'View','تعديل':'Edit','حذف':'Delete','حفظ':'Save','إرسال':'Send','تأكيد':'Confirm','رجوع':'Back',
+  'اليوم':'Today','الأسبوع':'Week','الشهر':'Month','السنة':'Year',
+  'الأحد':'Sunday','الاثنين':'Monday','الثلاثاء':'Tuesday','الأربعاء':'Wednesday','الخميس':'Thursday','الجمعة':'Friday','السبت':'Saturday',
+  'صباحاً':'AM','مساءً':'PM','ساعة':'hour','ساعات':'hours','يوم':'day','أيام':'days',
+  'الفصل التدريبي':'Training Term','الأول':'First','الثاني':'Second','الثالث':'Third','الرابع':'Fourth','الخامس':'Fifth',
+  'ترم أول':'First Term','ترم ثاني':'Second Term','ترم صيفي':'Summer Term',
+  'رقم الجوال':'Mobile Number','البريد الإلكتروني':'Email','الرمز السري':'Password','الرقم التدريبي':'Training ID',
+  'التخصص':'Specialization','تقنية الألكترونيات الصناعية وتحكم':'Industrial Electronics & Control Technology',
+  'تقنية الألكترونيات الصناعية والتحكم':'Industrial Electronics & Control Technology',
+  'حساب جديد':'New Account','إضافة حساب':'Add Account','إضافة متدرب':'Add Trainee','إضافة مدرب':'Add Trainer','إضافة إداري':'Add Admin',
+  'الإداريون':'Admins','مدير':'Director','مشرف':'Supervisor',
+  'تسجيل الدخول':'Login','تذكرني':'Remember me','نسيت الرقم السري؟':'Forgot password?',
+  'مرحباً بك في':'Welcome to','معهد المعرفة والإبداع العالي للتدريب':'Training Institute for Higher Knowledge and Creativity',
+  'أكاديمية بحرة للتعلم':'Bahra Learning Academy','منصة بحرة التعليمية':'Bahra Learning Platform',
+  'جاري التحميل...':'Loading...','جاري الحفظ...':'Saving...','تم الحفظ':'Saved','تم بنجاح':'Done successfully',
+  'حدث خطأ':'An error occurred','تعذّر الاتصال':'Connection failed','لا توجد بيانات':'No data',
+  'الطلبات المعلقة':'Pending Requests','طلبات معلقة':'Pending requests','معتمد':'Approved','معلق':'Pending',
+  'اعتماد':'Approve','رفض':'Reject','السبب':'Reason','التاريخ':'Date','النوع':'Type',
+  'حضور':'Present','غائب':'Absent','متأخر':'Late','بعذر':'Excused',
+  'رصد':'Record','درجة':'Grade','الدرجة':'Grade','الدرجات':'Grades','النهائي':'Final','النصفي':'Midterm','أعمال السنة':'Coursework',
+  'الملف الشخصي':'Profile','تغيير الرقم السري':'Change Password','اللغة':'Language','المظهر':'Theme','فاتح':'Light','داكن':'Dark'
+});
+EN_PATTERNS.push(
+  [/^الشعبة\s+(.+)$/,'Section $1'],
+  [/^(\d+)\s*حالة تحتاج متابعة فورية$/,'$1 cases need immediate follow-up'],
+  [/^(\d+)\s*متدرب\s*·\s*(\d+)%$/,'$1 trainees · $2%'],
+  [/^الشعبة\s+(\d+)\s*·\s*(\d+)\s*متدرب\s*·\s*(\d+)%$/,'Section $1 · $2 trainees · $3%'],
+  [/^(\d+)\s*طلب$/,'$1 requests'],[/^(\d+)\s*إشعار$/,'$1 alerts'],
+  [/^منذ\s+(.+)$/,'$1 ago'],[/^قبل\s+(.+)$/,'$1 ago']
+);
+
 let currentLang = 'ar';
 
 function txText(txt){
@@ -5865,6 +5905,9 @@ function txText(txt){
   }
   return null;
 }
+// سجلّ الأصول العربية للاسترجاع الكامل عند العودة للعربية
+let _txNodes=[];   // {node, orig}
+let _txAttrs=[];   // {el, attr, orig}
 function translateNode(root){
   if(currentLang!=='en')return;
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null);
@@ -5874,14 +5917,26 @@ function translateNode(root){
     const raw=node.textContent;const txt=raw.trim();
     if(!txt)return;
     const tr=txText(txt);
-    if(tr!==null)node.textContent=raw.replace(txt,tr);
+    if(tr!==null){
+      if(node._txOrig===undefined){node._txOrig=raw;_txNodes.push(node);}
+      node.textContent=raw.replace(txt,tr);
+    }
   });
   (root.querySelectorAll?[...root.querySelectorAll('[placeholder],[title]')]:[]).forEach(el=>{
     ['placeholder','title'].forEach(a=>{
       const v=el.getAttribute&&el.getAttribute(a);
-      if(v){const tr=txText(v.trim());if(tr!==null)el.setAttribute(a,tr);}
+      if(v){const tr=txText(v.trim());
+        if(tr!==null){
+          if(!el['_txOrig_'+a]){el['_txOrig_'+a]=v;_txAttrs.push({el,attr:a});}
+          el.setAttribute(a,tr);
+        }}
     });
   });
+}
+function restoreArabic(){
+  _txNodes.forEach(node=>{try{if(node._txOrig!==undefined){node.textContent=node._txOrig;delete node._txOrig;}}catch(e){}});
+  _txAttrs.forEach(({el,attr})=>{try{const o=el['_txOrig_'+attr];if(o){el.setAttribute(attr,o);delete el['_txOrig_'+attr];}}catch(e){}});
+  _txNodes=[];_txAttrs=[];
 }
 let _txObserver=null;
 function startTxObserver(){
@@ -5891,7 +5946,7 @@ function startTxObserver(){
     muts.forEach(m=>{
       m.addedNodes.forEach(nd=>{
         if(nd.nodeType===1)translateNode(nd);
-        else if(nd.nodeType===3){const txt=nd.textContent.trim();if(txt){const tr=txText(txt);if(tr!==null)nd.textContent=nd.textContent.replace(txt,tr);}}
+        else if(nd.nodeType===3){const txt=nd.textContent.trim();if(txt){const tr=txText(txt);if(tr!==null){if(nd._txOrig===undefined){nd._txOrig=nd.textContent;_txNodes.push(nd);}nd.textContent=nd.textContent.replace(txt,tr);}}}
       });
     });
   });
@@ -5906,9 +5961,14 @@ function translateTo(lang){
   const menu=document.getElementById('txMenu');if(menu)menu.style.display='none';
   const btn=document.getElementById('txBtn');
   if(btn){btn.innerHTML = lang==='en' ? '🇸🇦' : '🌐';btn.style.background='rgba(13,29,48,0.95)';btn.style.borderColor='rgba(100,160,220,0.25)';}
-  // إعادة بناء الواجهة ثم ترجمتها بالكامل
-  try{if(typeof user !== 'undefined' && user && typeof showApp === 'function') showApp();}catch(e){}
-  if(lang==='en'){startTxObserver();translateNode(document.body);}
+  if(lang==='en'){
+    startTxObserver();
+    translateNode(document.body);
+  }else{
+    // ⭐ العودة للعربية: استرجاع كل النصوص الأصلية المحفوظة
+    restoreArabic();
+    try{if(typeof user !== 'undefined' && user && typeof showApp === 'function') showApp();}catch(e){}
+  }
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
