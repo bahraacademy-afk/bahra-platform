@@ -5895,6 +5895,76 @@ EN_PATTERNS.push(
   [/^منذ\s+(.+)$/,'$1 ago'],[/^قبل\s+(.+)$/,'$1 ago']
 );
 
+
+Object.assign(TRANSLATIONS.en, {
+  'مولّد الجدول الأوتوماتيكي':'Automatic Schedule Generator','تعبئة ذكية من الأحد · أوقات مبكرة · قابل للتعديل بالسحب':'Smart fill from Sunday · early times · drag to edit',
+  'عدد الأيام':'Days Count','حصص باليوم':'Sessions/Day','ساعة الحصة':'Session Hours','بداية الدوام':'Day Start','بداية الاستراحة':'Break Start','مدة الاستراحة (ساعة)':'Break Duration (hr)',
+  'ولّد كل الشعب':'Generate All Sections','حفظ الجدول':'Save Schedule','طباعة تقرير':'Print Report','استراحة':'Break',
+  'معمل الإلكترونيات':'Electronics Lab','معمل الحاسب':'Computer Lab','قاعة':'Room','ورشة':'Workshop',
+  'جميع المتدربين':'All Trainees','ابحث بالاسم أو الرقم...':'Search by name or ID...','الجوال':'Mobile',
+  'المقررات الحالية':'Current Courses','متوسط':'Average','متوسط الغياب':'Avg Absence','محرومون':'Deprived',
+  'اضغط على أي مقرر لعرض تفاصيل المتدربين المسجّلين فيه':'Click any course to view enrolled trainees',
+  'المواد التي يدرسها المتدريون هذا الترم':'Courses trainees are studying this term','المواد التي يدرسها المتدربون هذا الترم':'Courses trainees are studying this term',
+  'إدارة المقررات':'Course Management','الخطة الدراسية وتسجيل المتدربين – يدعم تخصصات متعددة':'Study plan & enrollment – multi-specialization',
+  'إنهاء ترم دراسي':'End Academic Term','إنهاء الترم المحدد':'End Selected Term','Select term to end':'Select term to end',
+  'عند انتهاء ترم، حوّل كل مواده إلى "سابق" (منتهية) بضغطة – تنتقل للتاريخ الأكاديمي وتخرج من المواد الحالية':'When a term ends, convert all its courses to "Former" (finished) with one click – they move to academic history and leave current courses',
+  'كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ – واتركه فارغاً ليصلح لكل التخصصات':'Each course can be linked to multiple specializations via edit ✏️ – leave empty to apply to all',
+  'تسجيل جماعي ذكي':'Smart Bulk Enrollment','اختر الشعبة لترى المواد المنتهية والحالية والباقية. ثم سجّل المتدربين في المواد الباقية':'Select a section to see finished, current and remaining courses, then enroll trainees in remaining ones',
+  'تحديد الكل':'Select All','باقية':'Remaining','حالية':'Current','منتهية':'Finished',
+  'المدرب (لكل المواد المختارة)':'Trainer (for all selected courses)','— اختر المدرب —':'— Select Trainer —',
+  'النصف المجزأ':'Half Split','النصف الأول':'First Half','النصف الثاني':'Second Half','غير محدد':'Unspecified',
+  'تسجيل المحددين دفعة واحدة':'Enroll Selected at Once',
+  'الطلبات والموافقات':'Requests & Approvals','المشرف الأكاديمي – المراجعة الأولى':'Academic Supervisor – First Review',
+  'مدير الأكاديمية – الاعتماد النهائي':'Academy Director – Final Approval','بانتظار اعتمادك':'Awaiting Your Approval',
+  'لا توجد طلبات بانتظار اعتمادك':'No requests awaiting your approval','كل الطلبات':'All Requests',
+  'الاشعارات الأكاديمية':'Academic Alerts','حالات المتدربين مجمّعة حسب المواد':'Trainee cases grouped by course',
+  'راسبون (متطلبات)':'Failed (Prerequisites)','محرومون (غياب)':'Deprived (Absence)','ضعفاء':'Weak','إنذار غياب':'Absence Warning',
+  'راسبون':'Failed','متطلب':'Prerequisite','رسوب':'Fail',
+  'نظم اتصالات':'Communication Systems','التدريب التعاوني':'Cooperative Training','لغة إنجليزية':'English Language',
+  'مقدمة تطبيقات الحاسب':'Intro to Computer Applications','الرياضيات':'Mathematics','ورشة تأهيلية':'Preparatory Workshop',
+  'سلامة صناعية':'Industrial Safety','الفيزياء':'Physics','الكيمياء':'Chemistry','دوائر رقمية':'Digital Circuits',
+  'دوائر إلكترونية':'Electronic Circuits','دوائر الكترونية':'Electronic Circuits','عناصر الكترونية':'Electronic Components','عناصر إلكترونية':'Electronic Components',
+  'تحكم آلي':'Automatic Control','التحليل الهندسي':'Engineering Analysis','تحليل هندسي':'Engineering Analysis',
+  'هندسة كهربائية':'Electrical Engineering','حساسات ومبدلات':'Sensors & Transducers','الكتابة الفنية':'Technical Writing',
+  'التوجيه المهني':'Career Guidance','التوجيه المهني والتميز':'Career Guidance & Excellence','الرياضيات التطبيقية':'Applied Mathematics',
+  'اللياقة البدنية':'Physical Fitness','الرياضيات (1)':'Mathematics (1)','الثقافة الإسلامية':'Islamic Culture','اللغة العربية':'Arabic Language',
+  'مواد حالية':'Current courses','موزّعة':'placed','تحتاج':'needs',
+  'ص':'AM','م':'PM','الحصة':'Period','حصة':'session','حصص':'sessions',
+  'إضافة متدرب':'Add Trainee','إضافة مدرب':'Add Trainer','مشرف أكاديمي – براء الفران':'Academic Supervisor – Baraa Alfarran'
+});
+EN_PATTERNS.push(
+  [/^جميع المتدربين\s*\((\d+)\)$/,'All Trainees ($1)'],
+  [/^كل الطلبات\s*\((\d+)\)$/,'All Requests ($1)'],
+  [/^الخطة الدراسية\s*\((\d+)\s*مقرر\)$/,'Study Plan ($1 courses)'],
+  [/^متدربو الشعبة\s+(\d+)\s*\((\d+)\s*محدد\)$/,'Section $1 Trainees ($2 selected)'],
+  [/^مواد الشعبة\s+(\d+)\s*\((\d+)\s*محدد\)$/,'Section $1 Courses ($2 selected)'],
+  [/^تحديد كل الشعبة\s*\((\d+)\)$/,'Select whole section ($1)'],
+  [/^المواد الباقية\s*\((\d+)\)\s*[–-]\s*متاحة للتسجيل$/,'Remaining Courses ($1) – available to enroll'],
+  [/^المواد الحالية\s*\((\d+)\)$/,'Current Courses ($1)'],
+  [/^المواد المنتهية\s*\((\d+)\)$/,'Finished Courses ($1)'],
+  [/^راسبون\s*\((\d+)\)$/,'Failed ($1)'],
+  [/^إنذار غياب\s*\((\d+)\)$/,'Absence Warnings ($1)'],
+  [/^ضعفاء\s*\((\d+)\)$/,'Weak ($1)'],
+  [/^محرومون\s*\((\d+)\)$/,'Deprived ($1)'],
+  [/^غياب\s+(\d+)%\s*·\s*إنذار أول$/,'Absence $1% · First Warning'],
+  [/^غياب\s+(\d+)%\s*·\s*إنذار ثانٍ$/,'Absence $1% · Second Warning'],
+  [/^غياب\s+(\d+)%\s*·\s*حرمان$/,'Absence $1% · Deprivation'],
+  [/^ورقة تعريف\s*[–-]\s*(.+)$/,'Enrollment Letter – $1'],
+  [/^عذر غياب\s*[–-]\s*(.+)$/,'Absence Excuse – $1'],
+  [/^الحصة\s+(\d+)$/,'Period $1'],
+  [/^(\d+):(\d+)\s*ص\s*-\s*(\d+):(\d+)\s*ص$/,'$1:$2 AM - $3:$4 AM'],
+  [/^(\d+):(\d+)\s*ص\s*-\s*(\d+):(\d+)\s*م$/,'$1:$2 AM - $3:$4 PM'],
+  [/^(\d+):(\d+)\s*م\s*-\s*(\d+):(\d+)\s*م$/,'$1:$2 PM - $3:$4 PM'],
+  [/^(\d+)\s*مقرر\s*·\s*(\d+)\s*متدرب$/,'$1 courses · $2 trainees'],
+  [/^متوسط\s*(\d+)%$/,'Average $1%'],
+  [/^ترم صيفي\s+(.+)$/,'Summer Term $1'],[/^ترم أول\s+(.+)$/,'First Term $1'],[/^ترم ثاني\s+(.+)$/,'Second Term $1'],
+  [/^لغة إنجليزية\s*\((\d+)\)$/,'English Language ($1)'],
+  [/^التدريب التعاوني\s*\((\d+)\)$/,'Cooperative Training ($1)'],
+  [/^هندسة كهربائية\s*\((\d+)\)$/,'Electrical Engineering ($1)'],
+  [/^(.+)\s*\((\d+)\s*حصص\)\s*·\s*(.+)$/,'$1 ($2 sessions) · $3'],
+  [/^مواد حالية · تحتاج\s+(\d+)\s*حصة · (\d+)\s*موزّعة\s*(\d+)$/,'Current courses · needs $1 sessions · $2 placed $3']
+);
+
 let currentLang = 'ar';
 
 function txText(txt){
