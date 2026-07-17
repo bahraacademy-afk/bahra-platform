@@ -1170,7 +1170,7 @@ async function loadAdmin(){
   trainersDB=[];
   for(let i=1;i<td.length;i++){
     const r=td[i];
-    if(n0(r[1]))trainersDB.push({id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5])});
+    if(n0(r[1])&&n0(r[5]))trainersDB.push({id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5])});
   }
   // قاعدة الإداريين: A=الرقم B=الاسم C=المسمى D=الجوال E=البريد F=الرقم السري G=الصلاحية
   adminsDB=[];
@@ -2101,8 +2101,8 @@ window.updateNotifBadges=updateNotifBadges;
 
 // ===== STUDENT APP =====
 function buildStudentApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('s',['home','courses','performance','schedule','services','record','attachments','profile']);
-  buildMobNav('s',['home','courses','services','schedule','profile']);
+  document.getElementById('sidebar').innerHTML=navHTML('s',['home','courses','library','performance','schedule','services','record','attachments','profile']);
+  buildMobNav('s',['home','courses','library','schedule','profile']);
   showSPage('home',null);
 }
 
@@ -2121,6 +2121,7 @@ function navHTML(r,pages){
     settings:{icon:'⚙️',lbl:'الإعدادات'},
     record:{icon:'🏅',lbl:'السجل التدريبي'},
     services:{icon:'📝',lbl:'الخدمات'},
+    library:{icon:'📚',lbl:'المكتبة'},
     requests:{icon:'📋',lbl:'الطلبات والموافقات'}
   };
   const ac=r==='s'?'active':r==='t'?'active at':'active aa';
@@ -2128,8 +2129,8 @@ function navHTML(r,pages){
 }
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات'};
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة'};
   const ac=r==='s'?'as':r==='t'?'at':'aa';
   const mn=document.getElementById('mobNav');
   mn.style.display='';
@@ -2175,7 +2176,88 @@ function showSPage(pg,el){
   setTimeout(()=>{mc.style.animation='fadeIn .3s ease';mc.innerHTML=sPgs[pg]?sPgs[pg]():'';animCards();},10);
 }
 
+// ===== المكتبة العلمية (نظري + عملي لكل المقررات) =====
+// scope: مصفوفة أكواد مسموحة (مقررات الطالب)، أو null = كل المقررات
+function buildLibrary(scope, canAdd){
+  const norm=c=>normCode(c);
+  let cats=(catalog||[]).filter(c=>{
+    const m=getCourseMaterials(c.code);
+    const has=m.theory.length||m.practical.length;
+    if(scope){ // الطالب: مقرراته فقط (حتى لو ما فيها مواد نعرضها لكن فاضية)
+      return scope.some(code=>norm(code)===norm(c.code));
+    }
+    return canAdd?true:has; // المدرب/الإداري: الكل (canAdd يعرض حتى الفارغة للإضافة)
+  });
+  // إزالة التكرار بالكود
+  const seen=new Set();cats=cats.filter(c=>{const k=norm(c.code);if(seen.has(k))return false;seen.add(k);return true;});
+  const totalMats=cats.reduce((a,c)=>{const m=getCourseMaterials(c.code);return a+m.theory.length+m.practical.length;},0);
+  const secBlock=(lbl,arr)=>arr.length?`<div style="margin-top:8px"><div style="font-size:11px;color:var(--muted);margin-bottom:5px">${lbl}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${arr.map(matChipHTML).join('')}</div></div>`:'';
+  const cards=cats.map(c=>{
+    const m=getCourseMaterials(c.code);
+    const empty=!m.theory.length&&!m.practical.length;
+    return `<div class="ccard" style="cursor:default">
+      <div class="cc-top"><div><div class="cc-name">${c.name||c.code}</div><div class="cc-meta">${c.code}${c.term?' · '+c.term:''}</div></div>
+        <span class="pill ${empty?'py':'pg'}">${empty?'لا مواد':(m.theory.length+m.practical.length)+' مادة'}</span></div>
+      ${secBlock('📘 نظري',m.theory)}${secBlock('🔧 عملي',m.practical)}
+      ${empty?'<div style="font-size:12px;color:var(--muted);margin-top:8px">لم تُضف مواد لهذا المقرر بعد</div>':''}
+      ${canAdd?`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)"><button class="btn btn-out btn-sm" onclick='libAddMat(${JSON.stringify({code:c.code,name:c.name}).replace(/'/g,"&#39;")})'>➕ أضف مادة علمية</button></div>`:''}
+    </div>`;
+  }).join('');
+  return `
+    <div class="stitle">📚 المكتبة العلمية</div>
+    <div class="alert ab"><span class="aicon">📖</span>${scope?'المواد العلمية لمقرراتك (نظري + عملي)':'كل المواد العلمية لجميع المقررات'} · ${cats.length} مقرر · ${totalMats} مادة</div>
+    ${cats.length?`<div class="cgrid">${cards}</div>`:'<div class="empty"><div class="empty-icon">📭</div>لا توجد مواد علمية بعد</div>'}`;
+}
+// إضافة مادة علمية سريعة (للمدرب/الإداري) — تُدمج مع مواد المقرر الحالية
+function libAddMat(info){
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay';overlay.id='libMatModal';
+  overlay.innerHTML=`<div class="modal" style="max-width:440px">
+    <div class="modal-title"><span>➕ مادة علمية — ${info.name||info.code}</span><button class="modal-close" onclick="document.getElementById('libMatModal').remove()">✕</button></div>
+    <div style="padding:6px 0">
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">النوع</label>
+      <select id="libMatType" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:14px;margin-bottom:12px">
+        <option value="theory">📘 نظري</option><option value="practical">🔧 عملي</option>
+      </select>
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">اسم المادة (اختياري)</label>
+      <input id="libMatTitle" placeholder="مثال: شرح الوحدة الأولى" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:14px;margin-bottom:12px">
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الرابط *</label>
+      <input id="libMatUrl" placeholder="الصق رابط Google Drive أو أي رابط" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:14px">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-out" style="flex:1" onclick="document.getElementById('libMatModal').remove()">إلغاء</button>
+      <button class="btn btn-b" style="flex:1" onclick="libSaveMat('${info.code.replace(/'/g,"\\'")}')">حفظ</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+async function libSaveMat(code){
+  const type=document.getElementById('libMatType').value;
+  const title=document.getElementById('libMatTitle').value.trim();
+  const url=document.getElementById('libMatUrl').value.trim();
+  if(!url){showToast('الصق رابط المادة أولاً','w');return;}
+  const c=(catalog||[]).find(x=>normCode(x.code)===normCode(code));
+  if(!c){showToast('المقرر غير موجود','e');return;}
+  const cur=getCourseMaterials(code);
+  const arr=type==='theory'?cur.theory.slice():cur.practical.slice();
+  arr.push({title,url});
+  const rec={code:c.code,name:c.name,term:c.term,units:c.units,hours:c.hours,specs:c.specs||'',
+    matTheory:type==='theory'?serializeMaterials(arr):serializeMaterials(cur.theory),
+    matPractical:type==='practical'?serializeMaterials(arr):serializeMaterials(cur.practical),
+    oldCode:c.code};
+  showToast('جاري الحفظ...','i');
+  try{
+    const r=await jsonpCall({action:'updateCourse',data:JSON.stringify([rec])});
+    document.getElementById('libMatModal')?.remove();
+    showToast('✅ تمت إضافة المادة','s');
+    if(user.role==='t'){await loadTrainer();showTPage('library',document.getElementById('sn-library'));}
+    else{await loadAdmin();showAPage('library',document.getElementById('sn-library'));}
+  }catch(e){showToast('تعذّر الحفظ — تأكد من نشر Apps Script','e');}
+}
+window.libAddMat=libAddMat;window.libSaveMat=libSaveMat;
+
 const sPgs={
+  library:()=>buildLibrary([...new Set((courses||[]).map(c=>c.code))], false),
   home:()=>{
     const tot=courses.length,avg=avgPct(courses);
     const done=courses.filter(c=>c.pct>=80).length,warn=courses.filter(hasIssue).length;
@@ -2506,8 +2588,8 @@ function filterTerm(grp,val,btn){
 
 // ===== TRAINER APP =====
 function buildTrainerApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('t',['home','students','schedule','attendance','grades','requests','alerts','attachments']);
-  buildMobNav('t',['home','students','attendance','grades','alerts']);
+  document.getElementById('sidebar').innerHTML=navHTML('t',['home','students','library','schedule','attendance','grades','requests','alerts','attachments']);
+  buildMobNav('t',['home','students','library','grades','alerts']);
   showTPage('home',null);
 }
 
@@ -2518,6 +2600,7 @@ function showTPage(pg,el){
 }
 
 const tPgs={
+  library:()=>buildLibrary(null, true),
   requests:()=>{
     // أعذار الغياب لمواد هذا المدرب
     const myCourses=[...new Set(students.map(s=>s.course))];
@@ -3055,8 +3138,8 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','manage_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
-  buildMobNav('a',['overview','all_students','requests','reports','dashboard','accounts','all_courses','schedule','alerts','settings']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','library','manage_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
+  buildMobNav('a',['overview','all_students','library','reports','dashboard','accounts','all_courses','schedule','alerts','settings']);
   showAPage('overview',null);
 }
 
@@ -3637,6 +3720,7 @@ window.buildTVContent=buildTVContent;
 console.log('%c✅ شاشة العرض جاهزة - النسخة الجديدة v51','color:#2ecc71;font-size:14px;font-weight:bold');
 
 const aPgs={
+  library:()=>buildLibrary(null, true),
   manage_courses:()=>{
     const tab=window._mcTab||'plan';
     const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${id}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
@@ -5965,6 +6049,7 @@ EN_PATTERNS.push(
   [/^مواد حالية · تحتاج\s+(\d+)\s*حصة · (\d+)\s*موزّعة\s*(\d+)$/,'Current courses · needs $1 sessions · $2 placed $3']
 );
 
+Object.assign(TRANSLATIONS.en, {'المكتبة':'Library','📚 المكتبة العلمية':'📚 Course Library','المكتبة العلمية':'Course Library','أضف مادة علمية':'Add Material','➕ أضف مادة علمية':'➕ Add Material','مادة علمية':'Material','لا مواد':'No materials','لم تُضف مواد لهذا المقرر بعد':'No materials added for this course yet','لا توجد مواد علمية بعد':'No materials yet','المواد العلمية لمقرراتك (نظري + عملي)':'Materials for your courses (Theory + Practical)','كل المواد العلمية لجميع المقررات':'All materials for all courses','النوع':'Type','اسم المادة (اختياري)':'Material name (optional)','الرابط *':'Link *'});
 let currentLang = 'ar';
 
 function txText(txt){
