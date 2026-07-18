@@ -789,20 +789,16 @@ body{top:0!important}
 </div>
 
 <script>
-const SID='1-H6vwd1M3m1vHnrv1YTHYbhSI0Fxo3pb9JYFaJj8Na8';
-const AKEY='AIzaSyC8Jjt-sC0JzZS-7hsvPJJf_AA3a_td5wA';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzUjN_YbqxWBLGOLdn3-CX5RWuk8OEkGFnq2dkAIDgTH-bUzT8QBpzGPQ_laiOZXPfl/exec';
+const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخادم)
+const AKEY=''; // أُزيل مفتاح API نهائيًا
+// جلسة الدخول (توكن موقّع من الخادم)
+let SESSION={token: localStorage.getItem('bla_token')||''};
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby0hfxanInvE0PvTKYhT-l7-nAmytEmvV-JbCyVsooHh3GTzJTDpHFlfhgD-NVMrvKl/exec';
+const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
 const OTP_ENABLED=false;
-const ADMIN=[
-  {id:'admin',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
-  {id:'1806328',ph:'568696450',name:'م. براء الفران',title:'مشرف أكاديمي',level:'supervisor'},
-  {id:'1805468',ph:'534821578',name:'هشام نبيه',title:'مدير الأكاديمية',level:'director'},
-  {id:'admin2',ph:'000000001',name:'إداري احتياط 1',title:'مشرف أكاديمي',level:'supervisor'},
-  {id:'admin3',ph:'000000002',name:'إداري احتياط 2',title:'مشرف أكاديمي',level:'supervisor'},
-  {id:'admin4',ph:'000000003',name:'إداري احتياط 3',title:'مدير الأكاديمية',level:'director'},
-  {id:'admin5',ph:'000000004',name:'إداري احتياط 4',title:'مدير الأكاديمية',level:'director'}
-];
+const ADMIN=[]; // التحقق صار في الخادم
+
 
 let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
@@ -829,19 +825,14 @@ function num(v){
 }
 
 async function fetchSheet(range){
-  const ctrl=new AbortController();
-  const t=setTimeout(()=>ctrl.abort(),8000);
-  try{
-    const r=await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SID}/values/${encodeURIComponent(range)}?key=${AKEY}`,{signal:ctrl.signal});
-    clearTimeout(t);
-    if(!r.ok)throw new Error(r.status);
-    const d=await r.json();
-    return d.values||[];
-  }catch(e){clearTimeout(t);throw e;}
+  const d=await jsonpTo(AUTH_URL,{action:'getSheet',range:range,token:SESSION.token});
+  if(d&&d.ok===false){ if(d.error==='invalid_token') throw new Error('session'); return []; }
+  return (d&&d.values)||[];
 }
 
 // ===== JSONP عام (للطلبات التي تحتاج رد من Apps Script) =====
 function jsonpCall(params){
+  params=Object.assign({token:SESSION.token},params);
   return new Promise((resolve,reject)=>{
     const cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1000);
     const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},15000);
@@ -857,6 +848,18 @@ function jsonpCall(params){
     s.src=SCRIPT_URL+'?'+qs+'&callback='+cb;
     s.onerror=()=>{clearTimeout(timer);delete window[cb];reject(new Error('network'))};
     document.head.appendChild(s);
+  });
+}
+function jsonpTo(url,params){
+  return new Promise((resolve,reject)=>{
+    const cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},15000);
+    window[cb]=(d)=>{clearTimeout(timer);delete window[cb];document.getElementById('jsonp_'+cb)?.remove();resolve(d);};
+    const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+    const sc=document.createElement('script');
+    sc.id='jsonp_'+cb; sc.src=url+'?'+qs+'&callback='+cb;
+    sc.onerror=()=>{clearTimeout(timer);delete window[cb];reject(new Error('network'))};
+    document.head.appendChild(sc);
   });
 }
 
@@ -913,70 +916,16 @@ async function doLogin(){
   document.getElementById('lbtn').disabled=true;
   document.getElementById('ldg').style.display='block';
   try{
-    if(role==='a'){
-      let f=null;
-      // أولاً: ابحث في تبويب قاعدة بيانات الاداريين
-      // A=الرقم الوظيفي B=الاسم C=المسمى D=الجوال E=البريد F=الرقم السري G=الصلاحية
-      try{
-        const rows=await fetchSheet('قاعدة بيانات الاداريين!A:G');
-        for(let i=1;i<rows.length;i++){
-          const r=rows[i];
-          if(!r[0])continue;
-          const pw=norm(r[5])||norm(r[3]); // الرقم السري (F)، وإن فضي فالجوال (D)
-          if(n0(r[0])===sid&&(pw===sph||norm(r[3])===sph)){
-            const lvl=n0(r[6]).includes('مدير')?'director':'supervisor';
-            f={id:n0(r[0]),name:n0(r[1]),title:n0(r[2])||'إداري',ph:n0(r[3]),email:n0(r[4]),level:lvl,role:'a'};
-            break;
-          }
-        }
-      }catch(e){/* لو التبويب غير موجود نكمل للاحتياط */}
-      // احتياط: حسابات الكود الثابتة
-      if(!f){
-        const a=ADMIN.find(a=>norm(a.id)===norm(sid)&&norm(a.ph)===sph);
-        if(a)f={...a,role:'a'};
-      }
-      if(!f)throw new Error('not found');
-      user=f;
-    } else if(role==='t'){
-      const rows=await fetchSheet('قاعدة بيانات المدربين!A:F');
-      let f=null;
-      for(let i=1;i<rows.length;i++){
-        const r=rows[i];
-        if(!r[0])continue;
-        const secret=norm(r[5]); // العمود F = الرمز السري
-        const phone=norm(r[3]);  // العمود D = الجوال
-        const pwOK=secret?(secret===sph||secret===norm('0'+sph)):(phone===sph||phone===norm('0'+sph));
-        if(n0(r[0])===sid&&pwOK){
-          f={id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),role:'t'};break;
-        }
-      }
-      if(!f)throw new Error('not found');
-      user=f;
-    } else {
-      const rows=await fetchSheet('قاعدة بيانات مركزي!A:I');
-      let f=null;
-      for(let i=1;i<rows.length;i++){
-        const r=rows[i];
-        if(!r[0])continue;
-        const secret=norm(r[7]); // العمود H = الرمز السري
-        const phone=norm(r[4]);  // العمود E = الجوال
-        const pwOK=secret?(secret===sph||secret===norm('0'+sph)):(phone===sph||phone===norm('0'+sph));
-        if(n0(r[0])===sid&&pwOK){
-          f={id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),join:n0(r[8]),role:'s'};break;
-        }
-      }
-      if(!f)throw new Error('not found');
-      user=f;
-    }
-    // ✅ نجح التحقق من كلمة السر — الآن نتحقق من الجهاز (2FA)
+    const d=await jsonpTo(AUTH_URL,{action:'login',role:role,id:sid,pw:sph});
+    if(!d||!d.ok) throw new Error('bad');
+    SESSION.token=d.token;
+    localStorage.setItem('bla_token',d.token);
+    user=Object.assign({role:role},d.user);
     if(!OTP_ENABLED||isDeviceTrusted(user.id)){
-      // OTP معطّل أو جهاز موثوق → دخول مباشر
       await loadUserData();
       finishLogin();
     }else{
-      // جهاز جديد → أرسل رمز للإيميل
       if(!user.email||!user.email.includes('@')){
-        // ما عنده إيميل صالح → دخول بدون 2FA (مع تنبيه)
         await loadUserData();
         finishLogin();
         setTimeout(()=>showToast('⚠️ ما عندك إيميل مسجّل — يُنصح بإضافته للأمان','w'),800);
@@ -1003,6 +952,7 @@ async function loadUserData(){
 function finishLogin(){
   localStorage.setItem('bla_user', JSON.stringify(user));
   localStorage.setItem('bla_role', role);
+  if(SESSION.token) localStorage.setItem('bla_token', SESSION.token);
   showApp();
 }
 
@@ -1641,7 +1591,7 @@ async function saveSchedule(){
   // حفظ مباشر بدون تأكيد — الشعب الفاضية تظهر "ما عندك جدول" للطالب/المدرب
   showToast('جاري حفظ الجدول...','i');
   try{
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveSchedule',records,config:schedConfig}),headers:{'Content-Type':'text/plain'}});
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveSchedule',records,config:schedConfig}),headers:{'Content-Type':'text/plain'}});
     showToast(`✅ تم حفظ الجدول (${filledGrps.length} شعبة) — يقدر الطلاب والمدربين يشوفونه`,'s');
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
@@ -3031,7 +2981,7 @@ async function saveAttendance(course){
   if(!records.length){showToast('لم تُدخل أي ساعات غياب','w');return}
   showToast('جاري الحفظ...','i');
   try{
-    const url=SCRIPT_URL+'?action=saveAttendance&data='+encodeURIComponent(JSON.stringify(records));
+    const url=SCRIPT_URL+'?action=saveAttendance&data='+encodeURIComponent(JSON.stringify(records))+'&token='+encodeURIComponent(SESSION.token);
     await new Promise((resolve,reject)=>{
       const cb='cb_'+Date.now();
       window[cb]=(d)=>{
@@ -3049,7 +2999,7 @@ async function saveAttendance(course){
     showToast('✅ تم حفظ الحضور في الشيت','s');
   }catch(e){
     try{
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveAttendance',records}),headers:{'Content-Type':'text/plain'}});
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveAttendance',records}),headers:{'Content-Type':'text/plain'}});
       showToast('✅ تم إرسال الحضور','s');
     }catch(e2){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
   }
@@ -3072,7 +3022,7 @@ async function saveGrades(course){
   if(!records.length){showToast('لم يتم إدخال أي درجات','w');return}
   showToast('جاري الحفظ...','i');
   try{
-    const url=SCRIPT_URL+'?action=saveGrades&data='+encodeURIComponent(JSON.stringify(records));
+    const url=SCRIPT_URL+'?action=saveGrades&data='+encodeURIComponent(JSON.stringify(records))+'&token='+encodeURIComponent(SESSION.token);
     await new Promise((resolve,reject)=>{
       const cb='cb_'+Date.now();
       window[cb]=(d)=>{
@@ -3091,7 +3041,7 @@ async function saveGrades(course){
   }catch(e){
     // fallback - no-cors
     try{
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveGrades',records}),headers:{'Content-Type':'text/plain'}});
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveGrades',records}),headers:{'Content-Type':'text/plain'}});
       showToast('✅ تم إرسال الدرجات','s');
     }catch(e2){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
   }
@@ -4453,6 +4403,8 @@ function filterSt(){
 function doLogout(){
   localStorage.removeItem('bla_user');
   localStorage.removeItem('bla_role');
+  localStorage.removeItem('bla_token');
+  SESSION.token='';
   user=null;courses=[];students=[];allCourses=[];files={};attendanceData={};gradesData={};
   document.getElementById('appShell').style.display='none';
   document.getElementById('loginPage').style.display='flex';
@@ -4504,7 +4456,9 @@ async function restoreSession(){
   try{
     const savedUser=localStorage.getItem('bla_user');
     const savedRole=localStorage.getItem('bla_role');
-    if(!savedUser||!savedRole){hideSplash();return;}
+    const savedTok=localStorage.getItem('bla_token');
+    if(!savedUser||!savedRole||!savedTok){hideSplash();return;}
+    SESSION.token=savedTok;
     const u=JSON.parse(savedUser);
     role=savedRole;
     currentUser=u;
@@ -5306,7 +5260,7 @@ async function submitNewUser(type){
   try{
     await fetch(SCRIPT_URL,{
       method:'POST',mode:'no-cors',
-      body:JSON.stringify({action:'addUser',records}),
+      body:JSON.stringify({token:SESSION.token,action:'addUser',records}),
       headers:{'Content-Type':'text/plain'}
     });
     showToast(`✅ تمت إضافة ${name} بنجاح`,'s');
@@ -5414,7 +5368,7 @@ async function submitRequest(){
     exCode,exHours,exDates,trnStatus:type==='عذر غياب'?'معلق':'—',fileData,fileName};
   showToast('جاري إرسال الطلب...','i');
   try{
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'addRequest',records:[rec]}),headers:{'Content-Type':'text/plain'}});
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'addRequest',records:[rec]}),headers:{'Content-Type':'text/plain'}});
     showToast('✅ تم إرسال طلبك بنجاح','s');
     delete rec.fileData; // ما نحتفظ بالـ base64 بالذاكرة
     requests.unshift(rec);
@@ -5462,10 +5416,10 @@ async function actOnRequest(rid,decision){
   }
   showToast('جاري الحفظ...','i');
   try{
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'updateRequest',records:[payload]}),headers:{'Content-Type':'text/plain'}});
+    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'updateRequest',records:[payload]}),headers:{'Content-Type':'text/plain'}});
     // لو فيه خصم ساعات، احفظ النسبة الجديدة في سجل المقررات
     if(excuseInfo){
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({action:'saveAttendance',records:[excuseInfo]}),headers:{'Content-Type':'text/plain'}});
+      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveAttendance',records:[excuseInfo]}),headers:{'Content-Type':'text/plain'}});
       showToast('✅ تم الاعتماد وخصم ساعات الغياب','s');
     }else{
       showToast(decision==='معتمد'?'✅ تم الاعتماد':'تم الرفض','s');
