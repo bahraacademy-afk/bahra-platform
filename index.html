@@ -10,6 +10,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="معهد المعرفة والإبداع">
 <script>
+// XSS protection
+function esc(v){if(v==null)return '';var s=String(v),o='',c;for(var i=0;i<s.length;i++){c=s[i];if(c==='&')o+='&amp;';else if(c==='<')o+='&lt;';else if(c==='>')o+='&gt;';else if(c==='"')o+='&quot;';else if(c==="'")o+='&#x27;';else if(c==='`')o+='&#x60;';else if(c==='/')o+='&#x2F;';else o+=c;}return o;}
+function escUrl(v){var s=String(v==null?'':v).trim();return(/^(javascript|data|vbscript):/i.test(s))?'#':esc(s);}
+function escAttr(v){var s=esc(v),o='',c;for(var i=0;i<s.length;i++){c=s[i];o+=(c==='\n'||c==='\r')?' ':c;}return o;}
+
 // بناء manifest و apple-touch-icon من اللوقو الموجود (favicon) لإظهار شعار الأكاديمية عند التثبيت
 (function(){
   try{
@@ -966,7 +971,7 @@ async function startOTPFlow(){
     if(res&&res.status==='ok'){
       document.getElementById('otp-status').innerHTML='<span style="color:var(--green)">✅ تم إرسال الرمز لإيميلك</span>';
     }else{
-      document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">⚠️ '+((res&&res.msg)||'تعذر الإرسال')+'</span>';
+      document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">⚠️ '+esc((res&&res.msg)||'تعذر الإرسال')+'</span>';
     }
   }catch(e){
     document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">⚠️ تعذر إرسال الرمز — تحقق من الاتصال</span>';
@@ -1017,7 +1022,7 @@ async function confirmOTP(){
       finishLogin();
       pendingUser=null;
     }else{
-      document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">❌ '+((res&&res.msg)||'رمز غير صحيح')+'</span>';
+      document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">❌ '+esc((res&&res.msg)||'رمز غير صحيح')+'</span>';
     }
   }catch(e){
     document.getElementById('otp-status').innerHTML='<span style="color:var(--red)">تعذر التحقق — جرب مرة أخرى</span>';
@@ -1371,8 +1376,8 @@ function getCourseMaterials(code){
 function matChipHTML(m){
   const isLink=/^https?:\/\//i.test(m.url||'');
   const label=m.title||(isLink?'فتح المادة':m.url);
-  if(isLink)return `<a href="${m.url}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,.12);color:#2ecc71;border:1px solid rgba(46,204,113,.3);border-radius:14px;padding:5px 12px;font-size:12px;font-weight:600">📄 ${label}</a>`;
-  return `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:5px 12px;font-size:12px">📄 ${label}${m.title&&m.url&&m.title!==m.url?` — ${m.url}`:''}</span>`;
+  if(isLink)return `<a href="${escUrl(m.url)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,.12);color:#2ecc71;border:1px solid rgba(46,204,113,.3);border-radius:14px;padding:5px 12px;font-size:12px;font-weight:600">📄 ${label}</a>`;
+  return `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:5px 12px;font-size:12px">📄 ${label}${esc(m.title&&m.url&&m.title!==m.url?` — ${escUrl(m.url))}`:''}</span>`;
 }
 // مفتاح موحّد للطالب: يحوّل الأرقام العربية ويزيل الرموز/المسافات لمنع التكرار
 function sidKey(s){
@@ -1723,14 +1728,14 @@ async function printScheduleReport(){
   term=term.replace(/-/g,' ').trim(); // "ترم صيفي-2025/2026" → "ترم صيفي 2025/2026"
   const grps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
   // 1) جداول الشعب (المتدربين)
-  const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<b>${c.course}</b><span>${c.trainer||''}</span><i>${c.room||''}</i>`)}</div>`).join('');
+  const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<b>${esc(c.course)}</b><span>${esc(c.trainer||'')}</span><i>${c.room||''}</i>`)}</div>`).join('');
   // 2) جداول المدربين — مع دمج الشعب المشتركة
   const tSched=buildTrainerSchedules();
   const grpLbl=c=>c.grps&&c.grps.length>1?`الشعب ${c.grps.sort().join(' و ')}`:`الشعبة ${(c.grps&&c.grps[0])||c.grp||''}`;
-  const trHtml=Object.keys(tSched).map(t=>`<div class="block"><h3>👨‍🏫 المدرب: ${t}</h3>${schReportTable(tSched[t],c=>`<b>${c.course}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i>`)}</div>`).join('');
+  const trHtml=Object.keys(tSched).map(t=>`<div class="block"><h3>👨‍🏫 المدرب: ${t}</h3>${schReportTable(tSched[t],c=>`<b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i>`)}</div>`).join('');
   // 3) جداول القاعات — مع دمج الشعب المشتركة
   const rSched=buildRoomSchedules();
-  const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<b>${c.course}</b><span>${grpLbl(c)}</span><i>${c.trainer||''}</i>`)}</div>`).join('');
+  const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${esc(c.trainer||'')}</i>`)}</div>`).join('');
   // 4) الجدول العام الشامل (كل الشعب في جدول واحد)
   const generalGrid={};
   for(const g of grps){
@@ -1743,7 +1748,7 @@ async function printScheduleReport(){
       else generalGrid[slot].push({course:c.course,trainer:c.trainer,room:c.room,grps:[g]});
     }
   }
-  const genCell=arr=>arr.map(c=>`<b>${c.course}</b><span>${c.grps.length>1?'الشعب '+c.grps.sort().join('،'):'الشعبة '+c.grps[0]}</span><i>${c.trainer||''}${c.room?' · '+c.room:''}</i>`).join('<hr style="border:none;border-top:1px dashed #d5dce6;margin:4px 0">');
+  const genCell=arr=>arr.map(c=>`<b>${esc(c.course)}</b><span>${c.grps.length>1?'الشعب '+c.grps.sort().join('،'):'الشعبة '+c.grps[0]}</span><i>${esc(c.trainer||'')}${c.room?' · '+c.room:''}</i>`).join('<hr style="border:none;border-top:1px dashed #d5dce6;margin:4px 0">');
   const genHtml=`<div class="block">${schReportTable(generalGrid,genCell)}</div>`;
   const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الجدول الدراسي</title>
   <style>
@@ -1846,7 +1851,7 @@ function schDrop(e,grp,toSlot){
 function schClear(grp,slot){
   if(!schedule[grp]||!schedule[grp][slot])return;
   const c=schedule[grp][slot];
-  if(!confirm(`⚠️ هل تريد حذف: ${c.course}\\nالمدرب: ${c.trainer}\\n\\nسيتم حذفها من الجدول بشكل نهائي`))return;
+  if(!confirm(`⚠️ هل تريد حذف: ${esc(c.course)}\\nالمدرب: ${esc(c.trainer)}\\n\\nسيتم حذفها من الجدول بشكل نهائي`))return;
   delete schedule[grp][slot];
   showToast('✅ تم حذف الحصة من الجدول','s');
   showAPage('schedule',null);
@@ -1950,7 +1955,7 @@ function showToast(msg,type='i'){
   const t=document.createElement('div');
   const icons={i:'ℹ️',s:'✅',e:'❌',w:'⚠️'};
   t.className=`toast toast-${type}`;
-  t.innerHTML=`<span class="toast-icon">${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  t.innerHTML=`<span class="toast-icon">${icons[type]||'ℹ️'}</span><span>${esc(msg)}</span>`;
   tc.appendChild(t);
   setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),300)},3500);
 }
@@ -1990,14 +1995,14 @@ function getNotifications(){
     mine.forEach(r=>{
       const decided=r.finalStatus==='معتمد'||r.dirStatus==='معتمد';
       const rejected=r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'||r.finalStatus==='مرفوض';
-      if(decided)list.push({type:'as',icon:'✅',msg:`تم اعتماد طلبك: ${r.type}${r.date?' · '+r.date:''}`});
-      else if(rejected)list.push({type:'ad',icon:'❌',msg:`تم رفض طلبك: ${r.type}${r.date?' · '+r.date:''}`});
-      else list.push({type:'ab',icon:'⏳',msg:`طلبك قيد المراجعة: ${r.type}${r.date?' · '+r.date:''}`});
+      if(decided)list.push({type:'as',icon:'✅',msg:`تم اعتماد طلبك: ${esc(r.type)}${r.date?' · '+r.date:''}`});
+      else if(rejected)list.push({type:'ad',icon:'❌',msg:`تم رفض طلبك: ${esc(r.type)}${r.date?' · '+r.date:''}`});
+      else list.push({type:'ab',icon:'⏳',msg:`طلبك قيد المراجعة: ${esc(r.type)}${r.date?' · '+r.date:''}`});
     });
   } else if(user.role==='t'){
     // المدرب: أعذار غياب تنتظر اعتماده
     requests.filter(r=>r.type==='عذر غياب'&&r.trnStatus==='معلق').forEach(r=>{
-      list.push({type:'aw',icon:'📩',msg:`عذر غياب ينتظر اعتمادك — ${r.sname||''} · شعبة ${r.grp||''}${r.date?' · '+r.date:''}`});
+      list.push({type:'aw',icon:'📩',msg:`عذر غياب ينتظر اعتمادك — ${esc(r.sname||'')} · شعبة ${esc(r.grp||'')}${r.date?' · '+r.date:''}`});
     });
   } else {
     // الإداري: مشرف أو مدير
@@ -2007,7 +2012,7 @@ function getNotifications(){
       if(r.type==='عذر غياب')return r.trnStatus==='معتمد'&&r.supStatus==='معلق';
       return r.supStatus==='معلق';
     }).forEach(r=>{
-      list.push({type:'aw',icon:'📩',msg:`${r.type} ينتظر اعتمادك — ${r.sname||''} · شعبة ${r.grp||''}${r.date?' · '+r.date:''}`});
+      list.push({type:'aw',icon:'📩',msg:`${esc(r.type)} ينتظر اعتمادك — ${esc(r.sname||'')} · شعبة ${esc(r.grp||'')}${r.date?' · '+r.date:''}`});
     });
   }
   return list;
@@ -2021,11 +2026,11 @@ function showNotifs(){
 function getReviewCases(){
   const list=[];
   const src=user.role==='s'?courses:allCourses;
-  const grpTxt=c=>(user.role!=='s'&&c.grp)?` · شعبة ${c.grp}`:'';
+  const grpTxt=c=>(user.role!=='s'&&c.grp)?` · شعبة ${esc(c.grp)}`:'';
   src.forEach(c=>{
     const nm=user.role==='s'?c.course:c.sname;
-    if(isHighAbs(c))list.push({type:'aw',icon:'⚠️',msg:`${nm} — غياب ${Math.round(c.abs)}% في ${c.course}${grpTxt(c)}`});
-    if(isLowPerf(c))list.push({type:'ad',icon:'📉',msg:`${nm} — درجة ${Math.round(c.pct)}% في ${c.course}${grpTxt(c)}`});
+    if(isHighAbs(c))list.push({type:'aw',icon:'⚠️',msg:`${nm} — غياب ${Math.round(c.abs)}% في ${esc(c.course)}${grpTxt(c)}`});
+    if(isLowPerf(c))list.push({type:'ad',icon:'📉',msg:`${nm} — درجة ${Math.round(c.pct)}% في ${esc(c.course)}${grpTxt(c)}`});
   });
   return list;
 }
@@ -2146,7 +2151,7 @@ function buildLibrary(scope, canAdd){
     const m=getCourseMaterials(c.code);
     const empty=!m.theory.length&&!m.practical.length;
     return `<div class="ccard" style="cursor:default">
-      <div class="cc-top"><div><div class="cc-name">${c.name||c.code}</div><div class="cc-meta">${c.code}${c.term?' · '+c.term:''}</div></div>
+      <div class="cc-top"><div><div class="cc-name">${esc(c.name||c.code)}</div><div class="cc-meta">${esc(c.code)}${c.term?' · '+c.term:''}</div></div>
         <span class="pill ${empty?'py':'pg'}">${empty?'لا مواد':(m.theory.length+m.practical.length)+' مادة'}</span></div>
       ${secBlock('📘 نظري',m.theory)}${secBlock('🔧 عملي',m.practical)}
       ${empty?'<div style="font-size:12px;color:var(--muted);margin-top:8px">لم تُضف مواد لهذا المقرر بعد</div>':''}
@@ -2215,7 +2220,7 @@ const sPgs={
     const past=courses.filter(c=>c.status==='سابق');
     const gpa=gpaDisplay(courses);
     return `
-    <div class="banner anim-up"><div><div class="btitle">مرحباً، ${user.name.split(' ')[0]} 👋</div><div class="bsub">${user.spec} — الشعبة ${user.grp}</div></div><div class="bpill bp-r">الشعبة ${user.grp}</div></div>
+    <div class="banner anim-up"><div><div class="btitle">مرحباً، ${esc(user.name.split(' ')[0])} 👋</div><div class="bsub">${esc(user.spec)} — الشعبة ${esc(user.grp)}</div></div><div class="bpill bp-r">الشعبة ${esc(user.grp)}</div></div>
     <div class="metrics">
       <div class="mcard mc-p" onclick="showStudentStat('gpa')" style="cursor:pointer"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpa)}">${gpa}<span style="font-size:14px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
       <div class="mcard mc-r" onclick="showStudentStat('avg')" style="cursor:pointer"><div class="micon">📈</div><div class="mnum cr" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
@@ -2288,7 +2293,7 @@ const sPgs={
       <div class="gtable" style="margin-bottom:14px"><table>
         <thead><tr><th>المقرر</th><th>الرمز</th><th>الفصل</th><th>الوحدات</th></tr></thead>
         <tbody>${remaining.map(r=>`<tr>
-          <td>${r.name}</td><td style="color:var(--muted)">${r.code}</td>
+          <td>${esc(r.name)}</td><td style="color:var(--muted)">${r.code}</td>
           <td style="color:var(--muted)">${r.term||'—'}</td><td style="color:var(--muted)">${r.units||'—'}</td>
         </tr>`).join('')}</tbody>
       </table></div>`:'<div class="alert as"><span class="aicon">🎓</span>أكملت جميع مواد الخطة الدراسية!</div>'}`;
@@ -2307,8 +2312,8 @@ const sPgs={
     <div class="gtable">
       <table><thead><tr><th>المقرر</th><th>الرمز</th><th>التقدير</th><th>الإنجاز</th><th>الحالة</th></tr></thead>
       <tbody>${courses.map(c=>`<tr>
-        <td>${c.course}</td><td style="color:var(--muted)">${c.code}</td>
-        <td style="color:var(--muted)">${c.letter||'—'}</td>
+        <td>${esc(c.course)}</td><td style="color:var(--muted)">${esc(c.code)}</td>
+        <td style="color:var(--muted)">${esc(c.letter||'—')}</td>
         <td><span class="pill ${pillClass(Math.round(c.pct))}">${Math.round(c.pct)}%</span></td>
         <td style="color:var(--muted);font-size:12px">${c.status||'—'}</td>
       </tr>`).join('')}</tbody></table>
@@ -2334,7 +2339,7 @@ const sPgs={
     const P=hasMine?maxP:5;
     const cell=(day,p)=>{
       const c=myGrid[day+'|'+p];
-      return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${c.course}</div>${c.trainer?`<div class="sch-trainer">${c.trainer}</div>`:''}${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
+      return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${esc(c.course)}</div>${esc(c.trainer?`<div class="sch-trainer">${c.trainer)}</div>`:''}${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
     };
     const bAfter=breakAfterPeriod();
     const headCells=[...Array(P).keys()].map(p=>{
@@ -2409,14 +2414,14 @@ const sPgs={
     <div class="stitle">طلباتي ${myReqs.length?`(${myReqs.length})`:''}</div>
     ${myReqs.length?myReqs.map(r=>`
       <div class="ccard ${r.finalStatus==='معتمد'||r.dirStatus==='معتمد'?'cc-g':r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'?'cc-r':'cc-y'}">
-        <div class="cc-top"><div><div class="cc-name">${r.type}</div><div class="cc-meta">${r.date||''}</div></div>${statusBadge(r)}</div>
-        ${r.details?`<div style="font-size:13px;color:var(--muted);margin-top:8px">${r.details}</div>`:''}
+        <div class="cc-top"><div><div class="cc-name">${esc(r.type)}</div><div class="cc-meta">${r.date||''}</div></div>${statusBadge(r)}</div>
+        ${esc(r.details?`<div style="font-size:13px;color:var(--muted);margin-top:8px">${esc(r.details)}</div>`:''}
         <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;flex-wrap:wrap">
-          ${r.type==='عذر غياب'?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدرب: ${r.trnStatus||'معلق'}</span>`:''}
+          ${esc(r.type==='عذر غياب'?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)')}">المدرب: ${r.trnStatus||'معلق'}</span>`:''}
           <span style="color:${r.supStatus==='معتمد'?'var(--green)':r.supStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المشرف: ${r.supStatus}</span>
           <span style="color:${r.dirStatus==='معتمد'?'var(--green)':r.dirStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدير: ${r.dirStatus}</span>
         </div>
-        ${r.notes?`<div style="font-size:12px;color:#f4c78a;margin-top:6px">📌 ${r.notes}</div>`:''}
+        ${esc(r.notes?`<div style="font-size:12px;color:#f4c78a;margin-top:6px">📌 ${esc(r.notes)}</div>`:''}
         ${((r.type||'').includes('تعريف')&&(r.finalStatus==='معتمد'||r.dirStatus==='معتمد'))?`<div style="margin-top:12px"><button class="btn btn-b btn-sm" onclick="printMyIntro()">🖨️ اطبع ورقة التعريف (الإفادة)</button></div>`:''}
       </div>`).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات سابقة</div>'}`;
   },
@@ -2425,9 +2430,9 @@ const sPgs={
     <div class="alert ab"><span class="aicon">📎</span>المواد التي رفعها المدربون لمقرراتك</div>
     ${courses.map(c=>`
     <div class="ccard cc-b">
-      <div class="cc-top"><div><div class="cc-name">${c.course}</div><div class="cc-meta">${c.trainer||'—'}</div></div><span class="pill pb">${c.code}</span></div>
+      <div class="cc-top"><div><div class="cc-name">${esc(c.course)}</div><div class="cc-meta">${esc(c.trainer||'—')}</div></div><span class="pill pb">${esc(c.code)}</span></div>
       <div id="files-${c.key}" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        ${(files[c.key]||[]).map(f=>`<div class="file-item" style="width:auto"><span>📄</span><span class="fi-name">${f.name}</span><a href="${f.url}" target="_blank" class="btn btn-b btn-sm" style="text-decoration:none">تنزيل</a></div>`).join('')}
+        ${(files[c.key]||[]).map(f=>`<div class="file-item" style="width:auto"><span>📄</span><span class="fi-name">${esc(f.name)}</span><a href="${f.url}" target="_blank" class="btn btn-b btn-sm" style="text-decoration:none">تنزيل</a></div>`).join('')}
         ${!(files[c.key]||[]).length?'<div style="font-size:12px;color:var(--muted)">لا توجد مرفقات بعد</div>':''}
       </div>
     </div>`).join('')||'<div class="empty"><div class="empty-icon">📎</div>لا توجد مقررات</div>'}`,
@@ -2456,19 +2461,19 @@ const sPgs={
     return html2;
   },
   profile:()=>`
-    <div class="banner anim-up"><div><div class="btitle">المعدّل التراكمي 🏆</div><div class="bsub">${user.name.split(' ').slice(0,3).join(' ')}</div></div><div class="bpill" style="font-size:22px;font-weight:900;text-align:center;line-height:1.1;background:rgba(155,89,182,.15);color:${gpaColor(gpaFrom(courses))};border:1px solid rgba(155,89,182,.3)">${gpaDisplay(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5.00</div></div></div>
+    <div class="banner anim-up"><div><div class="btitle">المعدّل التراكمي 🏆</div><div class="bsub">${esc(user.name.split(' ').slice(0,3).join(' '))}</div></div><div class="bpill" style="font-size:22px;font-weight:900;text-align:center;line-height:1.1;background:rgba(155,89,182,.15);color:${gpaColor(gpaFrom(courses))};border:1px solid rgba(155,89,182,.3)">${gpaDisplay(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5.00</div></div></div>
     <div class="stitle">بياناتي الشخصية</div>
     <div class="igrid">
-      <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${user.id}</div></div>
-      <div class="iitem"><div class="ilbl">الاسم الكامل</div><div class="ival">${user.name}</div></div>
-      <div class="iitem"><div class="ilbl">التخصص</div><div class="ival">${user.spec}</div></div>
-      <div class="iitem"><div class="ilbl">الشعبة</div><div class="ival">${user.grp}</div></div>
-      <div class="iitem"><div class="ilbl">رقم الجوال</div><div class="ival">${user.ph}</div></div>
+      <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${esc(user.id)}</div></div>
+      <div class="iitem"><div class="ilbl">الاسم الكامل</div><div class="ival">${esc(user.name)}</div></div>
+      <div class="iitem"><div class="ilbl">التخصص</div><div class="ival">${esc(user.spec)}</div></div>
+      <div class="iitem"><div class="ilbl">الشعبة</div><div class="ival">${esc(user.grp)}</div></div>
+      <div class="iitem"><div class="ilbl">رقم الجوال</div><div class="ival">${esc(user.ph)}</div></div>
       <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival">${avgPct(courses)}%</div></div>
     </div>
     <div class="stitle">ملخص الأداء</div>
     <div class="ccard cc-b">
-      ${courses.map(c=>`<div class="sbar"><span class="sbar-name">${c.course}</span><div class="sbar-track"><div class="sbar-fill" style="width:${Math.min(c.pct,100)}%"></div></div><span class="sbar-val">${Math.round(c.pct)}%</span></div>`).join('')}
+      ${courses.map(c=>`<div class="sbar"><span class="sbar-name">${esc(c.course)}</span><div class="sbar-track"><div class="sbar-fill" style="width:${Math.min(c.pct,100)}%"></div></div><span class="sbar-val">${Math.round(c.pct)}%</span></div>`).join('')}
     </div>`
 };
 
@@ -2482,10 +2487,10 @@ function absWarnBanner(){
     return `<div class="alert ${urgent?'ad':'aw'}" style="${urgent?'border:2px solid var(--red)':''};display:flex;align-items:center;gap:10px">
       <span class="aicon">${urgent?'⛔':lv.key==='warn2'?'🔶':'⚠️'}</span>
       <div style="flex:1">
-        <div style="font-weight:700;color:${urgent?'var(--red)':av_color(lv)}">${urgent?'محروم رسمياً':lv.label} — ${c.course}</div>
+        <div style="font-weight:700;color:${urgent?'var(--red)':av_color(lv)}">${urgent?'محروم رسمياً':lv.label} — ${esc(c.course)}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px">غيابك <strong>${Math.round(c.abs)}%</strong>${urgent?' — وصلت حد الحرمان (25%)':' — قدّم عذرك قبل الوصول للحرمان (25%)'}</div>
       </div>
-      <button class="btn ${urgent?'btn-r':'btn-out'} btn-sm" onclick="goExcuse('${c.course.replace(/'/g,"\\'")}')">📨 ارفع عذر</button>
+      <button class="btn ${urgent?'btn-r':'btn-out'} btn-sm" onclick="goExcuse('${esc(c.course.replace(/'/g,"\\'"))}')">📨 ارفع عذر</button>
     </div>`;
   }).join('')+'</div>';
 }
@@ -2514,9 +2519,9 @@ function courseCardHTML(c){
     ${matSection('📘 نظري',mats.theory)}${matSection('🔧 عملي',mats.practical)}
   </div>`:'';
   return `<div class="ccard ${ccClass(p)}">
-    <div class="cc-top"><div><div class="cc-name">${c.course}</div><div class="cc-meta">${c.code}${c.trainer?' · '+c.trainer:''}${c.half&&c.half!=='غير محدد'?' · '+c.half:''}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
+    <div class="cc-top"><div><div class="cc-name">${esc(c.course)}</div><div class="cc-meta">${esc(c.code)}${esc(c.trainer?' · '+c.trainer:'')}${esc(c.half&&c.half!=='غير محدد'?' · '+c.half:'')}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
     <div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>
-    <div class="cc-footer"><span>الإنجاز: ${p}%</span><span style="color:${av.color}">الغياب: ${Math.round(c.abs)}%${showWarn?' · '+av.label:''}</span>${c.letter?'<span>التقدير: '+c.letter+'</span>':''}</div>
+    <div class="cc-footer"><span>الإنجاز: ${p}%</span><span style="color:${av.color}">الغياب: ${Math.round(c.abs)}%${showWarn?' · '+av.label:''}</span>${esc(c.letter?'<span>التقدير: '+c.letter+'</span>':'')}</div>
     ${matsHTML}
   </div>`;
 }
@@ -2576,7 +2581,7 @@ const tPgs={
       const ex=parseEx(r);
       const badge=r.trnStatus==='معتمد'?'<span class="pill pg">اعتمدته ✓</span>':r.trnStatus==='مرفوض'?'<span class="pill pr">رفضته</span>':'<span class="pill py">بانتظار اعتمادك</span>';
       return `<div class="ccard ${actionable?'cc-y':r.trnStatus==='معتمد'?'cc-g':'cc-r'}" style="margin-bottom:12px">
-        <div class="cc-top"><div><div class="cc-name">عذر غياب — ${r.sname}</div><div class="cc-meta">الشعبة ${r.grp} · ${r.sid} · ${r.date||''}</div></div>${badge}</div>
+        <div class="cc-top"><div><div class="cc-name">عذر غياب — ${esc(r.sname)}</div><div class="cc-meta">الشعبة ${esc(r.grp)} · ${r.sid} · ${r.date||''}</div></div>${badge}</div>
         <div style="margin:8px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border)">
           <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">المادة</span><span style="font-weight:700">${ex.course}</span></div>
           ${ex.days?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">أيام الغياب</span><span style="font-weight:700;text-align:left;max-width:60%">${ex.days}</span></div>`:''}
@@ -2622,7 +2627,7 @@ const tPgs={
       if(!c)return '<td class="sch-cell"><span class="sch-empty">—</span></td>';
       const grpLabel=c.grps.length>1?`الشعب ${c.grps.sort().join(' و ')}`:`الشعبة ${c.grps[0]}`;
       const roomLabel=c.rooms.join(' / ');
-      return `<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${c.course}</div><div class="sch-trainer">${grpLabel}</div>${roomLabel?`<div class="sch-room-tag">${roomLabel}</div>`:''}</div></td>`;
+      return `<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${esc(c.course)}</div><div class="sch-trainer">${grpLabel}</div>${roomLabel?`<div class="sch-room-tag">${roomLabel}</div>`:''}</div></td>`;
     };
     const bAfter=breakAfterPeriod();
     const headCells=[...Array(P).keys()].map(p=>{
@@ -2670,7 +2675,7 @@ const tPgs={
       </div>`;
     };
     return `
-    <div class="banner"><div><div class="btitle">مرحباً، ${user.name.split(' ')[0]} 👨‍🏫</div><div class="bsub">${user.spec}</div></div><div class="bpill bp-b">مدرب</div></div>
+    <div class="banner"><div><div class="btitle">مرحباً، ${esc(user.name.split(' ')[0])} 👨‍🏫</div><div class="bsub">${esc(user.spec)}</div></div><div class="bpill bp-b">مدرب</div></div>
     <div class="metrics">
       <div class="mcard mc-b" onclick="showTrainerStat('students')" style="cursor:pointer"><div class="micon">👥</div><div class="mnum cb" data-target="${[...new Set(students.map(s=>s.sid))].length}">${[...new Set(students.map(s=>s.sid))].length}</div><div class="mlbl">إجمالي المتدربين</div></div>
       <div class="mcard mc-g" onclick="showTrainerStat('current')" style="cursor:pointer"><div class="micon">🟢</div><div class="mnum cg" data-target="${currentCrs.length}">${currentCrs.length}</div><div class="mlbl">مقررات حالية</div></div>
@@ -2695,7 +2700,7 @@ const tPgs={
         <div class="gtable"><table>
           <thead><tr><th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>الإنجاز</th><th>الغياب</th></tr></thead>
           <tbody>${ss.map(s=>`<tr>
-            <td style="color:var(--muted)">${s.sid}</td><td>${s.name}</td><td>${s.grp}</td>
+            <td style="color:var(--muted)">${s.sid}</td><td>${esc(s.name)}</td><td>${esc(s.grp)}</td>
             <td><span class="pill ${pillClass(Math.round(s.pct))}">${Math.round(s.pct)}%</span></td>
             <td style="color:${absLevel(s.abs).color}" title="${absLevel(s.abs).label}">${Math.round(s.abs)}%</td>
           </tr>`).join('')}</tbody>
@@ -2739,7 +2744,7 @@ const tPgs={
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:`ℹ️ المادة غير مجدولة بالكامل — ستُحسب بيوم/أسبوع (${WEEKS_PER_HALF} يوم) · المحروم عند ${Math.ceil(WEEKS_PER_HALF*0.25)} أيام`}</div>
         <div class="att-grid">
           ${ssDedup.map(s=>`<div class="att-card">
-            <div class="att-name">${s.name.split(' ').slice(0,3).join(' ')}</div>
+            <div class="att-name">${esc(s.name.split(' ').slice(0,3).join(' '))}</div>
             <div class="att-id">${s.sid} · غياب حالي <span style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</span></div>
             <div class="att-marks">
               <button class="amk amk-p" id="mk-${s.sid}-present" onclick="setMark('${s.sid}','present')">✓ حاضر</button>
@@ -2769,7 +2774,7 @@ const tPgs={
         <div class="gtable"><table>
           <thead><tr><th>الاسم</th><th>الإنجاز الحالي%</th><th>الغياب%</th><th>تقييم المدرب</th></tr></thead>
           <tbody>${ss.map(s=>`<tr>
-            <td>${s.name.split(' ').slice(0,3).join(' ')}</td>
+            <td>${esc(s.name.split(' ').slice(0,3).join(' '))}</td>
             <td><span class="pill ${pillClass(Math.round(s.pct))}">${Math.round(s.pct)}%</span></td>
             <td style="color:${absLevel(s.abs).color}" title="${absLevel(s.abs).label}">${Math.round(s.abs)}%</td>
             <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${isDeprived(s.abs)?'disabled title="محروم - غياب +25%"':""} value="${gradesData[s.sid]||''}" onchange="gradesData['${s.sid}']=this.value" id="g-${s.sid}"></td>
@@ -2798,9 +2803,9 @@ const tPgs={
             <span style="font-size:11px;background:rgba(231,76,60,.15);color:#e74c3c;padding:3px 10px;border-radius:12px;font-weight:700">${gHi.length+gLo.length} حالة</span>
           </div>
           ${gHi.length?`<div style="font-size:12px;font-weight:700;color:#f4c78a;margin:8px 0 6px">⚠️ غياب عالي (${gHi.length})</div>
-            ${gHi.map(s=>`<div class="alert aw"><span class="aicon">👤</span>${nm(s.name)} — غياب ${Math.round(s.abs)}% في ${s.course}</div>`).join('')}`:''}
+            ${gHi.map(s=>`<div class="alert aw"><span class="aicon">👤</span>${nm(s.name)} — غياب ${Math.round(s.abs)}% في ${esc(s.course)}</div>`).join('')}`:''}
           ${gLo.length?`<div style="font-size:12px;font-weight:700;color:#ff8a92;margin:8px 0 6px">🔴 أداء منخفض (${gLo.length})</div>
-            ${gLo.map(s=>`<div class="alert ad"><span class="aicon">📉</span>${nm(s.name)} — درجة ${Math.round(s.pct)}% في ${s.course}</div>`).join('')}`:''}
+            ${gLo.map(s=>`<div class="alert ad"><span class="aicon">📉</span>${nm(s.name)} — درجة ${Math.round(s.pct)}% في ${esc(s.course)}</div>`).join('')}`:''}
         </div>`;
       }).join('')}`;
   },
@@ -2815,7 +2820,7 @@ const tPgs={
       </div>
       <input type="file" id="fu-${course.replace(/\s/g,'_')}" style="display:none" multiple onchange="handleFiles(event,'${course}')">
       <div class="file-list" id="fl-${course.replace(/\s/g,'_')}">
-        ${(files[course]||[]).map(f=>`<div class="file-item"><span>📄</span><span class="fi-name">${f.name}</span><button class="fi-del" onclick="delFile('${course}','${f.name}')">✕</button></div>`).join('')}
+        ${(files[course]||[]).map(f=>`<div class="file-item"><span>📄</span><span class="fi-name">${esc(f.name)}</span><button class="fi-del" onclick="delFile('${course}','${esc(f.name)}')">✕</button></div>`).join('')}
       </div>
     </div>`).join('')||'<div class="empty">لا توجد مقررات</div>'}`
 };
@@ -3083,7 +3088,7 @@ function delFile(course,name){
 function refreshFileList(course){
   const fl=document.getElementById('fl-'+course.replace(/\s/g,'_'));
   if(!fl)return;
-  fl.innerHTML=(files[course]||[]).map(f=>`<div class="file-item"><span>📄</span><span class="fi-name">${f.name}</span><button class="fi-del" onclick="delFile('${course}','${f.name}')">✕</button></div>`).join('');
+  fl.innerHTML=(files[course]||[]).map(f=>`<div class="file-item"><span>📄</span><span class="fi-name">${esc(f.name)}</span><button class="fi-del" onclick="delFile('${course}','${esc(f.name)}')">✕</button></div>`).join('');
 }
 
 // ===== ADMIN APP =====
@@ -3310,7 +3315,7 @@ function renderCrsMats(type){
   const mats=(type==='theory'?window._crsMatTheory:window._crsMatPractical)||[];
   box.innerHTML=mats.length?mats.map((m,i)=>`<div style="display:flex;align-items:center;gap:8px;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:8px 10px">
       <span style="font-size:15px">📄</span>
-      <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">${m.title||'مادة علمية'}</div><div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.url}</div></div>
+      <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">${esc(m.title||'مادة علمية')}</div><div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escUrl(m.url)}</div></div>
       <span onclick="crsRemoveMat('${type}',${i})" style="cursor:pointer;color:var(--red);font-weight:800">✕</span>
     </div>`).join(''):'<span style="font-size:11px;color:var(--muted)">لا توجد مواد بعد</span>';
 }
@@ -3594,7 +3599,7 @@ function buildTVContent(){
           return `<div class="tv-pod-col">
             <div class="tv-pod-medal">${r===1?'🥇':r===2?'🥈':'🥉'}</div>
             <div class="tv-pod-name">${nm(s.name)}</div>
-            <div class="tv-pod-info">شعبة ${s.grp} · ${s.avg}%</div>
+            <div class="tv-pod-info">شعبة ${esc(s.grp)} · ${s.avg}%</div>
             <div class="tv-pod-bar" style="height:${h}px;background:linear-gradient(180deg,${clr},${clr}bb);box-shadow:0 -4px 24px ${clr}66">
               <span class="tv-pod-rank">${r}</span>
             </div>
@@ -3610,7 +3615,7 @@ function buildTVContent(){
         ${ranked.slice(0,12).map(s=>`<div class="tv-row${s.rank<=3?' tv-row-top':''}">
           <div class="tv-rank">${s.rank<=3?['🥇','🥈','🥉'][s.rank-1]:s.rank}</div>
           <div class="tv-name">${nm(s.name)}</div>
-          <div class="tv-grp">شعبة ${s.grp}</div>
+          <div class="tv-grp">شعبة ${esc(s.grp)}</div>
           <div class="tv-avg" style="color:${s.avg>=80?'#2ecc71':s.avg>=60?'#ffd700':'#e74c3c'}">${s.avg}%</div>
         </div>`).join('')}
       </div>
@@ -3680,8 +3685,8 @@ const aPgs={
       const specChip=sp=>String(sp||'').split(/[|,؛;]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span style="display:inline-block;background:rgba(106,184,247,.12);color:#6ab8f7;border-radius:10px;padding:2px 8px;font-size:10px;margin:1px">${x}</span>`).join('')||'<span style="color:var(--muted);font-size:11px">عام</span>';
       const matBadge=c=>{const n=parseMaterials(c.matTheory).length,p=parseMaterials(c.matPractical).length;const parts=[];if(n)parts.push('📘'+n);if(p)parts.push('🔧'+p);return parts.length?`<span style="background:rgba(46,204,113,.15);color:#2ecc71;border-radius:10px;padding:2px 8px;font-size:10px">${parts.join(' ')}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>';};
       const rows=(catalog||[]).map(c=>`<tr>
-        <td style="font-weight:600">${c.code}</td><td>${c.name}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
-        <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${c.code}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
+        <td style="font-weight:600">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
+        <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${esc(c.code)}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr><td colspan="8" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
       // التروم الموجودة فعلاً في سجل المقررات (النشطة فقط)
       const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>{
@@ -3715,7 +3720,7 @@ const aPgs={
       const seen=new Set();
       const uniqStudents2=students.filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;});
       const grps=[...new Set(uniqStudents2.map(s=>s.grp))].filter(Boolean).sort();
-      const trOpts=(trainersDB||[]).map(tr=>`<option value="${tr.name}">${tr.name}</option>`).join('');
+      const trOpts=(trainersDB||[]).map(tr=>`<option value="${esc(tr.name)}">${esc(tr.name)}</option>`).join('');
       const selGrp=window._enrGrp||(grps[0]||'');
       window._enrGrp=selGrp;
       // طلاب الشعبة المختارة
@@ -3740,7 +3745,7 @@ const aPgs={
       const crsBox=(c,selectable)=>{
         const badge=c.st==='done'?'<span style="font-size:10px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">✓ منتهية</span>':c.st==='current'?'<span style="font-size:10px;background:#6ab8f7;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">▶ حالية</span>':'<span style="font-size:10px;background:var(--muted);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">باقية</span>';
         return `<label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;cursor:${selectable?'pointer':'default'};padding:8px;border:1px solid var(--border);border-radius:8px;${!selectable?'opacity:.6':''}">
-          <span style="display:flex;align-items:center;gap:8px">${selectable?`<input type="checkbox" class="enr-course-cb" value="${c.code}|${c.name}" style="cursor:pointer">`:''}<span><b>${c.code}</b> · ${c.name}</span></span>
+          <span style="display:flex;align-items:center;gap:8px">${selectable?`<input type="checkbox" class="enr-course-cb" value="${esc(c.code)}|${esc(c.name)}" style="cursor:pointer">`:''}<span><b>${esc(c.code)}</b> · ${esc(c.name)}</span></span>
           ${badge}
         </label>`;
       };
@@ -3757,7 +3762,7 @@ const aPgs={
             <label for="grpAll" style="font-weight:700;color:#6ab8f7;cursor:pointer;font-size:13px">تحديد كل الشعبة (${gStudents.length})</label>
           </div>
           <div style="max-height:320px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">
-            ${gStudents.map(s=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:4px"><input type="checkbox" class="enr-student-cb" value="${s.id}" style="cursor:pointer">${s.name.split(' ').slice(0,3).join(' ')}</label>`).join('')||'<div style="color:var(--muted)">لا يوجد متدربون بهذه الشعبة</div>'}
+            ${gStudents.map(s=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:4px"><input type="checkbox" class="enr-student-cb" value="${esc(s.id.toString())}" style="cursor:pointer">${esc(s.name.split(' ').slice(0,3).join(' '))}</label>`).join('')||'<div style="color:var(--muted)">لا يوجد متدربون بهذه الشعبة</div>'}
           </div>
         </div>
         <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px">
@@ -3819,20 +3824,20 @@ const aPgs={
       const seen=new Set();
       const uniq=students.filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;});
       rows=uniq.map(s=>`<tr>
-        <td>${s.id}</td><td style="font-weight:600">${s.name}</td><td>${s.grp||'-'}</td><td>${s.spec||'-'}</td><td>${s.ph||'-'}</td><td style="font-size:11px">${s.email||'-'}</td>
-        <td><button onclick='editAccount("student",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("student","${s.id}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
+        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.grp||'-')}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
+        <td><button onclick='editAccount("student",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("student","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد متدربون</td></tr>`;
     }else if(t==='trainer'){
       cols=`<th>الرقم</th><th>الاسم</th><th>التخصص</th><th>الجوال</th><th>البريد</th><th>إجراءات</th>`;
       rows=(trainersDB||[]).map(s=>`<tr>
-        <td>${s.id}</td><td style="font-weight:600">${s.name}</td><td>${s.spec||'-'}</td><td>${s.ph||'-'}</td><td style="font-size:11px">${s.email||'-'}</td>
-        <td><button onclick='editAccount("trainer",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("trainer","${s.id}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
+        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
+        <td><button onclick='editAccount("trainer",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("trainer","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مدربون</td></tr>`;
     }else{
       cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الجوال</th><th>البريد</th><th>الصلاحية</th><th>إجراءات</th>`;
       rows=(adminsDB||[]).map(s=>`<tr>
-        <td>${s.id}</td><td style="font-weight:600">${s.name}</td><td>${s.title||'-'}</td><td>${s.ph||'-'}</td><td style="font-size:11px">${s.email||'-'}</td><td>${s.level||'-'}</td>
-        <td><button onclick='editAccount("admin",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("admin","${s.id}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
+        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td><td>${s.level||'-'}</td>
+        <td><button onclick='editAccount("admin",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("admin","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
     }
     const tLbl=t==='student'?'متدرب':t==='trainer'?'مدرب':'إداري';
@@ -3892,7 +3897,7 @@ const aPgs={
     const podiumH=[130,170,105];
     const podiumC=['#c0c0c0','#ffd700','#cd7f32'];
     return `
-    <div class="banner"><div><div class="btitle">📈 الداشبورد الشامل والأوائل</div><div class="bsub">${user.title} — ${user.name}</div></div>
+    <div class="banner"><div><div class="btitle">📈 الداشبورد الشامل والأوائل</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div>
       <button id="tvModeBtn" onclick="try{openTVMode()}catch(e){alert('خطأ: '+e.message)}" style="background:linear-gradient(135deg,#c9a227,#e0b83a);color:#0a2348;border:none;padding:10px 24px;border-radius:24px;cursor:pointer;font-size:14px;font-weight:800;box-shadow:0 4px 16px rgba(201,162,39,.35);display:flex;align-items:center;gap:8px;transition:transform .2s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">🖥️ شاشة العرض</button>
     </div>
 
@@ -3965,8 +3970,8 @@ const aPgs={
         const realRank=s.rank;const h=podiumH[i];const clr=podiumC[i];
         return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;max-width:180px">
           <div style="font-size:32px;margin-bottom:4px">${realRank===1?'🥇':realRank===2?'🥈':'🥉'}</div>
-          <div style="font-weight:700;font-size:13px;text-align:center;margin-bottom:2px;color:var(--text)">${s.name.split(' ').slice(0,2).join(' ')}</div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">شعبة ${s.grp} · ${s.avg}%</div>
+          <div style="font-weight:700;font-size:13px;text-align:center;margin-bottom:2px;color:var(--text)">${esc(s.name.split(' ').slice(0,2).join(' '))}</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">شعبة ${esc(s.grp)} · ${s.avg}%</div>
           <div style="width:100%;height:${h}px;background:linear-gradient(180deg,${clr},${clr}bb);border-radius:8px 8px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:8px;box-shadow:0 -2px 12px ${clr}55">
             <span style="font-size:26px;font-weight:900;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.3)">${realRank}</span>
           </div>
@@ -3979,8 +3984,8 @@ const aPgs={
       <thead><tr><th>الترتيب</th><th>الاسم</th><th>الشعبة</th><th>المعدّل %</th><th>GPA /5</th><th>المقررات</th><th>متوسط الغياب</th></tr></thead>
       <tbody>${ranked.map(s=>`<tr${s.rank<=3?' style="background:rgba(201,162,39,.06)"':''}>
         <td>${medal(s.rank)}</td>
-        <td style="font-weight:${s.rank<=3?'700':'500'}">${s.name}</td>
-        <td>شعبة ${s.grp}</td>
+        <td style="font-weight:${s.rank<=3?'700':'500'}">${esc(s.name)}</td>
+        <td>شعبة ${esc(s.grp)}</td>
         <td><span class="pill ${pillClass(s.avg)}">${s.avg}%</span></td>
         <td><span style="font-weight:700;color:${gpaColor(s.gpa)}">${s.gpa.toFixed(2)}</span></td>
         <td>${s.coursesCount}</td>
@@ -3998,7 +4003,7 @@ const aPgs={
           <thead><tr><th>الترتيب</th><th>الاسم</th><th>المعدّل %</th><th>GPA /5</th></tr></thead>
           <tbody>${gRanked.map((s,i)=>`<tr>
             <td>${i===0?'🥇':i===1?'🥈':'🥉'}</td>
-            <td style="font-weight:${i===0?'700':'500'}">${s.name}</td>
+            <td style="font-weight:${i===0?'700':'500'}">${esc(s.name)}</td>
             <td><span class="pill ${pillClass(s.avg)}">${s.avg}%</span></td>
             <td><span style="font-weight:700;color:${gpaColor(s.gpa)}">${s.gpa.toFixed(2)}</span></td>
           </tr>`).join('')}</tbody>
@@ -4013,7 +4018,7 @@ const aPgs={
     const warns=allCourses.filter(hasIssue).length;
     const grps=[...new Set(students.map(s=>s.grp))];
     return `
-    <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${user.title} — ${user.name}</div></div><div class="bpill bp-y">إداري</div></div>
+    <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div><div class="bpill bp-y">إداري</div></div>
     <div class="metrics">
       <div class="mcard mc-b" data-nav="all_students" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
       <div class="mcard mc-g" data-nav="all_courses" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
@@ -4057,9 +4062,9 @@ const aPgs={
     </div>
     <div class="gtable"><table>
       <thead><tr><th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>التخصص</th><th>الجوال</th></tr></thead>
-      <tbody id="stBody">${students.map(s=>`<tr data-n="${s.name}" data-i="${s.id}" data-g="${s.grp}" onclick="showStudentDetail(this.dataset.i)" style="cursor:pointer;transition:background .2s" onmouseover="this.style.background='rgba(100,160,220,0.08)'" onmouseout="this.style.background=''">
-        <td style="color:var(--muted)">${s.id}</td><td>${s.name}</td><td>${s.grp}</td>
-        <td style="color:var(--muted);font-size:12px">${s.spec||'—'}</td><td style="color:var(--muted)">${s.ph||'—'}</td>
+      <tbody id="stBody">${students.map(s=>`<tr data-n="${esc(s.name)}" data-i="${esc(s.id.toString())}" data-g="${esc(s.grp)}" onclick="showStudentDetail(this.dataset.i)" style="cursor:pointer;transition:background .2s" onmouseover="this.style.background='rgba(100,160,220,0.08)'" onmouseout="this.style.background=''">
+        <td style="color:var(--muted)">${esc(s.id.toString())}</td><td>${esc(s.name)}</td><td>${esc(s.grp)}</td>
+        <td style="color:var(--muted);font-size:12px">${esc(s.spec||'—')}</td><td style="color:var(--muted)">${esc(s.ph||'—')}</td>
       </tr>`).join('')}</tbody>
     </table></div>`,
   all_courses:()=>{
@@ -4088,10 +4093,10 @@ const aPgs={
         const avgAbs=Math.round(c.students.reduce((a,s)=>a+(s.abs||0),0)/n);
         const banned=c.students.filter(s=>(s.abs||0)>=25).length;
         const grpsLbl=[...c.grps].sort().join('، ');
-        return `<tr style="cursor:pointer" onclick="showCourseDetail('${c.course.replace(/'/g,"")}')">
-          <td style="font-weight:700;color:#6ab8f7">${c.course}</td>
-          <td>${c.code||'-'}</td>
-          <td>${c.trainer||'—'}</td>
+        return `<tr style="cursor:pointer" onclick="showCourseDetail('${esc(c.course.replace(/'/g,""))}')">
+          <td style="font-weight:700;color:#6ab8f7">${esc(c.course)}</td>
+          <td>${esc(c.code||'-')}</td>
+          <td>${esc(c.trainer||'—')}</td>
           <td>${grpsLbl||'-'}</td>
           <td style="text-align:center;font-weight:700">${n}</td>
           <td><span class="pill ${pillClass(avg)}">${avg}%</span></td>
@@ -4118,8 +4123,8 @@ const aPgs={
         ondragover="event.preventDefault()" ondrop="schDrop(event,'${g}','${slot}')"
         onclick="${c?`schClear('${g}','${slot}')`:''}">
         ${c?`<div class="sch-item" draggable="true" ondragstart="schDrag(event,'${g}','${slot}')">
-          <div class="sch-course">${c.course}</div>
-          <div class="sch-trainer">${c.trainer||''}</div>
+          <div class="sch-course">${esc(c.course)}</div>
+          <div class="sch-trainer">${esc(c.trainer||'')}</div>
           <select class="sch-room" onclick="event.stopPropagation()" onchange="schSetRoom('${g}','${slot}',this.value)">
             ${LABS.map(l=>`<option value="${l}" ${c.room===l?'selected':''}>${l}</option>`).join('')}
           </select>
@@ -4145,7 +4150,7 @@ const aPgs={
       return `
       ${isAll?`<div class="stitle" style="margin-top:20px">📋 الشعبة ${g}</div>`:''}
       ${cListInfo.length?`<div class="alert ab"><span class="aicon">📚</span>الشعبة ${g}: ${cListInfo.length} مواد حالية · تحتاج ${neededCount} حصة · ${placedCount} موزّعة</div>`:'<div class="alert aw"><span class="aicon">⚠️</span>لا توجد مواد حالية للشعبة '+g+' (تأكد من حالة المواد = حالي)</div>'}
-      ${cListInfo.length?`<div class="sch-legend">${cListInfo.map(c=>`<span class="sch-tag">${c.course} <b>(${c.sessions} حصص)</b> · ${c.trainer}</span>`).join('')}</div>`:''}
+      ${cListInfo.length?`<div class="sch-legend">${cListInfo.map(c=>`<span class="sch-tag">${esc(c.course)} <b>(${c.sessions} حصص)</b> · ${esc(c.trainer)}</span>`).join('')}</div>`:''}
       <div class="sch-wrap"><table class="sch-table">
         <thead><tr><th>اليوم</th>${headCells}</tr></thead>
         <tbody>${days.map(d=>`<tr><td class="sch-pnum">${d}</td>${rowCells(g,d)}</tr>`).join('')}</tbody>
@@ -4225,8 +4230,8 @@ const aPgs={
       const finalBadge=(r.finalStatus==='معتمد'||r.dirStatus==='معتمد')?'<span class="pill pg">معتمد نهائياً ✓</span>':(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')?'<span class="pill pr">مرفوض</span>':r.supStatus==='معتمد'?'<span class="pill pb">بانتظار المدير</span>':'<span class="pill py">بانتظار المشرف</span>';
       const isExcuse=r.type==='عذر غياب';
       return `<div class="ccard ${actionable?'cc-y':((r.dirStatus==='معتمد')?'cc-g':(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')?'cc-r':'cc-b')}" style="margin-bottom:12px">
-        <div class="cc-top"><div><div class="cc-name">${r.type} — ${r.sname}</div><div class="cc-meta">الشعبة ${r.grp} · ${r.sid} · ${r.date||''}</div></div>${finalBadge}</div>
-        ${isExcuse?excusePanel(r):(r.details?`<div style="font-size:13px;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px">${r.details}</div>`:'')}
+        <div class="cc-top"><div><div class="cc-name">${esc(r.type)} — ${esc(r.sname)}</div><div class="cc-meta">الشعبة ${esc(r.grp)} · ${r.sid} · ${r.date||''}</div></div>${finalBadge}</div>
+        ${isExcuse?excusePanel(r):(r.details?`<div style="font-size:13px;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(r.details)}</div>`:'')}
         <div style="display:flex;gap:16px;font-size:11px;margin-top:6px;flex-wrap:wrap">
           ${isExcuse?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدرب: ${r.trnStatus||'معلق'}</span>`:''}
           <span style="color:${r.supStatus==='معتمد'?'var(--green)':r.supStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المشرف: ${r.supStatus}</span>
@@ -4282,7 +4287,7 @@ const aPgs={
       }[type];
       return `<div onclick="showStudentDetail('${c.sid}')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${cfg.bg};border-radius:8px;cursor:pointer;margin-bottom:5px">
         <span style="font-size:16px">${cfg.icon}</span>
-        <span style="flex:1;font-size:13px;font-weight:600">${c.sname.split(' ').slice(0,3).join(' ')}</span>
+        <span style="flex:1;font-size:13px;font-weight:600">${esc(c.sname.split(' ').slice(0,3).join(' '))}</span>
         <span style="font-size:12px;color:${cfg.color}">${cfg.lbl}</span>
         ${cfg.badge?`<span style="font-size:9px;background:${cfg.color};color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">${cfg.badge}</span>`:''}
         <span style="font-size:11px;color:#6ab8f7">←</span>
@@ -4300,7 +4305,7 @@ const aPgs={
       const total=c.failed.length+c.deprived.length+c.weak.length+c.highAbs.length;
       return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-          <div><span style="font-size:15px;font-weight:800;color:#6ab8f7">📚 ${c.course}</span> <span style="font-size:12px;background:rgba(106,184,247,.15);color:#6ab8f7;padding:2px 10px;border-radius:10px;font-weight:700;margin-inline-start:6px">🏫 شعبة ${c.grp}</span> <span style="font-size:11px;color:var(--muted)">· ${c.trainer||'—'}</span></div>
+          <div><span style="font-size:15px;font-weight:800;color:#6ab8f7">📚 ${esc(c.course)}</span> <span style="font-size:12px;background:rgba(106,184,247,.15);color:#6ab8f7;padding:2px 10px;border-radius:10px;font-weight:700;margin-inline-start:6px">🏫 شعبة ${esc(c.grp)}</span> <span style="font-size:11px;color:var(--muted)">· ${esc(c.trainer||'—')}</span></div>
           <span style="font-size:11px;background:rgba(231,76,60,.15);color:#e74c3c;padding:3px 10px;border-radius:12px;font-weight:700">${total} حالة</span>
         </div>
         ${c.failed.length?`<div style="font-size:11px;font-weight:700;color:#e74c3c;margin:8px 0 4px">❌ راسبون (${c.failed.length})</div>${c.failed.map(x=>caseRow(x,'failed')).join('')}`:''}
@@ -4350,7 +4355,7 @@ const aPgs={
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <select id="rep-student" style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
         <option value="">— اختر المتدرب —</option>
-        ${uniqStudents(students).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>`<option value="${s.id||s.sid}">${s.name} (${s.sid||s.id||''}) · شعبة ${s.grp}</option>`).join('')}
+        ${uniqStudents(students).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>`<option value="${esc(s.id||s.sid.toString())}">${esc(s.name)} (${s.sid||s.id||''}) · شعبة ${esc(s.grp)}</option>`).join('')}
       </select>
       <button class="btn btn-b" onclick="(function(){const v=document.getElementById('rep-student').value;if(!v){showToast('اختر متدرب أولاً','w');return}printStudentReport(v)})()">🖨️ اطبع كشف الطالب</button>
       <button class="btn" style="background:#0a7d34;color:#fff" onclick="(function(){const v=document.getElementById('rep-student').value;if(!v){showToast('اختر متدرب أولاً','w');return}printStudentIntro(v)})()">📄 اطبع إفادة تعريف</button>
@@ -4360,7 +4365,7 @@ const aPgs={
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
       <select id="warn-student" style="flex:1;min-width:200px;padding:10px;border-radius:8px;border:1px solid var(--border);background:var(--card2);color:var(--text)">
         <option value="">— اختر متدرب لديه غياب مرتفع —</option>
-        ${studentsHighAbs().map(({s,courses})=>`<option value="${s.id||s.sid}">${s.name} · شعبة ${s.grp||'—'} · ${courses.length} مقرر · أعلى ${Math.round(Math.max(...courses.map(c=>parseFloat(c.abs)||0)))}%</option>`).join('')||'<option value="" disabled>لا يوجد طلاب تجاوزوا 10%</option>'}
+        ${studentsHighAbs().map(({s,courses})=>`<option value="${esc(s.id||s.sid.toString())}">${esc(s.name)} · شعبة ${esc(s.grp||'—')} · ${courses.length} مقرر · أعلى ${Math.round(Math.max(...courses.map(c=>parseFloat(c.abs)||0)))}%</option>`).join('')||'<option value="" disabled>لا يوجد طلاب تجاوزوا 10%</option>'}
       </select>
       <button class="btn btn-b" onclick="printWarningLetter(document.getElementById('warn-student').value)">🖨️ اطبع الخطاب</button>
       <button class="btn" style="background:#16a34a;color:#fff" onclick="sendWarningEmail(document.getElementById('warn-student').value)">📧 أرسل بالإيميل</button>
@@ -4378,8 +4383,8 @@ const aPgs={
     <div class="rep-card">
       <div class="rep-header"><div class="rep-title">⚙️ إعدادات عامة</div></div>
       <div class="iitem" style="margin-bottom:10px"><div class="ilbl">معرف الشيت</div><div class="ival" style="font-size:12px;word-break:break-all">${SID}</div></div>
-      <div class="iitem" style="margin-bottom:10px"><div class="ilbl">الإداري</div><div class="ival">${user.name}</div></div>
-      <div class="iitem"><div class="ilbl">الصلاحية</div><div class="ival">${user.title}</div></div>
+      <div class="iitem" style="margin-bottom:10px"><div class="ilbl">الإداري</div><div class="ival">${esc(user.name)}</div></div>
+      <div class="iitem"><div class="ilbl">الصلاحية</div><div class="ival">${esc(user.title)}</div></div>
     </div>
     <div class="rep-card">
       <div class="rep-header"><div class="rep-title">📊 إحصائيات سريعة</div></div>
@@ -4849,13 +4854,13 @@ function buildWarningLetter(sid){
   const st=students.find(s=>String(s.id)===String(sid)||String(s.sid)===String(sid))||{};
   const courses=highAbsCourses(sid);
   const rows=courses.map(c=>`<tr>
-      <td style="text-align:right">${c.course}</td>
-      <td>${c.trainer||'—'}</td>
+      <td style="text-align:right">${esc(c.course)}</td>
+      <td>${esc(c.trainer||'—')}</td>
       <td>${absBadge(c.abs)}</td>
     </tr>`).join('');
   const body=`
-    <div class="to">المكرم المتدرب / ${st.name||'.....................'} &nbsp; المحترم</div>
-    <p style="color:#555;margin-top:-8px;font-size:13.5px">${st.grp?`الشعبة: ${st.grp}`:''}${(st.id||st.sid)?` &nbsp;·&nbsp; الرقم التدريبي: ${st.id||st.sid}`:''}${st.spec?` &nbsp;·&nbsp; ${st.spec}`:''}</p>
+    <div class="to">المكرم المتدرب / ${esc(st.name||'.....................')} &nbsp; المحترم</div>
+    <p style="color:#555;margin-top:-8px;font-size:13.5px">${esc(st.grp?`الشعبة: ${st.grp)}`:''}${(st.id||st.sid)?` &nbsp;·&nbsp; الرقم التدريبي: ${st.id||st.sid}`:''}${esc(st.spec?` &nbsp;·&nbsp; ${st.spec)}`:''}</p>
     <p>السلام عليكم ورحمة الله وبركاته،،</p>
     <p>يفيد معهد المعرفة والابداع العالي للتدريب بأنه وفقاً لسجلات الحضور والغياب، فقد بلغت نسبة غيابك في المقررات التالية الحدود الموضحة أدناه، وذلك حسب لائحة الحضور والغياب المعتمدة (10% إنذار أول · 20% إنذار ثانٍ · 25% حرمان):</p>
     <table>
@@ -4903,8 +4908,8 @@ function printAllWarnings(){
   const list=studentsHighAbs();
   if(!list.length){showToast('لا يوجد طلاب تجاوزوا 10% في المقررات الحالية','s');return;}
   const blocks=list.map(({s,courses})=>{
-    const rows=courses.map(c=>`<tr><td style="text-align:right">${c.course}</td><td>${c.trainer||'—'}</td><td>${absBadge(c.abs)}</td></tr>`).join('');
-    return `<div class="grp-block"><div class="sec-title">${s.name} · شعبة ${s.grp||'—'} · الرقم ${s.id||s.sid||''}</div>
+    const rows=courses.map(c=>`<tr><td style="text-align:right">${esc(c.course)}</td><td>${esc(c.trainer||'—')}</td><td>${absBadge(c.abs)}</td></tr>`).join('');
+    return `<div class="grp-block"><div class="sec-title">${esc(s.name)} · شعبة ${esc(s.grp||'—')} · الرقم ${esc(s.id||s.sid||''.toString())}</div>
       <table><thead><tr><th>المقرر</th><th>المدرب</th><th>نسبة الغياب والمستوى</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }).join('');
   const kpis=`<div class="kpis">
@@ -4922,7 +4927,7 @@ async function sendWarningEmail(sid){
   if(!courses.length){showToast('هذا المتدرب ليس لديه غياب مرتفع','i');return;}
   const maxAbs=Math.max(...courses.map(c=>parseFloat(c.abs)||0));
   const level=absLevel(maxAbs).label;
-  const details=courses.map(c=>`${c.course}~${Math.round(c.abs)}~${absLevel(c.abs).label}`).join('|');
+  const details=courses.map(c=>`${esc(c.course)}~${Math.round(c.abs)}~${absLevel(c.abs).label}`).join('|');
   showToast('جاري إرسال الإيميل...','i');
   try{
     const r=await jsonpCall({action:'sendAbsenceWarning',email:st.email,name:st.name||'',grp:st.grp||'',level,details});
@@ -4965,7 +4970,7 @@ function printAbsenceReport(){
       const sc=allCourses.filter(c=>c.sid===s.id&&isActive(c.status));
       const maxAbs=sc.length?Math.max(...sc.map(c=>c.abs)):0;
       const worst=sc.find(c=>c.abs===maxAbs);
-      return `<tr><td>${s.sid}</td><td style="text-align:right">${s.name}</td><td>${absBadge(maxAbs)}</td><td>${worst?worst.course:'—'}</td><td>${sc.length}</td></tr>`;
+      return `<tr><td>${s.sid}</td><td style="text-align:right">${esc(s.name)}</td><td>${absBadge(maxAbs)}</td><td>${worst?worst.course:'—'}</td><td>${sc.length}</td></tr>`;
     }).join('');
     body+=`<div class="grp-block"><div class="sec-title">📋 الشعبة ${g} (${gs.length} متدرب)</div>
     <table><thead><tr><th>الرقم</th><th>الاسم</th><th>أعلى نسبة غياب</th><th>في مادة</th><th>عدد المواد</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -4995,7 +5000,7 @@ function printGradesReport(){
         const st=students.find(s=>s.id===c.sid);
         const grade=Math.round(c.pct);
         const cls=grade>=60?'ok':(grade>0?'danger':'');
-        return `<tr><td>${c.sid}</td><td style="text-align:right">${st?st.name:c.sname||''}</td><td class="${cls}">${grade}%</td><td>${c.letter||'—'}</td><td>${grade>=60?'ناجح':(grade>0?'راسب':'—')}</td></tr>`;
+        return `<tr><td>${c.sid}</td><td style="text-align:right">${st?st.name:c.sname||''}</td><td class="${cls}">${grade}%</td><td>${esc(c.letter||'—')}</td><td>${grade>=60?'ناجح':(grade>0?'راسب':'—')}</td></tr>`;
       }).join('');
       const avg=avgPct(uniq);
       body+=`<div class="grp-block" style="margin-bottom:14px"><div style="font-weight:700;color:#0a2348;padding:6px 0">📚 ${course} <span style="font-size:11px;color:#5a6b85">(متوسط: ${avg}%)</span></div>
@@ -5022,21 +5027,21 @@ function printStudentReport(sid){
   </div>
   <div class="sec-title">بيانات المتدرب</div>
   <table><tbody>
-    <tr><th style="width:30%">الاسم</th><td style="text-align:right">${st.name}</td></tr>
+    <tr><th style="width:30%">الاسم</th><td style="text-align:right">${esc(st.name)}</td></tr>
     <tr><th>الرقم الأكاديمي</th><td>${st.id}</td></tr>
-    <tr><th>الشعبة</th><td>${st.grp}</td></tr>
-    <tr><th>التخصص</th><td style="text-align:right">${st.spec||'—'}</td></tr>
-    <tr><th>الجوال</th><td>${st.ph||'—'}</td></tr>
+    <tr><th>الشعبة</th><td>${esc(st.grp)}</td></tr>
+    <tr><th>التخصص</th><td style="text-align:right">${esc(st.spec||'—')}</td></tr>
+    <tr><th>الجوال</th><td>${esc(st.ph||'—'.toString())}</td></tr>
     <tr><th>البريد</th><td>${st.email||'—'}</td></tr>
   </tbody></table>`;
   if(current.length){
-    const rows=current.map(c=>`<tr><td style="text-align:right">${c.course}</td><td>${c.code||'—'}</td><td class="${c.pct>=60?'ok':c.pct>0?'danger':''}">${Math.round(c.pct)}%</td><td>${c.letter||'—'}</td><td>${absBadge(c.abs)}</td></tr>`).join('');
+    const rows=current.map(c=>`<tr><td style="text-align:right">${esc(c.course)}</td><td>${esc(c.code||'—')}</td><td class="${c.pct>=60?'ok':c.pct>0?'danger':''}">${Math.round(c.pct)}%</td><td>${esc(c.letter||'—')}</td><td>${absBadge(c.abs)}</td></tr>`).join('');
     body+=`<div class="sec-title">المواد الحالية (${current.length})</div>
     <table><thead><tr><th>المادة</th><th>الرمز</th><th>الدرجة</th><th>التقدير</th><th>الغياب</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
   const prev=sc.filter(c=>!isActive(c.status));
   if(prev.length){
-    const rows=prev.map(c=>`<tr><td style="text-align:right">${c.course}</td><td>${c.code||'—'}</td><td class="${c.pct>=60?'ok':c.pct>0?'danger':''}">${Math.round(c.pct)}%</td><td>${c.letter||'—'}</td><td>${c.pct>=60?'ناجح':'راسب'}</td></tr>`).join('');
+    const rows=prev.map(c=>`<tr><td style="text-align:right">${esc(c.course)}</td><td>${esc(c.code||'—')}</td><td class="${c.pct>=60?'ok':c.pct>0?'danger':''}">${Math.round(c.pct)}%</td><td>${esc(c.letter||'—')}</td><td>${c.pct>=60?'ناجح':'راسب'}</td></tr>`).join('');
     body+=`<div class="sec-title">المواد السابقة (${prev.length})</div>
     <table><thead><tr><th>المادة</th><th>الرمز</th><th>الدرجة</th><th>التقدير</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
@@ -5058,7 +5063,7 @@ function printRequestsReport(){
   const rows=reqs.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(r=>{
     const days=((String(r.details||'').match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim();
     const hours=((String(r.details||'').match(/ساعات:\s*([\d.]+)/)||[])[1]||'');
-    return `<tr><td>${r.date||'—'}</td><td style="text-align:right">${r.sname||''}</td><td>${r.grp||''}</td><td>${r.type||''}</td><td style="font-size:10px">${days||'—'}</td><td>${hours||'—'}</td><td>${statusOf(r)}</td></tr>`;
+    return `<tr><td>${r.date||'—'}</td><td style="text-align:right">${esc(r.sname||'')}</td><td>${esc(r.grp||'')}</td><td>${esc(r.type||'')}</td><td style="font-size:10px">${days||'—'}</td><td>${hours||'—'}</td><td>${statusOf(r)}</td></tr>`;
   }).join('');
   const body=`<div class="kpis">
     <div class="kpi"><div class="n">${reqs.length}</div><div class="l">إجمالي الطلبات</div></div>
@@ -5084,10 +5089,10 @@ function showStudentDetail(sid){
     <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto">
       <div class="modal-title">
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="av av-s" style="width:44px;height:44px;font-size:16px">${st.name.split(' ').slice(0,2).map(w=>w[0]).join('')}</div>
+          <div class="av av-s" style="width:44px;height:44px;font-size:16px">${esc(st.name.split(' ').slice(0,2).map(w=>w[0]).join(''))}</div>
           <div>
-            <div style="font-size:16px;font-weight:700">${st.name}</div>
-            <div style="font-size:12px;color:var(--muted);font-weight:400">الشعبة ${st.grp} · ${st.spec}</div>
+            <div style="font-size:16px;font-weight:700">${esc(st.name)}</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:400">الشعبة ${esc(st.grp)} · ${esc(st.spec)}</div>
           </div>
         </div>
         <button class="modal-close" onclick="document.getElementById('studentModal').remove()">✕</button>
@@ -5095,7 +5100,7 @@ function showStudentDetail(sid){
       
       <div class="igrid" style="margin-bottom:16px">
         <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${st.id}</div></div>
-        <div class="iitem"><div class="ilbl">الجوال</div><div class="ival">${st.ph||'—'}</div></div>
+        <div class="iitem"><div class="ilbl">الجوال</div><div class="ival">${esc(st.ph||'—'.toString())}</div></div>
         <div class="iitem"><div class="ilbl">المعدّل التراكمي</div><div class="ival" style="color:${gpaColor(gpaFrom(stCourses))};font-weight:700">${gpaDisplay(stCourses)} <span style="font-size:11px;color:var(--muted);font-weight:400">/ 5</span></div></div>
         <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival" style="color:${avg>=70?'var(--green)':avg>=60?'var(--gold)':'var(--red)'}">${avg}%</div></div>
       </div>
@@ -5122,7 +5127,7 @@ function showStudentDetail(sid){
         const p=Math.round(c.pct);
         return `<div class="ccard cc-b" style="margin-bottom:8px;padding:14px 16px">
           <div class="cc-top" style="margin-bottom:8px">
-            <div><div class="cc-name" style="font-size:13px">${c.course}</div><div class="cc-meta">${c.trainer||'—'}</div></div>
+            <div><div class="cc-name" style="font-size:13px">${esc(c.course)}</div><div class="cc-meta">${esc(c.trainer||'—')}</div></div>
             <span class="pill ${p>=80?'pg':p>=50?'py':'pr'}">${p}%</span>
           </div>
           <div class="prog"><div class="pfill ${p>=80?'pf-g':p>=50?'pf-y':'pf-r'}" style="width:${p}%"></div></div>
@@ -5475,10 +5480,10 @@ function showGroupDetail(grp){
       <div class="gtable">
         <table>
           <thead><tr><th>الرقم</th><th>الاسم</th><th>التخصص</th><th>الجوال</th></tr></thead>
-          <tbody>${gs.map(s=>`<tr onclick="document.getElementById('groupModal').remove();setTimeout(()=>showStudentDetail('${s.id}'),100)" style="cursor:pointer">
-            <td style="color:var(--muted)">${s.id}</td><td>${s.name}</td>
-            <td style="color:var(--muted);font-size:12px">${s.spec||'—'}</td>
-            <td style="color:var(--muted)">${s.ph||'—'}</td>
+          <tbody>${gs.map(s=>`<tr onclick="document.getElementById('groupModal').remove();setTimeout(()=>showStudentDetail('${esc(s.id.toString())}'),100)" style="cursor:pointer">
+            <td style="color:var(--muted)">${esc(s.id.toString())}</td><td>${esc(s.name)}</td>
+            <td style="color:var(--muted);font-size:12px">${esc(s.spec||'—')}</td>
+            <td style="color:var(--muted)">${esc(s.ph||'—')}</td>
           </tr>`).join('')}</tbody>
         </table>
       </div>
