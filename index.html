@@ -1376,8 +1376,8 @@ function getCourseMaterials(code){
 function matChipHTML(m){
   const isLink=/^https?:\/\//i.test(m.url||'');
   const label=m.title||(isLink?'فتح المادة':m.url);
-  if(isLink)return `<a href="${escUrl(m.url)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,.12);color:#2ecc71;border:1px solid rgba(46,204,113,.3);border-radius:14px;padding:5px 12px;font-size:12px;font-weight:600">📄 ${label}</a>`;
-  return `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:5px 12px;font-size:12px">📄 ${label}${esc(m.title&&m.url&&m.title!==m.url?` — ${escUrl(m.url))}`:''}</span>`;
+  if(isLink)return `<a href="${escUrl(m.url)}" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,.12);color:#2ecc71;border:1px solid rgba(46,204,113,.3);border-radius:14px;padding:5px 12px;font-size:12px;font-weight:600">📄 ${esc(label)}</a>`;
+  return `<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:5px 12px;font-size:12px">📄 ${esc(label)}${m.title&&m.url&&m.title!==m.url?` — ${esc(m.url)}`:''}</span>`;
 }
 // مفتاح موحّد للطالب: يحوّل الأرقام العربية ويزيل الرموز/المسافات لمنع التكرار
 function sidKey(s){
@@ -2339,7 +2339,7 @@ const sPgs={
     const P=hasMine?maxP:5;
     const cell=(day,p)=>{
       const c=myGrid[day+'|'+p];
-      return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${esc(c.course)}</div>${esc(c.trainer?`<div class="sch-trainer">${c.trainer)}</div>`:''}${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
+      return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${esc(c.course)}</div>${c.trainer?`<div class="sch-trainer">${esc(c.trainer)}</div>`:''}${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
     };
     const bAfter=breakAfterPeriod();
     const headCells=[...Array(P).keys()].map(p=>{
@@ -2415,13 +2415,13 @@ const sPgs={
     ${myReqs.length?myReqs.map(r=>`
       <div class="ccard ${r.finalStatus==='معتمد'||r.dirStatus==='معتمد'?'cc-g':r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'?'cc-r':'cc-y'}">
         <div class="cc-top"><div><div class="cc-name">${esc(r.type)}</div><div class="cc-meta">${r.date||''}</div></div>${statusBadge(r)}</div>
-        ${esc(r.details?`<div style="font-size:13px;color:var(--muted);margin-top:8px">${esc(r.details)}</div>`:''}
+        ${r.details?`<div style="font-size:13px;color:var(--muted);margin-top:8px">${esc(r.details)}</div>`:''}
         <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;flex-wrap:wrap">
-          ${esc(r.type==='عذر غياب'?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)')}">المدرب: ${r.trnStatus||'معلق'}</span>`:''}
+          ${r.type==='عذر غياب'?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدرب: ${esc(r.trnStatus||'معلق')}</span>`:''}
           <span style="color:${r.supStatus==='معتمد'?'var(--green)':r.supStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المشرف: ${r.supStatus}</span>
           <span style="color:${r.dirStatus==='معتمد'?'var(--green)':r.dirStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدير: ${r.dirStatus}</span>
         </div>
-        ${esc(r.notes?`<div style="font-size:12px;color:#f4c78a;margin-top:6px">📌 ${esc(r.notes)}</div>`:''}
+        ${r.notes?`<div style="font-size:12px;color:#f4c78a;margin-top:6px">📌 ${esc(r.notes)}</div>`:''}
         ${((r.type||'').includes('تعريف')&&(r.finalStatus==='معتمد'||r.dirStatus==='معتمد'))?`<div style="margin-top:12px"><button class="btn btn-b btn-sm" onclick="printMyIntro()">🖨️ اطبع ورقة التعريف (الإفادة)</button></div>`:''}
       </div>`).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات سابقة</div>'}`;
   },
@@ -4860,7 +4860,7 @@ function buildWarningLetter(sid){
     </tr>`).join('');
   const body=`
     <div class="to">المكرم المتدرب / ${esc(st.name||'.....................')} &nbsp; المحترم</div>
-    <p style="color:#555;margin-top:-8px;font-size:13.5px">${esc(st.grp?`الشعبة: ${st.grp)}`:''}${(st.id||st.sid)?` &nbsp;·&nbsp; الرقم التدريبي: ${st.id||st.sid}`:''}${esc(st.spec?` &nbsp;·&nbsp; ${st.spec)}`:''}</p>
+    <p style="color:#555;margin-top:-8px;font-size:13.5px">${st.grp?`الشعبة: ${esc(st.grp)}`:''}${(st.id||st.sid)?` &nbsp;·&nbsp; الرقم التدريبي: ${st.id||st.sid}`:''}${st.spec?` &nbsp;·&nbsp; ${esc(st.spec)}`:''}</p>
     <p>السلام عليكم ورحمة الله وبركاته،،</p>
     <p>يفيد معهد المعرفة والابداع العالي للتدريب بأنه وفقاً لسجلات الحضور والغياب، فقد بلغت نسبة غيابك في المقررات التالية الحدود الموضحة أدناه، وذلك حسب لائحة الحضور والغياب المعتمدة (10% إنذار أول · 20% إنذار ثانٍ · 25% حرمان):</p>
     <table>
