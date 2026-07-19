@@ -802,6 +802,7 @@ const SCRIPT_URL='https://script.google.com/macros/s/AKfycby0hfxanInvE0PvTKYhT-l
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
+// ⭐ فصل الغياب حسب الترم: يتم تلقائياً عبر عمود "الترم" في قاعدة الغياب (لا يحتاج ضبط).
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
 const OTP_ENABLED=false;
 const ADMIN=[]; // التحقق صار في الخادم
@@ -1071,7 +1072,7 @@ async function loadStudent(){
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
-  courses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
+  courses.forEach(s=>{ if(isActive(s.status)) s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); });
 }
 
 async function loadTrainer(){
@@ -1091,7 +1092,7 @@ async function loadTrainer(){
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
-  students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
+  students.forEach(s=>{ if(isActive(s.status)) s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); });
 }
 
 async function loadAdmin(){
@@ -1131,7 +1132,7 @@ async function loadAdmin(){
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6])});
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
-  allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
+  allCourses.forEach(s=>{ if(isActive(s.status)) s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); });
 }
 // هل المدرب حالي (مسجّل في القاعدة)؟
 function isCurrentTrainer(name){
@@ -1304,13 +1305,16 @@ function todayCoursesForTrainer(trainerName,dayName){
 // ===== المصدر الوحيد للحقيقة: حساب نسب الغياب من تبويب "قاعدة الغياب" =====
 // خريطة عامة: مفتاح "sidDigits|codeDigits" → مجموع أيام الغياب
 let absenceDaysMap={};
-// تحميل "قاعدة الغياب" وبناء خريطة أيام الغياب لكل طالب/مادة
+// تحميل "قاعدة الغياب" وبناء خريطة أيام الغياب لكل طالب/مادة/ترم
 async function loadAbsenceBase(){
   absenceDaysMap={};
   try{
-    const rows=await fetchSheet('قاعدة الغياب!A:G').catch(()=>[]);
+    const rows=await fetchSheet('قاعدة الغياب!A:H').catch(()=>[]);
     const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
-    // الأعمدة: A=الرقم · B=الاسم · C=المادة · D=رمز · E=شعبة · F=التاريخ · G=الحالة
+    // توحيد الشعبة: "شعبة 2" و"2" يصيران "2" — للفصل بين تسجيلات نفس المقرر
+    const gk=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
+    const tk=t=>String(t||'').replace(/\s+/g,''); // توحيد اسم الترم (إزالة المسافات)
+    // الأعمدة: A=الرقم · B=الاسم · C=المادة · D=رمز · E=شعبة · F=التاريخ · G=الحالة · H=الترم
     for(let i=1;i<rows.length;i++){
       const r=rows[i];
       const sid=onlyDigits(r[0]);
@@ -1318,15 +1322,18 @@ async function loadAbsenceBase(){
       if(!sid)continue;
       const status=String(r[6]||'').trim();
       const days=(status==='متأخر')?0.5:1; // غائب=1 · متأخر=0.5
-      const key=sid+'|'+code;
+      // ⭐ المفتاح يشمل الترم: يفصل نفس المقرر/الشعبة بين ترمين مختلفين
+      const key=sid+'|'+code+'|'+gk(r[4])+'|'+tk(r[7]);
       absenceDaysMap[key]=(absenceDaysMap[key]||0)+days;
     }
   }catch(e){}
 }
 // حساب نسبة الغياب لطالب في مادة من الخريطة (تعتمد على الجدول لإجمالي الأيام)
-function absPctFromBase(sid,code,course,grp){
+function absPctFromBase(sid,code,course,grp,term){
   const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
-  const key=onlyDigits(sid)+'|'+onlyDigits(code);
+  const gk=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
+  const tk=t=>String(t||'').replace(/\s+/g,'');
+  const key=onlyDigits(sid)+'|'+onlyDigits(code)+'|'+gk(grp)+'|'+tk(term); // ⭐ فصل حسب الشعبة + الترم
   const absDays=absenceDaysMap[key]||0;
   const total=courseTotalDays(course,grp);
   if(!total)return 0;
@@ -2929,7 +2936,7 @@ async function saveSessionV2(course,code,grp,dateStr){
     else if(mk==='late')addDays=0.5;
     // سجل يومي لكل من غاب/تأخر (حتى نمنع التكرار في التبويب)
     if(mk==='absent'||mk==='late'){
-      dailyLog.push({sid:s.sid,name:s.name,course,code:normCode(code),grp,date:dateStr,status:mk==='absent'?'غائب':'متأخر',days:addDays});
+      dailyLog.push({sid:s.sid,name:s.name,course,code:normCode(code),grp,date:dateStr,status:mk==='absent'?'غائب':'متأخر',days:addDays,term:s.half||''});
     }
     if(addDays>0){
       // الأيام المحفوظة سابقاً = النسبة الحالية × إجمالي الأيام ÷ 100
