@@ -778,6 +778,7 @@ body{top:0!important}
       <button id="themeBtn" onclick="toggleTheme()" title="تبديل الوضع">🌙</button>
       <div class="notif-btn" onclick="showReviewCases()" title="الحالات التي تحتاج مراجعة">⚠️<span class="notif-badge nb-y" id="reviewBadge" style="display:none"></span></div>
       <div class="notif-btn" onclick="showNotifs()" title="الاشعارات">🔔<span class="notif-badge" id="notifBadge" style="display:none"></span></div>
+      <div class="notif-btn" id="delegBtn" onclick="showDelegations()" title="التكليفات" style="display:none">🧾<span class="notif-badge nb-y" id="delegBadge" style="display:none"></span></div>
       <span class="role-badge" id="rbadge"></span>
       <div class="av" id="topAv"></div>
       <span class="uname" id="topName"></span>
@@ -1078,13 +1079,19 @@ async function loadStudent(){
 async function loadTrainer(){
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[])
+    fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[]),
+    loadDelegations()
   ]);
   students=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
-    if(n0(r[6])===user.name)
-      students.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'});
+    const mine=(n0(r[6])===user.name);
+    const dl=mine?null:activeDelegToMeForRow(r); // مادة مكلَّف بها
+    if(mine||dl){
+      const obj={key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'};
+      obj.delegated=!mine; obj.origTrainer=n0(r[6]);
+      students.push(obj);
+    }
   }
   catalog=[];
   for(let i=1;i<cat.length;i++){
@@ -1131,7 +1138,7 @@ async function loadAdmin(){
     const r=ad[i];
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6])});
   }
-  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
+  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations()]);
   allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
 }
 // هل المدرب حالي (مسجّل في القاعدة)؟
@@ -1152,6 +1159,215 @@ async function loadRequests(){
     requests.push({rid:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),type:n0(r[4]),details:n0(r[5]),date:n0(r[6]),supStatus:n0(r[7])||'معلق',dirStatus:n0(r[8])||'معلق',finalStatus:n0(r[9])||'قيد المراجعة',notes:n0(r[10]),trnStatus:n0(r[11])||'معلق'});
   }
 }
+
+/* ===================== نظام التكليفات ===================== */
+// المكلِّف (مدرب المادة أو إداري) يطلب → المشرف يعتمد → المدير يعتمد → التكليف نشط
+let delegations=[];      // كل التكليفات المرئية للمستخدم الحالي
+let staffCache=null;     // قائمة المدربين+الإداريين لاختيار المكلَّف
+const dg=s=>String(s||'').replace(/[^0-9]/g,'');
+function todayISO(){const d=new Date();const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+// تحميل تبويب "التكليفات"
+async function loadDelegations(){
+  const rows=await fetchSheet('التكليفات!A:O').catch(()=>[]);
+  delegations=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i];
+    if(!n0(r[0]))continue;
+    delegations.push({id:n0(r[0]),code:n0(r[1]),grp:n0(r[2]),term:n0(r[3]),byId:n0(r[4]),byName:n0(r[5]),
+      toId:n0(r[6]),toName:n0(r[7]),scope:n0(r[8]),supStatus:n0(r[9])||'معلق',dirStatus:n0(r[10])||'معلق',
+      finalStatus:n0(r[11])||'قيد المراجعة',created:n0(r[12]),expiry:n0(r[13]),log:n0(r[14])});
+  }
+}
+// قائمة الموظفين لاختيار المكلَّف (رقم+اسم فقط)
+async function loadStaffList(){
+  if(staffCache)return staffCache;
+  const d=await jsonpTo(AUTH_URL,{action:'staffList',token:SESSION.token}).catch(()=>null);
+  staffCache=(d&&d.staff)||[];
+  return staffCache;
+}
+// هل يوجد تكليف نشط يمنحني هذه المادة؟ (للمكلَّف — واجهة فقط، والخادم يفرضه فعلياً)
+function myActiveDelegationFor(code,grp){
+  const u=dg(user.id),t=todayISO();
+  return delegations.find(d=>d.finalStatus==='نشط'&&dg(d.toId)===u&&dg(d.code)===dg(code)
+    &&(!dg(d.grp)||dg(d.grp)===dg(grp))&&(!d.expiry||d.expiry>=t));
+}
+// نفس الفحص لكن انطلاقاً من صف سجل المقررات (E=code idx4 · D=grp idx3)
+function activeDelegToMeForRow(r){ return myActiveDelegationFor(n0(r[4]),n0(r[3])); }
+// هل يشمل نطاق التكليف صلاحية معيّنة؟
+function scopeHas(scope,need){ return String(scope||'').indexOf(need)>=0; }
+
+// عدّاد شارة التكليفات (ما ينتظر إجرائي)
+function updateDelegBadge(){
+  const badge=document.getElementById('delegBadge'); if(!badge)return;
+  let n=0;
+  if(user.role==='a'){
+    const lvl=user.level;
+    delegations.forEach(d=>{
+      if(d.finalStatus==='مرفوض'||d.finalStatus==='ملغى')return;
+      if(d.supStatus==='معلق') n++;
+      else if(lvl==='director'&&d.supStatus==='معتمد'&&d.dirStatus==='معلق') n++;
+    });
+  } else if(user.role==='t'){
+    delegations.forEach(d=>{ if(dg(d.byId)===dg(user.id)&&d.finalStatus==='قيد المراجعة') n++; });
+  }
+  if(n>0){badge.textContent=n;badge.style.display='';}else{badge.style.display='none';}
+}
+// المواد التي أملكها لإنشاء تكليف عنها
+function myOwnedCourses(){
+  const src=(user.role==='a')?allCourses:students.filter(s=>!s.delegated);
+  const map=new Map();
+  src.forEach(s=>{ if(!isActive(s.status))return; const k=dg(s.code)+'|'+dg(s.grp)+'|'+String(s.half||'');
+    if(!map.has(k))map.set(k,{code:s.code,grp:s.grp,course:s.course||s.sname||'',term:s.half||''}); });
+  return [...map.values()];
+}
+function delStatusColor(d){
+  if(d.finalStatus==='نشط')return 'var(--green)';
+  if(d.finalStatus==='مرفوض'||d.finalStatus==='ملغى')return 'var(--red)';
+  return 'var(--muted)';
+}
+// نافذة التكليفات
+async function showDelegations(){
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay'; overlay.id='delegModal';
+  const isAdmin=user.role==='a', lvl=user.level;
+  // أقسام حسب الدور
+  let sections='';
+  // (1) طلبات الاعتماد (للإداري)
+  if(isAdmin){
+    const pend=delegations.filter(d=>{
+      if(d.finalStatus==='مرفوض'||d.finalStatus==='ملغى')return false;
+      if(d.supStatus==='معلق')return true;
+      if(lvl==='director'&&d.supStatus==='معتمد'&&d.dirStatus==='معلق')return true;
+      return false;
+    });
+    sections+=`<div style="font-weight:700;margin:6px 0 8px;color:#f4c78a">🔎 طلبات تحتاج اعتمادك (${pend.length})</div>`;
+    sections+= pend.length? pend.map(d=>{
+      const stage=(d.supStatus==='معلق')?'sup':'dir';
+      const stageLbl=(stage==='sup')?'اعتماد المشرف':'اعتماد المدير';
+      const canAct=(stage==='sup')||(stage==='dir'&&lvl==='director');
+      return `<div class="alert aw" style="display:block">
+        <div style="font-weight:700">${esc(d.course||d.code)} · شعبة ${esc(d.grp||'—')}${d.term?' · '+esc(d.term):''}</div>
+        <div style="font-size:12px;color:var(--muted);margin:3px 0">من: ${esc(d.byName)} ← إلى: ${esc(d.toName)} · النطاق: ${esc(d.scope)}${d.expiry?' · ينتهي: '+esc(d.expiry):''}</div>
+        <div style="font-size:11px;color:var(--muted)">المرحلة: ${stageLbl}</div>
+        ${canAct?`<div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-b btn-sm" onclick="approveDeleg('${d.id}','${stage}','approve')">✔ اعتماد</button>
+          <button class="btn btn-out btn-sm" onclick="approveDeleg('${d.id}','${stage}','reject')">✕ رفض</button>
+        </div>`:`<div style="font-size:11px;color:var(--muted);margin-top:6px">بانتظار المدير</div>`}
+      </div>`;
+    }).join(''):'<div class="alert ab"><span class="aicon">ℹ️</span>لا يوجد طلبات تنتظر اعتمادك</div>';
+  }
+  // (2) تكليفات وصلتني (أنا المكلَّف)
+  const toMe=delegations.filter(d=>dg(d.toId)===dg(user.id));
+  if(toMe.length){
+    sections+=`<div style="font-weight:700;margin:14px 0 8px;color:#7fd1ae">📥 مواد كُلّفت بها (${toMe.length})</div>`;
+    sections+= toMe.map(d=>`<div class="alert ab" style="display:block">
+      <div style="font-weight:700">${esc(d.course||d.code)} · شعبة ${esc(d.grp||'—')}</div>
+      <div style="font-size:12px;color:var(--muted)">بالنيابة عن: ${esc(d.byName)} · النطاق: ${esc(d.scope)}</div>
+      <div style="font-size:12px;color:${delStatusColor(d)};font-weight:700;margin-top:3px">${esc(d.finalStatus)}${d.expiry?' · ينتهي '+esc(d.expiry):''}</div>
+    </div>`).join('');
+  }
+  // (3) تكليفاتي المُرسلة (أنا المكلِّف)
+  const mine=delegations.filter(d=>dg(d.byId)===dg(user.id));
+  sections+=`<div style="font-weight:700;margin:14px 0 8px;color:#c9d4e6">📤 تكليفاتي المُرسلة (${mine.length})</div>`;
+  sections+= mine.length? mine.map(d=>`<div class="alert" style="display:block;background:rgba(255,255,255,.03)">
+    <div style="font-weight:700">${esc(d.course||d.code)} · شعبة ${esc(d.grp||'—')} → ${esc(d.toName)}</div>
+    <div style="font-size:12px;color:var(--muted)">المشرف: ${esc(d.supStatus)} · المدير: ${esc(d.dirStatus)} · النطاق: ${esc(d.scope)}</div>
+    <div style="font-size:12px;color:${delStatusColor(d)};font-weight:700;margin-top:3px">${esc(d.finalStatus)}</div>
+    ${(isAdmin&&lvl==='director'&&d.finalStatus==='نشط')?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="revokeDeleg('${d.id}')">إلغاء التكليف</button>`:''}
+  </div>`).join(''):'<div class="alert ab"><span class="aicon">ℹ️</span>لم ترسل أي تكليف بعد</div>';
+
+  overlay.innerHTML=`<div class="modal-box" style="max-width:560px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:18px;padding:20px;max-height:88vh;overflow-y:auto">
+    <div class="modal-title" style="display:flex;align-items:center;margin-bottom:14px">🧾 التكليفات
+      <button class="btn btn-b btn-sm" style="margin-inline-start:auto" onclick="openCreateDelegation()">＋ تكليف جديد</button>
+      <button class="modal-close" style="margin-inline-start:10px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px">المسار: المدرب يطلب ← المشرف يعتمد ← المدير يعتمد ← يصبح نشطاً. المكلَّف يعمل بصلاحية المدرب على المادة فقط.</div>
+    ${sections}
+  </div>`;
+  document.body.appendChild(overlay);
+}
+// نافذة إنشاء تكليف
+async function openCreateDelegation(){
+  const courses=myOwnedCourses();
+  window._dlCourses=courses;
+  if(!courses.length){ showToast('لا توجد مواد حالية لديك لإنشائها','w'); return; }
+  showToast('جاري تحميل قائمة الموظفين...','i');
+  const staff=await loadStaffList();
+  const meDigits=dg(user.id);
+  const opts=staff.filter(s=>dg(s.id)!==meDigits).map(s=>`<option value="${esc(s.id)}" data-name="${esc(s.name)}">${esc(s.name)} · ${s.type==='admin'?'إداري':'مدرب'} (${esc(s.id)})</option>`).join('');
+  const cOpts=courses.map((c,i)=>`<option value="${i}">${esc(c.course||c.code)} · شعبة ${esc(c.grp||'—')}${c.term?' · '+esc(c.term):''}</option>`).join('');
+  document.getElementById('delegModal')?.remove();
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay'; overlay.id='delegCreateModal';
+  overlay.innerHTML=`<div class="modal-box" style="max-width:480px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:18px;padding:20px;max-height:88vh;overflow-y:auto">
+    <div class="modal-title" style="display:flex;align-items:center;margin-bottom:14px">＋ تكليف جديد
+      <button class="modal-close" style="margin-inline-start:auto;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <div class="mform-group"><label>المادة</label><select id="dlCourse" class="grade-input" style="width:100%">${cOpts}</select></div>
+    <div class="mform-group"><label>المكلَّف (مدرب أو إداري)</label><select id="dlStaff" class="grade-input" style="width:100%">${opts||'<option disabled>لا يوجد موظفون</option>'}</select></div>
+    <div class="mform-group"><label>نطاق التكليف</label>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:13px">
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="scGrades" checked> إدخال الدرجات</label>
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="scAtt" checked> التحضير (الغياب)</label>
+        <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="scApp"> اعتماد الأعذار (بصلاحية المدرب)</label>
+      </div>
+    </div>
+    <div class="mform-group"><label>تاريخ الانتهاء (اختياري)</label><input type="date" id="dlExpiry" class="grade-input" style="width:100%"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn btn-b" onclick="submitDelegation()">إرسال الطلب</button>
+      <button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">سيُرسل الطلب للمشرف ثم المدير للاعتماد قبل أن يصبح نشطاً.</div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+async function submitDelegation(){
+  const courses=window._dlCourses||[];
+  const ci=parseInt(document.getElementById('dlCourse').value,10);
+  const c=courses[ci]; if(!c){showToast('اختر المادة','w');return;}
+  const sel=document.getElementById('dlStaff');
+  const toId=sel.value; const toName=sel.options[sel.selectedIndex]?.getAttribute('data-name')||'';
+  if(!toId){showToast('اختر المكلَّف','w');return;}
+  const scope=[];
+  if(document.getElementById('scGrades').checked)scope.push('درجات');
+  if(document.getElementById('scAtt').checked)scope.push('تحضير');
+  if(document.getElementById('scApp').checked)scope.push('موافقات');
+  if(!scope.length){showToast('اختر نطاقاً واحداً على الأقل','w');return;}
+  const expiry=document.getElementById('dlExpiry').value||'';
+  const rec={code:c.code,grp:c.grp,term:c.term,toId:toId,toName:toName,byId:user.id,byName:user.name,scope:scope.join(' · '),expiry:expiry};
+  showToast('جاري إرسال التكليف...','i');
+  try{
+    const res=await jsonpCall({action:'addDelegation',data:JSON.stringify([rec])});
+    if(res&&res.status==='ok'){
+      showToast('✅ تم إرسال طلب التكليف للاعتماد','s');
+      document.getElementById('delegCreateModal')?.remove();
+      await loadDelegations(); updateDelegBadge();
+    } else {
+      showToast('تعذّر الإرسال: '+((res&&(res.hint||res.msg))||'خطأ'),'w');
+    }
+  }catch(e){ showToast('خطأ في الاتصال','w'); }
+}
+async function approveDeleg(id,stage,decision){
+  showToast('جاري التنفيذ...','i');
+  try{
+    const res=await jsonpCall({action:'updateDelegation',data:JSON.stringify([{id:id,stage:stage,decision:decision}])});
+    if(res&&res.status==='ok'){
+      showToast(decision==='reject'?'تم الرفض':(res.finalStatus==='نشط'?'✅ أصبح التكليف نشطاً':'✅ تم الاعتماد — بانتظار المدير'),'s');
+      document.getElementById('delegModal')?.remove();
+      await loadDelegations(); updateDelegBadge(); showDelegations();
+    } else { showToast('تعذّر: '+((res&&res.msg)||'خطأ'),'w'); }
+  }catch(e){ showToast('خطأ في الاتصال','w'); }
+}
+async function revokeDeleg(id){
+  if(!confirm('إلغاء هذا التكليف النشط؟'))return;
+  showToast('جاري الإلغاء...','i');
+  try{
+    const res=await jsonpCall({action:'updateDelegation',data:JSON.stringify([{id:id,act:'revoke'}])});
+    if(res&&res.status==='ok'){ showToast('تم إلغاء التكليف','s'); document.getElementById('delegModal')?.remove(); await loadDelegations(); updateDelegBadge(); showDelegations(); }
+    else { showToast('تعذّر الإلغاء','w'); }
+  }catch(e){ showToast('خطأ في الاتصال','w'); }
+}
+
 function showApp(){
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appShell').style.display='block';
@@ -1166,6 +1382,9 @@ function showApp(){
   if(user.role==='s') buildStudentApp();
   else if(user.role==='t') buildTrainerApp();
   else buildAdminApp();
+  // زر التكليفات للمدرب والإداري فقط
+  const dBtn=document.getElementById('delegBtn');
+  if(dBtn){ dBtn.style.display=(user.role==='t'||user.role==='a')?'':'none'; updateDelegBadge(); }
   initParticles();
   updateNotifBadges();
 }
