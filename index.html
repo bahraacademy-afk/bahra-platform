@@ -800,6 +800,8 @@ const AKEY=''; // أُزيل مفتاح API نهائيًا
 let SESSION={token: localStorage.getItem('bla_token')||''};
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycby0hfxanInvE0PvTKYhT-l7-nAmytEmvV-JbCyVsooHh3GTzJTDpHFlfhgD-NVMrvKl/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
+// ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
+const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
 const OTP_ENABLED=false;
 const ADMIN=[]; // التحقق صار في الخادم
@@ -949,9 +951,9 @@ async function doLogin(){
 
 // تحميل بيانات المستخدم حسب الدور
 async function loadUserData(){
-  if(role==='a')await loadAdmin();
-  else if(role==='t')await loadTrainer();
-  else await loadStudent();
+  const load=(role==='a')?loadAdmin():(role==='t')?loadTrainer():loadStudent();
+  const to=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),25000));
+  await Promise.race([load,to]);
 }
 // إتمام تسجيل الدخول (حفظ الجلسة وعرض التطبيق)
 function finishLogin(){
@@ -959,6 +961,7 @@ function finishLogin(){
   localStorage.setItem('bla_role', role);
   if(SESSION.token) localStorage.setItem('bla_token', SESSION.token);
   showApp();
+  initIdleGuard();
 }
 
 // ===== تدفق إرسال وإدخال رمز 2FA =====
@@ -1067,11 +1070,8 @@ async function loadStudent(){
     const r=cat[i];
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
-  await loadSchedule();
-  // ⭐ احسب نسبة الغياب من "قاعدة الغياب"
-  await loadAbsenceBase();
+  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   courses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
-  await loadRequests();
 }
 
 async function loadTrainer(){
@@ -1090,11 +1090,8 @@ async function loadTrainer(){
     const r=cat[i];
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
-  await loadSchedule();
-  // ⭐ المصدر الوحيد للحقيقة: احسب نسبة الغياب من "قاعدة الغياب" (يتطلب الجدول محمّلاً)
-  await loadAbsenceBase();
+  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
-  await loadRequests();
 }
 
 async function loadAdmin(){
@@ -1133,11 +1130,8 @@ async function loadAdmin(){
     const r=ad[i];
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6])});
   }
-  await loadSchedule();
-  // ⭐ احسب نسب الغياب لكل السجلات من "قاعدة الغياب"
-  await loadAbsenceBase();
+  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp);});
-  await loadRequests();
 }
 // هل المدرب حالي (مسجّل في القاعدة)؟
 function isCurrentTrainer(name){
@@ -1603,7 +1597,10 @@ async function saveSchedule(){
 // قراءة الجدول المحفوظ من الشيت
 // الأعمدة: A=الشعبة B=اليوم C=الحصة D=الوقت E=المادة F=المدرب G=القاعة
 async function loadSchedule(){
-  const rows=await fetchSheet('الجدول!A:G').catch(()=>[]);
+  const [rows,cfg]=await Promise.all([
+    fetchSheet('الجدول!A:G').catch(()=>[]),
+    fetchSheet('إعدادات_الجدول!A:B').catch(()=>[])
+  ]);
   schedule={};
   for(let i=1;i<rows.length;i++){
     const r=rows[i];
@@ -1614,7 +1611,6 @@ async function loadSchedule(){
     schedule[grp][slot]={course:n0(r[4]),trainer:n0(r[5]),room:n0(r[6])};
   }
   // تحميل إعدادات الجدول المحفوظة (الاستراحة، الأوقات...) إن وُجدت
-  const cfg=await fetchSheet('إعدادات_الجدول!A:B').catch(()=>[]);
   if(cfg&&cfg.length>1){
     const map={};
     for(let i=1;i<cfg.length;i++){if(n0(cfg[i][0]))map[n0(cfg[i][0])]=cfg[i][1];}
@@ -4406,9 +4402,11 @@ function filterSt(){
 
 // ===== LOGOUT =====
 function doLogout(){
+  clearIdleGuard();
   localStorage.removeItem('bla_user');
   localStorage.removeItem('bla_role');
   localStorage.removeItem('bla_token');
+  localStorage.removeItem('bla_last_activity');
   SESSION.token='';
   user=null;courses=[];students=[];allCourses=[];files={};attendanceData={};gradesData={};
   document.getElementById('appShell').style.display='none';
@@ -4417,6 +4415,51 @@ function doLogout(){
   document.getElementById('inpPh').value='';
   document.getElementById('errBox').style.display='none';
   document.getElementById('mobNav').style.display='none';
+}
+
+/* ========== حارس الخمول: خروج تلقائي حسب الدور ========== */
+let _idleTimer=null,_idleWarnTimer=null,_lastActStore=0;
+function idleLimitMs(){ return (IDLE_HOURS[role]||24)*3600*1000; }
+function markActivity(){
+  const now=Date.now();
+  localStorage.setItem('bla_last_activity',now);
+  const bar=document.getElementById('idleWarn'); if(bar) bar.style.display='none';
+  clearTimeout(_idleTimer); clearTimeout(_idleWarnTimer);
+  const limit=idleLimitMs();
+  _idleWarnTimer=setTimeout(showIdleWarning,Math.max(0,limit-60000));
+  _idleTimer=setTimeout(idleLogout,limit);
+}
+function throttledActivity(){
+  const now=Date.now();
+  if(now-_lastActStore>5000){ _lastActStore=now; markActivity(); }
+}
+function showIdleWarning(){
+  let bar=document.getElementById('idleWarn');
+  if(!bar){
+    bar=document.createElement('div');
+    bar.id='idleWarn';
+    bar.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:linear-gradient(90deg,#c0392b,#e67e22);color:#fff;padding:12px 16px;text-align:center;font-family:Tajawal,Arial,sans-serif;font-size:14px;box-shadow:0 2px 12px rgba(0,0,0,.3)';
+    bar.innerHTML='⏳ جلستك على وشك الانتهاء بسبب عدم النشاط &nbsp; <button onclick="continueSession()" style="background:#fff;color:#c0392b;border:none;border-radius:8px;padding:6px 16px;font-weight:700;cursor:pointer;font-family:inherit">متابعة الجلسة</button>';
+    document.body.appendChild(bar);
+  }
+  bar.style.display='block';
+}
+function continueSession(){ markActivity(); }
+function idleLogout(){
+  clearTimeout(_idleTimer); clearTimeout(_idleWarnTimer);
+  localStorage.removeItem('bla_last_activity');
+  doLogout();
+  const eb=document.getElementById('errBox');
+  if(eb){ eb.style.display='block'; eb.textContent='🔒 انتهت الجلسة بسبب عدم النشاط. الرجاء تسجيل الدخول مرة أخرى.'; }
+}
+function initIdleGuard(){
+  ['click','keydown','mousemove','touchstart','scroll'].forEach(ev=>
+    document.addEventListener(ev,throttledActivity,{passive:true}));
+  markActivity();
+}
+function clearIdleGuard(){
+  clearTimeout(_idleTimer); clearTimeout(_idleWarnTimer);
+  const bar=document.getElementById('idleWarn'); if(bar) bar.style.display='none';
 }
 
 function printRecord(){
@@ -4468,6 +4511,18 @@ async function restoreSession(){
     role=savedRole;
     currentUser=u;
     user=u;
+    // فحص الخمول: لو تجاوز الحد المسموح للدور → اعتبر الجلسة منتهية
+    const lastAct=parseInt(localStorage.getItem('bla_last_activity')||'0',10);
+    const idleLim=(IDLE_HOURS[role]||24)*3600*1000;
+    if(lastAct && (Date.now()-lastAct>idleLim)){
+      localStorage.removeItem('bla_user');localStorage.removeItem('bla_role');
+      localStorage.removeItem('bla_token');localStorage.removeItem('bla_last_activity');
+      SESSION.token='';user=null;currentUser=null;
+      hideSplash();
+      const eb=document.getElementById('errBox');
+      if(eb){eb.style.display='block';eb.textContent='🔒 انتهت الجلسة بسبب عدم النشاط. الرجاء تسجيل الدخول مرة أخرى.';}
+      return;
+    }
     const st=document.getElementById('splashStatus');if(st)st.textContent='جاري جلب بياناتك...';
     // حماية: لو التحميل علّق أكثر من 12 ثانية، نوقف ونعرض صفحة الدخول
     const loadPromise=(role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
@@ -4475,6 +4530,7 @@ async function restoreSession(){
     await Promise.race([loadPromise,timeout]);
     showApp();
     hideSplash();
+    initIdleGuard();
   }catch(e){
     // فشل أو علّق التحميل → امسح الجلسة وارجع لصفحة الدخول
     localStorage.removeItem('bla_user');
