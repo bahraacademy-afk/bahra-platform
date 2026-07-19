@@ -1072,7 +1072,7 @@ async function loadStudent(){
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
-  courses.forEach(s=>{ if(isActive(s.status)) s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); });
+  courses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
 }
 
 async function loadTrainer(){
@@ -1092,7 +1092,7 @@ async function loadTrainer(){
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
-  students.forEach(s=>{ if(isActive(s.status)) s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); });
+  students.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
 }
 
 async function loadAdmin(){
@@ -1132,7 +1132,7 @@ async function loadAdmin(){
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6])});
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
-  allCourses.forEach(s=>{ if(isActive(s.status)) s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); });
+  allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
 }
 // هل المدرب حالي (مسجّل في القاعدة)؟
 function isCurrentTrainer(name){
@@ -1335,8 +1335,10 @@ function absPctFromBase(sid,code,course,grp,term){
   const tk=t=>String(t||'').replace(/\s+/g,'');
   const key=onlyDigits(sid)+'|'+onlyDigits(code)+'|'+gk(grp)+'|'+tk(term); // ⭐ فصل حسب الشعبة + الترم
   const absDays=absenceDaysMap[key]||0;
-  const total=courseTotalDays(course,grp);
-  if(!total)return 0;
+  if(!absDays)return 0; // ⭐ لا يوجد غياب في الشيت = 0% دائماً
+  // احتياطي: لو المادة غير مجدولة بالكامل، افترض يوم/أسبوع (8 حصص) بدل ما نُخفي الغياب
+  let total=courseTotalDays(course,grp);
+  if(!total) total=(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
   return Math.min(Math.round(absDays/total*1000)/10,100);
 }
 function excuseHoursFromDates(course,grp,dates){
