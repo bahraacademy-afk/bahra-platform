@@ -1147,6 +1147,10 @@ function isCurrentTrainer(name){
   const nrm=s=>n0(s).replace(/\s+/g,' ').trim();
   return trainersDB.some(t=>nrm(t.name)===nrm(name));
 }
+// المدربون الفعّالون = من لهم حسابات ويظهرون في سجل المقررات
+function activeTrainerNames(){
+  return [...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].filter(isCurrentTrainer);
+}
 
 // تحميل طلبات الخدمات من تبويب "طلبات الخدمات"
 // الأعمدة: A=معرف B=الرقم C=الاسم D=الشعبة E=النوع F=التفاصيل G=التاريخ H=اعتماد المشرف I=اعتماد المدير J=الحالة النهائية K=ملاحظات L=اعتماد المدرب M=احتياط
@@ -1178,9 +1182,19 @@ async function loadDelegations(){
       finalStatus:n0(r[11])||'قيد المراجعة',created:n0(r[12]),expiry:n0(r[13]),log:n0(r[14])});
   }
 }
-// قائمة الموظفين لاختيار المكلَّف (رقم+اسم فقط)
+// قائمة الموظفين لاختيار المكلَّف (أصحاب الحسابات فقط: مدربون + إداريون)
 async function loadStaffList(){
   if(staffCache)return staffCache;
+  // الإداري عنده القوائم محمّلة محلياً (أصحاب الحسابات) — نبنيها مباشرة
+  if(user.role==='a' && ((trainersDB&&trainersDB.length)||(adminsDB&&adminsDB.length))){
+    const list=[];
+    (trainersDB||[]).forEach(t=>{ if(n0(t.id)||n0(t.name)) list.push({id:n0(t.id),name:n0(t.name),type:'trainer'}); });
+    (adminsDB||[]).forEach(a=>{ if(n0(a.id)||n0(a.name)) list.push({id:n0(a.id),name:n0(a.name),type:'admin'}); });
+    // إزالة التكرار حسب الرقم
+    const seen={}; staffCache=list.filter(s=>{const k=dg(s.id)||s.name; if(seen[k])return false; seen[k]=1; return true;});
+    return staffCache;
+  }
+  // المدرب: نطلبها من الخادم (تتطلب نشر Code.gs المحدّث)
   const d=await jsonpTo(AUTH_URL,{action:'staffList',token:SESSION.token}).catch(()=>null);
   staffCache=(d&&d.staff)||[];
   return staffCache;
@@ -4108,7 +4122,7 @@ const aPgs={
     // ===== معطيات عامة =====
     const totStudents=students.length;
     const totCourses=[...new Set(allCourses.map(c=>c.course))].length;
-    const totTrainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
+    const totTrainers=activeTrainerNames().length;
     const grps=[...new Set(students.map(s=>s.grp))].sort();
     const avgAll=avgPct(actives);
     const bannedCount=actives.filter(c=>(c.abs||0)>=25).length;
@@ -4237,7 +4251,7 @@ const aPgs={
   },
   overview:()=>{
     const tot=students.length,crs=[...new Set(allCourses.map(c=>c.course))].length;
-    const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
+    const trainers=activeTrainerNames().length;
     const avg=avgPct(allCourses);
     const warns=allCourses.filter(hasIssue).length;
     const grps=[...new Set(students.map(s=>s.grp))];
@@ -4868,13 +4882,16 @@ function showRepDetail(kind){
     html+=detailRow('الإجمالي',allCourses.filter(c=>c.pct>=80).length+' مقرر','var(--green)');
     showDetail('المقررات المكتملة','✅',html);
   }else if(kind==='trainers'){
-    const trainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
-    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المدربون النشطون:</div>';
+    const trainers=activeTrainerNames();
+    const archived=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].filter(t=>!isCurrentTrainer(t));
+    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المدربون الفعّالون (لهم حسابات دخول):</div>';
     trainers.forEach(t=>{
       const tc=allCourses.filter(c=>c.trainer===t);
       const a=tc.length?Math.round(tc.reduce((x,c)=>x+c.pct,0)/tc.length):0;
       html+=`<div onclick="document.getElementById('detailModal').remove();showTrainerDetail('${t}')" style="cursor:pointer">${detailRow(t,a+'% · '+[...new Set(tc.map(c=>c.sid))].length+' متدرب',a>=70?'var(--green)':'var(--gold)')}</div>`;
     });
+    if(!trainers.length)html+='<div class="alert ab"><span class="aicon">ℹ️</span>لا يوجد مدربون لهم حسابات دخول بعد</div>';
+    if(archived.length)html+=`<div style="font-size:12px;color:var(--muted);margin-top:14px">↩︎ ${archived.length} مدرب في السجلات بدون حساب دخول (أرشيف): ${archived.map(esc).join('، ')}</div>`;
     showDetail('المدربون','👨‍🏫',html);
   }else if(kind==='deprived'){
     const dep=allCourses.filter(c=>c.abs>=25);
