@@ -4905,19 +4905,59 @@ function showTrainerDetail(t){
   const tc=allCourses.filter(c=>c.trainer===t);
   const a=tc.length?Math.round(tc.reduce((x,c)=>x+c.pct,0)/tc.length):0;
   const courses=[...new Set(tc.map(c=>c.course))];
+  window._trName=t; window._trCourses=courses; // للتنقّل في التفاصيل
+  const studCount=[...new Set(tc.map(c=>c.sid))].length;
+  const alertCount=tc.filter(hasIssue).length;
   let html=`<div class="igrid" style="margin-bottom:16px">
-    <div class="iitem"><div class="ilbl">عدد المتدربين</div><div class="ival">${[...new Set(tc.map(c=>c.sid))].length}</div></div>
-    <div class="iitem"><div class="ilbl">عدد المقررات</div><div class="ival">${courses.length}</div></div>
-    <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival" style="color:${a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)'}">${a}%</div></div>
-    <div class="iitem"><div class="ilbl">اشعارات</div><div class="ival" style="color:${tc.filter(hasIssue).length?'var(--red)':'var(--green)'}">${tc.filter(hasIssue).length}</div></div>
+    <div class="iitem" onclick="showTrainerSub('students')" style="cursor:pointer"><div class="ilbl">عدد المتدربين ›</div><div class="ival">${studCount}</div></div>
+    <div class="iitem" onclick="showTrainerSub('courses')" style="cursor:pointer"><div class="ilbl">عدد المقررات ›</div><div class="ival">${courses.length}</div></div>
+    <div class="iitem" onclick="showTrainerSub('avg')" style="cursor:pointer"><div class="ilbl">متوسط الدرجات ›</div><div class="ival" style="color:${a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)'}">${a}%</div></div>
+    <div class="iitem" onclick="showTrainerSub('alerts')" style="cursor:pointer"><div class="ilbl">اشعارات ›</div><div class="ival" style="color:${alertCount?'var(--red)':'var(--green)'}">${alertCount}</div></div>
   </div>
-  <div style="font-size:13px;color:var(--muted);margin-bottom:8px">المقررات:</div>`;
-  courses.forEach(co=>{
+  <div style="font-size:13px;color:var(--muted);margin-bottom:8px">المقررات (اضغط لعرض متدربي المقرر):</div>`;
+  courses.forEach((co,i)=>{
     const cc=tc.filter(c=>c.course===co);
     const ca=Math.round(cc.reduce((x,c)=>x+c.pct,0)/cc.length);
-    html+=detailRow(co+' ('+cc.length+' متدرب)',ca+'%',ca>=70?'var(--green)':ca>=60?'var(--gold)':'var(--red)');
+    html+=`<div onclick="showTrainerCourseStudents(${i})" style="cursor:pointer">${detailRow(esc(co)+' ('+cc.length+' متدرب)',ca+'%',ca>=70?'var(--green)':ca>=60?'var(--gold)':'var(--red)')}</div>`;
   });
   showDetail('المدرب: '+t,'👨‍🏫',html);
+}
+// رجوع لبطاقة المدرب (بدون تمرير الاسم في onclick لتجنّب مشاكل الاقتباس)
+function backToTrainer(){ if(window._trName) showTrainerDetail(window._trName); }
+// تفاصيل فرعية لبطاقات المدرب (متدربين/مقررات/متوسط/اشعارات)
+function showTrainerSub(kind){
+  const t=window._trName; if(!t)return;
+  const tc=allCourses.filter(c=>c.trainer===t);
+  const back=`<div onclick="backToTrainer()" style="cursor:pointer;color:#6ab8f7;font-size:13px;margin-bottom:12px">← رجوع لبطاقة المدرب</div>`;
+  if(kind==='students'){
+    const ids=[...new Set(tc.map(c=>c.sid))];
+    const rows=ids.map(id=>{const sc=tc.filter(c=>c.sid===id);return {sc,a:Math.round(sc.reduce((x,c)=>x+c.pct,0)/sc.length)};}).sort((x,y)=>y.a-x.a);
+    let html=back+`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">متدربو ${esc(t)} (${ids.length}):</div>`;
+    rows.forEach(o=>{const nm=o.sc[0].sname||o.sc[0].name||o.sc[0].sid;html+=detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(o.sc[0].grp||'—'),o.sc.length+' مقرر · '+o.a+'%',o.a>=70?'var(--green)':o.a>=60?'var(--gold)':'var(--red)');});
+    showDetail('متدربو '+t,'👥',html);
+  } else if(kind==='courses'||kind==='avg'){
+    const courses=window._trCourses||[...new Set(tc.map(c=>c.course))];
+    let html=back+`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">مقررات ${esc(t)} (${courses.length}) — اضغط لعرض المتدربين:</div>`;
+    courses.forEach((co,i)=>{const cc=tc.filter(c=>c.course===co);const ca=Math.round(cc.reduce((x,c)=>x+c.pct,0)/cc.length);
+      html+=`<div onclick="showTrainerCourseStudents(${i})" style="cursor:pointer">${detailRow(esc(co)+' ('+cc.length+' متدرب)',ca+'%',ca>=70?'var(--green)':ca>=60?'var(--gold)':'var(--red)')}</div>`;});
+    showDetail((kind==='avg'?'متوسط درجات ':'مقررات ')+t,'📚',html);
+  } else if(kind==='alerts'){
+    const iss=tc.filter(hasIssue);
+    let html=back+(iss.length?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">حالات تحتاج متابعة (${iss.length}):</div>`:'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات لهذا المدرب</div>');
+    iss.forEach(c=>{const nm=c.sname||c.name||c.sid;const r=isHighAbs(c)?'غياب '+Math.round(c.abs)+'%':'درجة '+Math.round(c.pct)+'%';html+=detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · '+esc(c.course),r,'var(--red)');});
+    showDetail('اشعارات '+t,'⚠️',html);
+  }
+}
+// متدربو مقرر معيّن لهذا المدرب
+function showTrainerCourseStudents(i){
+  const t=window._trName, co=(window._trCourses||[])[i];
+  if(!t||co==null)return;
+  const cc=allCourses.filter(c=>c.trainer===t&&c.course===co).slice().sort((x,y)=>y.pct-x.pct);
+  const back=`<div onclick="backToTrainer()" style="cursor:pointer;color:#6ab8f7;font-size:13px;margin-bottom:12px">← رجوع لبطاقة المدرب</div>`;
+  let html=back+`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">${esc(co)} — المتدربون (${cc.length}):</div>`;
+  cc.forEach(c=>{const nm=c.sname||c.name||c.sid;const extra=isHighAbs(c)?' · غياب '+Math.round(c.abs)+'%':'';
+    html+=detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(c.grp||'—'),Math.round(c.pct)+'%'+extra,c.pct>=60?'var(--green)':'var(--red)');});
+  showDetail('مقرر: '+co,'📘',html);
 }
 // تفاصيل بطاقات المدرب
 function showTrainerStat(kind){
