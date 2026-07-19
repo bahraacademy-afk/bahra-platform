@@ -406,18 +406,41 @@ body.light-mode select option{background:#ffffff;color:#1a2a4a}
 .file-item .fi-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;transition:color .2s}
 .file-item .fi-del:hover{color:var(--red)}
 
-/* ===== MOBILE NAV ===== */
-.mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(7,17,31,.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);z-index:200;padding:8px 0 env(safe-area-inset-bottom)}
-.mob-nav-items{display:flex;justify-content:space-around}
-.mni{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 10px;border:none;background:transparent;color:var(--muted);font-family:'Tajawal',sans-serif;font-size:10px;cursor:pointer;border-radius:12px;transition:all .2s;min-width:54px;position:relative}
-.mni::before{content:'';position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:2px;border-radius:2px;transition:width .2s}
-.mni.as::before,.mni.act{width:24px;background:var(--red)}
-.mni.at::before{width:24px;background:var(--blue)}
-.mni.aa::before{width:24px;background:var(--gold)}
-.mni.as{color:#ff8a92}
-.mni.at{color:#6ab8f7}
-.mni.aa{color:#f4c78a}
-.mni-icon{font-size:20px}
+/* ===== MOBILE NAV — Floating FAB (اليمين) ===== */
+.mob-nav{display:none}
+/* الزر الدائري العائم في اليمين */
+.fab-nav{display:none;position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));right:16px;z-index:250}
+.fab-btn{width:58px;height:58px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#1a7abf,#0d4a80);color:#fff;
+  font-size:24px;cursor:pointer;box-shadow:0 8px 24px rgba(26,122,191,.5),0 2px 6px rgba(0,0,0,.4);
+  display:flex;align-items:center;justify-content:center;transition:transform .25s cubic-bezier(.2,.8,.3,1);position:relative}
+.fab-btn:active{transform:scale(.92)}
+.fab-btn.open{transform:rotate(45deg)}
+.fab-btn .fab-dot{position:absolute;top:6px;right:6px;width:10px;height:10px;border-radius:50%;background:var(--red);border:2px solid #0a1221;display:none}
+.fab-btn .fab-dot.on{display:block}
+/* القائمة المنبثقة العمودية */
+.fab-menu{position:absolute;bottom:70px;right:0;display:none;flex-direction:column;gap:10px;align-items:flex-end}
+.fab-menu.open{display:flex;animation:fabIn .28s cubic-bezier(.2,.8,.3,1)}
+@keyframes fabIn{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+.fab-item{display:flex;align-items:center;gap:10px;padding:0;border:none;background:transparent;cursor:pointer;font-family:'Tajawal',sans-serif;animation:fabSlide .3s cubic-bezier(.2,.8,.3,1) backwards}
+.fab-item:nth-child(1){animation-delay:.02s}.fab-item:nth-child(2){animation-delay:.06s}
+.fab-item:nth-child(3){animation-delay:.1s}.fab-item:nth-child(4){animation-delay:.14s}
+.fab-item:nth-child(5){animation-delay:.18s}.fab-item:nth-child(6){animation-delay:.22s}
+@keyframes fabSlide{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+.fab-item .fi-lbl{background:rgba(10,18,33,.92);backdrop-filter:blur(20px);color:var(--text);
+  padding:8px 14px;border-radius:14px;font-size:13px;font-weight:600;
+  border:1px solid rgba(255,255,255,.1);box-shadow:0 6px 20px rgba(0,0,0,.35);white-space:nowrap}
+.fab-item .fi-ico{width:44px;height:44px;border-radius:50%;background:rgba(10,18,33,.92);backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:20px;
+  box-shadow:0 6px 20px rgba(0,0,0,.35);transition:all .2s}
+.fab-item.active .fi-ico{background:linear-gradient(135deg,#1a7abf,#0d4a80);color:#fff;border-color:transparent}
+.fab-item.active .fi-lbl{color:#6ab8f7}
+.fab-item:active .fi-ico{transform:scale(.9)}
+/* طبقة سوداء خفيفة لما تفتح */
+.fab-backdrop{display:none;position:fixed;inset:0;background:rgba(5,10,20,.45);backdrop-filter:blur(4px);z-index:240;animation:fadeIn .2s ease}
+.fab-backdrop.open{display:block}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+body.light-mode .fab-item .fi-lbl,body.light-mode .fab-item .fi-ico{background:rgba(255,255,255,.92);border-color:rgba(26,58,107,.15)}
 
 /* ===== TERM FILTER ===== */
 .term-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
@@ -445,27 +468,18 @@ body.light-mode select option{background:#ffffff;color:#1a2a4a}
 
 /* RESPONSIVE */
 @media(max-width:768px){
-  .mob-nav{display:block}
+  .mob-nav{display:none!important}
+  .fab-nav{display:block}
   .sidebar{display:none!important}
   .dash-charts{grid-template-columns:1fr!important}
   .enr-grid{grid-template-columns:1fr!important}
-  .mcontent{padding:14px 12px 110px!important}
+  .mcontent{padding:14px 12px 100px!important}
   .topbar{padding:10px 12px;gap:6px}
   .metrics{grid-template-columns:1fr 1fr;gap:10px}
   .igrid{grid-template-columns:1fr}
   .banner{flex-direction:column;text-align:center;padding:16px}
   .att-grid{grid-template-columns:1fr 1fr}
   .mnum{font-size:24px}
-  /* شريط تنقل عائم احترافي */
-  .mob-nav{bottom:calc(10px + env(safe-area-inset-bottom));left:12px;right:12px;
-    background:rgba(10,18,33,.82);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
-    border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:8px 6px;
-    box-shadow:0 12px 40px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.3)}
-  .mob-nav-items{justify-content:space-around}
-  .mni{min-width:52px;padding:7px 8px;border-radius:14px;font-size:9.5px;gap:4px}
-  .mni-icon{font-size:21px}
-  .mni.as,.mni.at,.mni.aa{background:rgba(255,255,255,.06)}
-  .mni::before{top:auto;bottom:2px}
   /* هيدر أنظف على الجوال */
   .topbar{border-radius:0 0 18px 18px}
   .role-badge{font-size:11px;padding:5px 9px}
@@ -792,6 +806,14 @@ body{top:0!important}
   </div>
 
   <div class="mob-nav" id="mobNav"></div>
+  <div class="fab-backdrop" id="fabBackdrop" onclick="toggleFab(false)"></div>
+  <div class="fab-nav" id="fabNav">
+    <div class="fab-menu" id="fabMenu"></div>
+    <button class="fab-btn" id="fabBtn" onclick="toggleFab()" aria-label="القائمة">
+      <span id="fabIcon">☰</span>
+      <span class="fab-dot" id="fabDot"></span>
+    </button>
+  </div>
 </div>
 
 <script>
@@ -2287,6 +2309,7 @@ function updateNotifBadges(){
     const rb=document.getElementById('reviewBadge');
     if(nb){const n=getNotifications().length;nb.textContent=n>99?'99+':n;nb.style.display=n?'flex':'none';}
     if(rb){const r=getReviewCases().length;rb.textContent=r>99?'99+':r;rb.style.display=r?'flex':'none';}
+    updateFabDot();
   }catch(e){}
 }
 window.showReviewCases=showReviewCases;
@@ -2322,20 +2345,35 @@ function navHTML(r,pages){
 }
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة'};
-  const ac=r==='s'?'as':r==='t'?'at':'aa';
-  const mn=document.getElementById('mobNav');
-  mn.style.display='';
-  // لو العناصر 5 أو أقل: نعرضها كلها. لو أكثر: نعرض 4 + زر "المزيد"
-  let visible=pages, overflow=[];
-  if(pages.length>5){visible=pages.slice(0,4);overflow=pages.slice(4);}
-  const btns=visible.map((p,i)=>`<button class="mni ${i===0?ac:''}" onclick="mobNav('${p}',this,'${r}')"><span class="mni-icon">${map[p]||'📌'}</span><span>${lbls[p]||p}</span></button>`).join('');
-  const moreBtn=overflow.length?`<button class="mni" onclick="toggleMoreMenu(event,'${r}')"><span class="mni-icon">⋯</span><span>المزيد</span></button>`:'';
-  // القائمة المنبثقة للخدمات الإضافية
-  window._mobOverflow={items:overflow,role:r,map,lbls};
-  mn.innerHTML=`<div class="mob-nav-items">${btns}${moreBtn}</div>`;
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات'};
+  window._mobPages={pages,role:r,map,lbls,active:pages[0]};
+  // إخفاء الشريط القديم إن وُجد، وإظهار الزر العائم
+  const mn=document.getElementById('mobNav'); if(mn) mn.style.display='none';
+  const fn=document.getElementById('fabNav'); if(fn) fn.style.display='';
+  renderFabMenu();
 }
+// رسم قائمة الزر العائم
+function renderFabMenu(){
+  const o=window._mobPages||{}; const fm=document.getElementById('fabMenu'); if(!fm||!o.pages)return;
+  fm.innerHTML=o.pages.map(p=>`<button class="fab-item ${p===o.active?'active':''}" onclick="mobNav('${p}',null,'${o.role}');toggleFab(false)">
+    <span class="fi-lbl">${o.lbls[p]||p}</span>
+    <span class="fi-ico">${o.map[p]||'📌'}</span>
+  </button>`).join('');
+}
+// فتح/إغلاق الزر العائم
+function toggleFab(force){
+  const menu=document.getElementById('fabMenu'), btn=document.getElementById('fabBtn'), bd=document.getElementById('fabBackdrop');
+  const wasOpen=menu?.classList.contains('open');
+  const open=(force===undefined)?!wasOpen:!!force;
+  if(!menu||!btn||!bd)return;
+  menu.classList.toggle('open',open);
+  btn.classList.toggle('open',open);
+  bd.classList.toggle('open',open);
+  document.getElementById('fabIcon').textContent=open?'✕':'☰';
+}
+// تحديث تنبيه الزر العائم بناءً على الإشعارات
+function updateFabDot(){ try{ const n=(getNotifications&&getNotifications().length)||0; const d=document.getElementById('fabDot'); if(d)d.classList.toggle('on',n>0);}catch(e){} }
 // قائمة "المزيد" المنبثقة
 function toggleMoreMenu(e,r){
   e.stopPropagation();
@@ -2356,6 +2394,8 @@ function mobNav(page,btn,r){
   document.querySelectorAll('.mni').forEach(b=>b.className='mni');
   const ac=r==='s'?'as':r==='t'?'at':'aa';
   if(btn)btn.classList.add(ac);
+  // تحديث الصفحة النشطة في القائمة العائمة
+  if(window._mobPages){ window._mobPages.active=page; renderFabMenu(); }
   if(r==='s')showSPage(page,null);
   else if(r==='t')showTPage(page,null);
   else showAPage(page,null);
@@ -4141,14 +4181,14 @@ const aPgs={
 
     <div class="stitle">📊 معطيات الأكاديمية</div>
     <div class="metrics">
-      <div class="mcard mc-b"><div class="micon">🎓</div><div class="mnum cb" data-target="${totStudents}">${totStudents}</div><div class="mlbl">المتدربون</div></div>
-      <div class="mcard mc-g"><div class="micon">📚</div><div class="mnum cg" data-target="${totCourses}">${totCourses}</div><div class="mlbl">المقررات</div></div>
-      <div class="mcard mc-y"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${totTrainers}">${totTrainers}</div><div class="mlbl">المدربون</div></div>
-      <div class="mcard mc-b"><div class="micon">🏫</div><div class="mnum cb" data-target="${grps.length}">${grps.length}</div><div class="mlbl">الشعب</div></div>
-      <div class="mcard ${avgAll>=70?'mc-g':avgAll>=50?'mc-y':'mc-r'}"><div class="micon">📊</div><div class="mnum ${avgAll>=70?'cg':avgAll>=50?'cy':'cr'}" data-target="${avgAll}" data-suffix="%">${avgAll}%</div><div class="mlbl">متوسط الإنجاز</div></div>
-      <div class="mcard mc-g"><div class="micon">⭐</div><div class="mnum cg" data-target="${excellentCount}">${excellentCount}</div><div class="mlbl">متفوقون (90%+)</div></div>
-      <div class="mcard ${passRate>=70?'mc-g':'mc-y'}"><div class="micon">✅</div><div class="mnum ${passRate>=70?'cg':'cy'}" data-target="${passRate}" data-suffix="%">${passRate}%</div><div class="mlbl">نسبة النجاح</div></div>
-      <div class="mcard ${bannedCount?'mc-r':'mc-g'}"><div class="micon">🚫</div><div class="mnum ${bannedCount?'cr':'cg'}" data-target="${bannedCount}">${bannedCount}</div><div class="mlbl">محرومون بالغياب</div></div>
+      <div class="mcard mc-b" onclick="showOverallStat('students')" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${totStudents}">${totStudents}</div><div class="mlbl">المتدربون</div></div>
+      <div class="mcard mc-g" onclick="showOverallStat('courses')" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${totCourses}">${totCourses}</div><div class="mlbl">المقررات</div></div>
+      <div class="mcard mc-y" onclick="showOverallStat('trainers')" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${totTrainers}">${totTrainers}</div><div class="mlbl">المدربون</div></div>
+      <div class="mcard mc-b" onclick="showOverallStat('sections')" style="cursor:pointer"><div class="micon">🏫</div><div class="mnum cb" data-target="${grps.length}">${grps.length}</div><div class="mlbl">الشعب</div></div>
+      <div class="mcard ${avgAll>=70?'mc-g':avgAll>=50?'mc-y':'mc-r'}" onclick="showOverallStat('avg')" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avgAll>=70?'cg':avgAll>=50?'cy':'cr'}" data-target="${avgAll}" data-suffix="%">${avgAll}%</div><div class="mlbl">متوسط الإنجاز</div></div>
+      <div class="mcard mc-g" onclick="showOverallStat('excellent')" style="cursor:pointer"><div class="micon">⭐</div><div class="mnum cg" data-target="${excellentCount}">${excellentCount}</div><div class="mlbl">متفوقون (90%+)</div></div>
+      <div class="mcard ${passRate>=70?'mc-g':'mc-y'}" onclick="showOverallStat('pass')" style="cursor:pointer"><div class="micon">✅</div><div class="mnum ${passRate>=70?'cg':'cy'}" data-target="${passRate}" data-suffix="%">${passRate}%</div><div class="mlbl">نسبة النجاح</div></div>
+      <div class="mcard ${bannedCount?'mc-r':'mc-g'}" onclick="showOverallStat('deprived')" style="cursor:pointer"><div class="micon">🚫</div><div class="mnum ${bannedCount?'cr':'cg'}" data-target="${bannedCount}">${bannedCount}</div><div class="mlbl">محرومون بالغياب</div></div>
     </div>
 
     <div class="stitle">📊 التحليل البياني</div>
@@ -4166,14 +4206,14 @@ const aPgs={
         const maxC=Math.max(1,...counts);
         const bars=bands.map((b,i)=>{
           const h=Math.round(counts[i]/maxC*130);
-          return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px">
+          return `<div onclick="showBandStudents(${b.min},${b.max},'${b.lbl}')" style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;cursor:pointer">
             <div style="font-size:12px;font-weight:700;color:${b.c}">${counts[i]}</div>
             <div style="width:70%;height:${h}px;min-height:4px;background:linear-gradient(180deg,${b.c},${b.c}aa);border-radius:5px 5px 0 0;transition:height .6s"></div>
             <div style="font-size:9px;color:var(--muted);text-align:center;line-height:1.2">${b.lbl}</div>
           </div>`;
         }).join('');
         return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:14px">
-          <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">📈 توزيع المعدلات</div>
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text)">📈 توزيع المعدلات <span style="font-size:11px;color:var(--muted);font-weight:400">(اضغط أي عمود)</span></div>
           <div style="display:flex;align-items:flex-end;gap:6px;height:170px">${bars}</div>
         </div>`;
       })()}
@@ -4185,16 +4225,16 @@ const aPgs={
         const highAbsCount=ranked.filter(s=>s.avgAbs>=15).length;
         const perfectAtt=ranked.filter(s=>s.avgAbs===0).length;
         const rows=[
-          ['🏅','معدّل أعلى 10%',topAvg+'%','#2ecc71'],
-          ['📊','الوسيط (median)',median+'%','#6ab8f7'],
-          ['📉','غياب مرتفع (15%+)',highAbsCount+' متدرب',highAbsCount?'#e74c3c':'#2ecc71'],
-          ['✅','حضور كامل',perfectAtt+' متدرب','#2ecc71'],
-          ['🎯','إجمالي المصنّفين',totRanked+' متدرب','#c9a227']
+          ['🏅','معدّل أعلى 10%',topAvg+'%','#2ecc71','top10'],
+          ['📊','الوسيط (median)',median+'%','#6ab8f7',''],
+          ['📉','غياب مرتفع (15%+)',highAbsCount+' متدرب',highAbsCount?'#e74c3c':'#2ecc71','highabs'],
+          ['✅','حضور كامل',perfectAtt+' متدرب','#2ecc71','perfect'],
+          ['🎯','إجمالي المصنّفين',totRanked+' متدرب','#c9a227','students']
         ];
         return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:14px">
           <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">🎯 مؤشرات تحليلية</div>
-          ${rows.map(r=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border)">
-            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">${r[0]}</span><span style="font-size:12px;color:var(--muted)">${r[1]}</span></div>
+          ${rows.map(r=>`<div ${r[4]?`onclick="showOverallStat('${r[4]}')"`:''} style="display:flex;align-items:center;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--border)${r[4]?';cursor:pointer':''}">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">${r[0]}</span><span style="font-size:12px;color:var(--muted)">${r[1]}${r[4]?' ›':''}</span></div>
             <span style="font-size:14px;font-weight:800;color:${r[3]}">${r[2]}</span>
           </div>`).join('')}
         </div>`;
@@ -4534,10 +4574,10 @@ const aPgs={
     return `
     <div class="banner"><div><div class="btitle">🔔 الاشعارات الأكاديمية</div><div class="bsub">حالات المتدربين مجمّعة حسب المواد</div></div></div>
     <div class="metrics" style="margin-bottom:20px">
-      <div class="mcard mc-r"><div class="micon">❌</div><div class="mnum cr">${totFail}</div><div class="mlbl">راسبون (متطلبات)</div></div>
-      <div class="mcard mc-r"><div class="micon">🚫</div><div class="mnum cr">${totDep}</div><div class="mlbl">محرومون (غياب)</div></div>
-      <div class="mcard mc-y"><div class="micon">📉</div><div class="mnum cy">${totWeak}</div><div class="mlbl">ضعفاء</div></div>
-      <div class="mcard mc-y"><div class="micon">⚠️</div><div class="mnum cy">${totAbs}</div><div class="mlbl">إنذار غياب</div></div>
+      <div class="mcard mc-r" onclick="showNotifStat('fail')" style="cursor:pointer"><div class="micon">❌</div><div class="mnum cr">${totFail}</div><div class="mlbl">راسبون (متطلبات)</div></div>
+      <div class="mcard mc-r" onclick="showNotifStat('dep')" style="cursor:pointer"><div class="micon">🚫</div><div class="mnum cr">${totDep}</div><div class="mlbl">محرومون (غياب)</div></div>
+      <div class="mcard mc-y" onclick="showNotifStat('weak')" style="cursor:pointer"><div class="micon">📉</div><div class="mnum cy">${totWeak}</div><div class="mlbl">ضعفاء</div></div>
+      <div class="mcard mc-y" onclick="showNotifStat('abs')" style="cursor:pointer"><div class="micon">⚠️</div><div class="mnum cy">${totAbs}</div><div class="mlbl">إنذار غياب</div></div>
     </div>
     ${courses.length?courses.map(c=>{
       const total=c.failed.length+c.deprived.length+c.weak.length+c.highAbs.length;
@@ -4657,6 +4697,8 @@ function doLogout(){
   document.getElementById('inpPh').value='';
   document.getElementById('errBox').style.display='none';
   document.getElementById('mobNav').style.display='none';
+  const fn=document.getElementById('fabNav'); if(fn) fn.style.display='none';
+  toggleFab(false);
 }
 
 /* ========== حارس الخمول: خروج تلقائي حسب الدور ========== */
@@ -4899,6 +4941,100 @@ function showRepDetail(kind){
     dep.forEach(c=>{const st=students.find(s=>s.id===c.sid);html+=detailRow((st?st.name.split(' ').slice(0,3).join(' '):c.sname)+' · '+c.course,Math.round(c.abs)+'%','var(--red)');});
     showDetail('حالات الحرمان','⛔',html);
   }
+}
+// ترتيب المتدربين (نفس حساب الداشبورد) — للاستخدام في التفاصيل
+function studentRanking(){
+  const byStudent={};
+  students.forEach(st=>{
+    const stCourses=allCourses.filter(c=>c.sid===st.id);
+    if(!stCourses.length)return;
+    const done=completedCourses(stCourses);
+    const sumPct=done.reduce((a,c)=>a+c.pct,0);
+    const sumAbs=stCourses.reduce((a,c)=>a+(c.abs||0),0);
+    byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,nDone:done.length,n:stCourses.length};
+  });
+  return Object.values(byStudent).map(s=>({
+    sid:s.sid,name:s.name,grp:s.grp,coursesCount:s.n,
+    avg:s.nDone?Math.round(s.sumPct/s.nDone*10)/10:0,
+    gpa:parseFloat(gpaFrom(s.courses)),
+    avgAbs:s.n?Math.round(s.sumAbs/s.n):0
+  })).sort((a,b)=>b.avg-a.avg||b.gpa-a.gpa);
+}
+// رابط لفتح تفاصيل متدرب من داخل مودال
+function _openStud(sid){return `onclick="document.getElementById('detailModal').remove();showStudentDetail('${sid}')" style="cursor:pointer"`;}
+// تفاصيل بطاقات "الداشبورد الشامل والأوائل"
+function showOverallStat(kind){
+  const ranked=studentRanking();
+  const stRow=s=>`<div ${_openStud(s.sid)}>${detailRow(esc(String(s.name).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(s.grp||'—'),s.avg+'%',s.avg>=70?'var(--green)':s.avg>=60?'var(--gold)':'var(--red)')}</div>`;
+  if(kind==='students'){
+    let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">كل المتدربين (${ranked.length}) — اضغط للتفاصيل:</div>`;
+    ranked.forEach(s=>html+=stRow(s)); showDetail('المتدربون','🎓',html);
+  } else if(kind==='courses'){
+    const cs=[...new Set(allCourses.map(c=>c.course))];
+    let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">المقررات (${cs.length}):</div>`;
+    cs.forEach(co=>{const cc=allCourses.filter(c=>c.course===co);const a=Math.round(cc.reduce((x,c)=>x+c.pct,0)/cc.length);html+=detailRow(esc(co)+' ('+[...new Set(cc.map(c=>c.sid))].length+' متدرب)',a+'%',a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)');});
+    showDetail('المقررات','📚',html);
+  } else if(kind==='trainers'){ showRepDetail('trainers'); }
+  else if(kind==='sections'){
+    const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
+    let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">الشعب (${grps.length}):</div>`;
+    grps.forEach(g=>{const ss=students.filter(s=>s.grp===g);const rr=ranked.filter(r=>r.grp===g);const a=rr.length?Math.round(rr.reduce((x,r)=>x+r.avg,0)/rr.length):0;html+=detailRow('الشعبة '+esc(g),ss.length+' متدرب · '+a+'%',a>=70?'var(--green)':'var(--gold)');});
+    showDetail('الشعب','🏫',html);
+  } else if(kind==='avg'){ showRepDetail('avg'); }
+  else if(kind==='excellent'){
+    const ex=ranked.filter(s=>s.avg>=90);
+    let html=ex.length?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">المتفوقون 90%+ (${ex.length}):</div>`:'<div class="alert ab"><span class="aicon">ℹ️</span>لا يوجد متفوقون بعد</div>';
+    ex.forEach(s=>html+=stRow(s)); showDetail('المتفوقون','⭐',html);
+  } else if(kind==='pass'){
+    const done=allCourses.filter(c=>(parseFloat(c.pct)||0)>0);
+    const pass=done.filter(c=>c.pct>=60), fail=done.filter(c=>c.pct<60);
+    let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">المقررات المرصودة (${done.length}):</div>`;
+    html+=detailRow('ناجحة (60%+)',pass.length+' مقرر','var(--green)')+detailRow('راسبة (<60%)',fail.length+' مقرر','var(--red)');
+    if(fail.length){html+=`<div style="font-size:12px;color:var(--muted);margin-top:12px">الراسبة:</div>`;fail.forEach(c=>{const nm=c.sname||c.name||c.sid;html+=`<div ${_openStud(c.sid)}>${detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · '+esc(c.course),Math.round(c.pct)+'%','var(--red)')}</div>`;});}
+    showDetail('نسبة النجاح','✅',html);
+  } else if(kind==='deprived'){ showRepDetail('deprived'); }
+  else if(kind==='top10'){
+    const n=Math.max(1,Math.ceil(ranked.length*0.1)); const top=ranked.slice(0,n);
+    let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">أعلى 10% (${top.length} متدرب):</div>`;
+    top.forEach(s=>html+=stRow(s)); showDetail('أعلى 10%','🏅',html);
+  } else if(kind==='highabs'){
+    const hi=ranked.filter(s=>s.avgAbs>=15);
+    let html=hi.length?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">غياب مرتفع 15%+ (${hi.length}):</div>`:'<div class="alert as"><span class="aicon">✅</span>لا أحد بغياب مرتفع</div>';
+    hi.forEach(s=>html+=`<div ${_openStud(s.sid)}>${detailRow(esc(String(s.name).split(' ').slice(0,3).join(' ')),s.avgAbs+'%','var(--red)')}</div>`); showDetail('غياب مرتفع','📉',html);
+  } else if(kind==='perfect'){
+    const p=ranked.filter(s=>s.avgAbs===0);
+    let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">حضور كامل (${p.length}):</div>`;
+    p.forEach(s=>html+=`<div ${_openStud(s.sid)}>${detailRow(esc(String(s.name).split(' ').slice(0,3).join(' ')),'0% غياب','var(--green)')}</div>`); showDetail('حضور كامل','✅',html);
+  }
+}
+// تصنيف حالات الاشعارات (نفس منطق صفحة الاشعارات)
+function notifClassified(){
+  const stillFailed=c=>isFailed(c)&&!allCourses.some(o=>o.sid===c.sid&&normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
+  const out={failed:[],deprived:[],weak:[],highAbs:[]};
+  allCourses.forEach(c=>{
+    const failed=stillFailed(c), deprived=isDeprived(c.abs);
+    const weak=!failed&&(parseFloat(c.pct)||0)>0&&(parseFloat(c.pct)||0)<60;
+    const highAbs=!deprived&&isHighAbs(c);
+    if(failed)out.failed.push(c); else if(deprived)out.deprived.push(c); else if(weak)out.weak.push(c);
+    if(highAbs&&!deprived)out.highAbs.push(c);
+  });
+  return out;
+}
+// طلاب فئة معيّنة من رسم توزيع المعدلات
+function showBandStudents(min,max,lbl){
+  const ranked=studentRanking().filter(s=>s.avg>=min&&s.avg<max);
+  let html=ranked.length?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">${esc(lbl)} (${ranked.length} متدرب) — اضغط للتفاصيل:</div>`:'<div class="alert ab"><span class="aicon">ℹ️</span>لا يوجد متدربون في هذه الفئة</div>';
+  ranked.forEach(s=>html+=`<div ${_openStud(s.sid)}>${detailRow(esc(String(s.name).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(s.grp||'—'),s.avg+'%',s.avg>=70?'var(--green)':s.avg>=60?'var(--gold)':'var(--red)')}</div>`);
+  showDetail('توزيع المعدلات — '+lbl,'📈',html);
+}
+// تفاصيل بطاقات صفحة "الاشعارات الأكاديمية"
+function showNotifStat(kind){
+  const cl=notifClassified();
+  const map={fail:['failed','راسبون (متطلبات)','❌'],dep:['deprived','محرومون (غياب)','🚫'],weak:['weak','ضعفاء','📉'],abs:['highAbs','إنذار غياب','⚠️']};
+  const m=map[kind]||map.fail, list=cl[m[0]]||[];
+  let html=list.length?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">${m[1]} (${list.length}):</div>`:'<div class="alert as"><span class="aicon">✅</span>لا توجد حالات</div>';
+  list.forEach(c=>{const nm=c.sname||c.name||c.sid;const v=(m[0]==='deprived'||m[0]==='highAbs')?Math.round(c.abs)+'% غياب':Math.round(c.pct)+'%';html+=`<div ${_openStud(c.sid)}>${detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · '+esc(c.course)+' · شعبة '+esc(c.grp||'—'),v,'var(--red)')}</div>`;});
+  showDetail(m[1],m[2],html);
 }
 // تفاصيل أداء مدرب
 function showTrainerDetail(t){
