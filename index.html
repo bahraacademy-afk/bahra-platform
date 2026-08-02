@@ -3395,6 +3395,61 @@ document.addEventListener('click',function(e){
 },true);
 
 // ===== KPI لكل شعبة =====
+// 📈 رسم خطي لمقارنة المؤشرات عبر الشعب (بأسلوب حديث: نقاط + خطوط ناعمة + تعبئة خفيفة)
+function renderKpiLineChart(data){
+  if(!data||!data.length)return '';
+  // كل مؤشر = خط منفصل
+  const metrics=[
+    {k:'avg',           lbl:'متوسط الدرجات',      col:'#2ecc71', pct:true},
+    {k:'completionRate',lbl:'نسبة إكمال الخطة',    col:'#3498db', pct:true},
+    {k:'passRate',      lbl:'نسبة النجاح',        col:'#f39c12', pct:true},
+    {k:'alerts',        lbl:'الحالات الحرجة',     col:'#e74c3c', pct:false}
+  ];
+  const W=700,H=280,padT=30,padB=40,padL=44,padR=20;
+  const cw=W-padL-padR, ch=H-padT-padB;
+  const n=data.length;
+  const stepX=n>1?cw/(n-1):0;
+  const xAt=i=>padL+i*stepX;
+  // مقياس ٠–١٠٠ للنسب، والاشعارات نطبّعها على مقياس عيّني (نضربها ×١٠ للعرض على نفس المحور بحد أدنى ملاحظ)
+  const maxAlerts=Math.max(...data.map(d=>d.alerts||0),1);
+  const yPctAt=v=>padT+ch-(v/100)*ch;
+  const yAlertAt=v=>padT+ch-(v/maxAlerts)*ch;
+  // شبكة أفقية
+  let grid='';
+  for(let g=0;g<=100;g+=25){
+    const y=yPctAt(g);
+    grid+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+      <text x="${padL-8}" y="${y+3}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="Tajawal">${g}%</text>`;
+  }
+  // خطوط المؤشرات
+  let lines='';
+  metrics.forEach((m,mi)=>{
+    const pts=data.map((d,i)=>{ const v=d[m.k]||0; const y=m.pct?yPctAt(v):yAlertAt(v); return {x:xAt(i),y,v}; });
+    const path=pts.map((p,i)=>(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+    const area=path+` L${xAt(n-1).toFixed(1)},${(padT+ch).toFixed(1)} L${padL.toFixed(1)},${(padT+ch).toFixed(1)} Z`;
+    const isAlert=!m.pct;
+    lines+=`<g class="kpi-line kpi-line-${mi}" style="opacity:0;animation:kpiLineIn .8s cubic-bezier(.16,1,.3,1) ${(0.15*mi).toFixed(2)}s forwards">
+      <path d="${area}" fill="${m.col}" opacity=".08"/>
+      <path d="${path}" fill="none" stroke="${m.col}" stroke-width="${isAlert?2.5:2}" stroke-linecap="round" stroke-linejoin="round" ${isAlert?'stroke-dasharray="6 5"':''}/>
+      ${pts.map(p=>`<g><circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="5" fill="var(--card,#0f1b2e)" stroke="${m.col}" stroke-width="2.2"/>
+        <text x="${p.x.toFixed(1)}" y="${(p.y-11).toFixed(1)}" text-anchor="middle" font-size="11" font-weight="800" fill="${m.col}" font-family="Tajawal">${p.v}${m.pct?'%':''}</text></g>`).join('')}
+    </g>`;
+  });
+  // تسميات المحور السيني (الشعب)
+  let xlabels='';
+  data.forEach((d,i)=>{ xlabels+=`<text x="${xAt(i).toFixed(1)}" y="${H-14}" text-anchor="middle" font-size="12" font-weight="700" fill="var(--text)" font-family="Tajawal">شعبة ${esc(d.g)}</text>`; });
+  // مفتاح
+  const legend=metrics.map(m=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px">
+    <span style="width:22px;height:3px;background:${m.col};border-radius:2px;${m.k==='alerts'?'background:repeating-linear-gradient(90deg,'+m.col+' 0 6px,transparent 6px 11px)':''}"></span>
+    <span style="color:var(--text)">${m.lbl}</span></div>`).join('');
+  return `<div style="margin-top:16px">
+    <div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-bottom:8px">${legend}</div>
+    <div style="width:100%;overflow-x:auto"><svg viewBox="0 0 ${W} ${H}" style="width:100%;min-width:420px;height:auto;display:block" xmlns="http://www.w3.org/2000/svg">
+      <style>@keyframes kpiLineIn{to{opacity:1}}</style>
+      ${grid}${lines}${xlabels}
+    </svg></div>
+  </div>`;
+}
 function computeKPI(grp){
   // grp = 'all' أو رقم الشعبة
   const gs = grp==='all' ? students : students.filter(s=>s.grp===grp);
@@ -3429,14 +3484,9 @@ function renderKPI(grp,btn){
   const fillCol=v=>v>=80?'linear-gradient(90deg,#27ae60,#2ecc71)':v>=60?'linear-gradient(90deg,#e67e22,#f4a261)':'linear-gradient(90deg,#c1121f,#e63946)';
 
   if(grp==='all'){
-    // مقارنة الشعب الثلاث جنباً إلى جنب
+    // مقارنة الشعب الثلاث
     const grps=[...new Set(students.map(s=>s.grp))].sort();
     const data=grps.map(g=>({g,...computeKPI(g)}));
-    const metrics=[
-      {key:'avg',lbl:'متوسط الدرجات',suf:'%'},
-      {key:'completionRate',lbl:'نسبة إكمال الخطة',suf:'%'},
-      {key:'passRate',lbl:'نسبة النجاح',suf:'%'}
-    ];
     let html='<div class="kpi-wrap">';
     // بطاقات إجمالية سريعة لكل شعبة
     html+='<div class="kpi-cards">';
@@ -3446,28 +3496,8 @@ function renderKPI(grp,btn){
         <div class="kpi-lbl">الشعبة ${d.g} · ${d.traineeCount} متدرب · ${d.avg}%</div></div>`;
     });
     html+='</div>';
-    // أشرطة مقارنة لكل مؤشر
-    metrics.forEach(m=>{
-      html+=`<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:700">${m.lbl}</div>`;
-      data.forEach(d=>{
-        const v=d[m.key];
-        html+=`<div class="kpi-bar-row">
-          <div class="kpi-bar-label">الشعبة ${d.g}</div>
-          <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.min(v,100)}%;background:${fillCol(v)}"><span class="kpi-bar-val">${v}${m.suf}</span></div></div>
-        </div>`;
-      });
-    });
-    // اشعارات لكل شعبة
-    html+='<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;font-weight:700">الحالات الحرجة (اشعارات)</div>';
-    data.forEach(d=>{
-      const mx=Math.max(...data.map(x=>x.alerts),1);
-      const w=Math.round(d.alerts/mx*100);
-      html+=`<div class="kpi-bar-row">
-        <div class="kpi-bar-label">الشعبة ${d.g}</div>
-        <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${Math.max(w,d.alerts?12:0)}%;background:linear-gradient(90deg,#c1121f,#e63946)"><span class="kpi-bar-val">${d.alerts}</span></div></div>
-      </div>`;
-    });
-    html+='</div>';
+    // 📈 رسم خطي موحّد يقارن الشعب في كل المؤشرات
+    html+=renderKpiLineChart(data);
     el.innerHTML=html;
   } else {
     // شعبة واحدة — مؤشرات تفصيلية + قياس دائري
