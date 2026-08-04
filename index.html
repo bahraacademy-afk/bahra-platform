@@ -863,7 +863,7 @@ function num(v){
 }
 
 async function fetchSheet(range){
-  const d=await jsonpTo(AUTH_URL,{action:'getSheet',range:range,token:SESSION.token});
+  const d=await callServer(AUTH_URL,{action:'getSheet',range:range,token:SESSION.token});
   if(d&&d.ok===false){ if(d.error==='invalid_token') throw new Error('session'); return []; }
   return (d&&d.values)||[];
 }
@@ -891,14 +891,41 @@ function jsonpCall(params){
 function jsonpTo(url,params){
   return new Promise((resolve,reject)=>{
     const cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1000);
-    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},15000);
+    // مهلة أطول (20 ثانية) لدعم بدء التشغيل البطيء لـ Google Apps Script
+    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},20000);
     window[cb]=(d)=>{clearTimeout(timer);delete window[cb];document.getElementById('jsonp_'+cb)?.remove();resolve(d);};
-    const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+    const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v==null?'':v)).join('&');
     const sc=document.createElement('script');
     sc.id='jsonp_'+cb; sc.src=url+'?'+qs+'&callback='+cb;
-    sc.onerror=()=>{clearTimeout(timer);delete window[cb];reject(new Error('network'))};
+    sc.onerror=()=>{clearTimeout(timer);delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('network'))};
     document.head.appendChild(sc);
   });
+}
+// مسار بديل يعتمد fetch لقراءة GET من Google Apps Script — أوثق على Safari/iOS
+async function fetchGet(url,params){
+  const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v==null?'':v)).join('&');
+  const ctl=('AbortController' in window)?new AbortController():null;
+  const to=setTimeout(()=>ctl&&ctl.abort(),20000);
+  try{
+    const r=await fetch(url+'?'+qs,{method:'GET',redirect:'follow',signal:ctl?ctl.signal:undefined,cache:'no-store'});
+    clearTimeout(to);
+    if(!r.ok) throw new Error('http-'+r.status);
+    const t=await r.text();
+    // قد يعود الرد ك JSON مباشر أو ملفوفاً بـ JSONP callback
+    const j=t.trim();
+    if(j.startsWith('{')||j.startsWith('[')) return JSON.parse(j);
+    const m=j.match(/^[^(]+\(([\s\S]*)\)\s*;?\s*$/);
+    if(m) return JSON.parse(m[1]);
+    throw new Error('parse');
+  }catch(e){ clearTimeout(to); throw e; }
+}
+// محاولة JSONP، وإن فشلت جرّب fetch (يحل مشاكل Safari مع سكربتات المرور عبر إعادة التوجيه)
+async function callServer(url,params){
+  try{ return await jsonpTo(url,params); }
+  catch(e){
+    console.warn('[JSONP failed, retry via fetch]',e&&e.message);
+    return await fetchGet(url,params);
+  }
 }
 
 // ===== التحقق بخطوتين (2FA) — أول مرة لكل جهاز =====
@@ -953,9 +980,21 @@ async function doLogin(){
   document.getElementById('errBox').style.display='none';
   document.getElementById('lbtn').disabled=true;
   document.getElementById('ldg').style.display='block';
+  let d=null, netErr=null;
   try{
-    const d=await jsonpTo(AUTH_URL,{action:'login',role:role,id:sid,pw:sph});
-    if(!d||!d.ok) throw new Error('bad');
+    d=await callServer(AUTH_URL,{action:'login',role:role,id:sid,pw:sph});
+  }catch(e){ netErr=e&&e.message||'network'; }
+  try{
+    if(netErr){
+      showErr('تعذّر الاتصال بالخادم — تحقّق من الشبكة (خصوصاً على Safari/iPhone: عطّل "منع التتبّع بين المواقع" من إعدادات Safari)');
+      throw new Error('net');
+    }
+    if(!d||!d.ok){
+      // فرّق بين رسالة خطأ من الخادم وبيانات دخول خاطئة
+      if(d && d.msg) showErr(String(d.msg));
+      else showErr('بيانات الدخول غير صحيحة');
+      throw new Error('auth');
+    }
     SESSION.token=d.token;
     localStorage.setItem('bla_token',d.token);
     user=Object.assign({role:role},d.user);
@@ -975,7 +1014,7 @@ async function doLogin(){
       }
     }
     return;
-  }catch(e){showErr('بيانات الدخول غير صحيحة');}
+  }catch(e){/* تم عرض الخطأ أعلاه */}
   document.getElementById('lbtn').disabled=false;
   document.getElementById('ldg').style.display='none';
 }
