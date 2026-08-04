@@ -828,7 +828,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycby0hfxanInvE0PvTKYhT-l7-nAmytEmvV-JbCyVsooHh3GTzJTDpHFlfhgD-NVMrvKl/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzvaFN5tZmaEGfzXsTB5gLVBFepuhKsgILSCHVlpn_059RZ8Mo1QuJfO2fuP-EsM5Gb/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -867,6 +867,39 @@ async function fetchSheet(range){
   if(d&&d.ok===false){ if(d.error==='invalid_token') throw new Error('session'); return []; }
   return (d&&d.values)||[];
 }
+// ⚡ نظام كاش سريع: حفظ نسخة من البيانات محلياً للدخول الفوري في المرات القادمة
+const CACHE_KEY='bla_data_snap_v1';
+const CACHE_TTL=6*3600*1000; // ٦ ساعات
+function saveDataSnapshot(){
+  try{
+    const snap={t:Date.now(),role:role,uid:user&&user.id,
+      students, allCourses, catalog, trainersDB, adminsDB,
+      absenceRows: (typeof absenceRows!=='undefined'?absenceRows:null),
+      scheduleRows:(typeof scheduleRows!=='undefined'?scheduleRows:null),
+      schedConfig: (typeof schedConfig!=='undefined'?schedConfig:null),
+      requests:(typeof requests!=='undefined'?requests:null),
+      delegations:(typeof delegations!=='undefined'?delegations:null)
+    };
+    localStorage.setItem(CACHE_KEY, JSON.stringify(snap));
+  }catch(e){/* التخزين ممتلئ أو غير متاح */}
+}
+function loadDataSnapshot(){
+  try{
+    const raw=localStorage.getItem(CACHE_KEY); if(!raw) return false;
+    const s=JSON.parse(raw);
+    if(!s||s.role!==role||String(s.uid||'')!==String(user&&user.id||''))return false;
+    if(Date.now()-(s.t||0)>CACHE_TTL) return false;
+    students=s.students||[]; allCourses=s.allCourses||[]; catalog=s.catalog||[];
+    trainersDB=s.trainersDB||[]; adminsDB=s.adminsDB||[];
+    if(s.absenceRows && typeof absenceRows!=='undefined')  absenceRows=s.absenceRows;
+    if(s.scheduleRows && typeof scheduleRows!=='undefined') scheduleRows=s.scheduleRows;
+    if(s.schedConfig && typeof schedConfig!=='undefined')  schedConfig=s.schedConfig;
+    if(s.requests && typeof requests!=='undefined')        requests=s.requests;
+    if(s.delegations && typeof delegations!=='undefined')  delegations=s.delegations;
+    return true;
+  }catch(e){ return false; }
+}
+function clearDataSnapshot(){ try{ localStorage.removeItem(CACHE_KEY); }catch(e){} }
 
 // ===== JSONP عام (للطلبات التي تحتاج رد من Apps Script) =====
 function jsonpCall(params){
@@ -1142,6 +1175,7 @@ async function loadStudent(){
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   courses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
+  saveDataSnapshot();
 }
 
 async function loadTrainer(){
@@ -1168,6 +1202,7 @@ async function loadTrainer(){
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   students.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
+  saveDataSnapshot();
 }
 
 async function loadAdmin(){
@@ -1208,6 +1243,7 @@ async function loadAdmin(){
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations()]);
   allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
+  saveDataSnapshot();
 }
 // هل المدرب حالي (مسجّل في القاعدة)؟
 function isCurrentTrainer(name){
@@ -4731,6 +4767,7 @@ function filterSt(){
 // ===== LOGOUT =====
 function doLogout(){
   clearIdleGuard();
+  clearDataSnapshot();
   localStorage.removeItem('bla_user');
   localStorage.removeItem('bla_role');
   localStorage.removeItem('bla_token');
@@ -4829,7 +4866,7 @@ function setSplashLogo(){
   }catch(e){}
 }
 
-// استرجاع الجلسة عند تحميل الصفحة
+// استرجاع الجلسة عند تحميل الصفحة — سريع: كاش فوري ثم تحديث بالخلفية
 async function restoreSession(){
   try{
     const savedUser=localStorage.getItem('bla_user');
@@ -4841,28 +4878,39 @@ async function restoreSession(){
     role=savedRole;
     currentUser=u;
     user=u;
-    // فحص الخمول: لو تجاوز الحد المسموح للدور → اعتبر الجلسة منتهية
+    // فحص الخمول
     const lastAct=parseInt(localStorage.getItem('bla_last_activity')||'0',10);
     const idleLim=(IDLE_HOURS[role]||24)*3600*1000;
     if(lastAct && (Date.now()-lastAct>idleLim)){
       localStorage.removeItem('bla_user');localStorage.removeItem('bla_role');
       localStorage.removeItem('bla_token');localStorage.removeItem('bla_last_activity');
+      clearDataSnapshot();
       SESSION.token='';user=null;currentUser=null;
       hideSplash();
       const eb=document.getElementById('errBox');
       if(eb){eb.style.display='block';eb.textContent='🔒 انتهت الجلسة بسبب عدم النشاط. الرجاء تسجيل الدخول مرة أخرى.';}
       return;
     }
+    // ⚡ إذا فيه نسخة محفوظة → اعرض التطبيق فوراً ثم حدّث بالخلفية
+    if(loadDataSnapshot()){
+      showApp(); hideSplash(); initIdleGuard();
+      // تحديث صامت بالخلفية
+      const refresh=(role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
+      refresh.then(()=>{
+        // إعادة رسم اللوحة الحالية بالبيانات الجديدة (بدون قفزة مزعجة)
+        try{ if(role==='s') buildStudentApp(); else if(role==='t') buildTrainerApp(); else buildAdminApp(); }catch(e){}
+      }).catch(e=>{ if(e&&e.message==='session'){ localStorage.removeItem('bla_token'); location.reload(); } });
+      return;
+    }
+    // بدون كاش: تحميل عادي بشاشة "جاري جلب بياناتك..."
     const st=document.getElementById('splashStatus');if(st)st.textContent='جاري جلب بياناتك...';
-    // حماية: لو التحميل علّق أكثر من 12 ثانية، نوقف ونعرض صفحة الدخول
     const loadPromise=(role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
-    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),12000));
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),25000));
     await Promise.race([loadPromise,timeout]);
     showApp();
     hideSplash();
     initIdleGuard();
   }catch(e){
-    // فشل أو علّق التحميل → امسح الجلسة وارجع لصفحة الدخول
     localStorage.removeItem('bla_user');
     localStorage.removeItem('bla_role');
     user=null;currentUser=null;
