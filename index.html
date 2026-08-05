@@ -5461,13 +5461,29 @@ function printWarningLetter(sid){
   if(!highAbsCourses(sid).length){showToast('هذا المتدرب ليس لديه غياب مرتفع (10%+)','i');return;}
   openReport(buildWarningLetter(sid));
 }
+// ===== تنسيق تاريخ الالتحاق (يحوّل صيغة ISO الخام إلى يوم/شهر/سنة نظيف) =====
+function fmtJoinDate(v){
+  if(v==null) return '';
+  const s=String(v).trim();
+  if(!s) return '';
+  const d=new Date(s);
+  if(isNaN(d.getTime())) return s; // ليس تاريخاً — أعده كما هو (مثل نص عادي)
+  try{
+    const parts=new Intl.DateTimeFormat('en-GB',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Riyadh'}).formatToParts(d);
+    const g=t=>(parts.find(p=>p.type===t)||{}).value||'';
+    return g('day')+'/'+g('month')+'/'+g('year');
+  }catch(e){
+    const pad=n=>String(n).padStart(2,'0');
+    return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear();
+  }
+}
 // ===== ورقة التعريف (الإفادة الرسمية) — تطابق نموذج المعهد =====
 function introLetterFor(p){
   p=p||{};
   const name=p.name||'.....................';
   const id=p.id||p.sid||'.............';
   const spec=p.spec||'الألكترونيات الصناعية والتحكم';
-  const joinDate=(p.join||'').trim();
+  const joinDate=fmtJoinDate((p.join||'').trim());
   const joinHtml=joinDate?`<b>${joinDate}</b>`:`<span class="fillline">&nbsp;/&nbsp;&nbsp;/&nbsp;</span>`;
   const body=`
     <div class="to">الى من يهمه الأمر :</div>
