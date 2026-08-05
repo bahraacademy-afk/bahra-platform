@@ -828,7 +828,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzvaFN5tZmaEGfzXsTB5gLVBFepuhKsgILSCHVlpn_059RZ8Mo1QuJfO2fuP-EsM5Gb/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbz9dnXUamY9vg8ogUJYyLtA8_Kdu4fUb5nuvaMbhInw87lMy9jD0vTURq7kLB53HBWz/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -924,8 +924,8 @@ function jsonpCall(params){
 function jsonpTo(url,params){
   return new Promise((resolve,reject)=>{
     const cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1000);
-    // مهلة 12 ثانية (تكفي لبدء تشغيل Apps Script) — الطريقتان تعملان بالتوازي
-    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},12000);
+    // مهلة 10 ثوانٍ — الخادم يرد فوراً عند النجاح، فهذي تنطبق فقط عند تعذّر الوصول
+    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},10000);
     window[cb]=(d)=>{clearTimeout(timer);delete window[cb];document.getElementById('jsonp_'+cb)?.remove();resolve(d);};
     const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v==null?'':v)).join('&');
     const sc=document.createElement('script');
@@ -952,16 +952,16 @@ async function fetchGet(url,params){
     throw new Error('parse');
   }catch(e){ clearTimeout(to); throw e; }
 }
-// يشغّل JSONP و fetch بالتوازي معاً ويأخذ أول نجاح (أسرع + أثبت على Safari/iPhone)
-// يفشل فقط إذا فشلت الطريقتان
-function callServer(url,params){
-  return new Promise((resolve,reject)=>{
-    let done=false, fails=0;
-    const win=(d)=>{ if(done)return; done=true; resolve(d); };
-    const lose=(e)=>{ if(done)return; fails++; if(fails>=2){done=true; reject(e||new Error('network'));} };
-    jsonpTo(url,params).then(win).catch(lose);
-    fetchGet(url,params).then(win).catch(lose);
-  });
+// JSONP هو الطريقة الأساسية الموثوقة (يعمل على كل الأجهزة ولا يتأثر بحظر CORS)
+// وهو سريع: يرد فوراً عند نجاح الخادم؛ المهلة الطويلة تنطبق فقط عند الفشل الحقيقي.
+// fetch مجرد احتياطي أخير (نادراً ما ينجح على GitHub Pages بسبب CORS).
+async function callServer(url,params){
+  try{
+    return await jsonpTo(url,params);
+  }catch(e){
+    console.warn('[JSONP failed → trying fetch]', e&&e.message);
+    return await fetchGet(url,params);
+  }
 }
 
 // ===== التحقق بخطوتين (2FA) — أول مرة لكل جهاز =====
