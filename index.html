@@ -924,8 +924,8 @@ function jsonpCall(params){
 function jsonpTo(url,params){
   return new Promise((resolve,reject)=>{
     const cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1000);
-    // مهلة أطول (20 ثانية) لدعم بدء التشغيل البطيء لـ Google Apps Script
-    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},20000);
+    // مهلة 12 ثانية (تكفي لبدء تشغيل Apps Script) — الطريقتان تعملان بالتوازي
+    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},12000);
     window[cb]=(d)=>{clearTimeout(timer);delete window[cb];document.getElementById('jsonp_'+cb)?.remove();resolve(d);};
     const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v==null?'':v)).join('&');
     const sc=document.createElement('script');
@@ -938,7 +938,7 @@ function jsonpTo(url,params){
 async function fetchGet(url,params){
   const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v==null?'':v)).join('&');
   const ctl=('AbortController' in window)?new AbortController():null;
-  const to=setTimeout(()=>ctl&&ctl.abort(),20000);
+  const to=setTimeout(()=>ctl&&ctl.abort(),12000);
   try{
     const r=await fetch(url+'?'+qs,{method:'GET',redirect:'follow',signal:ctl?ctl.signal:undefined,cache:'no-store'});
     clearTimeout(to);
@@ -952,13 +952,16 @@ async function fetchGet(url,params){
     throw new Error('parse');
   }catch(e){ clearTimeout(to); throw e; }
 }
-// محاولة JSONP، وإن فشلت جرّب fetch (يحل مشاكل Safari مع سكربتات المرور عبر إعادة التوجيه)
-async function callServer(url,params){
-  try{ return await jsonpTo(url,params); }
-  catch(e){
-    console.warn('[JSONP failed, retry via fetch]',e&&e.message);
-    return await fetchGet(url,params);
-  }
+// يشغّل JSONP و fetch بالتوازي معاً ويأخذ أول نجاح (أسرع + أثبت على Safari/iPhone)
+// يفشل فقط إذا فشلت الطريقتان
+function callServer(url,params){
+  return new Promise((resolve,reject)=>{
+    let done=false, fails=0;
+    const win=(d)=>{ if(done)return; done=true; resolve(d); };
+    const lose=(e)=>{ if(done)return; fails++; if(fails>=2){done=true; reject(e||new Error('network'));} };
+    jsonpTo(url,params).then(win).catch(lose);
+    fetchGet(url,params).then(win).catch(lose);
+  });
 }
 
 // ===== التحقق بخطوتين (2FA) — أول مرة لكل جهاز =====
@@ -1157,6 +1160,7 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 
 // ===== LOAD DATA =====
 async function loadStudent(){
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[])
@@ -1173,12 +1177,13 @@ async function loadStudent(){
     const r=cat[i];
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
-  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
+  await p2;
   courses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
 
 async function loadTrainer(){
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[]),
@@ -1200,7 +1205,7 @@ async function loadTrainer(){
     const r=cat[i];
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
   }
-  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
+  await p2;
   students.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
