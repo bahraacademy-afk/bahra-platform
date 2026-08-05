@@ -828,7 +828,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbz9dnXUamY9vg8ogUJYyLtA8_Kdu4fUb5nuvaMbhInw87lMy9jD0vTURq7kLB53HBWz/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwzzBsDhOvpQ7-iEdLeyb_0OC-bsDDAayQzIWbmw5kwpqNjUJwUkq57T7miLyxaxW-E/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2568,11 +2568,18 @@ async function libSaveMat(code){
   showToast('جاري الحفظ...','i');
   try{
     const r=await jsonpCall({action:'updateCourse',data:JSON.stringify([rec])});
+    if(!r || (r.status!=='ok' && r.ok!==true)){
+      const m=(r&&(r.hint||r.msg))||'';
+      if(m==='forbidden'||/صلاح|forbidden/i.test(m)) showToast('ما عندك صلاحية إضافة مواد (الأدمن فقط)','e');
+      else if(m==='unauthorized'||/unauthorized/i.test(m)) showToast('انتهت الجلسة — سجّل خروج ثم دخول من جديد','e');
+      else showToast('تعذّر الحفظ'+(m?' — '+m:''),'e');
+      return;
+    }
     document.getElementById('libMatModal')?.remove();
     showToast('✅ تمت إضافة المادة','s');
     if(user.role==='t'){await loadTrainer();showTPage('library',document.getElementById('sn-library'));}
     else{await loadAdmin();showAPage('library',document.getElementById('sn-library'));}
-  }catch(e){showToast('تعذّر الحفظ — تأكد من نشر Apps Script','e');}
+  }catch(e){showToast('تعذّر الاتصال بالخادم — تأكد من نشر Apps Script وإعادة التفويض','e');}
 }
 window.libAddMat=libAddMat;window.libSaveMat=libSaveMat;
 
