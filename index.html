@@ -3799,6 +3799,63 @@ function updateEnrCounts(){
   const cr=document.querySelectorAll('.enr-course-cb:checked').length;
   const se=document.getElementById('stCount');if(se)se.textContent='('+st+' محدد)';
   const ce=document.getElementById('crsCount');if(ce)ce.textContent='('+cr+' محدد)';
+  applyPrereqLocks();
+}
+// ===== فحص المتطلبات السابقة عند التسجيل الجماعي =====
+// تطبيع نص لمطابقة رموز المواد (أرقام + حروف عربي/لاتيني فقط)
+function normTok(s){ return String(s||'').replace(/[^0-9\u0600-\u06FFa-zA-Z]/g,'').toLowerCase(); }
+// هل اجتاز المتدرب (sid) المادة المطلوبة في نص المتطلب؟
+function studentPassedPrereq(sid, prereq){
+  if(!prereq||!String(prereq).trim())return true; // لا يوجد متطلب → مسموح
+  // المواد التي أخذها المتدرب سابقاً ونجح فيها
+  const passed=(allCourses||[]).filter(c=>String(c.sid)===String(sid)&&!isActive(c.status)&&!isFailed(c));
+  // نفصل المتطلبات المتعددة (/ ، , ؛ +)
+  const parts=String(prereq).split(/[\/،,؛\+]|\sو\s/).map(x=>x.trim()).filter(Boolean);
+  if(!parts.length)return true;
+  // يُعتبر مستوفياً إذا نجح في مادة تطابق أياً من المتطلبات
+  return parts.some(part=>{
+    const num=((part.match(/\d+/)||[])[0])||'';
+    const alpha=normTok(part.replace(/\d+/g,''));
+    if(!num&&!alpha)return true;
+    return passed.some(pc=>{
+      const codeN=normTok(pc.code)+normTok(pc.course);
+      return (!num||codeN.includes(num))&&(!alpha||codeN.includes(alpha));
+    });
+  });
+}
+// قفل صناديق المواد التي لم يستوفِ متطلبها المتدربون المحددون
+function applyPrereqLocks(){
+  const sids=[...document.querySelectorAll('.enr-student-cb:checked')].map(c=>c.value);
+  document.querySelectorAll('.enr-course-cb').forEach(cb=>{
+    const code=(cb.value||'').split('|')[0];
+    const cat=(catalog||[]).find(c=>normCode(c.code)===normCode(code));
+    const prereq=cat?cat.prereq:'';
+    const wrap=cb.closest('label');
+    const old=wrap?wrap.querySelector('.prereq-lock'):null; if(old)old.remove();
+    let blocked=false, missing='';
+    if(prereq && sids.length){
+      // مقفلة إذا وُجد متدرب واحد على الأقل لم يستوفِ المتطلب
+      for(const sid of sids){ if(!studentPassedPrereq(sid,prereq)){ blocked=true; missing=prereq; break; } }
+    }
+    cb.disabled=blocked;
+    if(blocked){
+      cb.checked=false;
+      if(wrap){
+        wrap.style.opacity='.55';
+        const tag=document.createElement('span');
+        tag.className='prereq-lock';
+        tag.style.cssText='font-size:10px;background:rgba(231,76,60,.15);color:#e74c3c;border:1px solid rgba(231,76,60,.35);border-radius:10px;padding:2px 8px;font-weight:700;white-space:nowrap';
+        tag.textContent='🔒 المتطلب: '+missing;
+        wrap.appendChild(tag);
+      }
+    }else if(wrap){ wrap.style.opacity=''; }
+  });
+  updateEnrCountsRaw();
+}
+// تحديث العدّاد فقط (بدون إعادة استدعاء القفل لتفادي التكرار اللانهائي)
+function updateEnrCountsRaw(){
+  const cr=document.querySelectorAll('.enr-course-cb:checked').length;
+  const ce=document.getElementById('crsCount');if(ce)ce.textContent='('+cr+' محدد)';
 }
 // ربط التحديث بأي تغيير في الصناديق
 document.addEventListener('change',function(e){
@@ -3843,18 +3900,20 @@ async function enrollBatch(){
   if(!crs.length){showToast('اختر مقرراً واحداً على الأقل','w');return;}
   const total=sids.length*crs.length;
   if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nالترم: ${term}${half?' · '+half:''}\nهل تريد المتابعة؟`))return;
-  // بناء السجلات (مع تخطي المسجّلين مسبقاً)
-  const records=[];let skipped=0;
+  // بناء السجلات (مع تخطي المسجّلين مسبقاً والمواد المقفلة بمتطلب)
+  const records=[];let skipped=0,lockedSkip=0;
   sids.forEach(sid=>{
     const st=students.find(s=>s.id===sid);if(!st)return;
     crs.forEach(cv=>{
       const [code,course]=cv.split('|');
+      const cat=(catalog||[]).find(c=>normCode(c.code)===normCode(code));
+      if(cat&&cat.prereq&&!studentPassedPrereq(sid,cat.prereq)){lockedSkip++;return;} // متطلب غير مستوفى
       const already=allCourses.some(c=>c.sid===sid&&normCode(c.code)===normCode(code));
       if(already){skipped++;return;}
       records.push({sid,name:st.name,grp:st.grp,code,course,trainer,term,half,status:'حالي'});
     });
   });
-  if(!records.length){showToast('⚠️ كل التسجيلات موجودة مسبقاً','w');return;}
+  if(!records.length){showToast(lockedSkip?'⚠️ كل المواد المختارة مقفلة بمتطلب غير مستوفى':'⚠️ كل التسجيلات موجودة مسبقاً','w');return;}
   showToast(`جاري تسجيل ${records.length} تسجيل...`,'i');
   try{
     // نرسل على دفعات (كل دفعة 40 سجل) لتجنّب حدود الرابط
@@ -3862,7 +3921,7 @@ async function enrollBatch(){
       const batch=records.slice(i,i+40);
       await jsonpCall({action:'enrollStudent',data:JSON.stringify(batch)});
     }
-    showToast(`✅ تم تسجيل ${records.length} تسجيل`+(skipped?` · تخطّى ${skipped} مسجّل مسبقاً`:''),'s');
+    showToast(`✅ تم تسجيل ${records.length} تسجيل`+(skipped?` · تخطّى ${skipped} مسجّل مسبقاً`:'')+(lockedSkip?` · 🔒 ${lockedSkip} مقفلة بمتطلب`:''),'s');
     await loadAdmin();
     showAPage('manage_courses',document.getElementById('sn-manage_courses'));
   }catch(e){showToast('تعذّر التسجيل — جرب مرة أخرى','e');}
@@ -4154,7 +4213,7 @@ const aPgs={
       };
       body=`
       <div class="stitle">🔗 تسجيل جماعي ذكي</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">💡 اختر الشعبة لترى المواد المنتهية والحالية والباقية، ثم سجّل المتدربين في المواد الباقية</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">💡 اختر الشعبة لترى المواد المنتهية والحالية والباقية، ثم سجّل المتدربين في المواد الباقية · 🔒 عند تحديد متدرب تُقفل المواد التي لم يجتز متطلبها السابق</div>
       <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">${grpTabs}</div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="enr-grid">
@@ -4172,7 +4231,7 @@ const aPgs={
           <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text)">📚 مواد الشعبة ${selGrp} <span id="crsCount" style="font-size:11px;color:#6ab8f7">(0 محدد)</span></div>
           <div style="max-height:340px;overflow-y:auto">
             ${remaining.length?`<div style="font-size:12px;font-weight:700;color:var(--text);margin:4px 0 6px">🆕 المواد الباقية (${remaining.length}) — متاحة للتسجيل
-              <button class="btn btn-out btn-sm" style="margin-right:8px" onclick="document.querySelectorAll('.enr-course-cb').forEach(c=>c.checked=true);updateEnrCounts()">تحديد الكل</button></div>
+              <button class="btn btn-out btn-sm" style="margin-right:8px" onclick="document.querySelectorAll('.enr-course-cb').forEach(c=>{if(!c.disabled)c.checked=true});updateEnrCounts()">تحديد الكل</button></div>
             <div style="display:grid;gap:5px;margin-bottom:14px">${remaining.map(c=>crsBox(c,true)).join('')}</div>`:'<div style="color:#2ecc71;font-size:12px;margin-bottom:12px">✅ كل المواد مسجّلة لهذه الشعبة</div>'}
             ${current.length?`<div style="font-size:12px;font-weight:700;color:#6ab8f7;margin:4px 0 6px">▶ المواد الحالية (${current.length})</div>
             <div style="display:grid;gap:5px;margin-bottom:14px">${current.map(c=>crsBox(c,false)).join('')}</div>`:''}
