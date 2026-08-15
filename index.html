@@ -471,6 +471,12 @@ body.light-mode .fab-item.active .fi-ico{color:#fff}
 
 /* EMPTY STATE */
 .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px}
+.list-search{position:relative;display:flex;align-items:center;margin:6px 0 14px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:0 12px;transition:border-color .2s}
+.list-search:focus-within{border-color:var(--accent,#1a7abf)}
+.list-search .ls-ico{font-size:15px;opacity:.6;flex-shrink:0}
+.list-search input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:14px;padding:11px 8px;font-family:inherit}
+.list-search .ls-clear{display:none;cursor:pointer;font-size:12px;color:var(--muted);width:22px;height:22px;border-radius:50%;align-items:center;justify-content:center;flex-shrink:0}
+.list-search .ls-clear:hover{background:var(--border);color:var(--text)}
 .empty-icon{font-size:40px;margin-bottom:12px;opacity:.4}
 
 /* RESPONSIVE */
@@ -2405,7 +2411,7 @@ window.updateNotifBadges=updateNotifBadges;
 // ===== STUDENT APP =====
 function buildStudentApp(){
   document.getElementById('sidebar').innerHTML=navHTML('s',['home','courses','library','performance','schedule','services','record','attachments','profile']);
-  buildMobNav('s',['home','courses','library','schedule','profile']);
+  buildMobNav('s',['home','courses','library','performance','schedule','services','record','attachments','profile']);
   showSPage('home',null);
 }
 
@@ -2515,7 +2521,9 @@ function buildLibrary(scope, canAdd){
   const cards=cats.map(c=>{
     const m=getCourseMaterials(c.code);
     const empty=!m.theory.length&&!m.practical.length;
-    return `<div class="ccard" style="cursor:default">
+    const matNames=[...m.theory,...m.practical].map(x=>(x&&(x.name||x.title))||'').join(' ');
+    const sTxt=`${c.name||''} ${c.code||''} ${c.term||''} ${matNames}`.toLowerCase();
+    return `<div class="ccard libcard" data-s="${esc(sTxt)}" style="cursor:default">
       <div class="cc-top"><div><div class="cc-name">${esc(c.name||c.code)}</div><div class="cc-meta">${esc(c.code)}${c.term?' · '+c.term:''}</div></div>
         <span class="pill ${empty?'py':'pg'}">${empty?'لا مواد':(m.theory.length+m.practical.length)+' مادة'}</span></div>
       ${secBlock('📘 نظري',m.theory)}${secBlock('🔧 عملي',m.practical)}
@@ -2526,8 +2534,22 @@ function buildLibrary(scope, canAdd){
   return `
     <div class="stitle">📚 المكتبة العلمية</div>
     <div class="alert ab"><span class="aicon">📖</span>${scope?'المواد العلمية لمقرراتك (نظري + عملي)':'كل المواد العلمية لجميع المقررات'} · ${cats.length} مقرر · ${totalMats} مادة</div>
-    ${cats.length?`<div class="cgrid">${cards}</div>`:'<div class="empty"><div class="empty-icon">📭</div>لا توجد مواد علمية بعد</div>'}`;
+    ${cats.length?`<div class="list-search"><span class="ls-ico">🔍</span><input type="text" id="libSearchBox" placeholder="ابحث عن مقرر أو مادة..." oninput="libFilter(this.value)"><span class="ls-clear" onclick="libFilterClear()">✕</span></div>`:''}
+    ${cats.length?`<div class="cgrid" id="libGrid">${cards}</div><div class="empty" id="libNoRes" style="display:none"><div class="empty-icon">🔍</div>لا نتائج مطابقة</div>`:'<div class="empty"><div class="empty-icon">📭</div>لا توجد مواد علمية بعد</div>'}`;
 }
+// فلترة المكتبة حسب البحث
+function libFilter(q){
+  q=(q||'').trim().toLowerCase();
+  const grid=document.getElementById('libGrid'); if(!grid)return;
+  let shown=0;
+  grid.querySelectorAll('.libcard').forEach(el=>{
+    const hit=!q||(el.getAttribute('data-s')||'').includes(q);
+    el.style.display=hit?'':'none'; if(hit)shown++;
+  });
+  const nr=document.getElementById('libNoRes'); if(nr)nr.style.display=shown?'none':'block';
+  const cl=document.querySelector('.list-search .ls-clear'); if(cl)cl.style.display=q?'flex':'none';
+}
+function libFilterClear(){ const b=document.getElementById('libSearchBox'); if(b){b.value='';libFilter('');b.focus();} }
 // إضافة مادة علمية سريعة (للمدرب/الإداري) — تُدمج مع مواد المقرر الحالية
 function libAddMat(info){
   const overlay=document.createElement('div');
@@ -2916,7 +2938,7 @@ function filterTerm(grp,val,btn){
 // ===== TRAINER APP =====
 function buildTrainerApp(){
   document.getElementById('sidebar').innerHTML=navHTML('t',['home','students','library','schedule','attendance','grades','requests','alerts','attachments']);
-  buildMobNav('t',['home','students','library','grades','alerts']);
+  buildMobNav('t',['home','students','library','schedule','attendance','grades','requests','alerts','attachments']);
   showTPage('home',null);
 }
 
@@ -3466,7 +3488,7 @@ function refreshFileList(course){
 // ===== ADMIN APP =====
 function buildAdminApp(){
   document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','library','manage_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
-  buildMobNav('a',['overview','all_students','library','reports','dashboard','accounts','all_courses','schedule','alerts','settings']);
+  buildMobNav('a',['overview','all_students','all_courses','library','manage_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
   showAPage('overview',null);
 }
 
@@ -4059,7 +4081,7 @@ const aPgs={
       const rows=(catalog||[]).map(c=>`<tr>
         <td style="font-weight:600">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
         <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${esc(c.code)}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
-      </tr>`).join('')||`<tr><td colspan="8" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
+      </tr>`).join('')||`<tr data-empty><td colspan="8" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
       // التروم الموجودة فعلاً في سجل المقررات (النشطة فقط)
       const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>{
         // نأخذ الجزء قبل " · " (الترم بدون النصف) لتجميع النصفين
@@ -4083,10 +4105,12 @@ const aPgs={
         <button class="btn btn-b" onclick="addCourse()">➕ إضافة مقرر</button>
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ — واتركه فارغاً ليصلح لكل التخصصات</div>
+      <div data-listwrap>
+      ${searchBoxHTML('ابحث عن مقرر أو رمز...')}
       <div class="gtable"><table>
         <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>التخصصات</th><th>المادة العلمية</th><th>إجراءات</th></tr></thead>
         <tbody>${rows}</tbody>
-      </table></div>`;
+      </table></div></div>`;
     }else{
       // ===== تسجيل جماعي ذكي (بفلتر الشعبة وحالة المواد) =====
       const seen=new Set();
@@ -4198,19 +4222,19 @@ const aPgs={
       rows=uniq.map(s=>`<tr>
         <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.grp||'-')}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
         <td><button onclick='editAccount("student",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("student","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
-      </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد متدربون</td></tr>`;
+      </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد متدربون</td></tr>`;
     }else if(t==='trainer'){
       cols=`<th>الرقم</th><th>الاسم</th><th>التخصص</th><th>الجوال</th><th>البريد</th><th>إجراءات</th>`;
       rows=(trainersDB||[]).map(s=>`<tr>
         <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
         <td><button onclick='editAccount("trainer",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("trainer","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
-      </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مدربون</td></tr>`;
+      </tr>`).join('')||`<tr data-empty><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مدربون</td></tr>`;
     }else{
       cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الجوال</th><th>البريد</th><th>الصلاحية</th><th>إجراءات</th>`;
       rows=(adminsDB||[]).map(s=>`<tr>
         <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td><td>${s.level||'-'}</td>
         <td><button onclick='editAccount("admin",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("admin","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
-      </tr>`).join('')||`<tr><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
+      </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
     }
     const tLbl=t==='student'?'متدرب':t==='trainer'?'مدرب':'إداري';
     return `
@@ -4224,10 +4248,12 @@ const aPgs={
       <div class="stitle" style="margin:0">${t==='student'?'🎓 المتدربون':t==='trainer'?'👨‍🏫 المدربون':'⚙️ الإداريون'}</div>
       <button class="btn btn-b" onclick='addAccount("${t}")'>➕ إضافة ${tLbl}</button>
     </div>
+    <div data-listwrap>
+    ${searchBoxHTML('ابحث بالاسم أو الرقم أو البريد...')}
     <div class="gtable"><table>
       <thead><tr>${cols}</tr></thead>
       <tbody>${rows}</tbody>
-    </table></div>`;
+    </table></div></div>`;
   },
   dashboard:()=>{
     // ===== حساب معدّل كل طالب =====
@@ -4457,6 +4483,8 @@ const aPgs={
     const avgAll=avgPct(active);
     return `
     <div class="banner"><div><div class="btitle">📚 المقررات الحالية</div><div class="bsub">المواد التي يدرسها المتدربون هذا الترم — ${courses.length} مقرر · ${totStudents} متدرب</div></div><div class="bpill bp-b">${avgAll}% متوسط</div></div>
+    <div data-listwrap>
+    ${searchBoxHTML('ابحث عن مقرر أو رمز أو مدرب...')}
     <div class="gtable"><table>
       <thead><tr><th>المقرر</th><th>الرمز</th><th>المدرب</th><th>الشعب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>متوسط الغياب</th><th>محرومون</th></tr></thead>
       <tbody>${courses.map(c=>{
@@ -4476,7 +4504,7 @@ const aPgs={
           <td style="text-align:center">${banned?`<span style="color:var(--red);font-weight:700">${banned}</span>`:'0'}</td>
         </tr>`;
       }).join('')}</tbody>
-    </table></div>
+    </table></div></div>
     <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اضغط على أي مقرر لعرض تفاصيل المتدربين المسجّلين فيه</div>`;
   },
   schedule:()=>{
@@ -4775,6 +4803,27 @@ function filterSt(){
     r.style.display=show?'':'none';
   });
 }
+// ===== بحث عام لأي جدول =====
+// يوضع صندوق البحث داخل حاوية فيها [data-listwrap]، ويفلتر صفوف tbody بالنص
+function filterList(inp){
+  const q=(inp.value||'').trim().toLowerCase();
+  const wrap=inp.closest('[data-listwrap]'); if(!wrap)return;
+  const tb=wrap.querySelector('tbody'); if(!tb)return;
+  let shown=0, real=0;
+  tb.querySelectorAll('tr').forEach(tr=>{
+    if(tr.hasAttribute('data-empty'))return; // صف "لا يوجد" الأصلي
+    real++;
+    const hit=!q||tr.textContent.toLowerCase().includes(q);
+    tr.style.display=hit?'':'none'; if(hit)shown++;
+  });
+  let nr=wrap.querySelector('.list-nores');
+  if(!nr){ nr=document.createElement('div'); nr.className='list-nores empty'; nr.innerHTML='<div class="empty-icon">🔍</div>لا نتائج مطابقة'; wrap.appendChild(nr); }
+  nr.style.display=(real&&!shown)?'block':'none';
+  const cl=inp.parentElement.querySelector('.ls-clear'); if(cl)cl.style.display=q?'flex':'none';
+}
+function filterListClear(btn){ const inp=btn.parentElement.querySelector('input'); if(inp){inp.value='';filterList(inp);inp.focus();} }
+// مولّد HTML لصندوق بحث موحّد
+function searchBoxHTML(ph){ return `<div class="list-search"><span class="ls-ico">🔍</span><input type="text" placeholder="${ph||'ابحث...'}" oninput="filterList(this)"><span class="ls-clear" onclick="filterListClear(this)">✕</span></div>`; }
 
 // ===== LOGOUT =====
 function doLogout(){
