@@ -834,7 +834,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwzzBsDhOvpQ7-iEdLeyb_0OC-bsDDAayQzIWbmw5kwpqNjUJwUkq57T7miLyxaxW-E/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyFwakft5Anv46P82br_O9dGA6VCGcyG3gsL204vDA4OnObEznMfM3Z-cvh5Nocuh8e/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1169,7 +1169,7 @@ async function loadStudent(){
   const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[])
+    fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[])
   ]);
   courses=[];
   for(let i=1;i<cr.length;i++){
@@ -1181,7 +1181,7 @@ async function loadStudent(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7]),prereq:(n0(r[8])||n0(r[9]))});
   }
   await p2;
   courses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
@@ -1192,7 +1192,7 @@ async function loadTrainer(){
   const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[]),
+    fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[]),
     loadDelegations()
   ]);
   students=[];
@@ -1209,7 +1209,7 @@ async function loadTrainer(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7]),prereq:(n0(r[8])||n0(r[9]))});
   }
   await p2;
   students.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
@@ -1220,7 +1220,7 @@ async function loadAdmin(){
   const [sr,cr,cat,td,ad]=await Promise.all([
     fetchSheet('قاعدة بيانات مركزي!A:I'),
     fetchSheet('سجل المقررات!A:L'),
-    fetchSheet('قاعدة بيانات المقررات!A:H').catch(()=>[]),
+    fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[]),
     fetchSheet('قاعدة بيانات المدربين!A:F').catch(()=>[]),
     fetchSheet('قاعدة بيانات الاداريين!A:G').catch(()=>[])
   ]);
@@ -1238,7 +1238,7 @@ async function loadAdmin(){
   catalog=[];
   for(let i=1;i<cat.length;i++){
     const r=cat[i];
-    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7])});
+    if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7]),prereq:(n0(r[8])||n0(r[9]))});
   }
   // قاعدة المدربين المسجّلين (لهم حسابات): A=الرقم B=الاسم C=التخصص D=الجوال E=البريد
   trainersDB=[];
@@ -2526,6 +2526,7 @@ function buildLibrary(scope, canAdd){
     return `<div class="ccard libcard" data-s="${esc(sTxt)}" style="cursor:default">
       <div class="cc-top"><div><div class="cc-name">${esc(c.name||c.code)}</div><div class="cc-meta">${esc(c.code)}${c.term?' · '+c.term:''}</div></div>
         <span class="pill ${empty?'py':'pg'}">${empty?'لا مواد':(m.theory.length+m.practical.length)+' مادة'}</span></div>
+      ${c.prereq?`<div style="margin-top:8px"><span style="display:inline-block;background:rgba(244,162,97,.15);color:#f4a261;border:1px solid rgba(244,162,97,.3);border-radius:10px;padding:3px 10px;font-size:11px;font-weight:600">📌 المتطلب السابق: ${esc(c.prereq)}</span></div>`:''}
       ${secBlock('📘 نظري',m.theory)}${secBlock('🔧 عملي',m.practical)}
       ${empty?'<div style="font-size:12px;color:var(--muted);margin-top:8px">لم تُضف مواد لهذا المقرر بعد</div>':''}
       ${canAdd?`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)"><button class="btn btn-out btn-sm" onclick='libAddMat(${JSON.stringify({code:c.code,name:c.name}).replace(/'/g,"&#39;")})'>➕ أضف مادة علمية</button></div>`:''}
@@ -3663,6 +3664,7 @@ function courseModal(mode,data){
       ${f('term','الترم',data.term,'مثال: ترم أول')}
       ${f('units','عدد الوحدات',data.units)}
       ${f('hours','عدد الساعات',data.hours)}
+      ${f('prereq','📌 المتطلب السابق',data.prereq,'مثال: الكت 101 / ريض 121 — اتركه فارغاً إن لا يوجد')}
       <div style="margin-bottom:12px">
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصصات (يمكن أكثر من تخصص)</label>
         <div id="crsSpecChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
@@ -3758,18 +3760,23 @@ async function saveCourse(mode){
   const pp=g('matPracticalUrl');if(pp){window._crsMatPractical=window._crsMatPractical||[];window._crsMatPractical.push({title:g('matPracticalTitle'),url:pp});}
   const matTheory=serializeMaterials(window._crsMatTheory||[]);
   const matPractical=serializeMaterials(window._crsMatPractical||[]);
-  const rec={code:g('code'),name:g('name'),term:g('term'),units:g('units'),hours:g('hours'),specs,matTheory,matPractical};
+  const rec={code:g('code'),name:g('name'),term:g('term'),units:g('units'),hours:g('hours'),specs,matTheory,matPractical,prereq:g('prereq')};
   if(mode==='edit')rec.oldCode=g('oldCode');
   if(!rec.code||!rec.name){showToast('الرمز واسم المقرر مطلوبان','w');return;}
   showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
   try{
     const action=mode==='edit'?'updateCourse':'addCourse';
-    await jsonpCall({action,data:JSON.stringify([rec])});
+    const r=await jsonpCall({action,data:JSON.stringify([rec])});
+    if(r && r.status!=='ok' && r.ok!==true){
+      const m=(r.hint||r.msg||'');
+      showToast(m==='forbidden'?'ما عندك صلاحية (الأدمن فقط)':m==='unauthorized'?'انتهت الجلسة — سجّل خروج ودخول':'تعذّر الحفظ'+(m?' — '+m:''),'e');
+      return;
+    }
     document.getElementById('crsModal')?.remove();
     showToast(mode==='edit'?'✅ تم حفظ التعديل':'✅ تمت الإضافة','s');
     await loadAdmin();
     showAPage('manage_courses',document.getElementById('sn-manage_courses'));
-  }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى','e');}
+  }catch(e){showToast('تعذّر الاتصال بالخادم — تأكد من نشر Apps Script','e');}
 }
 async function deleteCourse(code,name){
   if(!confirm(`⚠️ هل تريد حذف المقرر: ${name}؟\nملاحظة: هذا يحذفه من الخطة فقط، ولا يحذف تسجيلات الطلاب.`))return;
@@ -4079,9 +4086,9 @@ const aPgs={
       const specChip=sp=>String(sp||'').split(/[|,؛;]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span style="display:inline-block;background:rgba(106,184,247,.12);color:#6ab8f7;border-radius:10px;padding:2px 8px;font-size:10px;margin:1px">${x}</span>`).join('')||'<span style="color:var(--muted);font-size:11px">عام</span>';
       const matBadge=c=>{const n=parseMaterials(c.matTheory).length,p=parseMaterials(c.matPractical).length;const parts=[];if(n)parts.push('📘'+n);if(p)parts.push('🔧'+p);return parts.length?`<span style="background:rgba(46,204,113,.15);color:#2ecc71;border-radius:10px;padding:2px 8px;font-size:10px">${parts.join(' ')}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>';};
       const rows=(catalog||[]).map(c=>`<tr>
-        <td style="font-weight:600">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
+        <td style="font-weight:600">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${c.prereq?`<span style="background:rgba(244,162,97,.15);color:#f4a261;border-radius:10px;padding:2px 8px;font-size:10px">📌 ${esc(c.prereq)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
         <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${esc(c.code)}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
-      </tr>`).join('')||`<tr data-empty><td colspan="8" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
+      </tr>`).join('')||`<tr data-empty><td colspan="9" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
       // التروم الموجودة فعلاً في سجل المقررات (النشطة فقط)
       const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>{
         // نأخذ الجزء قبل " · " (الترم بدون النصف) لتجميع النصفين
@@ -4108,7 +4115,7 @@ const aPgs={
       <div data-listwrap>
       ${searchBoxHTML('ابحث عن مقرر أو رمز...')}
       <div class="gtable"><table>
-        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>التخصصات</th><th>المادة العلمية</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>المتطلب</th><th>التخصصات</th><th>المادة العلمية</th><th>إجراءات</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div></div>`;
     }else{
