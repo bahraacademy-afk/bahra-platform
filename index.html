@@ -3802,6 +3802,14 @@ function updateEnrCounts(){
   applyPrereqLocks();
 }
 // ===== فحص المتطلبات السابقة عند التسجيل الجماعي =====
+// حالة مادة معيّنة لطالب معيّن: none | current | passed | failed
+function studentCourseState(sid, code){
+  const recs=(allCourses||[]).filter(c=>String(c.sid)===String(sid)&&normCode(c.code)===normCode(code));
+  if(!recs.length)return 'none';
+  if(recs.some(c=>isActive(c.status)))return 'current'; // مسجّل حالياً
+  if(recs.some(c=>!isFailed(c)))return 'passed'; // اجتاز إحدى المحاولات السابقة
+  return 'failed'; // كل السجلات سابقة وراسب فيها → يعيدها
+}
 // تطبيع نص لمطابقة رموز المواد (أرقام + حروف عربي/لاتيني فقط)
 function normTok(s){ return String(s||'').replace(/[^0-9\u0600-\u06FFa-zA-Z]/g,'').toLowerCase(); }
 // هل اجتاز المتدرب (sid) المادة المطلوبة في نص المتطلب؟
@@ -3908,8 +3916,8 @@ async function enrollBatch(){
       const [code,course]=cv.split('|');
       const cat=(catalog||[]).find(c=>normCode(c.code)===normCode(code));
       if(cat&&cat.prereq&&!studentPassedPrereq(sid,cat.prereq)){lockedSkip++;return;} // متطلب غير مستوفى
-      const already=allCourses.some(c=>c.sid===sid&&normCode(c.code)===normCode(code));
-      if(already){skipped++;return;}
+      const state=studentCourseState(sid,code);
+      if(state==='current'||state==='passed'){skipped++;return;} // مسجّل حالياً أو اجتازها → تخطَّ (الراسب يُعاد)
       records.push({sid,name:st.name,grp:st.grp,code,course,trainer,term,half,status:'حالي'});
     });
   });
@@ -4188,13 +4196,16 @@ const aPgs={
       // طلاب الشعبة المختارة
       const gStudents=uniqStudents2.filter(s=>s.grp===selGrp);
       // حالة كل مقرر لهذه الشعبة: نحسب من سجل المقررات
-      // منتهية = فيها سجلات حالتها "سابق" · حالية = فيها سجلات "حالي" · متبقية = ما فيها سجلات
+      // منتهية = اجتازها الكل · حالية = فيها سجل حالي · باقية = ما تسجّلت أو فيها راسب يعيدها
       const grpRecords=allCourses.filter(c=>c.grp===selGrp);
+      const gStudentIds=gStudents.map(s=>s.id);
       const courseStatus=code=>{
         const recs=grpRecords.filter(c=>normCode(c.code)===normCode(code));
         if(!recs.length)return 'remaining'; // ما تسجّلت
         if(recs.some(c=>isActive(c.status)))return 'current'; // حالية
-        return 'done'; // كلها سابقة = منتهية
+        // كل السجلات سابقة — نتحقق: هل يوجد طالب في الشعبة يحتاجها (راسب أو ما أخذها)؟
+        const anyNeeds=gStudentIds.some(sid=>{const st=studentCourseState(sid,code);return st==='none'||st==='failed';});
+        return anyNeeds?'remaining':'done'; // راسب فيها أحد → ترجع باقية · اجتازها الكل → منتهية
       };
       // تصنيف المقررات
       const catCourses=(catalog||[]).map(c=>({...c,st:courseStatus(c.code)}));
