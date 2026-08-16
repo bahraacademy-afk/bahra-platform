@@ -834,7 +834,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx5CzHtk_W3PrudDsJGDhVQ-kk-iXuIctJAOeZHFNHghrNecXNSCynBWDu4rCiajKLV/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby4SPT7qbz0qmVufhBK9gmhmjuTzqUaccfZl6bIeyAM23VullFA8SezGm3w17Ic4S8o/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -3164,11 +3164,7 @@ const tPgs={
     <div class="stitle">رصد الدرجات والتقييم</div>
     <div class="alert ab"><span class="aicon">📝</span>رصد درجات <strong style="margin:0 4px">المقررات الحالية</strong> فقط</div>
     ${crs.length?crs.map(course=>{
-      const all=students.filter(s=>s.course===course);
-      const ss=all.filter(s=>isActive(s.status));
-      // تشخيص: اطبع في الكونسول لو فيه طلاب استُبعدوا لأنهم سابقون
-      const excluded=all.filter(s=>!isActive(s.status));
-      if(excluded.length)console.log('[رصد الدرجات] '+course+' — استُبعد '+excluded.length+' (سابق):',excluded.map(s=>s.name+'='+s.status));
+      const ss=students.filter(s=>s.course===course&&isActive(s.status));
       if(!ss.length)return '';
       return `<div style="margin-bottom:24px">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${course}</div>
@@ -3178,7 +3174,7 @@ const tPgs={
             <td>${esc(s.name.split(' ').slice(0,3).join(' '))} <span style="font-size:9px;background:${isActive(s.status)?'rgba(46,204,113,.15)':'rgba(150,150,150,.15)'};color:${isActive(s.status)?'#2ecc71':'#999'};border-radius:8px;padding:1px 6px;font-weight:700">${esc(s.status||'؟')}</span></td>
             <td><span class="pill ${pillClass(Math.round(s.pct))}">${Math.round(s.pct)}%</span></td>
             <td style="color:${absLevel(s.abs).color}" title="${absLevel(s.abs).label}">${Math.round(s.abs)}%</td>
-            <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${isDeprived(s.abs)?'disabled title="محروم - غياب +25%"':""} value="${gradesData[s.sid]||''}" onchange="gradesData['${s.sid}']=this.value" id="g-${s.sid}"></td>
+            <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${isDeprived(s.abs)?'disabled title="محروم - غياب +25%"':""} value="${gradesData[s.key]||''}" onchange="gradesData['${String(s.key).replace(/'/g,'')}']=this.value" id="g-${esc(String(s.key))}"></td>
           </tr>`).join('')}</tbody>
         </table>
         <div class="btn-row"><button class="btn btn-g" onclick="saveGrades('${course}')">💾 حفظ درجات ${course}</button></div>
@@ -3415,14 +3411,14 @@ async function saveGrades(course){
   const ss=students.filter(s=>s.course===course&&isActive(s.status));
   const records=[];
   ss.forEach(s=>{
-    const grade=gradesData[s.sid];
+    const grade=gradesData[s.key];
     if(grade!==undefined&&grade!==''){
       // تحقق من الحرمان - غياب أكثر من 25%
       if(isDeprived(s.abs)){
         showToast('⚠️ '+s.name.split(' ')[0]+' محروم (غياب '+Math.round(s.abs)+'%)','w');
         return;
       }
-      records.push({key:s.key,sid:s.sid,grade:parseFloat(grade)||0});
+      records.push({key:s.key,sid:s.sid,code:s.code,grp:s.grp,grade:parseFloat(grade)||0});
     }
   });
   if(!records.length){showToast('لم يتم إدخال أي درجات','w');return}
