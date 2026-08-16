@@ -3164,13 +3164,18 @@ const tPgs={
     <div class="stitle">رصد الدرجات والتقييم</div>
     <div class="alert ab"><span class="aicon">📝</span>رصد درجات <strong style="margin:0 4px">المقررات الحالية</strong> فقط</div>
     ${crs.length?crs.map(course=>{
-      const ss=students.filter(s=>s.course===course);
+      const all=students.filter(s=>s.course===course);
+      const ss=all.filter(s=>isActive(s.status));
+      // تشخيص: اطبع في الكونسول لو فيه طلاب استُبعدوا لأنهم سابقون
+      const excluded=all.filter(s=>!isActive(s.status));
+      if(excluded.length)console.log('[رصد الدرجات] '+course+' — استُبعد '+excluded.length+' (سابق):',excluded.map(s=>s.name+'='+s.status));
+      if(!ss.length)return '';
       return `<div style="margin-bottom:24px">
         <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${course}</div>
         <div class="gtable"><table>
           <thead><tr><th>الاسم</th><th>الإنجاز الحالي%</th><th>الغياب%</th><th>تقييم المدرب</th></tr></thead>
           <tbody>${ss.map(s=>`<tr>
-            <td>${esc(s.name.split(' ').slice(0,3).join(' '))}</td>
+            <td>${esc(s.name.split(' ').slice(0,3).join(' '))} <span style="font-size:9px;background:${isActive(s.status)?'rgba(46,204,113,.15)':'rgba(150,150,150,.15)'};color:${isActive(s.status)?'#2ecc71':'#999'};border-radius:8px;padding:1px 6px;font-weight:700">${esc(s.status||'؟')}</span></td>
             <td><span class="pill ${pillClass(Math.round(s.pct))}">${Math.round(s.pct)}%</span></td>
             <td style="color:${absLevel(s.abs).color}" title="${absLevel(s.abs).label}">${Math.round(s.abs)}%</td>
             <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${isDeprived(s.abs)?'disabled title="محروم - غياب +25%"':""} value="${gradesData[s.sid]||''}" onchange="gradesData['${s.sid}']=this.value" id="g-${s.sid}"></td>
@@ -3407,7 +3412,7 @@ async function saveAttendance(course){
 }
 
 async function saveGrades(course){
-  const ss=students.filter(s=>s.course===course);
+  const ss=students.filter(s=>s.course===course&&isActive(s.status));
   const records=[];
   ss.forEach(s=>{
     const grade=gradesData[s.sid];
