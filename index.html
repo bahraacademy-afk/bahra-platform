@@ -3064,8 +3064,9 @@ const tPgs={
     const courseCard=(course,faded)=>{
       const ss=uniqStudents(students.filter(s=>s.course===course));
       const a=Math.round(ss.reduce((x,s)=>x+s.pct,0)/ss.length);
-      return `<div class="ccard ${faded?'cc-b':'cc-g'}" ${faded?'style="opacity:.6"':''}>
-        <div class="cc-top"><div><div class="cc-name">${course}</div><div class="cc-meta">${ss.length} متدرب · ${ss[0]?.code||''}</div></div><span class="pill ${pillClass(a)}">${a}%</span></div>
+      const grpCount=new Set(ss.map(s=>s.grp)).size;
+      return `<div class="ccard ${faded?'cc-b':'cc-g'}" onclick="showTrainerCourseDetail('${esc(String(course).replace(/'/g,''))}')" style="cursor:pointer${faded?';opacity:.6':''}">
+        <div class="cc-top"><div><div class="cc-name">${course}</div><div class="cc-meta">${ss.length} متدرب · ${grpCount>1?grpCount+' شعب · ':''}${ss[0]?.code||''}</div></div><span class="pill ${pillClass(a)}">${a}%</span></div>
         <div class="prog"><div class="pfill ${faded?'pf-b':'pf-g'}" style="width:${a}%"></div></div>
       </div>`;
     };
@@ -5326,6 +5327,44 @@ function showTrainerCourseStudents(i){
   cc.forEach(c=>{const nm=c.sname||c.name||c.sid;const extra=isHighAbs(c)?' · غياب '+Math.round(c.abs)+'%':'';
     html+=detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(c.grp||'—'),Math.round(c.pct)+'%'+extra,c.pct>=60?'var(--green)':'var(--red)');});
   showDetail('مقرر: '+co,'📘',html);
+}
+// تفاصيل المادة عند المدرب — مقسّمة حسب الشعبة (كل شعبة بمتوسطها) + خطة المتطلب
+function showTrainerCourseDetail(course){
+  const recs=uniqStudents(students.filter(s=>s.course===course));
+  if(!recs.length){showDetail('مقرر: '+course,'📘','<div class="alert ab">لا يوجد متدربون</div>');return;}
+  const code=recs[0]?.code||'';
+  // خطة المتطلب من قاعدة المقررات
+  const cat=(catalog||[]).find(c=>normCode(c.code)===normCode(code));
+  const prereq=cat?cat.prereq:'';
+  // تجميع حسب الشعبة
+  const grps=[...new Set(recs.map(s=>s.grp||'—'))].sort();
+  const overallAvg=Math.round(recs.reduce((x,s)=>x+s.pct,0)/recs.length);
+  let html=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    <span style="background:rgba(106,184,247,.12);color:#6ab8f7;border-radius:10px;padding:4px 12px;font-size:12px;font-weight:700">${esc(code)}</span>
+    <span style="background:rgba(46,204,113,.12);color:#2ecc71;border-radius:10px;padding:4px 12px;font-size:12px;font-weight:700">${recs.length} متدرب · ${grps.length} شعبة</span>
+    <span style="background:${overallAvg>=70?'rgba(46,204,113,.12)':overallAvg>=60?'rgba(244,199,138,.15)':'rgba(231,76,60,.12)'};color:${overallAvg>=70?'#2ecc71':overallAvg>=60?'#f4c78a':'#e74c3c'};border-radius:10px;padding:4px 12px;font-size:12px;font-weight:700">متوسط عام ${overallAvg}%</span>
+  </div>`;
+  if(prereq)html+=`<div style="margin-bottom:16px"><span style="display:inline-block;background:rgba(244,162,97,.15);color:#f4a261;border:1px solid rgba(244,162,97,.3);border-radius:10px;padding:5px 12px;font-size:12px;font-weight:700">📌 المتطلب السابق: ${esc(prereq)}</span></div>`;
+  // كل شعبة على حدة
+  grps.forEach(g=>{
+    const gs=recs.filter(s=>(s.grp||'—')===g).slice().sort((a,b)=>b.pct-a.pct);
+    const ga=Math.round(gs.reduce((x,s)=>x+s.pct,0)/gs.length);
+    const gcolor=ga>=70?'#2ecc71':ga>=60?'#f4c78a':'#e74c3c';
+    html+=`<div style="margin-bottom:18px;background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;overflow:hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:linear-gradient(135deg,rgba(10,35,72,.5),rgba(26,58,107,.3));border-bottom:1px solid var(--border)">
+        <div style="font-weight:800;font-size:14px;color:var(--text)">🏫 الشعبة ${esc(g)} <span style="font-size:11px;color:var(--muted);font-weight:400">(${gs.length} متدرب)</span></div>
+        <span style="background:${gcolor}22;color:${gcolor};border-radius:10px;padding:3px 12px;font-size:13px;font-weight:800">${ga}%</span>
+      </div>
+      <div style="padding:6px 10px">
+        ${gs.map(s=>{const nm=String(s.sname||s.name||s.sid).split(' ').slice(0,3).join(' ');const p=Math.round(s.pct);const ab=Math.round(s.abs)||0;const abTxt=ab>=10?` · <span style="color:${absLevel(s.abs).color}">غياب ${ab}%</span>`:'';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 6px;border-bottom:1px solid rgba(150,150,150,.08);font-size:13px">
+            <span>${esc(nm)}${abTxt}</span>
+            <span class="pill ${pillClass(p)}" style="font-size:11px">${p}%</span>
+          </div>`;}).join('')}
+      </div>
+    </div>`;
+  });
+  showDetail('مقرر: '+course,'📘',html);
 }
 // تفاصيل بطاقات المدرب
 function showTrainerStat(kind){
