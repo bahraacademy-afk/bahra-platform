@@ -2041,17 +2041,38 @@ function schReportTable(grid,cellRender){
   const P=schedConfig.periodsPerDay;
   const bAfter=breakAfterPeriod();
   const showBreak=bAfter>=0&&bAfter<P-1;
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   // رؤوس الأعمدة مع إدراج عمود الاستراحة
   const head='<tr><th class="hc">اليوم</th>'+[...Array(P).keys()].map(p=>{
     const th=`<th>الحصة ${p+1}<br><small>${periodTime(p)}</small></th>`;
     return (p===bAfter&&showBreak)?th+`<th class="brk">☕<br><small>${breakTime()}</small></th>`:th;
   }).join('')+'</tr>';
   const body=days.map(d=>{
-    const cells=[...Array(P).keys()].map(p=>{
+    let cells='';
+    let p=0;
+    while(p<P){
       const c=grid[d+'|'+p];
-      const cell=c?`<td class="f">${cellRender(c)}</td>`:'<td class="e">—</td>';
-      return (p===bAfter&&showBreak)?cell+`<td class="brk-cell">☕</td>`:cell;
-    }).join('');
+      if(!c){
+        cells+='<td class="e">—</td>';
+        if(p===bAfter&&showBreak)cells+='<td class="brk-cell">☕</td>';
+        p++; continue;
+      }
+      // دمج الحصص المتتالية لنفس المادة (ونفس المدرب) في خانة عريضة — دون تجاوز الاستراحة
+      let span=1;
+      while(p+span<P){
+        const nx=grid[d+'|'+(p+span)];
+        const same=nx&&nrm(nx.course)===nrm(c.course)&&nrm(nx.trainer||'')===nrm(c.trainer||'');
+        const stopAtBreak=showBreak&&(p+span-1)===bAfter; // لا تدمج عبر الاستراحة
+        if(!same||stopAtBreak)break;
+        span++;
+      }
+      const spanAttr=span>1?` colspan="${span}"`:'';
+      const spanTag=span>1?`<em style="display:block;color:#7a8aa3;font-size:8px;font-style:normal;margin-top:1px">(${span} حصص متتالية)</em>`:'';
+      cells+=`<td class="f"${spanAttr}>${cellRender(c)}${spanTag}</td>`;
+      const lastP=p+span-1;
+      if(showBreak&&lastP===bAfter)cells+='<td class="brk-cell">☕</td>';
+      p+=span;
+    }
     return `<tr><td class="tc">${d}</td>${cells}</tr>`;
   }).join('');
   return `<table class="rt">${head}${body}</table>`;
