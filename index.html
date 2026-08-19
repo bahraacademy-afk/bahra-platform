@@ -487,6 +487,10 @@ body.light-mode .fab-item.active .fi-ico{color:#fff}
 /* EMPTY STATE */
 .empty{text-align:center;padding:48px 20px;color:var(--muted);font-size:14px}
 .list-search{position:relative;display:flex;align-items:center;margin:6px 0 14px;background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:0 12px;transition:border-color .2s}
+.prt-row{display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:8px;background:var(--card2);border:1px solid var(--border);border-radius:10px;cursor:pointer;font-size:14px;color:var(--text);font-weight:600}
+.prt-row input{width:17px;height:17px;cursor:pointer;flex-shrink:0}
+.prt-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;background:var(--card,rgba(255,255,255,.04));border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600}
+.prt-chip input{width:14px;height:14px;cursor:pointer}
 .list-search:focus-within{border-color:var(--accent,#1a7abf)}
 .list-search .ls-ico{font-size:15px;opacity:.6;flex-shrink:0}
 .list-search input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:14px;padding:11px 8px;font-family:inherit}
@@ -2088,7 +2092,71 @@ function schReportTable(grid,cellRender){
   return `<table class="rt">${head}${body}</table>`;
 }
 // طباعة التقرير الكامل
-async function printScheduleReport(){
+// نافذة خيارات طباعة الجدول — تختار ماذا تطبع
+function openSchedPrintOptions(){
+  if(!Object.keys(schedule).length||!Object.values(schedule).some(g=>Object.keys(g).length)){
+    showToast('ولّد الجدول أولاً','w');return;
+  }
+  const grps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
+  const trainers=[...new Set(Object.values(schedule).flatMap(g=>Object.values(g).map(c=>c.trainer)).filter(t=>t&&t!=='—'))].sort();
+  const old=document.getElementById('schPrintModal');if(old)old.remove();
+  const m=document.createElement('div');
+  m.id='schPrintModal';m.className='modal-overlay';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  m.innerHTML=`<div style="background:var(--bg,#0a1628);border:1px solid var(--border);border-radius:16px;max-width:520px;width:100%;max-height:88vh;overflow-y:auto;padding:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="font-size:18px;font-weight:800;color:var(--text)">🖨️ خيارات طباعة الجدول</div>
+      <button onclick="document.getElementById('schPrintModal').remove()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--muted)">اختر الأقسام التي تريد طباعتها:</div>
+      <button class="btn btn-out btn-sm" onclick="schPrintToggleAll()" id="prt_allBtn">✅ تحديد الكل</button>
+    </div>
+    <label class="prt-row"><input type="checkbox" id="prt_general" checked><span>📊 الجدول العام الشامل (كل الشعب)</span></label>
+
+    <label class="prt-row"><input type="checkbox" id="prt_sections" checked onchange="document.getElementById('prt_secBox').style.display=this.checked?'flex':'none'"><span>📋 جداول الشعب (كل شعبة على حدة)</span></label>
+    <div id="prt_secBox" style="display:flex;flex-wrap:wrap;gap:6px;margin:0 28px 10px;padding:8px;background:var(--card2);border-radius:8px">
+      <div style="width:100%;font-size:11px;color:var(--muted);margin-bottom:4px">حدّد شعباً معيّنة (أو اترك الكل):</div>
+      ${grps.map(g=>`<label class="prt-chip"><input type="checkbox" class="prt-sec" value="${g}"><span>شعبة ${g}</span></label>`).join('')}
+    </div>
+
+    <label class="prt-row"><input type="checkbox" id="prt_trainers" onchange="document.getElementById('prt_trnBox').style.display=this.checked?'flex':'none'"><span>👨‍🏫 جداول المدربين</span></label>
+    <div id="prt_trnBox" style="display:none;flex-wrap:wrap;gap:6px;margin:0 28px 10px;padding:8px;background:var(--card2);border-radius:8px">
+      <div style="width:100%;font-size:11px;color:var(--muted);margin-bottom:4px">حدّد مدرّباً معيّناً (أو اترك الكل):</div>
+      ${trainers.map(t=>`<label class="prt-chip"><input type="checkbox" class="prt-trn" value="${esc(t)}"><span style="color:${trainerColor(t)}">${esc(t)}</span></label>`).join('')}
+    </div>
+
+    <label class="prt-row"><input type="checkbox" id="prt_rooms"><span>🏫 جداول القاعات والمعامل</span></label>
+
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button class="btn btn-b" style="flex:1" onclick="doSchedPrint()">🖨️ طباعة المختار</button>
+      <button class="btn btn-out" onclick="document.getElementById('schPrintModal').remove()">إلغاء</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+}
+function schPrintToggleAll(){
+  const boxes=['prt_general','prt_sections','prt_trainers','prt_rooms'].map(id=>document.getElementById(id));
+  const allOn=boxes.every(b=>b&&b.checked);
+  boxes.forEach(b=>{if(b){b.checked=!allOn;b.dispatchEvent(new Event('change'));}});
+  const btn=document.getElementById('prt_allBtn');if(btn)btn.textContent=allOn?'✅ تحديد الكل':'⬜ إلغاء الكل';
+}
+function doSchedPrint(){
+  const g=id=>document.getElementById(id);
+  const opts={
+    general:g('prt_general').checked,
+    sections:g('prt_sections').checked,
+    trainers:g('prt_trainers').checked,
+    rooms:g('prt_rooms').checked,
+    secList:[...document.querySelectorAll('.prt-sec:checked')].map(c=>c.value),
+    trnList:[...document.querySelectorAll('.prt-trn:checked')].map(c=>c.value)
+  };
+  if(!opts.general&&!opts.sections&&!opts.trainers&&!opts.rooms){showToast('اختر قسماً واحداً على الأقل','w');return;}
+  document.getElementById('schPrintModal').remove();
+  printScheduleReport(opts);
+}
+async function printScheduleReport(opts){
+  // الافتراضي: اطبع كل شي (توافق مع الاستدعاء القديم)
+  opts=opts||{general:true,sections:true,trainers:true,rooms:true,secList:[],trnList:[]};
   if(!Object.keys(schedule).length||!Object.values(schedule).some(g=>Object.keys(g).length)){
     showToast('ولّد الجدول أولاً','w');return;
   }
@@ -2121,13 +2189,16 @@ async function printScheduleReport(){
     term=Object.keys(tc).sort((a,b)=>tc[b]-tc[a])[0]||'';
   }
   term=term.replace(/-/g,' ').trim(); // "ترم صيفي-2025/2026" → "ترم صيفي 2025/2026"
-  const grps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
+  const allGrps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
+  // تطبيق اختيار الشعب المطلوبة (فارغ = الكل)
+  const grps=(opts.secList&&opts.secList.length)?allGrps.filter(g=>opts.secList.includes(g)):allGrps;
   // 1) جداول الشعب (المتدربين)
   const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}</span><i>${c.room||''}</i></div>`)}</div>`).join('');
   // 2) جداول المدربين — مع دمج الشعب المشتركة
   const tSched=buildTrainerSchedules();
   const grpLbl=c=>c.grps&&c.grps.length>1?`الشعب ${c.grps.sort().join(' و ')}`:`الشعبة ${(c.grps&&c.grps[0])||c.grp||''}`;
-  const trHtml=Object.keys(tSched).map(t=>`<div class="block"><h3 style="border-right-color:${trainerColor(t)}">👨‍🏫 المدرب: <span style="color:${trainerColor(t)}">${t}</span></h3>${schReportTable(tSched[t],c=>`<div style="border-right:4px solid ${trainerColor(t)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i></div>`)}</div>`).join('');
+  const trKeys=(opts.trnList&&opts.trnList.length)?Object.keys(tSched).filter(t=>opts.trnList.includes(t)):Object.keys(tSched);
+  const trHtml=trKeys.map(t=>`<div class="block"><h3 style="border-right-color:${trainerColor(t)}">👨‍🏫 المدرب: <span style="color:${trainerColor(t)}">${t}</span></h3>${schReportTable(tSched[t],c=>`<div style="border-right:4px solid ${trainerColor(t)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i></div>`)}</div>`).join('');
   // 3) جداول القاعات — مع دمج الشعب المشتركة
   const rSched=buildRoomSchedules();
   const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}</i></div>`)}</div>`).join('');
@@ -2148,6 +2219,17 @@ async function printScheduleReport(){
   // مفتاح ألوان المدربين
   const allTrainers=[...new Set(Object.values(schedule).flatMap(g=>Object.values(g).map(c=>c.trainer)).filter(t=>t&&t!=='—'))].sort();
   const trainerLegend=allTrainers.length?`<div class="tlegend">${allTrainers.map(t=>`<span class="tl-item"><span class="tl-dot" style="background:${trainerColor(t)}"></span>${esc(t)}</span>`).join('')}</div>`:'';
+  // ترويسة صفحة متكررة
+  const pgHdr=`<div class="pg-hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div><div class="meta">تاريخ الإصدار: ${today}</div></div>`;
+  // تجميع الأقسام المختارة فقط
+  const parts=[];
+  if(opts.general)parts.push(`<div class="sec-title">📊 الجدول العام الشامل (كل الشعب)</div>${genHtml}`);
+  if(opts.sections&&secHtml)parts.push(`<div class="sec-title">${grps.length===allGrps.length?'جداول الشعب (المتدربين)':'جداول الشعب المختارة'}</div>${secHtml}`);
+  if(opts.trainers&&trHtml)parts.push(`<div class="sec-title">جداول المدربين</div>${trHtml}`);
+  if(opts.rooms&&rmHtml)parts.push(`<div class="sec-title">جداول القاعات والمعامل</div>${rmHtml}`);
+  if(!parts.length){showToast('اختر قسماً واحداً على الأقل للطباعة','w');return;}
+  // نفصل الأقسام بفاصل صفحة + ترويسة (عدا الأول)
+  const sectionsHtml=parts.map((p,i)=>i===0?p:`<div class="page-break"></div>${pgHdr}${p}`).join('');
   const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الجدول الدراسي</title>
   <style>
   @page{size:A4 landscape;margin:8mm}
@@ -2206,16 +2288,7 @@ async function printScheduleReport(){
     <div class="meta">تاريخ الإصدار: ${today}<br>الدوام: ${fmtTime(schedConfig.startHour)} · ${schedConfig.periodsPerDay} حصص</div>
   </div>
   ${trainerLegend}
-  <div class="sec-title">📊 الجدول العام الشامل (كل الشعب)</div>${genHtml}
-  <div class="page-break"></div>
-  <div class="pg-hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div><div class="meta">تاريخ الإصدار: ${today}</div></div>
-  <div class="sec-title">أولاً: جداول الشعب (المتدربين)</div>${secHtml}
-  <div class="page-break"></div>
-  <div class="pg-hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div><div class="meta">تاريخ الإصدار: ${today}</div></div>
-  <div class="sec-title">ثانياً: جداول المدربين</div>${trHtml}
-  <div class="page-break"></div>
-  <div class="pg-hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div><div class="meta">تاريخ الإصدار: ${today}</div></div>
-  <div class="sec-title">ثالثاً: جداول القاعات والمعامل</div>${rmHtml}
+  ${sectionsHtml}
   </body></html>`;
   const w=window.open('','_blank');
   if(!w){showToast('فعّل النوافذ المنبثقة للطباعة','w');return;}
@@ -4758,7 +4831,7 @@ const aPgs={
         <input type="number" min="0.5" max="3" step="0.5" value="${schedConfig.breakHours}" onchange="schedConfig.breakHours=parseFloat(this.value)||1;showAPage('schedule',null)"></div>
       ${genBtn}
       <button class="btn btn-g" onclick="saveSchedule()">💾 حفظ الجدول</button>
-      <button class="btn btn-out" onclick="printScheduleReport()">🖨️ طباعة تقرير</button>
+      <button class="btn btn-out" onclick="openSchedPrintOptions()">🖨️ طباعة تقرير</button>
     </div>
     ${isAll?grps.map(g=>tableFor(g)).join(''):tableFor(cur)}
     <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اسحب مادة من القائمة الجانبية إلى أي حصة · اسحب حصة لخانة ثانية للنقل · اضغط على خانة معبّأة لحذفها · التعارض يظهر كتنبيه فقط ولا يمنعك</div>`;
