@@ -2036,6 +2036,14 @@ function buildRoomSchedules(){
   return res;
 }
 // بناء جدول HTML من شبكة + دالة عرض الخلية (مع عمود الاستراحة)
+// لون مميز لكل مدرب (ثابت حسب الاسم) — لتلوين خانات الجدول في الطباعة
+const TRAINER_COLORS=['#1a7abf','#e67e22','#27ae60','#8e44ad','#c0392b','#16a085','#d4a017','#2c3e50','#e84393','#00857a','#6c5ce7','#a0522d','#0984e3','#b8860b'];
+function trainerColor(name){
+  const s=String(name||'').trim();
+  if(!s||s==='—')return '#8894a8';
+  let h=0; for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;
+  return TRAINER_COLORS[h%TRAINER_COLORS.length];
+}
 function schReportTable(grid,cellRender){
   const days=activeDays();
   const P=schedConfig.periodsPerDay;
@@ -2067,8 +2075,7 @@ function schReportTable(grid,cellRender){
         span++;
       }
       const spanAttr=span>1?` colspan="${span}"`:'';
-      const spanTag=span>1?`<em style="display:block;color:#7a8aa3;font-size:8px;font-style:normal;margin-top:1px">(${span} حصص متتالية)</em>`:'';
-      cells+=`<td class="f"${spanAttr}>${cellRender(c)}${spanTag}</td>`;
+      cells+=`<td class="f"${spanAttr}>${cellRender(c)}</td>`;
       const lastP=p+span-1;
       if(showBreak&&lastP===bAfter)cells+='<td class="brk-cell">☕</td>';
       p+=span;
@@ -2113,14 +2120,14 @@ async function printScheduleReport(){
   term=term.replace(/-/g,' ').trim(); // "ترم صيفي-2025/2026" → "ترم صيفي 2025/2026"
   const grps=Object.keys(schedule).filter(g=>Object.keys(schedule[g]).length).sort();
   // 1) جداول الشعب (المتدربين)
-  const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<b>${esc(c.course)}</b><span>${esc(c.trainer||'')}</span><i>${c.room||''}</i>`)}</div>`).join('');
+  const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}</span><i>${c.room||''}</i></div>`)}</div>`).join('');
   // 2) جداول المدربين — مع دمج الشعب المشتركة
   const tSched=buildTrainerSchedules();
   const grpLbl=c=>c.grps&&c.grps.length>1?`الشعب ${c.grps.sort().join(' و ')}`:`الشعبة ${(c.grps&&c.grps[0])||c.grp||''}`;
-  const trHtml=Object.keys(tSched).map(t=>`<div class="block"><h3>👨‍🏫 المدرب: ${t}</h3>${schReportTable(tSched[t],c=>`<b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i>`)}</div>`).join('');
+  const trHtml=Object.keys(tSched).map(t=>`<div class="block"><h3 style="border-right-color:${trainerColor(t)}">👨‍🏫 المدرب: <span style="color:${trainerColor(t)}">${t}</span></h3>${schReportTable(tSched[t],c=>`<div style="border-right:4px solid ${trainerColor(t)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i></div>`)}</div>`).join('');
   // 3) جداول القاعات — مع دمج الشعب المشتركة
   const rSched=buildRoomSchedules();
-  const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${esc(c.trainer||'')}</i>`)}</div>`).join('');
+  const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}</i></div>`)}</div>`).join('');
   // 4) الجدول العام الشامل (كل الشعب في جدول واحد)
   const generalGrid={};
   for(const g of grps){
@@ -2133,12 +2140,19 @@ async function printScheduleReport(){
       else generalGrid[slot].push({course:c.course,trainer:c.trainer,room:c.room,grps:[g]});
     }
   }
-  const genCell=arr=>arr.map(c=>`<b>${esc(c.course)}</b><span>${c.grps.length>1?'الشعب '+c.grps.sort().join('،'):'الشعبة '+c.grps[0]}</span><i>${esc(c.trainer||'')}${c.room?' · '+c.room:''}</i>`).join('<hr style="border:none;border-top:1px dashed #d5dce6;margin:4px 0">');
+  const genCell=arr=>arr.map(c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${c.grps.length>1?'الشعب '+c.grps.sort().join('،'):'الشعبة '+c.grps[0]}</span><i style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}${c.room?' · '+c.room:''}</i></div>`).join('<hr style="border:none;border-top:1px dashed #d5dce6;margin:4px 0">');
   const genHtml=`<div class="block">${schReportTable(generalGrid,genCell)}</div>`;
+  // مفتاح ألوان المدربين
+  const allTrainers=[...new Set(Object.values(schedule).flatMap(g=>Object.values(g).map(c=>c.trainer)).filter(t=>t&&t!=='—'))].sort();
+  const trainerLegend=allTrainers.length?`<div class="tlegend">${allTrainers.map(t=>`<span class="tl-item"><span class="tl-dot" style="background:${trainerColor(t)}"></span>${esc(t)}</span>`).join('')}</div>`:'';
   const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الجدول الدراسي</title>
   <style>
-  @page{size:A4 landscape;margin:12mm}
-  *{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box}
+  @page{size:A4 landscape;margin:8mm}
+  *{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  table.rt{table-layout:fixed}
+  .tlegend{display:flex;flex-wrap:wrap;gap:6px 14px;padding:10px 14px;background:#f6f8fb;border:1px solid #dde3ec;border-radius:8px;margin-bottom:16px}
+  .tl-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:#0a2348}
+  .tl-dot{width:12px;height:12px;border-radius:50%;display:inline-block;flex-shrink:0}
   body{margin:0;color:#1a2942;background:#fff}
   .hdr{display:flex;align-items:center;gap:16px;border-bottom:3px solid #c9a227;padding-bottom:14px;margin-bottom:18px}
   .hdr img{width:64px;height:64px;border-radius:50%}
@@ -2180,11 +2194,13 @@ async function printScheduleReport(){
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
   <button class="closebtn" onclick="window.close()" title="إغلاق">✕</button>
+  <div class="noprint" style="position:fixed;top:56px;left:10px;background:#c9a227;color:#000;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;max-width:220px;z-index:99">⚠️ اختر الاتجاه: <u>أفقي Landscape</u></div>
   <div class="hdr">
     ${logo?`<img src="${logo}" alt="logo">`:''}
     <div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div>
     <div class="meta">تاريخ الإصدار: ${today}<br>الدوام: ${fmtTime(schedConfig.startHour)} · ${schedConfig.periodsPerDay} حصص</div>
   </div>
+  ${trainerLegend}
   <div class="sec-title">📊 الجدول العام الشامل (كل الشعب)</div>${genHtml}
   <div class="page-break"></div>
   <div class="pg-hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div><div class="meta">تاريخ الإصدار: ${today}</div></div>
