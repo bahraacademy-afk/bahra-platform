@@ -2065,14 +2065,17 @@ function schReportTable(grid,cellRender){
         if(p===bAfter&&showBreak)cells+='<td class="brk-cell">☕</td>';
         p++; continue;
       }
-      // دمج الحصص المتتالية لنفس المادة (ونفس المدرب) في خانة عريضة — دون تجاوز الاستراحة
+      // دمج الحصص المتتالية لنفس المادة (ونفس المدرب) — فقط للخلايا المفردة (لا الجدول العام متعدد المواد)
       let span=1;
-      while(p+span<P){
-        const nx=grid[d+'|'+(p+span)];
-        const same=nx&&nrm(nx.course)===nrm(c.course)&&nrm(nx.trainer||'')===nrm(c.trainer||'');
-        const stopAtBreak=showBreak&&(p+span-1)===bAfter; // لا تدمج عبر الاستراحة
-        if(!same||stopAtBreak)break;
-        span++;
+      const mergeable=c&&!Array.isArray(c)&&c.course;
+      if(mergeable){
+        while(p+span<P){
+          const nx=grid[d+'|'+(p+span)];
+          const same=nx&&!Array.isArray(nx)&&nrm(nx.course)===nrm(c.course)&&nrm(nx.trainer||'')===nrm(c.trainer||'');
+          const stopAtBreak=showBreak&&(p+span-1)===bAfter; // لا تدمج عبر الاستراحة
+          if(!same||stopAtBreak)break;
+          span++;
+        }
       }
       const spanAttr=span>1?` colspan="${span}"`:'';
       cells+=`<td class="f"${spanAttr}>${cellRender(c)}</td>`;
@@ -2160,8 +2163,10 @@ async function printScheduleReport(){
   .hdr .t2{font-size:13px;color:#5a6b85;margin-top:2px}
   .hdr .t3{font-size:12px;color:#c9a227;font-weight:700;margin-top:3px}
   .hdr .meta{margin-right:auto;text-align:left;font-size:12px;color:#5a6b85}
-  .sec-title{font-size:18px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:10px 16px;border-radius:8px;margin:24px 0 14px}
-  .block{margin-bottom:20px;page-break-inside:avoid}
+  .sec-title{font-size:18px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:10px 16px;border-radius:8px;margin:24px 0 14px;page-break-after:avoid}
+  .block{margin-bottom:20px}
+  table.rt thead{display:table-header-group}
+  table.rt tr{page-break-inside:avoid}
   .block h3{font-size:15px;font-weight:700;color:#0a2348;margin:0 0 8px;padding-right:6px;border-right:4px solid #c9a227}
   table.rt{width:100%;border-collapse:collapse;margin-bottom:6px}
   table.rt th{background:#0a2348;color:#fff;font-size:12px;font-weight:700;padding:8px 4px;border:1px solid #0a2348;text-align:center}
