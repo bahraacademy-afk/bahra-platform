@@ -1599,13 +1599,9 @@ function dateToArDay(dateStr){
 function courseSessionsOnDay(course,grp,day){
   let count=0;
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
-  const g=schedule[grp];
-  if(g){
-    for(const slot in g){
-      const [d]=slot.split('|');
-      if(d===day&&nrm(g[slot].course)===nrm(course))count++;
-    }
-  }
+  const countIn=(g)=>{let n=0;if(g)for(const slot in g){const [d]=slot.split('|');if(d===day&&nrm(g[slot].course)===nrm(course))n++;}return n;};
+  count=countIn(schedule[grp]);
+  if(count===0){for(const gg in schedule){if(gg===grp)continue;const n=countIn(schedule[gg]);if(n){count=n;break;}}}
   return count;
 }
 
@@ -2747,16 +2743,25 @@ const sPgs={
   },
   schedule:()=>{
     const grp=user.grp;
-    const grid=schedule[grp]||{};
-    const hasSchedule=Object.keys(grid).length>0;
     // مواد الطالب الحالية فقط (عشان مادة الإعادة ما تظهر لكل الشعبة)
     const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
     const myCourses=new Set(courses.filter(c=>isActive(c.status)).map(c=>nrm(c.course)));
     // هل المادة في الخانة من ضمن مواد الطالب؟
     const isMine=(c)=>c&&myCourses.has(nrm(c.course));
-    // الشبكة المفلترة (حصص الطالب فقط)
+    // ⭐ اجمع حصص الطالب من كل الجداول (شعبته + أي شعبة يدرس معها مادة مشتركة كالإعادة)
+    // الأولوية لجدول شعبة الطالب عند التعارض على نفس الخانة
     const myGrid={};
-    for(const slot in grid){if(isMine(grid[slot]))myGrid[slot]=grid[slot];}
+    const ownGrid=schedule[grp]||{};
+    // أولاً من جدول شعبة الطالب
+    for(const slot in ownGrid){if(isMine(ownGrid[slot]))myGrid[slot]=ownGrid[slot];}
+    // ثم من بقية الشعب (لمواده التي يدرسها مع شعبة أخرى)
+    for(const g in schedule){
+      if(g===grp)continue;
+      const gr=schedule[g]||{};
+      for(const slot in gr){
+        if(isMine(gr[slot])&&!myGrid[slot])myGrid[slot]={...gr[slot],_withGrp:g};
+      }
+    }
     const hasMine=Object.keys(myGrid).length>0;
     // استنتاج الأيام والحصص من حصص الطالب فقط
     const usedDays=DAYS.filter(d=>Object.keys(myGrid).some(s=>s.startsWith(d+'|')));
@@ -2765,7 +2770,7 @@ const sPgs={
     const P=hasMine?maxP:5;
     const cell=(day,p)=>{
       const c=myGrid[day+'|'+p];
-      return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${esc(c.course)}</div>${c.trainer?`<div class="sch-trainer">${esc(c.trainer)}</div>`:''}${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
+      return c?`<td class="sch-cell filled"><div class="sch-item-v"><div class="sch-course">${esc(c.course)}</div>${c.trainer?`<div class="sch-trainer">${esc(c.trainer)}</div>`:''}${c.room?`<div class="sch-room-tag">${c.room}</div>`:''}${c._withGrp?`<div class="sch-room-tag" style="background:rgba(244,162,97,.2);color:#f4a261;margin-top:2px">مع شعبة ${esc(c._withGrp)}</div>`:''}</div></td>`:'<td class="sch-cell"><span class="sch-empty">—</span></td>';
     };
     const bAfter=breakAfterPeriod();
     const headCells=[...Array(P).keys()].map(p=>{
