@@ -2193,15 +2193,16 @@ async function printScheduleReport(opts){
   // تطبيق اختيار الشعب المطلوبة (فارغ = الكل)
   const grps=(opts.secList&&opts.secList.length)?allGrps.filter(g=>opts.secList.includes(g)):allGrps;
   // 1) جداول الشعب (المتدربين)
-  const secHtml=grps.map(g=>`<div class="block"><h3>📋 الشعبة ${g}</h3>${schReportTable(schedule[g],c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}</span><i>${c.room||''}</i></div>`)}</div>`).join('');
-  // 2) جداول المدربين — مع دمج الشعب المشتركة
+  // 1) جداول الشعب — كل شعبة قسم مستقل
+  const secItems=grps.map(g=>`<div class="sec-title">📋 الشعبة ${g}</div><div class="block">${schReportTable(schedule[g],c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}</span><i>${c.room||''}</i></div>`)}</div>`);
+  // 2) جداول المدربين — كل مدرب قسم مستقل — مع دمج الشعب المشتركة
   const tSched=buildTrainerSchedules();
   const grpLbl=c=>c.grps&&c.grps.length>1?`الشعب ${c.grps.sort().join(' و ')}`:`الشعبة ${(c.grps&&c.grps[0])||c.grp||''}`;
   const trKeys=(opts.trnList&&opts.trnList.length)?Object.keys(tSched).filter(t=>opts.trnList.includes(t)):Object.keys(tSched);
-  const trHtml=trKeys.map(t=>`<div class="block"><h3 style="border-right-color:${trainerColor(t)}">👨‍🏫 المدرب: <span style="color:${trainerColor(t)}">${t}</span></h3>${schReportTable(tSched[t],c=>`<div style="border-right:4px solid ${trainerColor(t)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i></div>`)}</div>`).join('');
-  // 3) جداول القاعات — مع دمج الشعب المشتركة
+  const trItems=trKeys.map(t=>`<div class="sec-title" style="background:linear-gradient(135deg,${trainerColor(t)},#0a2348)">👨‍🏫 المدرب: ${t}</div><div class="block">${schReportTable(tSched[t],c=>`<div style="border-right:4px solid ${trainerColor(t)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i>${(c.rooms&&c.rooms.join(' / '))||c.room||''}</i></div>`)}</div>`);
+  // 3) جداول القاعات — كل قاعة قسم مستقل — مع دمج الشعب المشتركة
   const rSched=buildRoomSchedules();
-  const rmHtml=Object.keys(rSched).map(r=>`<div class="block"><h3>🏫 ${r}</h3>${schReportTable(rSched[r],c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}</i></div>`)}</div>`).join('');
+  const rmItems=Object.keys(rSched).map(r=>`<div class="sec-title">🏫 ${r}</div><div class="block">${schReportTable(rSched[r],c=>`<div style="border-right:4px solid ${trainerColor(c.trainer)};border-radius:3px;padding-right:5px"><b>${esc(c.course)}</b><span>${grpLbl(c)}</span><i style="color:${trainerColor(c.trainer)};font-weight:700">${esc(c.trainer||'')}</i></div>`)}</div>`);
   // 4) الجدول العام الشامل (كل الشعب في جدول واحد)
   const generalGrid={};
   for(const g of grps){
@@ -2221,12 +2222,12 @@ async function printScheduleReport(opts){
   const trainerLegend=allTrainers.length?`<div class="tlegend">${allTrainers.map(t=>`<span class="tl-item"><span class="tl-dot" style="background:${trainerColor(t)}"></span>${esc(t)}</span>`).join('')}</div>`:'';
   // ترويسة صفحة متكررة
   const pgHdr=`<div class="pg-hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div><div class="meta">تاريخ الإصدار: ${today}</div></div>`;
-  // تجميع الأقسام المختارة فقط
+  // تجميع الأقسام المختارة — كل عنصر (شعبة/مدرب/قاعة) في صفحة مستقلة بترويسة كاملة
   const parts=[];
   if(opts.general)parts.push(`<div class="sec-title">📊 الجدول العام الشامل (كل الشعب)</div>${genHtml}`);
-  if(opts.sections&&secHtml)parts.push(`<div class="sec-title">${grps.length===allGrps.length?'جداول الشعب (المتدربين)':'جداول الشعب المختارة'}</div>${secHtml}`);
-  if(opts.trainers&&trHtml)parts.push(`<div class="sec-title">جداول المدربين</div>${trHtml}`);
-  if(opts.rooms&&rmHtml)parts.push(`<div class="sec-title">جداول القاعات والمعامل</div>${rmHtml}`);
+  if(opts.sections)secItems.forEach(h=>parts.push(h));
+  if(opts.trainers)trItems.forEach(h=>parts.push(h));
+  if(opts.rooms)rmItems.forEach(h=>parts.push(h));
   if(!parts.length){showToast('اختر قسماً واحداً على الأقل للطباعة','w');return;}
   // نفصل الأقسام بفاصل صفحة + ترويسة (عدا الأول)
   const sectionsHtml=parts.map((p,i)=>i===0?p:`<div class="page-break"></div>${pgHdr}${p}`).join('');
