@@ -853,7 +853,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycby4SPT7qbz0qmVufhBK9gmhmjuTzqUaccfZl6bIeyAM23VullFA8SezGm3w17Ic4S8o/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwtp7cFmuQE5trtq5EpipaSV5WVkgAD582xqUnD-2Mn2aurHKqKuuEGXtra4eN0wCU/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -866,6 +866,7 @@ const ADMIN=[]; // التحقق صار في الخادم
 let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
 let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakStart:12, breakHours:1};
+let rubrics={}, gradeDetails=[]; // بنود الدرجات لكل مادة + الدرجات التفصيلية
 const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
 // معامل/قاعات الأكاديمية (قابلة للتعديل)
 const LABS=['قاعة التدريب','معمل الكمبيوتر','معمل الإلكترونيات','معمل النيوماتك','معمل الهيدروليك'];
@@ -1185,7 +1186,7 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 
 // ===== LOAD DATA =====
 async function loadStudent(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[])
@@ -1208,7 +1209,7 @@ async function loadStudent(){
 }
 
 async function loadTrainer(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[]),
@@ -1271,7 +1272,7 @@ async function loadAdmin(){
     const r=ad[i];
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6])});
   }
-  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations()]);
+  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics()]);
   allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
@@ -1968,6 +1969,33 @@ async function saveSchedule(){
 }
 // قراءة الجدول المحفوظ من الشيت
 // الأعمدة: A=الشعبة B=اليوم C=الحصة D=الوقت E=المادة F=المدرب G=القاعة
+// تحميل بنود الدرجات والدرجات التفصيلية
+async function loadRubrics(){
+  const [rub,det]=await Promise.all([
+    fetchSheet('بنود الدرجات!A:D').catch(()=>[]),
+    fetchSheet('درجات تفصيلية!A:D').catch(()=>[])
+  ]);
+  rubrics={};
+  for(let i=1;i<rub.length;i++){
+    const r=rub[i]; const code=n0(r[0]); if(!code)continue;
+    const k=normCode(code);
+    if(!rubrics[k])rubrics[k]=[];
+    rubrics[k].push({cat:n0(r[1]),max:parseFloat(r[2])||0,order:parseInt(n0(r[3]))||99});
+  }
+  for(const k in rubrics)rubrics[k].sort((a,b)=>a.order-b.order);
+  gradeDetails=[];
+  for(let i=1;i<det.length;i++){
+    const r=det[i]; if(!n0(r[0]))continue;
+    gradeDetails.push({key:n0(r[0]),code:n0(r[1]),cat:n0(r[2]),grade:parseFloat(r[3])||0});
+  }
+}
+// بنود مادة معيّنة (بالرمز)
+function rubricFor(code){return rubrics[normCode(code)]||[];}
+// درجة طالب في بند معيّن
+function detailGrade(key,code,cat){
+  const d=gradeDetails.find(x=>String(x.key).trim()===String(key).trim()&&normCode(x.code)===normCode(code)&&String(x.cat).trim()===String(cat).trim());
+  return d?d.grade:'';
+}
 async function loadSchedule(){
   const [rows,cfg]=await Promise.all([
     fetchSheet('الجدول!A:G').catch(()=>[]),
@@ -3065,10 +3093,19 @@ function courseCardHTML(c){
     <div style="font-size:11px;color:#6ab8f7;font-weight:700;margin-bottom:4px">📚 المادة العلمية</div>
     ${matSection('📘 نظري',mats.theory)}${matSection('🔧 عملي',mats.practical)}
   </div>`:'';
+  // تفصيل الدرجات حسب البنود (إن وُجدت)
+  const rub=rubricFor(c.code);
+  let detHTML='';
+  if(rub.length){
+    const key=c.key||((c.code||'')+'-'+(c.sid||''));
+    const rows=rub.map(r=>{const g=detailGrade(key,c.code,r.cat);return g!==''?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0"><span style="color:var(--muted)">${esc(r.cat)}</span><span style="font-weight:700">${g} / ${r.max}</span></div>`:'';}).filter(Boolean).join('');
+    if(rows)detHTML=`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)"><div style="font-size:11px;color:#f4a261;font-weight:700;margin-bottom:4px">📊 تفصيل الدرجات</div>${rows}</div>`;
+  }
   return `<div class="ccard ${ccClass(p)}">
     <div class="cc-top"><div><div class="cc-name">${esc(c.course)}</div><div class="cc-meta">${esc(c.code)}${esc(c.trainer?' · '+c.trainer:'')}${esc(c.half&&c.half!=='غير محدد'?' · '+c.half:'')}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
     <div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>
     <div class="cc-footer"><span>الإنجاز: ${p}%</span><span style="color:${av.color}">الغياب: ${Math.round(c.abs)}%${showWarn?' · '+av.label:''}</span>${esc(c.letter?'<span>التقدير: '+c.letter+'</span>':'')}</div>
+    ${detHTML}
     ${matsHTML}
   </div>`;
 }
@@ -3318,18 +3355,42 @@ const tPgs={
     ${crs.length?crs.map(course=>{
       const ss=students.filter(s=>s.course===course&&isActive(s.status));
       if(!ss.length)return '';
+      const code=ss[0]?.code||'';
+      const rub=rubricFor(code);
+      const rubTotal=rub.reduce((a,x)=>a+x.max,0);
+      const cid='rb_'+normCode(code).replace(/[^a-z0-9]/gi,'');
+      // رأس الجدول: عمود لكل بند + المجموع (إن وُجدت بنود)، وإلا عمود واحد
+      const gradeHead=rub.length
+        ? rub.map(r=>`<th>${esc(r.cat)}<br><small>/${r.max}</small></th>`).join('')+'<th>المجموع<br><small>/100</small></th>'
+        : '<th>تقييم المدرب<br><small>/100</small></th>';
       return `<div style="margin-bottom:24px">
-        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${course}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course}${rub.length?` <span style="font-size:11px;color:var(--muted)">(${rub.length} بنود · مجموع ${rubTotal}/100)</span>`:''}</div>
+          <button class="btn btn-out btn-sm" onclick='openRubricSetup("${esc(String(code))}","${esc(String(course).replace(/"/g,''))}")'>⚙️ إعداد بنود الدرجات</button>
+        </div>
+        ${rub.length&&rubTotal!==100?`<div class="alert aw" style="margin-bottom:8px"><span class="aicon">⚠️</span>مجموع البنود ${rubTotal} (يُفضّل أن يساوي 100)</div>`:''}
         <div class="gtable"><table>
-          <thead><tr><th>الاسم</th><th>الإنجاز الحالي%</th><th>الغياب%</th><th>تقييم المدرب</th></tr></thead>
-          <tbody>${ss.map(s=>`<tr>
-            <td>${esc(s.name.split(' ').slice(0,3).join(' '))} <span style="font-size:9px;background:${isActive(s.status)?'rgba(46,204,113,.15)':'rgba(150,150,150,.15)'};color:${isActive(s.status)?'#2ecc71':'#999'};border-radius:8px;padding:1px 6px;font-weight:700">${esc(s.status||'؟')}</span></td>
-            <td><span class="pill ${pillClass(Math.round(s.pct))}">${Math.round(s.pct)}%</span></td>
-            <td style="color:${absLevel(s.abs).color}" title="${absLevel(s.abs).label}">${Math.round(s.abs)}%</td>
-            <td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${isDeprived(s.abs)?'disabled title="محروم - غياب +25%"':""} value="${gradesData[s.key]||''}" onchange="gradesData['${String(s.key).replace(/'/g,'')}']=this.value" id="g-${esc(String(s.key))}"></td>
-          </tr>`).join('')}</tbody>
+          <thead><tr><th>الاسم</th><th>الغياب%</th>${gradeHead}</tr></thead>
+          <tbody>${ss.map(s=>{
+            const sk=String(s.key).replace(/'/g,'');
+            const dep=isDeprived(s.abs);
+            let cells;
+            if(rub.length){
+              cells=rub.map((r,ri)=>{
+                const val=detailGrade(s.key,code,r.cat);
+                return `<td><input class="grade-input rbin ${cid}" data-key="${esc(sk)}" data-cat="${esc(String(r.cat))}" data-max="${r.max}" type="number" min="0" max="${r.max}" placeholder="/${r.max}" ${dep?'disabled':''} value="${val}" oninput="rbSum('${cid}','${esc(sk)}')"></td>`;
+              }).join('')+`<td><b class="rbtot" id="tot-${cid}-${esc(sk)}" style="color:#2ecc71">${dep?'محروم':(rbInitTotal(s.key,code,rub))}</b></td>`;
+            }else{
+              cells=`<td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${dep?'disabled title="محروم"':''} value="${gradesData[s.key]||''}" onchange="gradesData['${sk}']=this.value"></td>`;
+            }
+            return `<tr>
+              <td>${esc(s.name.split(' ').slice(0,3).join(' '))}</td>
+              <td style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</td>
+              ${cells}
+            </tr>`;
+          }).join('')}</tbody>
         </table>
-        <div class="btn-row"><button class="btn btn-g" onclick="saveGrades('${course}')">💾 حفظ درجات ${course}</button></div>
+        <div class="btn-row"><button class="btn btn-g" onclick="${rub.length?`saveDetailGrades('${esc(String(code))}','${course}')`:`saveGrades('${course}')`}">💾 حفظ درجات ${course}</button></div>
       </div>`;
     }).join(''):'<div class="empty"><div class="empty-icon">📝</div>لا توجد مقررات حالية لرصد الدرجات</div>'}`;
   },
@@ -3559,6 +3620,114 @@ async function saveAttendance(course){
   }
 }
 
+// ===== نظام بنود الدرجات التفصيلية =====
+// حساب المجموع الأولي لطالب من درجاته المحفوظة
+function rbInitTotal(key,code,rub){
+  let sum=0,any=false;
+  rub.forEach(r=>{const v=detailGrade(key,code,r.cat);if(v!==''){sum+=parseFloat(v)||0;any=true;}});
+  return any?Math.round(sum*10)/10:'—';
+}
+// إعادة حساب مجموع صف طالب عند الإدخال
+function rbSum(cid,sk){
+  let sum=0,any=false;
+  document.querySelectorAll('.'+cid+'[data-key="'+sk+'"]').forEach(inp=>{
+    const max=parseFloat(inp.dataset.max)||0;
+    let v=parseFloat(inp.value);
+    if(!isNaN(v)){if(v>max){v=max;inp.value=max;}if(v<0){v=0;inp.value=0;}sum+=v;any=true;}
+  });
+  const tot=document.getElementById('tot-'+cid+'-'+sk);
+  if(tot){const t=Math.round(sum*10)/10;tot.textContent=any?t:'—';tot.style.color=t>=60?'#2ecc71':t>0?'#e74c3c':'#999';}
+}
+// فتح نافذة إعداد بنود الدرجات
+function openRubricSetup(code,course){
+  const rub=rubricFor(code);
+  const items=rub.length?rub.map(r=>({cat:r.cat,max:r.max})):[{cat:'',max:''}];
+  const old=document.getElementById('rubModal');if(old)old.remove();
+  const m=document.createElement('div');
+  m.id='rubModal';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  m.innerHTML=`<div style="background:var(--bg,#0a1628);border:1px solid var(--border);border-radius:16px;max-width:480px;width:100%;max-height:88vh;overflow-y:auto;padding:22px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-size:17px;font-weight:800;color:var(--text)">⚙️ بنود درجات: ${esc(course)}</div>
+      <button onclick="document.getElementById('rubModal').remove()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">حدّد اسم كل بند ودرجته القصوى · المجموع يجب أن يساوي <b>100</b></div>
+    <div id="rubItems">${items.map((it,i)=>rubRow(it,i)).join('')}</div>
+    <button class="btn btn-out btn-sm" style="width:100%;margin:8px 0" onclick="rubAddRow()">➕ إضافة بند</button>
+    <div id="rubTotalBar" style="text-align:center;font-weight:800;padding:8px;border-radius:8px;margin:8px 0"></div>
+    <input type="hidden" id="rubCode" value="${esc(code)}"><input type="hidden" id="rubCourse" value="${esc(course)}">
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-b" style="flex:1" onclick="saveRubricSetup()">💾 حفظ البنود</button>
+      <button class="btn btn-out" onclick="document.getElementById('rubModal').remove()">إلغاء</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  rubUpdateTotal();
+}
+function rubRow(it,i){
+  return `<div class="rub-row" style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+    <input class="rub-cat" placeholder="اسم البند (مثل: واجب)" value="${esc(it.cat||'')}" oninput="rubUpdateTotal()" style="flex:2;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px">
+    <input class="rub-max" type="number" min="0" max="100" placeholder="الدرجة" value="${it.max||''}" oninput="rubUpdateTotal()" style="flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px">
+    <button onclick="this.closest('.rub-row').remove();rubUpdateTotal()" style="background:rgba(231,76,60,.15);color:#e74c3c;border:none;width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:16px;flex-shrink:0">🗑️</button>
+  </div>`;
+}
+function rubAddRow(){document.getElementById('rubItems').insertAdjacentHTML('beforeend',rubRow({cat:'',max:''}));rubUpdateTotal();}
+function rubUpdateTotal(){
+  let sum=0;document.querySelectorAll('#rubItems .rub-max').forEach(i=>sum+=parseFloat(i.value)||0);
+  const bar=document.getElementById('rubTotalBar');if(!bar)return;
+  const ok=sum===100;
+  bar.textContent='المجموع: '+sum+' / 100'+(ok?' ✅':' (يجب أن يساوي 100)');
+  bar.style.background=ok?'rgba(46,204,113,.15)':'rgba(231,76,60,.12)';
+  bar.style.color=ok?'#2ecc71':'#e74c3c';
+}
+async function saveRubricSetup(){
+  const code=document.getElementById('rubCode').value;
+  const rows=[...document.querySelectorAll('#rubItems .rub-row')];
+  const items=[];
+  for(const r of rows){
+    const cat=r.querySelector('.rub-cat').value.trim();
+    const max=parseFloat(r.querySelector('.rub-max').value)||0;
+    if(cat&&max>0)items.push({cat,max});
+  }
+  if(!items.length){showToast('أضف بنداً واحداً على الأقل','w');return;}
+  const total=items.reduce((a,x)=>a+x.max,0);
+  if(total!==100){showToast('مجموع البنود يجب أن يساوي 100 (حالياً '+total+')','w');return;}
+  showToast('جاري حفظ البنود...','i');
+  try{
+    const r=await jsonpCall({action:'saveRubric',data:JSON.stringify({code,items})});
+    if(r&&r.status!=='ok'&&r.ok!==true){showToast('تعذّر الحفظ'+(r.hint?' — '+r.hint:''),'e');return;}
+    document.getElementById('rubModal').remove();
+    showToast('✅ تم حفظ بنود الدرجات','s');
+    await loadRubrics();
+    if(user.role==='t')showTPage('grades',document.getElementById('sn-grades'));
+    else showAPage('grades',document.getElementById('sn-grades'));
+  }catch(e){showToast('تعذّر الاتصال بالخادم','e');}
+}
+// حفظ الدرجات التفصيلية
+async function saveDetailGrades(code,course){
+  const ss=students.filter(s=>s.course===course&&isActive(s.status));
+  const rub=rubricFor(code);
+  const cid='rb_'+normCode(code).replace(/[^a-z0-9]/gi,'');
+  const details=[],totals=[];
+  ss.forEach(s=>{
+    if(isDeprived(s.abs))return;
+    const sk=String(s.key).replace(/'/g,'');
+    let sum=0,any=false;
+    rub.forEach(r=>{
+      const inp=document.querySelector('.'+cid+'[data-key="'+sk+'"][data-cat="'+CSS.escape(String(r.cat))+'"]');
+      const v=inp?inp.value:'';
+      if(v!==''&&v!=null){const g=parseFloat(v)||0;details.push({key:s.key,cat:r.cat,grade:g});sum+=g;any=true;}
+    });
+    if(any)totals.push({key:s.key,sid:s.sid,grp:s.grp,total:Math.round(sum*10)/10});
+  });
+  if(!details.length){showToast('أدخل درجة واحدة على الأقل','w');return;}
+  showToast('جاري حفظ الدرجات...','i');
+  try{
+    const r=await jsonpCall({action:'saveDetailGrades',data:JSON.stringify({code,grp:(ss[0]||{}).grp,details,totals})});
+    if(r&&r.status!=='ok'&&r.ok!==true){showToast('تعذّر الحفظ'+(r.hint?' — '+r.hint:''),'e');return;}
+    showToast('✅ تم حفظ الدرجات ('+r.updated+' طالب)','s');
+    await loadRubrics();
+  }catch(e){showToast('تعذّر الاتصال بالخادم','e');}
+}
 async function saveGrades(course){
   const ss=students.filter(s=>s.course===course&&isActive(s.status));
   const records=[];
