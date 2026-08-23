@@ -853,7 +853,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzcbpBVfnrGL-2QETy0F0fBUGcQa67EKpz8btbIoDujK4GTRN45tfPncujGl-z7Rp4W/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyfhSwxkBj42BlE-y8MNCitBiVAPAIP5FF7EsUIQxSRKxVNKvIB7ZDHO8PrldKWk_uR/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2603,6 +2603,7 @@ function navHTML(r,pages){
     performance:{icon:'📊',lbl:'أدائي'},schedule:{icon:'📅',lbl:'الجدول'},
     profile:{icon:'👤',lbl:'ملفي'},students:{icon:'👥',lbl:'قوائم الفصول'},
     attendance:{icon:'✅',lbl:'تسجيل الحضور'},grades:{icon:'📝',lbl:'رصد الدرجات'},
+    attlog:{icon:'🗂️',lbl:'سجل التحضير'},
     alerts:{icon:'🔔',lbl:'الاشعارات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     dashboard:{icon:'📈',lbl:'الداشبورد والأوائل'},
@@ -3156,6 +3157,8 @@ const tPgs={
     const header=`<div class="stitle">🗂️ سجل التحضير — التحضيرات السابقة</div>`;
     const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
     const dig=s=>String(s||'').replace(/[^0-9]/g,'');
+    // تنسيق التاريخ إلى dd/mm/yyyy (يعالج ISO أو كائن التاريخ القادم من الشيت)
+    const fmtD=v=>{const s=String(v||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m)return s.slice(0,10);const d=new Date(s);return isNaN(d)?s:(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear());};
     // مواد المدرب (تشمل مواده + المكلَّف بها لأن students محمّلة بهما)
     const myNames=new Set(students.map(s=>cnk_(s.course)));
     const myCodes=new Set(students.map(s=>dig(s.code)).filter(Boolean));
@@ -3168,7 +3171,7 @@ const tPgs={
       const cname=r[2]||'', code=dig(r[3]);
       const mine=myNames.has(cnk_(cname))||(code&&myCodes.has(code));
       if(!mine)continue;
-      const date=String(r[5]||'').trim(), grp=String(r[4]||'').trim(),
+      const date=fmtD(r[5]), grp=String(r[4]||'').trim(),
             term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
       const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
       if(!sessions.has(key))sessions.set(key,{date,course:cname,grp,term,abs:0,late:0,students:[]});
@@ -3900,8 +3903,8 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','library','manage_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
-  buildMobNav('a',['overview','all_students','all_courses','library','manage_courses','schedule','requests','alerts','reports','dashboard','accounts','settings']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','requests','alerts','reports','dashboard','accounts','settings']);
+  buildMobNav('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','requests','alerts','reports','dashboard','accounts','settings']);
   showAPage('overview',null);
 }
 
@@ -4554,8 +4557,93 @@ window.closeTVMode=closeTVMode;
 window.buildTVContent=buildTVContent;
 console.log('%c✅ شاشة العرض جاهزة - النسخة الجديدة v51','color:#2ecc71;font-size:14px;font-weight:bold');
 
+// ===== أدوات تعديل/حذف سجل التحضير (للأدمن) =====
+async function admAttReload(){
+  await loadAbsenceBase();
+  try{
+    if(typeof allCourses!=='undefined')allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
+    if(typeof students!=='undefined')students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
+  }catch(e){}
+  showAPage('attlog',document.getElementById('sn-attlog'));
+}
+async function admAttSet(si,sti,newStatus){
+  const s=(window._attSessions||[])[si]; if(!s)return; const st=s.students[sti]; if(!st)return;
+  if(st.status===newStatus)return;
+  showToast('جاري التعديل...','i');
+  try{
+    const rec={sid:st.sid,name:st.name,course:s.course,code:st.code||s.code||'',grp:s.grp,date:s.date,status:newStatus,term:s.term||''};
+    const res=await jsonpCall({action:'saveDailyAbsence',data:JSON.stringify([rec])});
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر التعديل: '+attErrMsg(res.msg,res.hint),'e');return;}
+    showToast('✅ تم تعديل الحالة','s'); await admAttReload();
+  }catch(e){showToast('تعذّر التعديل — جرب مرة أخرى','e');}
+}
+async function admAttDelOne(si,sti){
+  const s=(window._attSessions||[])[si]; if(!s)return; const st=s.students[sti]; if(!st)return;
+  if(!confirm('حذف تحضير: '+st.name+' — '+s.course+' ('+s.date+')؟'))return;
+  await admAttDelete([{sid:st.sid,code:st.code||s.code||'',course:s.course,date:s.date,term:s.term||''}]);
+}
+async function admAttDelSession(si){
+  const s=(window._attSessions||[])[si]; if(!s)return;
+  if(!confirm('حذف الجلسة كاملة: '+s.course+' — '+s.date+' ('+s.students.length+' سجل)؟'))return;
+  await admAttDelete(s.students.map(st=>({sid:st.sid,code:st.code||s.code||'',course:s.course,date:s.date,term:s.term||''})));
+}
+async function admAttDelete(recs){
+  showToast('جاري الحذف...','i');
+  try{
+    const res=await jsonpCall({action:'deleteDailyAbsence',data:JSON.stringify(recs)});
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الحذف: '+attErrMsg(res.msg,res.hint),'e');return;}
+    showToast('✅ تم الحذف ('+((res&&res.deleted)||0)+' سجل)','s'); await admAttReload();
+  }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
+}
+window.admAttSet=admAttSet;window.admAttDelOne=admAttDelOne;window.admAttDelSession=admAttDelSession;
+
 const aPgs={
   library:()=>buildLibrary(null, true),
+  // ===== سجل التحضير (أدمن) — عرض + تعديل الحالة + حذف =====
+  attlog:()=>{
+    const header=`<div class="stitle">🗂️ سجل التحضير — إدارة (تعديل/حذف)</div>`;
+    const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
+    if(rows.length<2)
+      return header+`<div class="empty"><div class="empty-icon">📭</div>ما فيه تحضيرات مسجّلة بعد</div>`;
+    const dig=s=>String(s||'').replace(/[^0-9]/g,'');
+    const fmtD=v=>{const s=String(v||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m)return s.slice(0,10);const d=new Date(s);return isNaN(d)?s:(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear());};
+    const sessions=new Map();
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i]; if(!dig(r[0]))continue;
+      const cname=r[2]||'', code=r[3]||'', date=fmtD(r[5]), grp=String(r[4]||'').trim(),
+            term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
+      const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
+      if(!sessions.has(key))sessions.set(key,{date,course:cname,code,grp,term,students:[]});
+      sessions.get(key).students.push({name:r[1]||'',sid:r[0]||'',code,status:status||'غائب'});
+    }
+    const list=[...sessions.values()];
+    const dnum=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?((m[3].length===2?'20'+m[3]:m[3])+m[2].padStart(2,'0')+m[1].padStart(2,'0')):'0';};
+    list.sort((a,b)=>dnum(b.date).localeCompare(dnum(a.date)));
+    window._attSessions=list;
+    const totalAbs=list.reduce((n,s)=>n+s.students.filter(x=>x.status!=='متأخر').length,0);
+    const totalLate=list.reduce((n,s)=>n+s.students.filter(x=>x.status==='متأخر').length,0);
+    const summary=`<div class="alert ab"><span class="aicon">📊</span>عدد الجلسات: <strong>${list.length}</strong> · إجمالي الغياب: <strong>${totalAbs}</strong> · التأخير: <strong>${totalLate}</strong> · <span style="color:var(--muted);font-size:12px">اضغط الجلسة لعرض الطلاب وتعديلهم</span></div>`;
+    const cards=list.map((s,si)=>{
+      const absC=s.students.filter(x=>x.status!=='متأخر').length, lateC=s.students.filter(x=>x.status==='متأخر').length;
+      const studs=s.students.map((st,sti)=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 2px;border-bottom:1px solid var(--border);gap:8px">
+        <span style="flex:1;min-width:0">${esc(st.name)} <span style="color:var(--muted)">· ${esc(String(st.sid))}</span></span>
+        <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+          <button class="btn btn-sm ${st.status==='غائب'?'btn-b':'btn-out'}" style="padding:3px 9px;font-size:11px" onclick="admAttSet(${si},${sti},'غائب')">غائب</button>
+          <button class="btn btn-sm ${st.status==='متأخر'?'btn-b':'btn-out'}" style="padding:3px 9px;font-size:11px" onclick="admAttSet(${si},${sti},'متأخر')">متأخر</button>
+          <button class="btn btn-sm" style="padding:3px 9px;font-size:11px;background:#e74c3c;color:#fff" onclick="admAttDelOne(${si},${sti})" title="حذف">🗑️</button>
+        </div></div>`).join('');
+      return `<details class="ccard" style="margin-bottom:10px;padding:12px">
+        <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div><div class="cc-name">📚 ${esc(s.course)}${s.grp?` <span style="font-size:11px;color:var(--muted);font-weight:400">· شعبة ${esc(s.grp)}</span>`:''}</div>
+          <div class="cc-meta">📅 ${esc(s.date)}${s.term?` · ${esc(s.term)}`:''}</div></div>
+          <div style="display:flex;gap:6px;flex-shrink:0"><span class="pill pr">${absC} غياب</span>${lateC?`<span class="pill py">${lateC} تأخير</span>`:''}</div>
+        </summary>
+        <div style="margin-top:10px">${studs}</div>
+        <div class="btn-row" style="margin-top:10px"><button class="btn btn-sm" style="background:#e74c3c;color:#fff" onclick="admAttDelSession(${si})">🗑️ حذف الجلسة كاملة</button></div>
+      </details>`;
+    }).join('');
+    return header+summary+cards;
+  },
   manage_courses:()=>{
     const tab=window._mcTab||'plan';
     const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${id}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
