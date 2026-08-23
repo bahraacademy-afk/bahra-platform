@@ -1668,10 +1668,12 @@ function todayCoursesForTrainer(trainerName,dayName){
 
 // ===== المصدر الوحيد للحقيقة: حساب نسب الغياب من تبويب "قاعدة الغياب" =====
 // خريطة عامة: مفتاح "sidDigits|codeDigits" → مجموع أيام الغياب
-let absenceDaysMap={};
+let absenceDaysMap={};        // مفتاح بالرمز: "sid|codeDigits|grp|term" (للسجلات التي فيها رمز)
+let absenceDaysMapByName={};  // مفتاح بالاسم: "sid|nameKey|grp|term" (للسجلات القديمة بلا رمز)
+const cnk_=c=>String(c||'').replace(/\s+/g,'').trim(); // توحيد اسم المادة (إزالة المسافات)
 // تحميل "قاعدة الغياب" وبناء خريطة أيام الغياب لكل طالب/مادة/ترم
 async function loadAbsenceBase(){
-  absenceDaysMap={};
+  absenceDaysMap={}; absenceDaysMapByName={};
   try{
     const rows=await fetchSheet('قاعدة الغياب!A:H').catch(()=>[]);
     const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
@@ -1686,9 +1688,14 @@ async function loadAbsenceBase(){
       if(!sid)continue;
       const status=String(r[6]||'').trim();
       const days=(status==='متأخر')?0.5:1; // غائب=1 · متأخر=0.5
-      // ⭐ المفتاح يشمل الترم: يفصل نفس المقرر/الشعبة بين ترمين مختلفين
-      const key=sid+'|'+code+'|'+gk(r[4])+'|'+tk(r[7]);
-      absenceDaysMap[key]=(absenceDaysMap[key]||0)+days;
+      // ⭐ لو فيه رمز نفهرس بالرمز، وإلا نفهرس باسم المادة (شبكة أمان للسجلات القديمة بلا رمز)
+      if(code){
+        const key=sid+'|'+code+'|'+gk(r[4])+'|'+tk(r[7]);
+        absenceDaysMap[key]=(absenceDaysMap[key]||0)+days;
+      }else{
+        const nkey=sid+'|'+cnk_(r[2])+'|'+gk(r[4])+'|'+tk(r[7]);
+        absenceDaysMapByName[nkey]=(absenceDaysMapByName[nkey]||0)+days;
+      }
     }
   }catch(e){}
 }
@@ -1697,8 +1704,10 @@ function absPctFromBase(sid,code,course,grp,term){
   const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
   const gk=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
   const tk=t=>String(t||'').replace(/\s+/g,'');
-  const key=onlyDigits(sid)+'|'+onlyDigits(code)+'|'+gk(grp)+'|'+tk(term); // ⭐ فصل حسب الشعبة + الترم
-  const absDays=absenceDaysMap[key]||0;
+  // ⭐ نجمع مطابقة الرمز + مطابقة الاسم (للسجلات القديمة بلا رمز) — كل سجل مفهرس مرة واحدة فقط
+  const key=onlyDigits(sid)+'|'+onlyDigits(code)+'|'+gk(grp)+'|'+tk(term);
+  const nkey=onlyDigits(sid)+'|'+cnk_(course)+'|'+gk(grp)+'|'+tk(term);
+  const absDays=(absenceDaysMap[key]||0)+(absenceDaysMapByName[nkey]||0);
   if(!absDays)return 0; // ⭐ لا يوجد غياب في الشيت = 0% دائماً
   // احتياطي: لو المادة غير مجدولة بالكامل، افترض يوم/أسبوع (8 حصص) بدل ما نُخفي الغياب
   let total=courseTotalDays(course,grp);
@@ -3554,9 +3563,12 @@ async function saveSessionV2(course,code,grp,dateStr){
     let addDays=0;
     if(mk==='absent')addDays=1;
     else if(mk==='late')addDays=0.5;
+    // ⭐ الرمز والشعبة من سجل الطالب نفسه (لأن تبويب «الجدول» لا يخزّن رمز المقرر)
+    //    وإلا يُحفظ الغياب بلا رمز فتفشل مطابقة النسبة وتظهر 0%
+    const sCode=normCode(s.code||code), sGrp=s.grp||grp;
     // سجل يومي لكل من غاب/تأخر (حتى نمنع التكرار في التبويب)
     if(mk==='absent'||mk==='late'){
-      dailyLog.push({sid:s.sid,name:s.name,course,code:normCode(code),grp,date:dateStr,status:mk==='absent'?'غائب':'متأخر',days:addDays,term:s.half||''});
+      dailyLog.push({sid:s.sid,name:s.name,course,code:sCode,grp:sGrp,date:dateStr,status:mk==='absent'?'غائب':'متأخر',days:addDays,term:s.half||''});
     }
     if(addDays>0){
       // الأيام المحفوظة سابقاً = النسبة الحالية × إجمالي الأيام ÷ 100
@@ -3564,7 +3576,7 @@ async function saveSessionV2(course,code,grp,dateStr){
       const newDays=curDays+addDays;
       const newPct=Math.min(Math.round(newDays/totalDays*1000)/10,100);
       s.abs=newPct;
-      records.push({key:s.key,sid:s.sid,code:normCode(code),grp,absence:newPct});
+      records.push({key:s.key,sid:s.sid,code:sCode,grp:sGrp,absence:newPct});
     }
   });
   if(!marked){showToast('سجّل حضور المتدربين أولاً','w');return;}
