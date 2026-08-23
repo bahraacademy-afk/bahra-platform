@@ -3570,26 +3570,29 @@ async function saveSessionV2(course,code,grp,dateStr){
   if(!marked){showToast('سجّل حضور المتدربين أولاً','w');return;}
   showToast('جاري حفظ غياب اليوم...','i');
   try{
-    // 1) تحديث نسبة الغياب في سجل المقررات
-    let upd=null;
-    if(records.length){
-      const res=await jsonpCall({action:'saveAttendance',data:JSON.stringify(records)});
-      // فحص حالة الرد أولاً: لو رفض الخادم الكتابة نعرض السبب الحقيقي بدل نجاح وهمي
-      if(res && res.status && res.status!=='ok'){
-        showToast('❌ الخادم رفض الحفظ: '+attErrMsg(res.msg,res.hint),'e');
-        return;
-      }
-      upd=(res&&typeof res.updated!=='undefined')?res.updated:null;
-      if(upd!==null && upd===0){
-        showToast('⚠️ ما تحدّث أي سجل — تأكد إن الطلاب في سجل المقررات','e');
-        return;
-      }
-    }
-    // 2) تسجيل الغياب اليومي في التبويب الجديد (منع التكرار: نفس اليوم/المادة يُحدّث)
+    // 1) الأساسي: تسجيل الغياب اليومي في "قاعدة الغياب" (المصدر الوحيد للنسبة)
+    //    نحفظه أولاً ونتحقق من نجاحه — لأنه هو الذي يظهر في النظام فعلياً
     if(dailyLog.length){
-      await jsonpCall({action:'saveDailyAbsence',data:JSON.stringify(dailyLog)}).catch(()=>{});
+      const resD=await jsonpCall({action:'saveDailyAbsence',data:JSON.stringify(dailyLog)});
+      if(resD && resD.status && resD.status!=='ok'){
+        showToast('❌ الخادم رفض حفظ الغياب: '+attErrMsg(resD.msg,resD.hint),'e');
+        return;
+      }
     }
-    showToast(`✅ تم حفظ غياب ${dateStr} — ${absC} غياب · ${lateC} تأخير`+(upd!==null?` (${upd} سجل)`:''),'s');
+    // 2) ثانوي (أفضل جهد): تحديث عمود "نسبة الغياب" في سجل المقررات — لا يوقف العملية إن فشل
+    let upd=null, colWarn='';
+    if(records.length){
+      try{
+        const res=await jsonpCall({action:'saveAttendance',data:JSON.stringify(records)});
+        if(res && res.status && res.status!=='ok'){
+          colWarn=' (لكن عمود «نسبة الغياب» بسجل المقررات لم يُحدَّث: '+attErrMsg(res.msg,res.hint)+')';
+        }else{
+          upd=(res&&typeof res.updated!=='undefined')?res.updated:null;
+          if(upd===0) colWarn=' (لم يُحدَّث عمود «نسبة الغياب» — الطالب غير مسجّل بهذه المادة في سجل المقررات)';
+        }
+      }catch(e){ colWarn=' (تعذّر تحديث عمود «نسبة الغياب» — الغياب محفوظ في قاعدة الغياب)'; }
+    }
+    showToast(`✅ تم حفظ غياب ${dateStr} — ${absC} غياب · ${lateC} تأخير`+(upd?` (${upd} سجل)`:'')+colWarn, colWarn?'w':'s');
     attMarks={};
     attCurrentCourse=null;
     // s.abs تحدّثت في الذاكرة قبل الإرسال → نعرض الصفحة فوراً بالقيم الجديدة
