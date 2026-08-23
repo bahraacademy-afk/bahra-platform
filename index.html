@@ -959,7 +959,7 @@ a{transition:color .15s,opacity .15s}
       </div>
       <div class="fgroup">
         <label id="phLbl">الرقم السري</label>
-        <input type="password" id="inpPh" placeholder="أدخل الرمز السري (حروف وأرقام)" inputmode="text" autocomplete="off">
+        <input type="password" id="inpPh" placeholder="أدخل الرمز السري" inputmode="text" autocomplete="off">
       </div>
       <button class="lbtn bs" id="lbtn" onclick="doLogin()">دخول المنصة</button>
       <div class="err-box" id="errBox">بيانات الدخول غير صحيحة</div>
@@ -2760,7 +2760,7 @@ function navHTML(r,pages){
     attlog:{icon:'🗂️',lbl:'سجل التحضير'},
     alerts:{icon:'🔔',lbl:'الاشعارات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
-    dashboard:{icon:'📈',lbl:'الداشبورد والأوائل'},
+    dashboard:{icon:'📈',lbl:'لوحة المؤشرات والأوائل'},
     accounts:{icon:'👥',lbl:'إضافة الحسابات'},
     manage_courses:{icon:'📖',lbl:'إدارة المقررات'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
@@ -2930,7 +2930,7 @@ async function libSaveMat(code){
     const r=await jsonpCall({action:'updateCourse',data:JSON.stringify([rec])});
     if(!r || (r.status!=='ok' && r.ok!==true)){
       const m=(r&&(r.hint||r.msg))||'';
-      if(m==='forbidden'||/صلاح|forbidden/i.test(m)) showToast('ما عندك صلاحية إضافة مواد (الأدمن فقط)','e');
+      if(m==='forbidden'||/صلاح|forbidden/i.test(m)) showToast('ما عندك صلاحية إضافة مواد (الإداري فقط)','e');
       else if(m==='unauthorized'||/unauthorized/i.test(m)) showToast('انتهت الجلسة — سجّل خروج ثم دخول من جديد','e');
       else showToast('تعذّر الحفظ'+(m?' — '+m:''),'e');
       return;
@@ -4415,7 +4415,7 @@ async function saveCourse(mode){
     const r=await jsonpCall({action,data:JSON.stringify([rec])});
     if(r && r.status!=='ok' && r.ok!==true){
       const m=(r.hint||r.msg||'');
-      showToast(m==='forbidden'?'ما عندك صلاحية (الأدمن فقط)':m==='unauthorized'?'انتهت الجلسة — سجّل خروج ودخول':'تعذّر الحفظ'+(m?' — '+m:''),'e');
+      showToast(m==='forbidden'?'ما عندك صلاحية (الإداري فقط)':m==='unauthorized'?'انتهت الجلسة — سجّل خروج ودخول':'تعذّر الحفظ'+(m?' — '+m:''),'e');
       return;
     }
     document.getElementById('crsModal')?.remove();
@@ -5067,7 +5067,7 @@ const aPgs={
     const podiumH=[130,170,105];
     const podiumC=['#c0c0c0','#ffd700','#cd7f32'];
     return `
-    <div class="banner"><div><div class="btitle">📈 الداشبورد الشامل والأوائل</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div>
+    <div class="banner"><div><div class="btitle">📈 لوحة المؤشرات الشاملة والأوائل</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div>
       <button id="tvModeBtn" onclick="try{openTVMode()}catch(e){alert('خطأ: '+e.message)}" style="background:linear-gradient(135deg,#c9a227,#e0b83a);color:#0a2348;border:none;padding:10px 24px;border-radius:24px;cursor:pointer;font-size:14px;font-weight:800;box-shadow:0 4px 16px rgba(201,162,39,.35);display:flex;align-items:center;gap:8px;transition:transform .2s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">🖥️ شاشة العرض</button>
     </div>
 
@@ -5196,7 +5196,7 @@ const aPgs={
       <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
     </div>
     ${warns?`<div class="alert ad"><span class="aicon">🔴</span>${warns} حالة تحتاج متابعة فورية</div>`:''}
-    <div class="stitle">📊 مؤشرات الأداء (KPI)</div>
+    <div class="stitle">📊 مؤشرات الأداء</div>
     <div class="term-tabs" id="kpiTabs">
       <button class="tterm active" onclick="renderKPI('all',this)">كل الشعب</button>
       ${grps.map(g=>`<button class="tterm" onclick="renderKPI('${g}',this)">الشعبة ${g}</button>`).join('')}
@@ -5909,7 +5909,7 @@ function studentRanking(){
 }
 // رابط لفتح تفاصيل متدرب من داخل مودال
 function _openStud(sid){return `onclick="document.getElementById('detailModal').remove();showStudentDetail('${sid}')" style="cursor:pointer"`;}
-// تفاصيل بطاقات "الداشبورد الشامل والأوائل"
+// تفاصيل بطاقات "لوحة المؤشرات الشاملة والأوائل"
 function showOverallStat(kind){
   const ranked=studentRanking();
   const stRow=s=>`<div ${_openStud(s.sid)}>${detailRow(esc(String(s.name).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(s.grp||'—'),s.avg+'%',s.avg>=70?'var(--green)':s.avg>=60?'var(--gold)':'var(--red)')}</div>`;
@@ -7335,7 +7335,7 @@ const EXTRA_EN = {
   'الرمز':'Code','اسم المقرر':'Course Name','الوحدات':'Units','الساعات':'Hours','إجراءات':'Actions',
   'لا توجد مقررات في الخطة':'No courses in plan',
   'شاشة العرض':'Display Screen','🖥️ شاشة العرض':'🖥️ Display Screen','لوحة الشرف والإحصائيات':'Honor Board & Statistics','مباشر':'Live',
-  'الداشبورد الشامل والأوائل':'Dashboard & Top Performers','معطيات الأكاديمية':'Academy Metrics','التحليل البياني':'Analytics',
+  'لوحة المؤشرات الشاملة والأوائل':'Dashboard & Top Performers','معطيات الأكاديمية':'Academy Metrics','التحليل البياني':'Analytics',
   'توزيع المعدلات':'Grade Distribution','مؤشرات تحليلية':'Analytical Indicators','الوسيط (median)':'Median',
   'معدل أعلى 10%':'Top 10% Average','غياب مرتفع (15%+)':'High Absence (15%+)','محرومون بالغياب':'Deprived by Absence',
   'متفوقون (90%+)':'Excellent (90%+)','نسبة النجاح':'Pass Rate','متوسط الإنجاز':'Average Achievement',
@@ -7380,8 +7380,8 @@ const EN_PATTERNS = [
 Object.assign(TRANSLATIONS.en, {
   'لوحة المتابعة المركزية':'Central Dashboard','⚙️ لوحة المتابعة المركزية':'⚙️ Central Dashboard',
   'مشرف أكاديمي':'Academic Supervisor','مدير الأكاديمية':'Academy Director','مشرف أكاديمي – براء الفران':'Academic Supervisor – Baraa Alfarran',
-  'مؤشرات الأداء (KPI)':'Performance Indicators (KPI)','كل الشعب':'All Sections',
-  'حالة تحتاج متابعة فورية':'cases need immediate follow-up','الداشبورد والأوائل':'Dashboard & Top Performers',
+  'مؤشرات الأداء':'Performance Indicators (KPI)','كل الشعب':'All Sections',
+  'حالة تحتاج متابعة فورية':'cases need immediate follow-up','لوحة المؤشرات والأوائل':'Dashboard & Top Performers',
   'متوسط الدرجات حسب الشعبة':'Average Grade by Section','أفضل 5 متدربين':'Top 5 Trainees','الأوائل':'Top Performers',
   'توزيع الحالات':'Cases Distribution','معدل الغياب':'Absence Rate','نسبة الحضور':'Attendance Rate',
   'إحصائيات عامة':'General Statistics','آخر تحديث':'Last updated','تحديث':'Refresh','بحث':'Search','بحث...':'Search...',
