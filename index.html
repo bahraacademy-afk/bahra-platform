@@ -757,6 +757,85 @@ body{top:0!important}
 @keyframes splashBar{0%{width:0}100%{width:100%}}
 .splash-status{color:#6a7a95;font-size:12px;opacity:0;animation:fadeUp .5s ease 1s forwards}
 </style>
+<style id="ux-polish">
+/* ============================================================
+   طبقة تحسين UX/UI شاملة — تُطبّق على كامل الموقع (إضافية، لا تكسر البنية)
+   ============================================================ */
+*{-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility}
+::selection{background:rgba(26,122,191,.35);color:#fff}
+img,svg,video{max-width:100%}
+
+/* --- تمرير أنيق يطابق الثيم --- */
+*{scrollbar-width:thin;scrollbar-color:rgba(100,160,220,.28) transparent}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:transparent}
+*::-webkit-scrollbar-thumb{background:rgba(100,160,220,.25);border-radius:8px;border:2px solid transparent;background-clip:content-box}
+*::-webkit-scrollbar-thumb:hover{background:rgba(100,160,220,.45);background-clip:content-box}
+
+/* --- إتاحة الوصول: حلقة تركيز واضحة للوحة المفاتيح فقط --- */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,
+.btn:focus-visible,.sitem:focus-visible,.amk:focus-visible,[tabindex]:focus-visible,summary:focus-visible{
+  outline:2px solid #6ab8f7;outline-offset:2px;border-radius:8px
+}
+:focus:not(:focus-visible){outline:none}
+
+/* --- أزرار: حركة دقيقة عند التمرير/الضغط + حالة معطّلة --- */
+.btn,.lbtn,.out-btn,.amk,.rtab{will-change:transform}
+@media (hover:hover){
+  .btn:hover{transform:translateY(-1px);filter:brightness(1.06)}
+  .btn-out:hover{border-color:rgba(100,160,220,.5);color:var(--text);background:rgba(100,160,220,.06)}
+}
+.btn:active,.lbtn:active,.out-btn:active,.amk:active{transform:translateY(1px) scale(.985)}
+.btn[disabled],.btn:disabled,.lbtn:disabled,button:disabled{opacity:.5;cursor:not-allowed;transform:none!important;filter:none!important}
+
+/* --- عناصر الإدخال: تناسق كامل للخط وحالة التركيز --- */
+input,select,textarea,button{font-family:'Tajawal',sans-serif}
+input:not([type=checkbox]):not([type=radio]):focus,select:focus,textarea:focus{
+  border-color:rgba(100,160,220,.45)!important;box-shadow:0 0 0 3px rgba(26,122,191,.12)
+}
+select{cursor:pointer}
+
+/* --- كروت وعناصر تفاعلية: انتقالات ناعمة موحّدة --- */
+.mcard,.ccard,.pill,.sitem,.notif-btn,.prt-row,.sch-pal-card,details.ccard{transition:transform .2s cubic-bezier(.2,.8,.3,1),box-shadow .2s,border-color .2s,background .2s}
+details>summary{cursor:pointer}
+details.ccard:hover{border-color:rgba(100,160,220,.28)}
+
+/* --- شارات/حبوب: محاذاة أدق --- */
+.pill{display:inline-flex;align-items:center;justify-content:center;line-height:1.4;gap:4px}
+
+/* --- منع الطفح الأفقي وتحسين حاويات الجداول --- */
+.sch-wrap,.table-wrap,.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* ============================================================
+   تحسينات الجوال والتابلت (رسبونسف)
+   ============================================================ */
+@media (max-width:768px){
+  .btn{min-height:42px;padding:11px 18px}      /* أهداف لمس مريحة */
+  .btn-sm{min-height:36px}
+  .amk{min-height:40px;font-size:12px}
+  .sitem{padding:13px 18px}                     /* قوائم أسهل باللمس */
+  .stitle{font-size:11px}
+  .banner{flex-direction:column;align-items:flex-start;gap:10px;padding:18px}
+  .atl-toolbar{flex-direction:column;align-items:stretch}
+  .atl-select{width:100%}
+  .atl-card>summary{flex-wrap:wrap}
+  /* شبكات الإحصاء تتكيّف تلقائياً */
+  .mnum{font-size:22px!important}
+}
+@media (max-width:480px){
+  .banner .cc-name{font-size:17px!important}
+  .pill{font-size:11px;padding:4px 11px}
+  .atl-datebox{min-width:50px;padding:6px 8px}
+  .atl-datebox .d{font-size:17px}
+}
+
+/* --- احترام تفضيل تقليل الحركة --- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+</style>
 </head>
 <body>
 
@@ -3150,57 +3229,134 @@ function showTPage(pg,el){
   mc.innerHTML='';setTimeout(()=>{mc.innerHTML=tPgs[pg]?tPgs[pg]():'';animCards();},10);
 }
 
+/* ============ سجل التحضير — باني موحّد عالي الجودة (مدرب: عرض · أدمن: تعديل/حذف) ============ */
+window._attFilter={q:'',course:'all'};
+function atlDig(s){return String(s||'').replace(/[^0-9]/g,'');}
+function atlFmtDate(v){const s=String(v||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m)return s.slice(0,10);const d=new Date(s);return isNaN(d)?s:(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear());}
+function atlDnum(d){const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?((m[3].length===2?'20'+m[3]:m[3])+m[2].padStart(2,'0')+m[1].padStart(2,'0')):'0';}
+const _ATL_COLORS=['#1a7abf','#2ecc71','#9b59b6','#e67e22','#16a085','#2980b9','#8e44ad','#d35400'];
+function atlColor(str){let h=0;const s=String(str||'');for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return _ATL_COLORS[h%_ATL_COLORS.length];}
+function atlInitials(name){const p=String(name||'').trim().split(/\s+/).filter(Boolean);return(((p[0]||'').charAt(0))+((p[1]||'').charAt(0)||'')).trim()||'؟';}
+function atlDateBox(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);const dd=m?m[1]:'—';const yy=m?(m[3].length===2?m[3]:m[3].slice(-2)):'';const AR=['','ينا','فبر','مار','أبر','ماي','يون','يول','أغس','سبت','أكت','نوف','ديس'];const mon=m?(AR[parseInt(m[2])]||''):'';return `<div class="atl-datebox"><div class="d">${dd}</div><div class="my">${mon} ${yy}</div></div>`;}
+function atlBuildSessions(editable){
+  const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
+  const mineNames=editable?null:new Set(students.map(s=>cnk_(s.course)));
+  const mineCodes=editable?null:new Set(students.map(s=>atlDig(s.code)).filter(Boolean));
+  const sessions=new Map();
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!atlDig(r[0]))continue;
+    const cname=r[2]||'', codeR=r[3]||'', codeD=atlDig(r[3]);
+    if(!editable){const mine=mineNames.has(cnk_(cname))||(codeD&&mineCodes.has(codeD));if(!mine)continue;}
+    const date=atlFmtDate(r[5]), grp=String(r[4]||'').trim(), term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
+    const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
+    if(!sessions.has(key))sessions.set(key,{date,course:cname,code:codeR,grp,term,students:[]});
+    sessions.get(key).students.push({name:r[1]||'',sid:String(r[0]||''),code:codeR,status:status==='متأخر'?'متأخر':'غائب'});
+  }
+  const list=[...sessions.values()];
+  list.sort((a,b)=>atlDnum(b.date).localeCompare(atlDnum(a.date)));
+  return list;
+}
+function atlCss(){return `<style>
+.atl-wrap{max-width:920px;margin:0 auto}
+.atl-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.atl-search{flex:1;min-width:200px;display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;padding:0 14px;transition:border-color .2s}
+.atl-search:focus-within{border-color:rgba(100,160,220,.4)}
+.atl-search input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:inherit;font-size:14px;padding:12px 0}
+.atl-select{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;font-size:13px;padding:12px 14px;cursor:pointer;min-width:150px}
+.atl-card{margin-bottom:12px;padding:16px 18px}
+.atl-card>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px}
+.atl-card>summary::-webkit-details-marker{display:none}
+.atl-chev{transition:transform .25s;color:var(--muted);font-size:13px;flex-shrink:0}
+.atl-card[open]>summary .atl-chev{transform:rotate(180deg)}
+.atl-datebox{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(26,122,191,.18),rgba(26,122,191,.05));border:1px solid rgba(26,122,191,.22);border-radius:12px;padding:7px 10px;min-width:56px;flex-shrink:0}
+.atl-datebox .d{font-size:19px;font-weight:800;color:#6ab8f7;line-height:1}
+.atl-datebox .my{font-size:10px;color:var(--muted);margin-top:3px;white-space:nowrap}
+.atl-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.atl-srow{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--border)}
+.atl-srow:last-child{border-bottom:none}
+.atl-seg{display:inline-flex;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.atl-seg button{border:none;background:transparent;color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;padding:6px 12px;cursor:pointer;transition:.15s}
+.atl-seg button:hover{color:var(--text)}
+.atl-seg button.on-a{background:var(--red);color:#fff}
+.atl-seg button.on-l{background:var(--gold);color:#3a2400}
+.atl-del{width:31px;height:31px;border-radius:8px;border:1px solid rgba(230,57,70,.3);background:rgba(230,57,70,.08);color:#ff8a92;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.15s}
+.atl-del:hover{background:var(--red);color:#fff}
+</style>`;}
+function renderAttLog(editable){
+  const list=atlBuildSessions(editable);
+  window._attSessions=list; window._attEditable=editable; window._attFilter={q:'',course:'all'};
+  const title=editable?'إدارة سجل التحضير':'سجل التحضير';
+  const subtitle=editable?'استعرض وعدّل واحذف جلسات التحضير لكل المدربين':'كل جلسات التحضير التي سجّلتها — لموادك والمواد المكلَّف بها';
+  const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">🗂️ ${title}</div><div class="bsub">${subtitle}</div></div>${editable?'<span class="pill pb">وضع الإدارة</span>':'<span class="pill pg">عرض</span>'}</div>`;
+  if(!list.length)
+    return atlCss()+`<div class="atl-wrap">${banner}<div class="empty"><div class="empty-icon">📭</div>ما فيه تحضيرات مسجّلة بعد<br><span style="font-size:12px">تظهر هنا فور تسجيل أي حضور</span></div></div>`;
+  const totalAbs=list.reduce((n,s)=>n+s.students.filter(x=>x.status==='غائب').length,0);
+  const totalLate=list.reduce((n,s)=>n+s.students.filter(x=>x.status==='متأخر').length,0);
+  const courses=[...new Set(list.map(s=>s.course))];
+  const kpi=(icon,num,lbl,cls)=>`<div class="mcard ${cls}"><div style="font-size:20px">${icon}</div><div class="mnum" style="font-size:26px;font-weight:800;margin-top:4px">${num}</div><div class="mlbl">${lbl}</div></div>`;
+  const kpis=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:12px;margin-bottom:18px">
+    ${kpi('🗂️',list.length,'جلسة تحضير','mc-b')}${kpi('🚫',totalAbs,'إجمالي الغياب','mc-r')}${kpi('⏰',totalLate,'إجمالي التأخير','mc-y')}${kpi('📚',courses.length,'عدد المواد','mc-g')}
+  </div>`;
+  const opts=['<option value="all">كل المواد</option>'].concat(courses.map(c=>`<option value="${esc(cnk_(c))}">${esc(c)}</option>`)).join('');
+  const toolbar=`<div class="atl-toolbar">
+    <div class="atl-search"><span style="color:var(--muted)">🔍</span><input id="atlSearch" placeholder="ابحث باسم الطالب أو رقمه أو المادة..." oninput="attlogFilter()"></div>
+    <select id="atlCourse" class="atl-select" onchange="attlogFilter()">${opts}</select>
+  </div>`;
+  return atlCss()+`<div class="atl-wrap">${banner}${kpis}${toolbar}<div id="attlogBody">${attlogCards()}</div></div>`;
+}
+function attlogCards(){
+  const list=window._attSessions||[]; const editable=window._attEditable;
+  const f=window._attFilter||{q:'',course:'all'}; const q=String(f.q||'').trim();
+  const filtered=list.filter(s=>{
+    if(f.course&&f.course!=='all'&&cnk_(s.course)!==f.course)return false;
+    if(!q)return true;
+    if(String(s.course).includes(q))return true;
+    return s.students.some(st=>st.name.includes(q)||st.sid.includes(q));
+  });
+  if(!filtered.length)return `<div class="empty"><div class="empty-icon">🔍</div>ما فيه نتائج مطابقة للبحث</div>`;
+  return filtered.map(s=>{
+    const si=list.indexOf(s);
+    const absC=s.students.filter(x=>x.status==='غائب').length, lateC=s.students.filter(x=>x.status==='متأخر').length;
+    let studs=s.students.map((st,i)=>({st,i})).sort((a,b)=>(a.st.status===b.st.status?0:a.st.status==='غائب'?-1:1));
+    const courseMatch=q&&String(s.course).includes(q);
+    if(q&&!courseMatch)studs=studs.filter(o=>o.st.name.includes(q)||o.st.sid.includes(q));
+    const openAttr=q?' open':'';
+    const rowsHtml=studs.map(o=>{
+      const st=o.st, sti=o.i, col=atlColor(st.name);
+      const ctrl=editable?`<div class="atl-seg">
+          <button class="${st.status==='غائب'?'on-a':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'غائب')">غائب</button>
+          <button class="${st.status==='متأخر'?'on-l':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'متأخر')">متأخر</button>
+        </div><button class="atl-del" title="حذف السجل" onclick="event.stopPropagation();admAttDelOne(${si},${sti})">🗑️</button>`
+        :`<span class="pill ${st.status==='متأخر'?'py':'pr'}">${esc(st.status)}</span>`;
+      return `<div class="atl-srow"><div class="atl-avatar" style="background:${col}">${esc(atlInitials(st.name))}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.name)}</div><div style="font-size:11px;color:var(--muted)">${esc(st.sid)}</div></div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${ctrl}</div></div>`;
+    }).join('')||'<div style="font-size:12px;color:var(--muted);padding:8px">لا توجد أسماء مطابقة</div>';
+    const accent=absC>0?'cc-r':'cc-y';
+    return `<details class="ccard atl-card ${accent}"${openAttr}>
+      <summary>${atlDateBox(s.date)}
+        <div style="flex:1;min-width:0"><div class="cc-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.course)}</div>
+        <div class="cc-meta">${s.grp?`شعبة ${esc(s.grp)}`:''}${s.grp&&s.term?' · ':''}${s.term?esc(s.term):''}${(!s.grp&&!s.term)?'—':''}</div></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span class="pill pr">${absC} غياب</span>${lateC?`<span class="pill py">${lateC} تأخير</span>`:''}<span class="atl-chev">▾</span></div>
+      </summary>
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:4px">${rowsHtml}</div>
+      ${editable?`<div class="btn-row" style="margin-top:12px;justify-content:flex-end"><button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" onclick="admAttDelSession(${si})">🗑️ حذف الجلسة كاملة</button></div>`:''}
+    </details>`;
+  }).join('');
+}
+function attlogFilter(){
+  const q=(document.getElementById('atlSearch')||{}).value||'';
+  const c=(document.getElementById('atlCourse')||{}).value||'all';
+  window._attFilter={q:q,course:c};
+  const host=document.getElementById('attlogBody');
+  if(host)host.innerHTML=attlogCards();
+}
+window.attlogFilter=attlogFilter;
+
 const tPgs={
   library:()=>buildLibrary(null, true),
-  // ===== سجل التحضير: كل التحضيرات السابقة التي سجّلها المدرب (عرض فقط) =====
-  attlog:()=>{
-    const header=`<div class="stitle">🗂️ سجل التحضير — التحضيرات السابقة</div>`;
-    const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
-    const dig=s=>String(s||'').replace(/[^0-9]/g,'');
-    // تنسيق التاريخ إلى dd/mm/yyyy (يعالج ISO أو كائن التاريخ القادم من الشيت)
-    const fmtD=v=>{const s=String(v||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m)return s.slice(0,10);const d=new Date(s);return isNaN(d)?s:(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear());};
-    // مواد المدرب (تشمل مواده + المكلَّف بها لأن students محمّلة بهما)
-    const myNames=new Set(students.map(s=>cnk_(s.course)));
-    const myCodes=new Set(students.map(s=>dig(s.code)).filter(Boolean));
-    if(rows.length<2)
-      return header+`<div class="empty"><div class="empty-icon">📭</div>ما فيه تحضيرات مسجّلة بعد</div>`;
-    // اجمع السجلات في جلسات: (التاريخ + المادة + الشعبة + الترم)
-    const sessions=new Map();
-    for(let i=1;i<rows.length;i++){
-      const r=rows[i]; if(!dig(r[0]))continue;
-      const cname=r[2]||'', code=dig(r[3]);
-      const mine=myNames.has(cnk_(cname))||(code&&myCodes.has(code));
-      if(!mine)continue;
-      const date=fmtD(r[5]), grp=String(r[4]||'').trim(),
-            term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
-      const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
-      if(!sessions.has(key))sessions.set(key,{date,course:cname,grp,term,abs:0,late:0,students:[]});
-      const S=sessions.get(key);
-      if(status==='متأخر')S.late++; else S.abs++;
-      S.students.push({name:r[1]||'',sid:r[0]||'',status:status||'غائب'});
-    }
-    const list=[...sessions.values()];
-    if(!list.length)
-      return header+`<div class="empty"><div class="empty-icon">📭</div>ما سجّلت أي تحضير سابق لموادك</div>`;
-    // ترتيب بالتاريخ تنازلياً (dd/mm/yyyy)
-    const dnum=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?((m[3].length===2?'20'+m[3]:m[3])+m[2].padStart(2,'0')+m[1].padStart(2,'0')):'0';};
-    list.sort((a,b)=>dnum(b.date).localeCompare(dnum(a.date)));
-    const totalAbs=list.reduce((n,s)=>n+s.abs,0), totalLate=list.reduce((n,s)=>n+s.late,0);
-    const summary=`<div class="alert ab"><span class="aicon">📊</span>عدد الجلسات: <strong>${list.length}</strong> · إجمالي الغياب: <strong>${totalAbs}</strong> · إجمالي التأخير: <strong>${totalLate}</strong></div>`;
-    const cards=list.map(s=>{
-      const studs=s.students.slice().sort((a,b)=>(a.status===b.status?0:a.status==='غائب'?-1:1));
-      const rowsHtml=studs.map(st=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 2px;border-bottom:1px solid var(--border)"><span>${esc(st.name)} <span style="color:var(--muted)">· ${esc(String(st.sid))}</span></span><span class="pill ${st.status==='متأخر'?'py':'pr'}">${esc(st.status)}</span></div>`).join('');
-      return `<details class="ccard" style="margin-bottom:10px;padding:12px">
-        <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <div><div class="cc-name">📚 ${esc(s.course)}${s.grp?` <span style="font-size:11px;color:var(--muted);font-weight:400">· شعبة ${esc(s.grp)}</span>`:''}</div>
-          <div class="cc-meta">📅 ${esc(s.date)}${s.term?` · ${esc(s.term)}`:''}</div></div>
-          <div style="display:flex;gap:6px;flex-shrink:0"><span class="pill pr">${s.abs} غياب</span>${s.late?`<span class="pill py">${s.late} تأخير</span>`:''}</div>
-        </summary>
-        <div style="margin-top:10px">${rowsHtml||'<div style="font-size:12px;color:var(--muted)">لا توجد تفاصيل</div>'}</div>
-      </details>`;
-    }).join('');
-    return header+summary+cards;
-  },
+  // ===== سجل التحضير (المدرب) — عرض فقط =====
+  attlog:()=>renderAttLog(false),
   requests:()=>{
     // أعذار الغياب لمواد هذا المدرب
     const myCourses=[...new Set(students.map(s=>s.course))];
@@ -4564,7 +4720,14 @@ async function admAttReload(){
     if(typeof allCourses!=='undefined')allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
     if(typeof students!=='undefined')students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
   }catch(e){}
-  showAPage('attlog',document.getElementById('sn-attlog'));
+  // إعادة بناء الجلسات وتحديث القائمة فقط (نحافظ على الفلتر والبحث)
+  const host=document.getElementById('attlogBody');
+  if(host && typeof atlBuildSessions==='function'){
+    window._attSessions=atlBuildSessions(true);
+    host.innerHTML=attlogCards();
+  }else{
+    showAPage('attlog',document.getElementById('sn-attlog'));
+  }
 }
 async function admAttSet(si,sti,newStatus){
   const s=(window._attSessions||[])[si]; if(!s)return; const st=s.students[sti]; if(!st)return;
@@ -4599,51 +4762,8 @@ window.admAttSet=admAttSet;window.admAttDelOne=admAttDelOne;window.admAttDelSess
 
 const aPgs={
   library:()=>buildLibrary(null, true),
-  // ===== سجل التحضير (أدمن) — عرض + تعديل الحالة + حذف =====
-  attlog:()=>{
-    const header=`<div class="stitle">🗂️ سجل التحضير — إدارة (تعديل/حذف)</div>`;
-    const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
-    if(rows.length<2)
-      return header+`<div class="empty"><div class="empty-icon">📭</div>ما فيه تحضيرات مسجّلة بعد</div>`;
-    const dig=s=>String(s||'').replace(/[^0-9]/g,'');
-    const fmtD=v=>{const s=String(v||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m)return s.slice(0,10);const d=new Date(s);return isNaN(d)?s:(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear());};
-    const sessions=new Map();
-    for(let i=1;i<rows.length;i++){
-      const r=rows[i]; if(!dig(r[0]))continue;
-      const cname=r[2]||'', code=r[3]||'', date=fmtD(r[5]), grp=String(r[4]||'').trim(),
-            term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
-      const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
-      if(!sessions.has(key))sessions.set(key,{date,course:cname,code,grp,term,students:[]});
-      sessions.get(key).students.push({name:r[1]||'',sid:r[0]||'',code,status:status||'غائب'});
-    }
-    const list=[...sessions.values()];
-    const dnum=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?((m[3].length===2?'20'+m[3]:m[3])+m[2].padStart(2,'0')+m[1].padStart(2,'0')):'0';};
-    list.sort((a,b)=>dnum(b.date).localeCompare(dnum(a.date)));
-    window._attSessions=list;
-    const totalAbs=list.reduce((n,s)=>n+s.students.filter(x=>x.status!=='متأخر').length,0);
-    const totalLate=list.reduce((n,s)=>n+s.students.filter(x=>x.status==='متأخر').length,0);
-    const summary=`<div class="alert ab"><span class="aicon">📊</span>عدد الجلسات: <strong>${list.length}</strong> · إجمالي الغياب: <strong>${totalAbs}</strong> · التأخير: <strong>${totalLate}</strong> · <span style="color:var(--muted);font-size:12px">اضغط الجلسة لعرض الطلاب وتعديلهم</span></div>`;
-    const cards=list.map((s,si)=>{
-      const absC=s.students.filter(x=>x.status!=='متأخر').length, lateC=s.students.filter(x=>x.status==='متأخر').length;
-      const studs=s.students.map((st,sti)=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 2px;border-bottom:1px solid var(--border);gap:8px">
-        <span style="flex:1;min-width:0">${esc(st.name)} <span style="color:var(--muted)">· ${esc(String(st.sid))}</span></span>
-        <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
-          <button class="btn btn-sm ${st.status==='غائب'?'btn-b':'btn-out'}" style="padding:3px 9px;font-size:11px" onclick="admAttSet(${si},${sti},'غائب')">غائب</button>
-          <button class="btn btn-sm ${st.status==='متأخر'?'btn-b':'btn-out'}" style="padding:3px 9px;font-size:11px" onclick="admAttSet(${si},${sti},'متأخر')">متأخر</button>
-          <button class="btn btn-sm" style="padding:3px 9px;font-size:11px;background:#e74c3c;color:#fff" onclick="admAttDelOne(${si},${sti})" title="حذف">🗑️</button>
-        </div></div>`).join('');
-      return `<details class="ccard" style="margin-bottom:10px;padding:12px">
-        <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px">
-          <div><div class="cc-name">📚 ${esc(s.course)}${s.grp?` <span style="font-size:11px;color:var(--muted);font-weight:400">· شعبة ${esc(s.grp)}</span>`:''}</div>
-          <div class="cc-meta">📅 ${esc(s.date)}${s.term?` · ${esc(s.term)}`:''}</div></div>
-          <div style="display:flex;gap:6px;flex-shrink:0"><span class="pill pr">${absC} غياب</span>${lateC?`<span class="pill py">${lateC} تأخير</span>`:''}</div>
-        </summary>
-        <div style="margin-top:10px">${studs}</div>
-        <div class="btn-row" style="margin-top:10px"><button class="btn btn-sm" style="background:#e74c3c;color:#fff" onclick="admAttDelSession(${si})">🗑️ حذف الجلسة كاملة</button></div>
-      </details>`;
-    }).join('');
-    return header+summary+cards;
-  },
+  // ===== سجل التحضير (أدمن) — عرض + تعديل + حذف =====
+  attlog:()=>renderAttLog(true),
   manage_courses:()=>{
     const tab=window._mcTab||'plan';
     const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${id}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
