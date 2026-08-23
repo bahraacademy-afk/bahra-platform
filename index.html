@@ -3155,7 +3155,7 @@ const sPgs={
     <div class="stitle">طلباتي ${myReqs.length?`(${myReqs.length})`:''}</div>
     ${myReqs.length?myReqs.map(r=>`
       <div class="ccard ${r.finalStatus==='معتمد'||r.dirStatus==='معتمد'?'cc-g':r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'?'cc-r':'cc-y'}">
-        <div class="cc-top"><div><div class="cc-name">${esc(r.type)}</div><div class="cc-meta">${r.date||''}</div></div>${statusBadge(r)}</div>
+        <div class="cc-top"><div><div class="cc-name">${esc(r.type)}</div><div class="cc-meta">رقم الطلب <b style="color:#6ab8f7">${esc(String(r.rid||'—'))}</b>${r.date?' · '+r.date:''}</div></div>${statusBadge(r)}</div>
         ${r.details?`<div style="font-size:13px;color:var(--muted);margin-top:8px">${esc(r.details)}</div>`:''}
         <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;flex-wrap:wrap">
           ${r.type==='عذر غياب'?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدرب: ${esc(r.trnStatus||'معلق')}</span>`:''}
@@ -3457,7 +3457,7 @@ const tPgs={
       const ex=parseEx(r);
       const badge=r.trnStatus==='معتمد'?'<span class="pill pg">اعتمدته ✓</span>':r.trnStatus==='مرفوض'?'<span class="pill pr">رفضته</span>':'<span class="pill py">بانتظار اعتمادك</span>';
       return `<div class="ccard ${actionable?'cc-y':r.trnStatus==='معتمد'?'cc-g':'cc-r'}" style="margin-bottom:12px">
-        <div class="cc-top"><div><div class="cc-name">عذر غياب — ${esc(r.sname)}</div><div class="cc-meta">الشعبة ${esc(r.grp)} · ${r.sid} · ${r.date||''}</div></div>${badge}</div>
+        <div class="cc-top"><div><div class="cc-name">عذر غياب — ${esc(r.sname)}</div><div class="cc-meta">رقم الطلب <b style="color:#6ab8f7">${esc(String(r.rid||'—'))}</b> · الشعبة ${esc(r.grp)} · ${r.sid} · ${r.date||''}</div></div>${badge}</div>
         <div style="margin:8px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border)">
           <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">المادة</span><span style="font-weight:700">${ex.course}</span></div>
           ${ex.days?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">أيام الغياب</span><span style="font-weight:700;text-align:left;max-width:60%">${ex.days}</span></div>`:''}
@@ -5422,7 +5422,7 @@ const aPgs={
       const finalBadge=(r.finalStatus==='معتمد'||r.dirStatus==='معتمد')?'<span class="pill pg">معتمد نهائياً ✓</span>':(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')?'<span class="pill pr">مرفوض</span>':r.supStatus==='معتمد'?'<span class="pill pb">بانتظار المدير</span>':'<span class="pill py">بانتظار المشرف</span>';
       const isExcuse=r.type==='عذر غياب';
       return `<div class="ccard ${actionable?'cc-y':((r.dirStatus==='معتمد')?'cc-g':(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')?'cc-r':'cc-b')}" style="margin-bottom:12px">
-        <div class="cc-top"><div><div class="cc-name">${esc(r.type)} — ${esc(r.sname)}</div><div class="cc-meta">الشعبة ${esc(r.grp)} · ${r.sid} · ${r.date||''}</div></div>${finalBadge}</div>
+        <div class="cc-top"><div><div class="cc-name">${esc(r.type)} — ${esc(r.sname)}</div><div class="cc-meta">رقم الطلب <b style="color:#6ab8f7">${esc(String(r.rid||'—'))}</b> · الشعبة ${esc(r.grp)} · ${r.sid} · ${r.date||''}</div></div>${finalBadge}</div>
         ${isExcuse?excusePanel(r):(r.details?`<div style="font-size:13px;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(r.details)}</div>`:'')}
         <div style="display:flex;gap:16px;font-size:11px;margin-top:6px;flex-wrap:wrap">
           ${isExcuse?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدرب: ${r.trnStatus||'معلق'}</span>`:''}
