@@ -853,7 +853,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwtp7cFmuQE5trtq5EpipaSV5WVkgAD582xqUnD-2Mn2aurHKqKuuEGXtra4eN0wCU/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx4HjYMHCvHCztH5MYXigm8FiOGxitqlGQ1cg_tYf1bBsT7G5dBNvYfH4mZVoRRDo6D/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -3461,6 +3461,14 @@ function setMark(sid,mark){
 function markAll(course,mark){
   uniqStudents(students.filter(s=>s.course===course&&isActive(s.status))).forEach(s=>setMark(s.sid,mark));
 }
+// ترجمة رسائل خطأ الخادم إلى عربي واضح للمستخدم
+function attErrMsg(msg,hint){
+  const m=String(msg||'');
+  if(m==='forbidden-course') return (hint||'لست مدرّب هذه المادة ولا مكلَّفاً بها') + ' — تأكد أن اسمك في «سجل المقررات» يطابق اسم دخولك، أو أن التكليف يشمل نطاق «تحضير».';
+  if(m==='forbidden') return 'لا تملك صلاحية هذه العملية.';
+  if(m==='unauthorized') return 'انتهت صلاحية جلسة الدخول — سجّل خروج ثم دخول من جديد.';
+  return m || 'خطأ غير معروف من الخادم';
+}
 // حفظ حضور اليوم: غائب=حصة كاملة، متأخر=نصف حصة (تأخيرين=غياب)
 async function saveSession(course,code,sessionHrs){
   let total=courseTotalHours(code);
@@ -3500,6 +3508,11 @@ async function saveSession(course,code,sessionHrs){
     if(records.length){
       // إرسال عبر JSONP عشان نقرأ الرد ونعرف كم سجل تحدّث فعلياً
       const res=await jsonpCall({action:'saveAttendance',data:JSON.stringify(records)});
+      // فحص حالة الرد أولاً: لو رفض الخادم نعرض السبب الحقيقي بدل نجاح وهمي
+      if(res && res.status && res.status!=='ok'){
+        showToast('❌ الخادم رفض الحفظ: '+attErrMsg(res.msg,res.hint),'e');
+        return;
+      }
       const upd=(res&&typeof res.updated!=='undefined')?res.updated:null;
       if(upd!==null && upd===0){
         // ما تحدّث ولا سجل → المفتاح/الرقم ما تطابق بالشيت
@@ -3561,6 +3574,11 @@ async function saveSessionV2(course,code,grp,dateStr){
     let upd=null;
     if(records.length){
       const res=await jsonpCall({action:'saveAttendance',data:JSON.stringify(records)});
+      // فحص حالة الرد أولاً: لو رفض الخادم الكتابة نعرض السبب الحقيقي بدل نجاح وهمي
+      if(res && res.status && res.status!=='ok'){
+        showToast('❌ الخادم رفض الحفظ: '+attErrMsg(res.msg,res.hint),'e');
+        return;
+      }
       upd=(res&&typeof res.updated!=='undefined')?res.updated:null;
       if(upd!==null && upd===0){
         showToast('⚠️ ما تحدّث أي سجل — تأكد إن الطلاب في سجل المقررات','e');
@@ -3613,9 +3631,16 @@ async function saveAttendance(course){
     });
     showToast('✅ تم حفظ الحضور في الشيت','s');
   }catch(e){
+    // لو الخطأ رسالة صلاحية من الخادم نعرضها بوضوح (لا نُظهر نجاحاً وهمياً)
+    const em=String(e&&e.message||'');
+    if(em && em!=='network' && em!=='timeout'){
+      showToast('❌ الخادم رفض الحفظ: '+attErrMsg(em),'e');
+      return;
+    }
+    // تعذّر الوصول فقط (شبكة) → مسار احتياطي بلا قراءة للرد
     try{
       await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveAttendance',records}),headers:{'Content-Type':'text/plain'}});
-      showToast('✅ تم إرسال الحضور','s');
+      showToast('⚠️ أُرسل الحضور بدون تأكيد — تحقّق من الشيت','w');
     }catch(e2){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
   }
 }
