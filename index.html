@@ -1670,12 +1670,14 @@ function todayCoursesForTrainer(trainerName,dayName){
 // خريطة عامة: مفتاح "sidDigits|codeDigits" → مجموع أيام الغياب
 let absenceDaysMap={};        // مفتاح بالرمز: "sid|codeDigits|grp|term" (للسجلات التي فيها رمز)
 let absenceDaysMapByName={};  // مفتاح بالاسم: "sid|nameKey|grp|term" (للسجلات القديمة بلا رمز)
+let absenceRows=[];           // الصفوف الخام لتبويب "قاعدة الغياب" (لصفحة سجل التحضير)
 const cnk_=c=>String(c||'').replace(/\s+/g,'').trim(); // توحيد اسم المادة (إزالة المسافات)
 // تحميل "قاعدة الغياب" وبناء خريطة أيام الغياب لكل طالب/مادة/ترم
 async function loadAbsenceBase(){
   absenceDaysMap={}; absenceDaysMapByName={};
   try{
     const rows=await fetchSheet('قاعدة الغياب!A:H').catch(()=>[]);
+    absenceRows=Array.isArray(rows)?rows:[]; // نحتفظ بالصفوف الخام لعرض التحضيرات السابقة
     const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
     // توحيد الشعبة: "شعبة 2" و"2" يصيران "2" — للفصل بين تسجيلات نفس المقرر
     const gk=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
@@ -2618,8 +2620,8 @@ function navHTML(r,pages){
 }
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات'};
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:'سجل التحضير',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات'};
   window._mobPages={pages,role:r,map,lbls,active:pages[0]};
   // إخفاء الشريط القديم إن وُجد، وإظهار الزر العائم
   const mn=document.getElementById('mobNav'); if(mn) mn.style.display='none';
@@ -3136,8 +3138,8 @@ function filterTerm(grp,val,btn){
 
 // ===== TRAINER APP =====
 function buildTrainerApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('t',['home','students','library','schedule','attendance','grades','requests','alerts','attachments']);
-  buildMobNav('t',['home','students','library','schedule','attendance','grades','requests','alerts','attachments']);
+  document.getElementById('sidebar').innerHTML=navHTML('t',['home','students','library','schedule','attendance','attlog','grades','requests','alerts','attachments']);
+  buildMobNav('t',['home','students','library','schedule','attendance','attlog','grades','requests','alerts','attachments']);
   showTPage('home',null);
 }
 
@@ -3149,6 +3151,53 @@ function showTPage(pg,el){
 
 const tPgs={
   library:()=>buildLibrary(null, true),
+  // ===== سجل التحضير: كل التحضيرات السابقة التي سجّلها المدرب (عرض فقط) =====
+  attlog:()=>{
+    const header=`<div class="stitle">🗂️ سجل التحضير — التحضيرات السابقة</div>`;
+    const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
+    const dig=s=>String(s||'').replace(/[^0-9]/g,'');
+    // مواد المدرب (تشمل مواده + المكلَّف بها لأن students محمّلة بهما)
+    const myNames=new Set(students.map(s=>cnk_(s.course)));
+    const myCodes=new Set(students.map(s=>dig(s.code)).filter(Boolean));
+    if(rows.length<2)
+      return header+`<div class="empty"><div class="empty-icon">📭</div>ما فيه تحضيرات مسجّلة بعد</div>`;
+    // اجمع السجلات في جلسات: (التاريخ + المادة + الشعبة + الترم)
+    const sessions=new Map();
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i]; if(!dig(r[0]))continue;
+      const cname=r[2]||'', code=dig(r[3]);
+      const mine=myNames.has(cnk_(cname))||(code&&myCodes.has(code));
+      if(!mine)continue;
+      const date=String(r[5]||'').trim(), grp=String(r[4]||'').trim(),
+            term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
+      const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
+      if(!sessions.has(key))sessions.set(key,{date,course:cname,grp,term,abs:0,late:0,students:[]});
+      const S=sessions.get(key);
+      if(status==='متأخر')S.late++; else S.abs++;
+      S.students.push({name:r[1]||'',sid:r[0]||'',status:status||'غائب'});
+    }
+    const list=[...sessions.values()];
+    if(!list.length)
+      return header+`<div class="empty"><div class="empty-icon">📭</div>ما سجّلت أي تحضير سابق لموادك</div>`;
+    // ترتيب بالتاريخ تنازلياً (dd/mm/yyyy)
+    const dnum=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?((m[3].length===2?'20'+m[3]:m[3])+m[2].padStart(2,'0')+m[1].padStart(2,'0')):'0';};
+    list.sort((a,b)=>dnum(b.date).localeCompare(dnum(a.date)));
+    const totalAbs=list.reduce((n,s)=>n+s.abs,0), totalLate=list.reduce((n,s)=>n+s.late,0);
+    const summary=`<div class="alert ab"><span class="aicon">📊</span>عدد الجلسات: <strong>${list.length}</strong> · إجمالي الغياب: <strong>${totalAbs}</strong> · إجمالي التأخير: <strong>${totalLate}</strong></div>`;
+    const cards=list.map(s=>{
+      const studs=s.students.slice().sort((a,b)=>(a.status===b.status?0:a.status==='غائب'?-1:1));
+      const rowsHtml=studs.map(st=>`<div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 2px;border-bottom:1px solid var(--border)"><span>${esc(st.name)} <span style="color:var(--muted)">· ${esc(String(st.sid))}</span></span><span class="pill ${st.status==='متأخر'?'py':'pr'}">${esc(st.status)}</span></div>`).join('');
+      return `<details class="ccard" style="margin-bottom:10px;padding:12px">
+        <summary style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px">
+          <div><div class="cc-name">📚 ${esc(s.course)}${s.grp?` <span style="font-size:11px;color:var(--muted);font-weight:400">· شعبة ${esc(s.grp)}</span>`:''}</div>
+          <div class="cc-meta">📅 ${esc(s.date)}${s.term?` · ${esc(s.term)}`:''}</div></div>
+          <div style="display:flex;gap:6px;flex-shrink:0"><span class="pill pr">${s.abs} غياب</span>${s.late?`<span class="pill py">${s.late} تأخير</span>`:''}</div>
+        </summary>
+        <div style="margin-top:10px">${rowsHtml||'<div style="font-size:12px;color:var(--muted)">لا توجد تفاصيل</div>'}</div>
+      </details>`;
+    }).join('');
+    return header+summary+cards;
+  },
   requests:()=>{
     // أعذار الغياب لمواد هذا المدرب
     const myCourses=[...new Set(students.map(s=>s.course))];
