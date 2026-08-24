@@ -5542,6 +5542,7 @@ const aPgs={
       <button class="btn btn-b" onclick="printAbsenceReport()">📉 تقرير الغياب الشامل</button>
       <button class="btn btn-b" onclick="printGradesReport()">📝 تقرير الدرجات المفصّل</button>
       <button class="btn btn-b" onclick="printRequestsReport()">📋 تقرير الأعذار والطلبات</button>
+      <button class="btn btn-b" onclick="printSectionLists()">🧑‍🤝‍🧑 قوائم الشعب</button>
     </div>
     <div class="stitle" style="margin-top:8px">👤 تقرير طالب فردي</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -6454,6 +6455,28 @@ function printAbsenceReport(){
     <table><thead><tr><th>الرقم</th><th>الاسم</th><th>أعلى نسبة غياب</th><th>في مادة</th><th>عدد المواد</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   });
   openReport(reportShell('تقرير الغياب الشامل','تقرير الغياب الشامل لجميع المتدربين',body));
+}
+
+// ===== قوائم الشعب: كل شعبة بقائمتها (اسم المتدرب + الرقم الأكاديمي) =====
+function printSectionLists(){
+  const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  const totalStud=uniqStudents(students).length;
+  let body=`<div class="kpis">
+    <div class="kpi"><div class="n">${grps.length}</div><div class="l">عدد الشعب</div></div>
+    <div class="kpi"><div class="n">${totalStud}</div><div class="l">إجمالي المتدربين</div></div>
+  </div>`;
+  let any=false;
+  grps.forEach(g=>{
+    const gs=uniqStudents(students.filter(s=>String(s.grp)===String(g)&&isActive(s.status)))
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+    if(!gs.length)return;
+    any=true;
+    const rows=gs.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(String(s.sid||s.id||''))}</td><td style="text-align:right">${esc(s.name||'')}</td></tr>`).join('');
+    body+=`<div class="grp-block"><div class="sec-title">🧑‍🤝‍🧑 الشعبة ${esc(String(g))} <span style="font-size:12px;opacity:.85">(${gs.length} متدرب)</span></div>
+      <table><thead><tr><th style="width:46px">م</th><th style="width:135px">الرقم الأكاديمي</th><th>اسم المتدرب</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  });
+  if(!any)body+='<p style="text-align:center;color:#5a6b85;padding:30px">لا توجد شعب أو متدربون حاليون</p>';
+  openReport(reportShell('قوائم الشعب','قائمة كل شعبة بأسماء المتدربين وأرقامهم الأكاديمية',body));
 }
 
 // ===== 2) تقرير الدرجات المفصّل (لكل شعبة/مادة) =====
