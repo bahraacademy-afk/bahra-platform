@@ -6467,7 +6467,7 @@ function printSectionLists(){
   </div>`;
   let any=false;
   grps.forEach(g=>{
-    const gs=uniqStudents(students.filter(s=>String(s.grp)===String(g)&&isActive(s.status)))
+    const gs=uniqStudents(students.filter(s=>String(s.grp)===String(g)))
       .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
     if(!gs.length)return;
     any=true;
