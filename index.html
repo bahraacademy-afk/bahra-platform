@@ -1007,7 +1007,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyfhSwxkBj42BlE-y8MNCitBiVAPAIP5FF7EsUIQxSRKxVNKvIB7ZDHO8PrldKWk_uR/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyFe9t_st1r3V5yHee7gjjaaREdXL-v6FWtrlA7Jb63QZ8FmqNwNqVp3JJh6cNur7QA/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1022,6 +1022,21 @@ let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catal
 let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakStart:12, breakHours:1};
 let rubrics={}, gradeDetails=[]; // بنود الدرجات لكل مادة + الدرجات التفصيلية
 const DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس'];
+// ===== تحضير الدروس الإلكتروني =====
+let lessonPreps=[];
+const LP_METHODS=['محاضرة','مناقشة','استنباطية','عصف ذهني','تعليم تعاوني','اكتشاف','لعب أدوار'];
+const LP_SOURCES=['internet','الكتاب المدرسي','المكتبة','سبورة تقليدية','سبورة ذكية'];
+const LP_MEDIA=['موقع الكتروني','عمل لوحات','عمل أبحاث','قراءة مراجع','زيارة ميدانية','لقاءات ومؤتمرات','بريد الكتروني'];
+const LP_ACTS=['شفوية','تحريرية','متابعة أداء','اختبار','أخرى'];
+async function loadLessonPreps(){
+  const rows=await fetchSheet('تحضير الدروس!A:S').catch(()=>[]);
+  lessonPreps=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!n0(r[0]))continue;
+    lessonPreps.push({id:n0(r[0]),tid:n0(r[1]),tname:n0(r[2]),material:n0(r[3]),branch:n0(r[4]),grade:n0(r[5]),date:n0(r[6]),period:n0(r[7]),topic:n0(r[8]),outcomes:n0(r[9]),intro:n0(r[10]),present:n0(r[11]),eval:n0(r[12]),homework:n0(r[13]),methods:n0(r[14]),sources:n0(r[15]),media:n0(r[16]),activities:n0(r[17]),sentAt:n0(r[18])});
+  }
+  lessonPreps.sort((a,b)=>String(b.sentAt||'').localeCompare(String(a.sentAt||'')));
+}
 // معامل/قاعات الأكاديمية (قابلة للتعديل)
 const LABS=['قاعة التدريب','معمل الكمبيوتر','معمل الإلكترونيات','معمل النيوماتك','معمل الهيدروليك'];
 let attendanceData={}, gradesData={};
@@ -1340,7 +1355,7 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 
 // ===== LOAD DATA =====
 async function loadStudent(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[])
@@ -1363,7 +1378,7 @@ async function loadStudent(){
 }
 
 async function loadTrainer(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[]),
@@ -1426,7 +1441,7 @@ async function loadAdmin(){
     const r=ad[i];
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6])});
   }
-  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics()]);
+  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics(), loadLessonPreps()]);
   allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
@@ -2758,6 +2773,7 @@ function navHTML(r,pages){
     profile:{icon:'👤',lbl:'ملفي'},students:{icon:'👥',lbl:'قوائم الفصول'},
     attendance:{icon:'✅',lbl:'تسجيل الحضور'},grades:{icon:'📝',lbl:'رصد الدرجات'},
     attlog:{icon:'🗂️',lbl:'سجل الغياب اليومي'},
+    lesson:{icon:'📝',lbl:'تحضير الدروس'},lessons:{icon:'📚',lbl:'تحاضير المدربين'},
     alerts:{icon:'🔔',lbl:'الاشعارات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     dashboard:{icon:'📈',lbl:'لوحة المؤشرات والأوائل'},
@@ -2775,8 +2791,8 @@ function navHTML(r,pages){
 }
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:'سجل الغياب اليومي',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات'};
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',lesson:'📝',lessons:'📚',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:'سجل الغياب اليومي',lesson:'تحضير الدروس',lessons:'تحاضير المدربين',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات'};
   window._mobPages={pages,role:r,map,lbls,active:pages[0]};
   // إخفاء الشريط القديم إن وُجد، وإظهار الزر العائم
   const mn=document.getElementById('mobNav'); if(mn) mn.style.display='none';
@@ -3293,8 +3309,8 @@ function filterTerm(grp,val,btn){
 
 // ===== TRAINER APP =====
 function buildTrainerApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('t',['home','students','library','schedule','attendance','attlog','grades','requests','alerts','attachments']);
-  buildMobNav('t',['home','students','library','schedule','attendance','attlog','grades','requests','alerts','attachments']);
+  document.getElementById('sidebar').innerHTML=navHTML('t',['home','students','library','schedule','attendance','attlog','lesson','grades','requests','alerts','attachments']);
+  buildMobNav('t',['home','students','library','schedule','attendance','attlog','lesson','grades','requests','alerts','attachments']);
   showTPage('home',null);
 }
 
@@ -3428,7 +3444,187 @@ function attlogFilter(){
 }
 window.attlogFilter=attlogFilter;
 
+/* ============ تحضير الدروس الإلكتروني (مدرب: تعبئة/إرسال · أدمن: استعراض) ============ */
+const LP_CSS=`
+.lp-chips{display:flex;flex-wrap:wrap;gap:6px}
+.lp-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--border);border-radius:9px;padding:6px 10px;font-size:12px;cursor:pointer;transition:.15s;user-select:none}
+.lp-chip:hover{border-color:rgba(100,160,220,.4)}
+.lp-chip input{accent-color:#1a7abf;width:15px;height:15px}
+.lp-in{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--border);background:var(--card2,rgba(255,255,255,.04));color:var(--text);font-family:inherit;font-size:14px}
+.lp-lbl{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:var(--muted)}
+.lp-gt{font-size:12px;font-weight:800;color:#6ab8f7;margin-bottom:6px}`;
+function lpChk(cls,items,selected){
+  const sel=new Set(String(selected||'').split(/[،,]/).map(x=>x.trim()).filter(Boolean));
+  return items.map(t=>`<label class="lp-chip"><input type="checkbox" class="${cls}" value="${esc(t)}" ${sel.has(t)?'checked':''}> ${esc(t)}</label>`).join('');
+}
+function lpFld(lbl,inner){return `<div style="margin-bottom:12px"><label class="lp-lbl">${lbl}</label>${inner}</div>`;}
+function lessonCard(lp,showTrainer,canDelete){
+  return `<div class="ccard" style="margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+      <div style="min-width:0"><div class="cc-name">📚 ${esc(lp.material||'—')}${lp.topic?` — ${esc(lp.topic)}`:''}</div>
+        <div class="cc-meta">${showTrainer?`👨‍🏫 ${esc(lp.tname||'')} · `:''}${lp.grade?`شعبة ${esc(lp.grade)} · `:''}📅 ${esc(lp.date||'—')}${lp.period?` · الحصة ${esc(lp.period)}`:''}</div>
+        <div class="cc-meta" style="opacity:.7">أُرسل: ${esc(lp.sentAt||'')}</div></div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <button class="btn btn-sm btn-b" onclick="viewLessonPrep('${esc(lp.id)}')">👁️ عرض/طباعة</button>
+        ${canDelete?`<button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" onclick="delLessonPrep('${esc(lp.id)}')">🗑️</button>`:''}
+      </div>
+    </div></div>`;
+}
+function lessonFormPage(){
+  const myCourses=[...new Set(students.map(s=>s.course).filter(Boolean))];
+  const myGrps=[...new Set(students.map(s=>s.grp).filter(Boolean))].sort();
+  const t=new Date(),pad=n=>String(n).padStart(2,'0');
+  const dv=t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());
+  const mine=lessonPreps;
+  const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">📝 تحضير الدروس</div><div class="bsub">عبّئ نموذج التحضير وأرسله للإدارة — وتقدر تطبعه</div></div><span class="pill pb">${mine.length} تحضير مُرسل</span></div>`;
+  const form=`<div class="ccard" style="padding:18px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+      ${lpFld('المادة',`<select id="lp_material" class="lp-in">${myCourses.map(c=>`<option>${esc(c)}</option>`).join('')||'<option></option>'}</select>`)}
+      ${lpFld('الفرع/التخصص',`<input id="lp_branch" class="lp-in" placeholder="اختياري">`)}
+      ${lpFld('الصف/الشعبة',`<select id="lp_grade" class="lp-in"><option value=""></option>${myGrps.map(g=>`<option>${esc(g)}</option>`).join('')}</select>`)}
+      ${lpFld('التاريخ',`<input type="date" id="lp_date" value="${dv}" class="lp-in" style="color-scheme:light dark">`)}
+      ${lpFld('الحصة',`<input id="lp_period" class="lp-in" placeholder="مثال: الثانية">`)}
+    </div>
+    ${lpFld('موضوع الدرس',`<input id="lp_topic" class="lp-in">`)}
+    ${lpFld('نواتج التعلم (الأهداف الإجرائية)',`<textarea id="lp_outcomes" rows="3" class="lp-in" placeholder="اكتب كل هدف في سطر"></textarea>`)}
+    ${lpFld('التمهيد',`<textarea id="lp_intro" rows="2" class="lp-in"></textarea>`)}
+    ${lpFld('عرض الدرس',`<textarea id="lp_present" rows="6" class="lp-in"></textarea>`)}
+    ${lpFld('التقويم',`<textarea id="lp_eval" rows="2" class="lp-in"></textarea>`)}
+    ${lpFld('الواجب المنزلي',`<textarea id="lp_homework" rows="2" class="lp-in"></textarea>`)}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:6px">
+      <div><div class="lp-gt">أساليب التعليم والتعلم</div><div class="lp-chips">${lpChk('lp-m',LP_METHODS)}</div></div>
+      <div><div class="lp-gt">مصادر التعلم</div><div class="lp-chips">${lpChk('lp-s',LP_SOURCES)}</div></div>
+      <div><div class="lp-gt">الوسائل التعليمية</div><div class="lp-chips">${lpChk('lp-w',LP_MEDIA)}</div></div>
+      <div><div class="lp-gt">الأنشطة</div><div class="lp-chips">${lpChk('lp-a',LP_ACTS)}</div></div>
+    </div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-b" onclick="submitLessonPrep()">📤 إرسال للإدارة</button>
+      <button class="btn btn-out" onclick="printLessonPrepForm()">🖨️ نموذج فارغ للطباعة</button>
+    </div>
+  </div>`;
+  const list=mine.length?`<div class="stitle" style="margin-top:22px">تحاضيري المُرسلة (${mine.length})</div>`+mine.map(lp=>lessonCard(lp,false,true)).join(''):`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>ما أرسلت أي تحضير بعد</div>`;
+  return `<style>${LP_CSS}</style>`+banner+form+list;
+}
+function adminLessonsPage(){
+  const list=lessonPreps.slice();
+  const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">📚 تحاضير المدربين</div><div class="bsub">التحاضير التي أرسلها المدربون — استعراض وطباعة</div></div><span class="pill pb">${list.length} تحضير</span></div>`;
+  if(!list.length)return `<style>${LP_CSS}</style>`+banner+`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>ما وصل أي تحضير بعد</div>`;
+  const trainers=[...new Set(list.map(x=>x.tname).filter(Boolean))];
+  const opts=['<option value="all">كل المدربين</option>'].concat(trainers.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`)).join('');
+  const toolbar=`<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <input id="lpSearch" class="lp-in" style="flex:1;min-width:200px" placeholder="🔍 ابحث بالمادة أو الموضوع أو المدرب..." oninput="admLessonsFilter()">
+    <select id="lpTrainer" class="lp-in" style="max-width:220px" onchange="admLessonsFilter()">${opts}</select>
+  </div>`;
+  return `<style>${LP_CSS}</style>`+banner+toolbar+`<div id="lessonsBody">${admLessonsCards()}</div>`;
+}
+function admLessonsCards(){
+  const q=String((document.getElementById('lpSearch')||{}).value||'').trim();
+  const tf=String((document.getElementById('lpTrainer')||{}).value||'all');
+  let list=lessonPreps.slice();
+  if(tf&&tf!=='all')list=list.filter(x=>x.tname===tf);
+  if(q)list=list.filter(x=>[x.material,x.topic,x.tname,x.grade].some(v=>String(v||'').includes(q)));
+  if(!list.length)return `<div class="empty"><div class="empty-icon">🔍</div>ما فيه نتائج مطابقة</div>`;
+  return list.map(lp=>lessonCard(lp,true,true)).join('');
+}
+function admLessonsFilter(){const h=document.getElementById('lessonsBody');if(h)h.innerHTML=admLessonsCards();}
+async function submitLessonPrep(){
+  const g=id=>String((document.getElementById(id)||{}).value||'').trim();
+  const chk=cls=>[...document.querySelectorAll('.'+cls+':checked')].map(x=>x.value).join('، ');
+  const obj={material:g('lp_material'),branch:g('lp_branch'),grade:g('lp_grade'),date:g('lp_date'),period:g('lp_period'),topic:g('lp_topic'),outcomes:g('lp_outcomes'),intro:g('lp_intro'),present:g('lp_present'),eval:g('lp_eval'),homework:g('lp_homework'),methods:chk('lp-m'),sources:chk('lp-s'),media:chk('lp-w'),activities:chk('lp-a')};
+  if(!obj.material||!obj.topic){showToast('أدخل المادة وموضوع الدرس على الأقل','w');return;}
+  showToast('جاري الإرسال...','i');
+  try{
+    const res=await jsonpCall({action:'saveLessonPrep',data:JSON.stringify(obj)});
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الإرسال: '+attErrMsg(res.msg,res.hint),'e');return;}
+    showToast('✅ تم إرسال التحضير للإدارة','s');
+    await loadLessonPreps();
+    showTPage('lesson',document.getElementById('sn-lesson'));
+  }catch(e){showToast('تعذّر الإرسال — جرب مرة أخرى','e');}
+}
+async function delLessonPrep(id){
+  if(!confirm('حذف هذا التحضير نهائياً؟'))return;
+  showToast('جاري الحذف...','i');
+  try{
+    const res=await jsonpCall({action:'deleteLessonPrep',data:JSON.stringify({id:id})});
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الحذف: '+attErrMsg(res.msg,res.hint),'e');return;}
+    showToast('✅ تم الحذف','s');
+    await loadLessonPreps();
+    if(user&&user.role==='a')showAPage('lessons',document.getElementById('sn-lessons'));
+    else showTPage('lesson',document.getElementById('sn-lesson'));
+  }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
+}
+function viewLessonPrep(id){
+  const lp=lessonPreps.find(x=>String(x.id)===String(id));
+  if(!lp){showToast('التحضير غير موجود','w');return;}
+  openReport(buildLessonDoc(lp));
+}
+// مستند تحضير مُعبّأ قابل للطباعة (مطابق للنموذج)
+function buildLessonDoc(lp){
+  const v=x=>esc(x||'');
+  const multi=x=>String(x||'').split(/\r?\n/).filter(s=>s.trim()).map(s=>`<div class="ln">${esc(s)}</div>`).join('')||'<div class="ln">&nbsp;</div>';
+  const sel=s=>new Set(String(s||'').split(/[،,]/).map(x=>x.trim()).filter(Boolean));
+  const mS=sel(lp.methods),sS=sel(lp.sources),wS=sel(lp.media),aS=sel(lp.activities);
+  const sideGroup=(title,items,set)=>`<table class="side">${items.map((t,i)=>`<tr>${i===0?`<td class="sh" rowspan="${items.length}">${title}</td>`:''}<td class="ov">${t}</td><td class="ck">${set.has(t)?'✔':''}</td></tr>`).join('')}</table>`;
+  const body=`
+  <div class="lp-top">
+    <table class="att"><tr><th>المدرب</th><th>المادة</th><th>الفرع</th><th>الصف</th><th>التاريخ</th><th>الحصة</th></tr>
+      <tr><td>${v(lp.tname)}</td><td>${v(lp.material)}</td><td>${v(lp.branch)}</td><td>${v(lp.grade)}</td><td>${v(lp.date)}</td><td>${v(lp.period)}</td></tr>
+    </table>
+  </div>
+  <div class="lp-main">
+    <div class="lp-left">
+      <div class="fld"><b>موضوع الدرس :</b> ${v(lp.topic)}</div>
+      <div class="fld"><b>نواتج التعلم (الأهداف الإجرائية) :</b></div>${multi(lp.outcomes)}
+      <div class="sec">■ <b>التمهيد:</b></div>${multi(lp.intro)}
+      <div class="sec">■ <b>عرض الدرس:</b></div>${multi(lp.present)}
+      <div class="sec">★ <b>التقويم :</b></div>${multi(lp.eval)}
+      <div class="sec">★ <b>الواجب المنزلي:</b></div>${multi(lp.homework)}
+    </div>
+    <div class="lp-right">
+      ${sideGroup('أساليب التعليم والتعلم',LP_METHODS,mS)}
+      ${sideGroup('مصادر التعلم',LP_SOURCES,sS)}
+      ${sideGroup('مصادر التعليم والوسائل التعليمية',LP_MEDIA,wS)}
+      ${sideGroup('الأنشطة',LP_ACTS,aS)}
+    </div>
+  </div>`;
+  const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تحضير درس — ${v(lp.material)}</title>
+  <style>
+  @page{size:A4;margin:10mm}
+  *{box-sizing:border-box;font-family:'Tajawal','Segoe UI',Arial,sans-serif}
+  body{margin:0;color:#111;background:#fff;font-size:13px}
+  .noprint{position:fixed;top:8px;left:8px;background:#0a2348;color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:700}
+  .closebtn{position:fixed;top:8px;right:8px;background:#e74c3c;color:#fff;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:700}
+  @media print{.noprint,.closebtn{display:none}}
+  .doc-title{text-align:center;font-weight:800;font-size:18px;margin:6px 0 6px}
+  .doc-sub{text-align:center;color:#555;font-size:12px;margin-bottom:12px}
+  .lp-top{margin-bottom:12px}
+  .att{border-collapse:collapse;width:100%}
+  .att th,.att td{border:1px solid #333;padding:6px 8px;text-align:center;font-size:12px}
+  .att th{background:#0a2348;color:#fff}
+  .lp-main{display:flex;gap:14px;align-items:flex-start}
+  .lp-left{flex:1;border:1px solid #333;padding:12px 14px;min-height:640px}
+  .lp-left .fld{margin-bottom:8px;line-height:2}
+  .lp-left .ln{line-height:1.9;border-bottom:1px dotted #ccc;padding:3px 2px;min-height:20px}
+  .lp-left .sec{margin:12px 0 4px;font-weight:700;color:#0a2348}
+  .lp-right{width:220px;display:flex;flex-direction:column;gap:12px}
+  table.side{border-collapse:collapse;width:100%}
+  table.side td{border:1px solid #333;font-size:12px;padding:5px 7px}
+  table.side .sh{writing-mode:vertical-rl;text-align:center;font-weight:700;background:#f0f2f5;width:26px;white-space:nowrap}
+  table.side .ov{text-align:center}
+  table.side .ck{width:26px;text-align:center;color:#1e8449;font-weight:800}
+  </style></head><body>
+  <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <button class="closebtn" onclick="window.close()">✕</button>
+  <div class="doc-title">نموذج تحضير درس</div>
+  <div class="doc-sub">معهد المعرفة والإبداع العالي للتدريب · أُرسل بتاريخ ${v(lp.sentAt)}</div>
+  ${body}
+  </body></html>`;
+  return html;
+}
+window.submitLessonPrep=submitLessonPrep;window.delLessonPrep=delLessonPrep;window.viewLessonPrep=viewLessonPrep;window.admLessonsFilter=admLessonsFilter;
+
 const tPgs={
+  lesson:()=>lessonFormPage(),
   library:()=>buildLibrary(null, true),
   // ===== سجل التحضير (المدرب) — عرض فقط =====
   attlog:()=>renderAttLog(false),
@@ -4146,8 +4342,8 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','requests','alerts','reports','dashboard','accounts','settings']);
-  buildMobNav('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','requests','alerts','reports','dashboard','accounts','settings']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','lessons','requests','alerts','reports','dashboard','accounts','settings']);
+  buildMobNav('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','lessons','requests','alerts','reports','dashboard','accounts','settings']);
   showAPage('overview',null);
 }
 
@@ -4848,6 +5044,7 @@ async function admAttDelete(recs){
 window.admAttSet=admAttSet;window.admAttDelOne=admAttDelOne;window.admAttDelSession=admAttDelSession;
 
 const aPgs={
+  lessons:()=>adminLessonsPage(),
   library:()=>buildLibrary(null, true),
   // ===== سجل التحضير (أدمن) — عرض + تعديل + حذف =====
   attlog:()=>renderAttLog(true),
