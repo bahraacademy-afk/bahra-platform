@@ -5564,6 +5564,7 @@ const aPgs={
       <button class="btn" style="background:#16a34a;color:#fff" onclick="sendWarningEmail(document.getElementById('warn-student').value)">📧 أرسل بالإيميل</button>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-b" onclick="printAllWarningLetters()">🖨️ طباعة كل خطابات الإنذار</button>
       <button class="btn btn-out" onclick="printAllWarnings()">📋 كشف كل الإنذارات (طباعة)</button>
       <button class="btn" style="background:#0a7d34;color:#fff" onclick="sendAllWarningEmails()">📨 إرسال جماعي لكل المتجاوزين</button>
     </div>`;
@@ -6265,8 +6266,8 @@ function hijriToday(){
 function gregToday(){try{return new Date().toLocaleDateString('en-GB');}catch(e){return '';}}
 
 // ===== قالب الخطاب الرسمي الاحترافي (ترويسة المعهد + تاريخ اليوم) =====
-function officialLetterShell(title,bodyHtml){
-  return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${title} - معهد المعرفة والإبداع العالي للتدريب</title>
+function officialLetterDoc(innerHtml,title){
+  return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>${title||'مستند رسمي'} - معهد المعرفة والإبداع العالي للتدريب</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -6300,17 +6301,26 @@ function officialLetterShell(title,bodyHtml){
   @media print{.noprint,.closebtn{display:none}body{-webkit-print-color-adjust:exact}}
   .grp-block{page-break-inside:avoid;margin-bottom:16px}
   .sec-title{font-weight:800;color:#0a2348;background:#eef3f9;padding:8px 12px;border-radius:8px;margin:14px 0 6px}
+  .pagebreak{page-break-after:always;break-after:page}
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
   <button class="closebtn" onclick="window.close()">✕</button>
-  <div class="sheet">
+  ${innerHtml}
+  </body></html>`;
+}
+// ورقة رسمية واحدة (ترويسة + عنوان + نص) — لإعادة الاستخدام في المستندات المفردة والمجمّعة
+function officialLetterSheet(title,bodyHtml){
+  return `<div class="sheet">
     <img class="banner" src="${INSTITUTE_HEADER}" alt="ترويسة المعهد">
     <div class="rule"></div><div class="rule2"></div>
     <div class="meta"><span class="date">التاريخ : ${hijriToday()}</span></div>
     <div class="title-wrap"><span class="title">${title}</span></div>
     <div class="body">${bodyHtml}</div>
-  </div>
-  </body></html>`;
+  </div>`;
+}
+// مستند رسمي بورقة واحدة (توافق مع الاستدعاءات القديمة)
+function officialLetterShell(title,bodyHtml){
+  return officialLetterDoc(officialLetterSheet(title,bodyHtml), title);
 }
 
 function buildWarningLetter(sid){
@@ -6398,6 +6408,39 @@ function printAllWarnings(){
   </div>`;
   openReport(reportShell('كشف إنذارات الغياب','كشف إنذارات الغياب للمقررات الحالية',kpis+blocks));
 }
+// ===== طباعة كل خطابات إنذار الغياب الرسمية (خطاب لكل متجاوز · كل واحد بصفحة) =====
+function buildAllWarningLetters(){
+  const list=studentsHighAbs();
+  if(!list.length)return null;
+  const sheets=list.map(({s,courses},i)=>{
+    const rows=courses.map(c=>`<tr>
+        <td style="text-align:right">${esc(c.course)}</td>
+        <td>${esc(c.trainer||'—')}</td>
+        <td>${absBadge(c.abs)}</td>
+      </tr>`).join('');
+    const body=`
+      <div class="to">المكرم المتدرب / ${esc(s.name||'.....................')} &nbsp; المحترم</div>
+      <p style="color:#555;margin-top:-8px;font-size:13.5px">${s.grp?`الشعبة: ${esc(s.grp)}`:''}${(s.id||s.sid)?` &nbsp;·&nbsp; الرقم التدريبي: ${s.id||s.sid}`:''}${s.spec?` &nbsp;·&nbsp; ${esc(s.spec)}`:''}</p>
+      <p>السلام عليكم ورحمة الله وبركاته،،</p>
+      <p>يفيد معهد المعرفة والابداع العالي للتدريب بأنه وفقاً لسجلات الحضور والغياب، فقد بلغت نسبة غيابك في المقررات التالية الحدود الموضحة أدناه، وذلك حسب لائحة الحضور والغياب المعتمدة (10% إنذار أول · 20% إنذار ثانٍ · 25% حرمان):</p>
+      <table>
+        <thead><tr><th>المقرر</th><th>المدرب</th><th>نسبة الغياب والمستوى</th></tr></thead>
+        <tbody>${rows||'<tr><td colspan="3">لا يوجد غياب مرتفع</td></tr>'}</tbody>
+      </table>
+      <p>وعليه نأمل منك تدارك الأمر والانتظام في الحضور، علماً بأنه عند بلوغ نسبة الغياب <b style="color:#c0392b">25%</b> في أي مقرر يُحرم المتدرب من دخول الاختبار النهائي لذلك المقرر، ولك تقديم الأعذار الرسمية عبر المنصة إن وُجدت.</p>
+      <div class="closing">وهذه إفادة منا بذلك ،،</div>
+      <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
+      <div class="clearfix"></div>`;
+    return officialLetterSheet('إشعار غياب',body)+(i<list.length-1?'<div class="pagebreak"></div>':'');
+  }).join('');
+  return officialLetterDoc(sheets,'خطابات إنذار الغياب');
+}
+function printAllWarningLetters(){
+  const html=buildAllWarningLetters();
+  if(!html){showToast('لا يوجد طلاب تجاوزوا 10% في المقررات الحالية','s');return;}
+  openReport(html);
+}
+window.printAllWarningLetters=printAllWarningLetters;
 // إرسال خطاب الإنذار بالإيميل للمتدرب عبر Apps Script
 async function sendWarningEmail(sid){
   const st=students.find(s=>String(s.id)===String(sid)||String(s.sid)===String(sid))||{};
