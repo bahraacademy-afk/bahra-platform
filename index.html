@@ -3458,11 +3458,34 @@ function lpChk(cls,items,selected){
   return items.map(t=>`<label class="lp-chip"><input type="checkbox" class="${cls}" value="${esc(t)}" ${sel.has(t)?'checked':''}> ${esc(t)}</label>`).join('');
 }
 function lpFld(lbl,inner){return `<div style="margin-bottom:12px"><label class="lp-lbl">${lbl}</label>${inner}</div>`;}
+// صف تاريخ/حصة/فصل في نموذج التحضير (متعدد التواريخ)
+function lpSessionRowHtml(date,period,cls){
+  return `<div class="lp-srow" style="display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:8px;margin-bottom:8px">
+    <input type="date" class="lp-in lp-sdate" value="${esc(date||'')}" style="color-scheme:light dark">
+    <input class="lp-in lp-speriod" placeholder="الحصة" value="${esc(period||'')}">
+    <input class="lp-in lp-scls" placeholder="الفصل/الشعبة" value="${esc(cls||'')}">
+    <button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" title="حذف" onclick="const c=this.closest('#lp_sessions');if(c&&c.querySelectorAll('.lp-srow').length>1)this.closest('.lp-srow').remove();else showToast('لازم تاريخ واحد على الأقل','w')">🗑️</button>
+  </div>`;
+}
+function lpAddSession(){
+  const c=document.getElementById('lp_sessions');
+  const g=(document.getElementById('lp_grade')||{}).value||'';
+  if(c)c.insertAdjacentHTML('beforeend',lpSessionRowHtml('','',g));
+}
+// تفكيك التواريخ المخزّنة: "date~period~cls|date~period~cls" أو تاريخ مفرد قديم
+function lpSessions(lp){
+  const raw=String(lp.date||'');
+  if(raw.indexOf('|')<0 && raw.indexOf('~')<0)
+    return raw?[{date:raw,period:lp.period||'',cls:lp.grade||''}]:[];
+  return raw.split('|').filter(Boolean).map(seg=>{const a=seg.split('~');return {date:a[0]||'',period:a[1]||'',cls:a[2]||''};});
+}
+function lpFmtDate(v){const s=String(v||'').trim();const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:s;}
+window.lpAddSession=lpAddSession;
 function lessonCard(lp,showTrainer,canDelete){
   return `<div class="ccard" style="margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
       <div style="min-width:0"><div class="cc-name">📚 ${esc(lp.material||'—')}${lp.topic?` — ${esc(lp.topic)}`:''}</div>
-        <div class="cc-meta">${showTrainer?`👨‍🏫 ${esc(lp.tname||'')} · `:''}${lp.grade?`شعبة ${esc(lp.grade)} · `:''}📅 ${esc(lp.date||'—')}${lp.period?` · الحصة ${esc(lp.period)}`:''}</div>
+        ${(()=>{const ss=lpSessions(lp);const first=ss[0]?lpFmtDate(ss[0].date):'—';const more=ss.length>1?` (+${ss.length-1} تاريخ)`:'';return `<div class="cc-meta">${showTrainer?`👨‍🏫 ${esc(lp.tname||'')} · `:''}${lp.grade?`شعبة ${esc(lp.grade)} · `:''}📅 ${esc(first)}${more}</div>`;})()}
         <div class="cc-meta" style="opacity:.7">أُرسل: ${esc(lp.sentAt||'')}</div></div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn btn-sm btn-b" onclick="viewLessonPrep('${esc(lp.id)}')">👁️ عرض/طباعة</button>
@@ -3482,9 +3505,10 @@ function lessonFormPage(){
       ${lpFld('المادة',`<select id="lp_material" class="lp-in">${myCourses.map(c=>`<option>${esc(c)}</option>`).join('')||'<option></option>'}</select>`)}
       ${lpFld('الفرع/التخصص',`<input id="lp_branch" class="lp-in" placeholder="اختياري">`)}
       ${lpFld('الصف/الشعبة',`<select id="lp_grade" class="lp-in"><option value=""></option>${myGrps.map(g=>`<option>${esc(g)}</option>`).join('')}</select>`)}
-      ${lpFld('التاريخ',`<input type="date" id="lp_date" value="${dv}" class="lp-in" style="color-scheme:light dark">`)}
-      ${lpFld('الحصة',`<input id="lp_period" class="lp-in" placeholder="مثال: الثانية">`)}
     </div>
+    ${lpFld('التواريخ والحصص <span style="font-weight:400;color:var(--muted)">(تقدر تضيف أكثر من تاريخ)</span>',
+      `<div id="lp_sessions">${lpSessionRowHtml(dv,'','')}</div>
+       <button class="btn btn-sm btn-out" onclick="lpAddSession()" style="margin-top:4px">➕ إضافة تاريخ</button>`)}
     ${lpFld('موضوع الدرس',`<input id="lp_topic" class="lp-in">`)}
     ${lpFld('نواتج التعلم (الأهداف الإجرائية)',`<textarea id="lp_outcomes" rows="3" class="lp-in" placeholder="اكتب كل هدف في سطر"></textarea>`)}
     ${lpFld('التمهيد',`<textarea id="lp_intro" rows="2" class="lp-in"></textarea>`)}
@@ -3530,7 +3554,14 @@ function admLessonsFilter(){const h=document.getElementById('lessonsBody');if(h)
 async function submitLessonPrep(){
   const g=id=>String((document.getElementById(id)||{}).value||'').trim();
   const chk=cls=>[...document.querySelectorAll('.'+cls+':checked')].map(x=>x.value).join('، ');
-  const obj={material:g('lp_material'),branch:g('lp_branch'),grade:g('lp_grade'),date:g('lp_date'),period:g('lp_period'),topic:g('lp_topic'),outcomes:g('lp_outcomes'),intro:g('lp_intro'),present:g('lp_present'),eval:g('lp_eval'),homework:g('lp_homework'),methods:chk('lp-m'),sources:chk('lp-s'),media:chk('lp-w'),activities:chk('lp-a')};
+  // اجمع التواريخ المتعددة وسلسلها في حقل واحد: date~period~cls|...
+  const sess=[...document.querySelectorAll('#lp_sessions .lp-srow')].map(r=>({
+    date:(r.querySelector('.lp-sdate')||{}).value||'',
+    period:((r.querySelector('.lp-speriod')||{}).value||'').trim(),
+    cls:((r.querySelector('.lp-scls')||{}).value||'').trim()
+  })).filter(x=>x.date||x.period||x.cls);
+  const serial=sess.map(x=>[x.date,x.period,x.cls].join('~')).join('|');
+  const obj={material:g('lp_material'),branch:g('lp_branch'),grade:g('lp_grade'),date:serial,period:'',topic:g('lp_topic'),outcomes:g('lp_outcomes'),intro:g('lp_intro'),present:g('lp_present'),eval:g('lp_eval'),homework:g('lp_homework'),methods:chk('lp-m'),sources:chk('lp-s'),media:chk('lp-w'),activities:chk('lp-a')};
   if(!obj.material||!obj.topic){showToast('أدخل المادة وموضوع الدرس على الأقل','w');return;}
   showToast('جاري الإرسال...','i');
   try{
@@ -3565,11 +3596,14 @@ function buildLessonDoc(lp){
   const sel=s=>new Set(String(s||'').split(/[،,]/).map(x=>x.trim()).filter(Boolean));
   const mS=sel(lp.methods),sS=sel(lp.sources),wS=sel(lp.media),aS=sel(lp.activities);
   const sideGroup=(title,items,set)=>`<table class="side">${items.map((t,i)=>`<tr>${i===0?`<td class="sh" rowspan="${items.length}">${title}</td>`:''}<td class="ov">${t}</td><td class="ck">${set.has(t)?'✔':''}</td></tr>`).join('')}</table>`;
+  const ss=lpSessions(lp);
+  const sessRows=(ss.length?ss:[{date:'',period:'',cls:''}]).map(x=>`<tr><td>${esc(lpFmtDate(x.date))}</td><td>${esc(x.period||'')}</td><td>${esc(x.cls||lp.grade||'')}</td></tr>`).join('');
   const body=`
   <div class="lp-top">
-    <table class="att"><tr><th>المدرب</th><th>المادة</th><th>الفرع</th><th>الصف</th><th>التاريخ</th><th>الحصة</th></tr>
-      <tr><td>${v(lp.tname)}</td><td>${v(lp.material)}</td><td>${v(lp.branch)}</td><td>${v(lp.grade)}</td><td>${v(lp.date)}</td><td>${v(lp.period)}</td></tr>
+    <table class="att"><tr><th>المدرب</th><th>المادة</th><th>الفرع</th><th>الصف</th></tr>
+      <tr><td>${v(lp.tname)}</td><td>${v(lp.material)}</td><td>${v(lp.branch)}</td><td>${v(lp.grade)}</td></tr>
     </table>
+    <table class="att" style="margin-top:8px"><tr><th>التاريخ</th><th>الحصة</th><th>الفصل/الشعبة</th></tr>${sessRows}</table>
   </div>
   <div class="lp-main">
     <div class="lp-left">
