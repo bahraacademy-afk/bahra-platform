@@ -2757,7 +2757,7 @@ function navHTML(r,pages){
     performance:{icon:'📊',lbl:'أدائي'},schedule:{icon:'📅',lbl:'الجدول'},
     profile:{icon:'👤',lbl:'ملفي'},students:{icon:'👥',lbl:'قوائم الفصول'},
     attendance:{icon:'✅',lbl:'تسجيل الحضور'},grades:{icon:'📝',lbl:'رصد الدرجات'},
-    attlog:{icon:'🗂️',lbl:'سجل التحضير'},
+    attlog:{icon:'🗂️',lbl:'سجل الغياب اليومي'},
     alerts:{icon:'🔔',lbl:'الاشعارات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     dashboard:{icon:'📈',lbl:'لوحة المؤشرات والأوائل'},
@@ -2776,7 +2776,7 @@ function navHTML(r,pages){
 
 function buildMobNav(r,pages){
   const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:'سجل التحضير',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:'سجل الغياب اليومي',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات'};
   window._mobPages={pages,role:r,map,lbls,active:pages[0]};
   // إخفاء الشريط القديم إن وُجد، وإظهار الزر العائم
   const mn=document.getElementById('mobNav'); if(mn) mn.style.display='none';
@@ -3360,7 +3360,7 @@ function atlCss(){return `<style>
 function renderAttLog(editable){
   const list=atlBuildSessions(editable);
   window._attSessions=list; window._attEditable=editable; window._attFilter={q:'',course:'all'};
-  const title=editable?'إدارة سجل التحضير':'سجل التحضير';
+  const title=editable?'إدارة سجل الغياب اليومي':'سجل الغياب اليومي';
   const subtitle=editable?'استعرض وعدّل واحذف جلسات التحضير لكل المدربين':'كل جلسات التحضير التي سجّلتها — لموادك والمواد المكلَّف بها';
   const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">🗂️ ${title}</div><div class="bsub">${subtitle}</div></div>${editable?'<span class="pill pb">وضع الإدارة</span>':'<span class="pill pg">عرض</span>'}</div>`;
   if(!list.length)
@@ -3586,15 +3586,27 @@ const tPgs={
     }).join('')}`;
   },
   attendance:()=>{
-    const today=new Date();
+    // ⭐ تاريخ التحضير قابل للاختيار (افتراضياً اليوم) — يسمح بالتحضير لأيام سابقة
+    const selVal=window._attSelDate||'';
+    let today=selVal?new Date(selVal+'T00:00:00'):new Date();
+    if(isNaN(today.getTime())){today=new Date();window._attSelDate='';}
     const todayName=DAYS[today.getDay()===0?0:(today.getDay()<=4?today.getDay():-1)]; // 0=أحد..4=خميس
     const isWeekend=(today.getDay()===5||today.getDay()===6); // جمعة/سبت
     const dateStr=today.toLocaleDateString('en-GB');
     const dayLabel=today.toLocaleDateString('ar-EG',{weekday:'long'});
-    const header=`<div class="stitle">تسجيل حضور اليوم <span style="font-size:.62em;font-weight:600;color:var(--gold,#c9a227);background:rgba(201,162,39,.12);padding:3px 12px;border-radius:20px;margin-right:8px;vertical-align:middle">📅 ${dateStr} · ${dayLabel}</span></div>`;
+    const pad=n=>String(n).padStart(2,'0');
+    const inputVal=today.getFullYear()+'-'+pad(today.getMonth()+1)+'-'+pad(today.getDate());
+    const isToday=!selVal;
+    const dateBar=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--border);border-radius:12px">
+      <span style="font-weight:700">📅 تاريخ التحضير:</span>
+      <input type="date" value="${inputVal}" onchange="window._attSelDate=this.value;showTPage('attendance',null)" style="padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card,rgba(255,255,255,.03));color:var(--text);font-family:inherit;font-size:14px;color-scheme:light dark">
+      <span class="pill ${isToday?'pg':'py'}">${isToday?'اليوم':'تاريخ سابق'} · ${dayLabel}</span>
+      ${!isToday?`<button class="btn btn-sm btn-out" onclick="window._attSelDate='';showTPage('attendance',null)">↩︎ رجوع لليوم</button>`:''}
+    </div>`;
+    const header=`<div class="stitle">تسجيل الحضور والغياب</div>`+dateBar;
     // عطلة نهاية الأسبوع
     if(isWeekend){
-      return header+`<div class="empty"><div class="empty-icon">🕌</div>اليوم ${dayLabel} — عطلة نهاية الأسبوع، لا توجد حصص</div>`;
+      return header+`<div class="empty"><div class="empty-icon">🕌</div>${dayLabel} — عطلة نهاية الأسبوع، لا توجد حصص. تقدر تختار تاريخاً آخر من الأعلى.</div>`;
     }
     // مواد المدرب اليوم (من الجدول)
     const myName=(currentUser&&(currentUser.name||currentUser.sname))||'';
@@ -5543,6 +5555,8 @@ const aPgs={
       <button class="btn btn-b" onclick="printGradesReport()">📝 تقرير الدرجات المفصّل</button>
       <button class="btn btn-b" onclick="printRequestsReport()">📋 تقرير الأعذار والطلبات</button>
       <button class="btn btn-b" onclick="printSectionLists()">🧑‍🤝‍🧑 قوائم الشعب</button>
+      <button class="btn btn-b" onclick="printControlSheet()">🎛️ شيت الكنترول (كل المواد)</button>
+      <button class="btn btn-b" onclick="printLessonPrepForm()">📝 نموذج تحضير الدروس</button>
     </div>
     <div class="stitle" style="margin-top:8px">👤 تقرير طالب فردي</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -6521,6 +6535,190 @@ function printSectionLists(){
   if(!any)body+='<p style="text-align:center;color:#5a6b85;padding:30px">لا توجد شعب أو متدربون حاليون</p>';
   openReport(reportShell('قوائم الشعب','قائمة كل شعبة بأسماء المتدربين وأرقامهم الأكاديمية',body));
 }
+
+// ===== نموذج دفتر تحضير الدروس (فارغ للطباعة · مطابق لنموذج المعهد) =====
+function printLessonPrepForm(){
+  const dline=(w)=>`<span style="display:inline-block;border-bottom:1px dotted #555;min-width:${w||'60px'};height:14px"></span>`;
+  const opt=(t)=>`<tr><td class="ck"></td><td class="ov">${t}</td></tr>`;
+  const grpBox=(title,items)=>`<table class="side"><tr><td class="sh" rowspan="${items.length}">${title}</td>${items.map((t,i)=>`${i===0?'':'<tr>'}<td class="ov">${t}</td><td class="ck"></td>${i===0?'':'</tr>'}`).join('')}</table>`;
+  // نبنيها بطريقة أوضح: جدول عمودي لكل مجموعة
+  const sideGroup=(title,items)=>`
+    <table class="side">
+      ${items.map((t,i)=>`<tr>${i===0?`<td class="sh" rowspan="${items.length}">${title}</td>`:''}<td class="ov">${t}</td><td class="ck"></td></tr>`).join('')}
+    </table>`;
+  const attRows=Array.from({length:5},()=>`<tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
+  const body=`
+  <div class="lp-top">
+    <table class="att">
+      <tr><th>اليوم</th><th>التاريخ</th><th>الحصة</th><th>الفصل</th><th>حاضر</th><th>غياب</th><th>جملة</th></tr>
+      ${attRows}
+    </table>
+    <div class="info">
+      <div class="row"><b>المادة :</b> ${dline('120px')} &nbsp;&nbsp; <b>الفرع :</b> ${dline('110px')} &nbsp;&nbsp; <b>الصف :</b> ${dline('110px')}</div>
+    </div>
+  </div>
+  <div class="lp-main">
+    <div class="lp-left">
+      <div class="fld"><b>موضوع الدرس :</b> ${dline('380px')}</div>
+      <div class="fld"><b>نواتج التعلم (الأهداف الإجرائية)</b></div>
+      <div class="ln">1- ${dline('520px')}</div>
+      <div class="ln">2- ${dline('520px')}</div>
+      <div class="ln">3- ${dline('520px')}</div>
+      <div class="sec">■ <b>التمهيد:</b></div>
+      <div class="ln">1- ${dline('520px')}</div>
+      <div class="ln">2- ${dline('520px')}</div>
+      <div class="sec">■ <b>عرض الدرس:</b></div>
+      ${Array.from({length:10},()=>`<div class="ln">${dline('600px')}</div>`).join('')}
+      <div class="sec">★ <b>التقويم :</b></div>
+      <div class="ln">${dline('600px')}</div>
+      <div class="sec">★ <b>الواجب المنزلي:</b></div>
+      <div class="ln">1- ${dline('540px')}</div>
+      <div class="ln">2- ${dline('540px')}</div>
+    </div>
+    <div class="lp-right">
+      ${sideGroup('أساليب التعليم والتعلم',['محاضرة','مناقشة','استنباطية','عصف ذهني','تعليم تعاوني','اكتشاف','لعب أدوار'])}
+      ${sideGroup('مصادر التعلم',['internet','الكتاب المدرسي','المكتبة','سبورة تقليدية','سبورة ذكية'])}
+      ${sideGroup('مصادر التعليم والوسائل التعليمية',['موقع الكتروني','عمل لوحات','عمل أبحاث','قراءة مراجع','زيارة ميدانية','لقاءات ومؤتمرات','بريد الكتروني'])}
+      ${sideGroup('الأنشطة',['شفوية','تحريرية','متابعة أداء','اختبار','أخرى'])}
+    </div>
+  </div>`;
+  const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>نموذج تحضير درس</title>
+  <style>
+  @page{size:A4;margin:10mm}
+  *{box-sizing:border-box;font-family:'Tajawal','Segoe UI',Arial,sans-serif}
+  body{margin:0;color:#111;background:#fff;font-size:13px}
+  .noprint{position:fixed;top:8px;left:8px;background:#0a2348;color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:700}
+  .closebtn{position:fixed;top:8px;right:8px;background:#e74c3c;color:#fff;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:700}
+  @media print{.noprint,.closebtn{display:none}}
+  .doc-title{text-align:center;font-weight:800;font-size:18px;margin:6px 0 14px}
+  .lp-top{display:flex;gap:14px;align-items:flex-start;margin-bottom:12px}
+  .att{border-collapse:collapse;min-width:360px}
+  .att th,.att td{border:1px solid #333;padding:5px 8px;text-align:center;font-size:12px}
+  .att th{background:#f0f2f5;font-weight:700}
+  .att td{height:26px}
+  .info{flex:1;border:1px solid #333;border-radius:2px;padding:14px 12px;align-self:stretch}
+  .info .row{line-height:2.6}
+  .lp-main{display:flex;gap:14px;align-items:flex-start}
+  .lp-left{flex:1;border:1px solid #333;padding:12px 14px;min-height:640px}
+  .lp-left .fld{margin-bottom:8px;line-height:2.2}
+  .lp-left .ln{line-height:2.5}
+  .lp-left .sec{margin:12px 0 4px;font-size:13px}
+  .lp-right{width:210px;display:flex;flex-direction:column;gap:12px}
+  table.side{border-collapse:collapse;width:100%}
+  table.side td{border:1px solid #333;font-size:12px;padding:5px 7px}
+  table.side .sh{writing-mode:vertical-rl;text-align:center;font-weight:700;background:#f0f2f5;width:26px;white-space:nowrap}
+  table.side .ov{text-align:center}
+  table.side .ck{width:26px}
+  </style></head><body>
+  <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <button class="closebtn" onclick="window.close()">✕</button>
+  <div class="doc-title">نموذج تحضير</div>
+  ${body}
+  </body></html>`;
+  openReport(html);
+}
+window.printLessonPrepForm=printLessonPrepForm;
+
+// ===== شيت الكنترول: لكل شعبة جدول عريض (كل مادة ببنود درجاتها ومجموعها) =====
+function controlShell(bodyHtml){
+  const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
+  const today=new Date().toLocaleDateString('en-GB');
+  return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شيت الكنترول</title>
+  <style>
+  @page{size:A4 landscape;margin:8mm}
+  *{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{margin:0;color:#1a2942;background:#fff}
+  .hdr{display:flex;align-items:center;gap:14px;border-bottom:3px solid #c9a227;padding-bottom:10px;margin-bottom:12px}
+  .hdr img{width:52px;height:52px;border-radius:50%}.hdr .t1{font-size:18px;font-weight:800;color:#0a2348}.hdr .t2{font-size:11px;color:#5a6b85;margin-top:2px}
+  .hdr .meta{margin-right:auto;text-align:left;font-size:11px;color:#5a6b85}
+  .cs-title{font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:7px 12px;border-radius:6px;margin:16px 0 8px}
+  .cs-block{margin-bottom:22px}
+  table.cs{width:100%;border-collapse:collapse;font-size:10px}
+  table.cs th,table.cs td{border:1px solid #6b7a90;padding:3px 4px;text-align:center;line-height:1.35}
+  table.cs th{background:#0a2348;color:#fff;font-weight:700}
+  table.cs th.cgrp{background:#12457e;font-size:11px}
+  table.cs td.nm,table.cs th.nm{text-align:right;white-space:nowrap;padding-inline:8px}
+  table.cs .tot{font-weight:800;background:#eef3f9;color:#0a2348}
+  table.cs td.g{color:#c0392b;font-weight:700}
+  table.cs .mxr th{background:#c9a227;color:#0a2348;font-weight:700}
+  table.cs tbody tr:nth-child(even) td{background:#f6f8fb}
+  .noprint{position:fixed;top:8px;left:8px;background:#0a2348;color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:700}
+  .closebtn{position:fixed;top:8px;right:8px;background:#e74c3c;color:#fff;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:700}
+  @media print{.noprint,.closebtn{display:none}}
+  </style></head><body>
+  <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
+  <button class="closebtn" onclick="window.close()">✕</button>
+  <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">شيت الكنترول — كشف درجات مجمّع لكل شعبة</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
+  ${bodyHtml}
+  </body></html>`;
+}
+function printControlSheet(){
+  const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  let body='';
+  grps.forEach(g=>{
+    const gs=uniqStudents(students.filter(s=>String(s.grp)===String(g)))
+      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+    if(!gs.length)return;
+    const sids=new Set(gs.map(s=>String(s.id||s.sid)));
+    // مواد هذه الشعبة (الحالية) — بدون تكرار بالرمز
+    const cmap=new Map();
+    (allCourses||[]).forEach(c=>{
+      if(!sids.has(String(c.sid))||!isActive(c.status))return;
+      const k=normCode(c.code); if(!k)return;
+      if(!cmap.has(k))cmap.set(k,{code:c.code,course:c.course,cats:rubricFor(c.code)});
+    });
+    const courses=[...cmap.values()];
+    if(!courses.length)return;
+    // ترويسة عمودية (صفّان) + صف الدرجة العظمى
+    let h1=`<th rowspan="2" style="width:26px">م</th><th rowspan="2" class="nm">اسم الطالب</th><th rowspan="2" style="width:90px">الرقم التدريبي</th>`;
+    let h2='', h3='';
+    courses.forEach(co=>{
+      const cats=co.cats||[];
+      const span=(cats.length||1)+1;
+      h1+=`<th colspan="${span}" class="cgrp">${esc(co.course||co.code)}</th>`;
+      if(cats.length){
+        cats.forEach(ct=>{h2+=`<th>${esc(ct.cat)}</th>`;});
+        h2+=`<th class="tot">مجموع</th>`;
+        cats.forEach(ct=>{h3+=`<th>${ct.max}</th>`;});
+        h3+=`<th>${cats.reduce((a,c)=>a+(parseFloat(c.max)||0),0)||100}</th>`;
+      }else{
+        h2+=`<th>الدرجة</th><th class="tot">مجموع</th>`;
+        h3+=`<th>100</th><th>100</th>`;
+      }
+    });
+    const rows=gs.map((s,i)=>{
+      const ssid=String(s.id||s.sid||'');
+      let tds=`<td>${i+1}</td><td class="nm">${esc(s.name||'')}</td><td>${esc(ssid)}</td>`;
+      courses.forEach(co=>{
+        const c=(allCourses||[]).find(x=>String(x.sid)===ssid&&normCode(x.code)===normCode(co.code)&&isActive(x.status));
+        const key=c?c.key:'';
+        if((co.cats||[]).length){
+          let sum=0,any=false,cells='';
+          co.cats.forEach(ct=>{
+            const v=key?detailGrade(key,co.code,ct.cat):'';
+            if(v!==''&&v!=null){sum+=parseFloat(v)||0;any=true;cells+=`<td>${v}</td>`;}
+            else cells+=`<td class="g">غ</td>`;
+          });
+          const total=any?(Math.round(sum*10)/10):(c&&c.pct?Math.round(c.pct):'');
+          tds+=cells+`<td class="tot">${total!==''?total:'—'}</td>`;
+        }else{
+          const grade=(c&&c.pct)?Math.round(c.pct):'';
+          tds+=`<td>${grade!==''?grade:'—'}</td><td class="tot">${grade!==''?grade:'—'}</td>`;
+        }
+      });
+      return `<tr>${tds}</tr>`;
+    }).join('');
+    body+=`<div class="cs-block"><div class="cs-title">🎛️ شيت كنترول — الشعبة ${esc(String(g))} <span style="font-size:11px;opacity:.85">(${gs.length} متدرب · ${courses.length} مادة)</span></div>
+      <table class="cs"><thead>
+        <tr>${h1}</tr>
+        <tr>${h2}</tr>
+        <tr class="mxr"><th colspan="3" style="text-align:center">الدرجة العظمى ←</th>${h3}</tr>
+      </thead><tbody>${rows}</tbody></table></div>`;
+  });
+  if(!body){showToast('لا توجد شعب أو درجات لعرضها','w');return;}
+  openReport(controlShell(body));
+}
+window.printControlSheet=printControlSheet;
 
 // ===== 2) تقرير الدرجات المفصّل (لكل شعبة/مادة) =====
 function printGradesReport(){
