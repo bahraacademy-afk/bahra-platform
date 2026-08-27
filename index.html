@@ -3581,10 +3581,11 @@ async function delLessonPrep(id){
   try{
     const res=await jsonpCall({action:'deleteLessonPrep',data:JSON.stringify({id:id})});
     if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الحذف: '+attErrMsg(res.msg,res.hint),'e');return;}
+    lessonPreps=lessonPreps.filter(x=>String(x.id)!==String(id)); // تحديث فوري
     showToast('✅ تم الحذف','s');
-    await loadLessonPreps();
     if(user&&user.role==='a')showAPage('lessons',document.getElementById('sn-lessons'));
     else showTPage('lesson',document.getElementById('sn-lesson'));
+    loadLessonPreps().catch(()=>{}); // مزامنة صامتة
   }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
 }
 function viewLessonPrep(id){
@@ -4672,8 +4673,7 @@ async function saveCourse(mode){
     }
     document.getElementById('crsModal')?.remove();
     showToast(mode==='edit'?'✅ تم حفظ التعديل':'✅ تمت الإضافة','s');
-    await loadAdmin();
-    showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+    loadAdmin().then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
   }catch(e){showToast('تعذّر الاتصال بالخادم — تأكد من نشر Apps Script','e');}
 }
 async function deleteCourse(code,name){
@@ -4681,9 +4681,10 @@ async function deleteCourse(code,name){
   showToast('جاري الحذف...','i');
   try{
     await jsonpCall({action:'deleteCourse',data:JSON.stringify([{code}])});
+    catalog=catalog.filter(c=>normCode(c.code)!==normCode(code)); // تحديث فوري
     showToast('✅ تم الحذف','s');
-    await loadAdmin();
     showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+    loadAdmin().catch(()=>{}); // مزامنة صامتة
   }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
 }
 // تحديد/إلغاء كل طلاب شعبة
@@ -4779,8 +4780,7 @@ async function endTerm(){
     const res=await jsonpCall({action:'endTerm',data:JSON.stringify([{term}])});
     const n=(res&&res.updated)||0;
     showToast(`✅ تم إنهاء الترم — حُوّلت ${n} مادة إلى سابق`,'s');
-    await loadAdmin();
-    showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+    loadAdmin().then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
   }catch(e){showToast('تعذّر إنهاء الترم — جرب مرة أخرى','e');}
 }
 window.endTerm=endTerm;
@@ -4828,8 +4828,7 @@ async function enrollBatch(){
       await jsonpCall({action:'enrollStudent',data:JSON.stringify(batch)});
     }
     showToast(`✅ تم تسجيل ${records.length} تسجيل`+(skipped?` · تخطّى ${skipped} مسجّل مسبقاً`:'')+(lockedSkip?` · 🔒 ${lockedSkip} مقفلة بمتطلب`:''),'s');
-    await loadAdmin();
-    showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+    loadAdmin().then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
   }catch(e){showToast('تعذّر التسجيل — جرب مرة أخرى','e');}
 }
 window.toggleGrpStudents=toggleGrpStudents;window.updateEnrCounts=updateEnrCounts;window.enrollBatch=enrollBatch;
@@ -4874,8 +4873,7 @@ async function saveAccount(type,mode){
     const res=await jsonpCall({action,data:JSON.stringify([rec])});
     document.getElementById('accModal')?.remove();
     showToast(mode==='edit'?'✅ تم حفظ التعديل':'✅ تمت الإضافة','s');
-    await loadAdmin();
-    showAPage('accounts',document.getElementById('sn-accounts'));
+    loadAdmin().then(()=>showAPage('accounts',document.getElementById('sn-accounts'))).catch(()=>{});
   }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى','e');}
 }
 async function deleteAccount(type,id,name){
@@ -4884,9 +4882,14 @@ async function deleteAccount(type,id,name){
   showToast('جاري الحذف...','i');
   try{
     await jsonpCall({action:'deleteUser',data:JSON.stringify([{type,id}])});
+    // تحديث فوري محلياً ثم مزامنة صامتة بالخلفية
+    const od=x=>String(x||'').replace(/[^0-9]/g,'');
+    if(type==='student'){students=students.filter(s=>od(s.id)!==od(id));allCourses=allCourses.filter(c=>od(c.sid)!==od(id));}
+    else if(type==='trainer'){trainersDB=trainersDB.filter(s=>od(s.id)!==od(id));}
+    else{adminsDB=adminsDB.filter(s=>od(s.id)!==od(id));}
     showToast('✅ تم الحذف','s');
-    await loadAdmin();
     showAPage('accounts',document.getElementById('sn-accounts'));
+    loadAdmin().catch(()=>{});
   }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
 }
 window.addAccount=addAccount;window.editAccount=editAccount;window.deleteAccount=deleteAccount;window.saveAccount=saveAccount;
