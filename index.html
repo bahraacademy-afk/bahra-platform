@@ -6305,8 +6305,9 @@ function showTrainerCourseStudents(i){
 }
 // تفاصيل المادة عند المدرب — مقسّمة حسب الشعبة (كل شعبة بمتوسطها) + خطة المتطلب
 function showTrainerCourseDetail(course){
-  const recs=uniqStudents(students.filter(s=>s.course===course));
-  if(!recs.length){showDetail('مقرر: '+course,'📘','<div class="alert ab">لا يوجد متدربون</div>');return;}
+  // الدفعات الحالية فقط (السابقة مؤرشفة ولا تظهر هنا)
+  const recs=uniqStudents(students.filter(s=>s.course===course&&isActive(s.status)));
+  if(!recs.length){showDetail('مقرر: '+course,'📘','<div class="alert ab">لا يوجد متدربون في الدفعة الحالية</div>');return;}
   const code=recs[0]?.code||'';
   // خطة المتطلب من قاعدة المقررات
   const cat=(catalog||[]).find(c=>normCode(c.code)===normCode(code));
