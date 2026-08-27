@@ -5893,6 +5893,9 @@ function doLogout(){
   document.getElementById('inpId').value='';
   document.getElementById('inpPh').value='';
   document.getElementById('errBox').style.display='none';
+  // ⭐ إعادة تفعيل زر الدخول وإخفاء مؤشر التحميل حتى نقدر ندخل من جديد
+  const _lb=document.getElementById('lbtn'); if(_lb)_lb.disabled=false;
+  const _ldg=document.getElementById('ldg'); if(_ldg)_ldg.style.display='none';
   document.getElementById('mobNav').style.display='none';
   const fn=document.getElementById('fabNav'); if(fn) fn.style.display='none';
   toggleFab(false);
