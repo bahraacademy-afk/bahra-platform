@@ -3797,13 +3797,21 @@ const tPgs={
     ${pastCrs.map(c=>courseCard(c,true)).join('')}`:''}`;
   },
   students:()=>{
-    const crs=[...new Set(students.map(s=>s.course))];
-    return `
-    <div class="stitle">قوائم الفصول</div>
-    ${crs.map(course=>{
-      const ss=uniqStudents(students.filter(s=>s.course===course));
+    const view=window._clsView||'current';
+    const curCrs=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.course))].length;
+    const oldCrs=[...new Set(students.filter(s=>!isActive(s.status)).map(s=>s.course))].length;
+    const tbtn=(id,lbl,n)=>`<button class="tterm ${view===id?'active':''}" onclick="window._clsView='${id}';showTPage('students',document.getElementById('sn-students'))" style="padding:9px 16px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;background:${view===id?'linear-gradient(135deg,#1a7abf,#0d4a80)':'var(--card2,rgba(255,255,255,.04))'};color:${view===id?'#fff':'var(--text)'}">${lbl} (${n})</button>`;
+    const tabs=`<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${tbtn('current','🟢 الحالية',curCrs)}${tbtn('archived','🗄️ السابقة (المؤرشفة)',oldCrs)}</div>`;
+    const isArch=view==='archived';
+    const pool=students.filter(s=>isArch?!isActive(s.status):isActive(s.status));
+    const crs=[...new Set(pool.map(s=>s.course))];
+    if(!crs.length)
+      return `<div class="stitle">قوائم الفصول</div>${tabs}<div class="empty"><div class="empty-icon">📭</div>${isArch?'ما فيه فصول سابقة مؤرشفة':'ما فيه فصول حالية'}</div>`;
+    const body=crs.map(course=>{
+      const ss=uniqStudents(pool.filter(s=>s.course===course));
+      const term=ss[0]&&ss[0].half&&ss[0].half!=='غير محدد'?ss[0].half:'';
       return `<div style="margin-bottom:24px">
-        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${course} (${ss.length} متدرب)</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${esc(course)} <span style="color:var(--muted);font-weight:400">(${ss.length} متدرب)</span>${term?` <span class="pill ${isArch?'py':'pg'}" style="font-size:11px">${esc(term)}</span>`:''}${isArch?' <span class="pill" style="font-size:11px;background:rgba(150,150,150,.15);color:var(--muted);border:1px solid rgba(150,150,150,.25)">مؤرشف</span>':''}</div>
         <div class="gtable"><table>
           <thead><tr><th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>الإنجاز</th><th>الغياب</th></tr></thead>
           <tbody>${ss.map(s=>`<tr>
@@ -3813,7 +3821,8 @@ const tPgs={
           </tr>`).join('')}</tbody>
         </table></div>
       </div>`;
-    }).join('')}`;
+    }).join('');
+    return `<div class="stitle">قوائم الفصول</div>${tabs}${body}`;
   },
   attendance:()=>{
     // ⭐ تاريخ التحضير قابل للاختيار (افتراضياً اليوم) — يسمح بالتحضير لأيام سابقة
