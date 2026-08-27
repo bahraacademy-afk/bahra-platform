@@ -1201,6 +1201,9 @@ function setRole(r,btn){
   if(r==='s'){lb.textContent='الرقم الأكاديمي';inp.placeholder='أدخل رقمك الأكاديمي';lb2.className='lbtn bs'}
   else if(r==='t'){lb.textContent='الرقم الوظيفي';inp.placeholder='أدخل رقمك الوظيفي';lb2.className='lbtn bt'}
   else{lb.textContent='اسم المستخدم';inp.placeholder='أدخل اسم المستخدم';lb2.className='lbtn ba'}
+  // ⭐ نظّف حالة التحميل عند اختيار الدور (احتياط إضافي)
+  lb2.disabled=false;
+  const _ldg=document.getElementById('ldg'); if(_ldg)_ldg.style.display='none';
 }
 
 // ===== LOGIN =====
@@ -1261,6 +1264,9 @@ function finishLogin(){
   localStorage.setItem('bla_user', JSON.stringify(user));
   localStorage.setItem('bla_role', role);
   if(SESSION.token) localStorage.setItem('bla_token', SESSION.token);
+  // ⭐ نظّف حالة تحميل نموذج الدخول حتى تكون الشاشة جاهزة عند الخروج لاحقاً
+  const _lb=document.getElementById('lbtn'); if(_lb)_lb.disabled=false;
+  const _ldg=document.getElementById('ldg'); if(_ldg)_ldg.style.display='none';
   showApp();
   initIdleGuard();
 }
