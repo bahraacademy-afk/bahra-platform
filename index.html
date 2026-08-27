@@ -3497,8 +3497,8 @@ function lessonCard(lp,showTrainer,canDelete){
     </div></div>`;
 }
 function lessonFormPage(){
-  const myCourses=[...new Set(students.map(s=>s.course).filter(Boolean))];
-  const myGrps=[...new Set(students.map(s=>s.grp).filter(Boolean))].sort();
+  const myCourses=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.course).filter(Boolean))];
+  const myGrps=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.grp).filter(Boolean))].sort();
   const t=new Date(),pad=n=>String(n).padStart(2,'0');
   const dv=t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());
   const mine=lessonPreps;
