@@ -1858,6 +1858,7 @@ async function loadAbsenceBase(){
       const code=onlyDigits(r[3]);
       if(!sid)continue;
       const status=String(r[6]||'').trim();
+      if(status==='حاضر')continue; // ⭐ الحضور لا يُحسب في نسبة الغياب
       const days=(status==='متأخر')?0.5:1; // غائب=1 · متأخر=0.5
       // ⭐ لو فيه رمز نفهرس بالرمز، وإلا نفهرس باسم المادة (شبكة أمان للسجلات القديمة بلا رمز)
       if(code){
@@ -3341,7 +3342,7 @@ function atlBuildSessions(editable){
     const date=atlFmtDate(r[5]), grp=String(r[4]||'').trim(), term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
     const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
     if(!sessions.has(key))sessions.set(key,{date,course:cname,code:codeR,grp,term,students:[]});
-    sessions.get(key).students.push({name:r[1]||'',sid:String(r[0]||''),code:codeR,status:status==='متأخر'?'متأخر':'غائب'});
+    sessions.get(key).students.push({name:r[1]||'',sid:String(r[0]||''),code:codeR,status:status==='متأخر'?'متأخر':status==='حاضر'?'حاضر':'غائب'});
   }
   const list=[...sessions.values()];
   list.sort((a,b)=>atlDnum(b.date).localeCompare(atlDnum(a.date)));
@@ -3370,6 +3371,7 @@ function atlCss(){return `<style>
 .atl-seg button:hover{color:var(--text)}
 .atl-seg button.on-a{background:var(--red);color:#fff}
 .atl-seg button.on-l{background:var(--gold);color:#3a2400}
+.atl-seg button.on-p{background:var(--green);color:#062a15}
 .atl-del{width:31px;height:31px;border-radius:8px;border:1px solid rgba(230,57,70,.3);background:rgba(230,57,70,.08);color:#ff8a92;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.15s}
 .atl-del:hover{background:var(--red);color:#fff}
 </style>`;}
@@ -3415,10 +3417,11 @@ function attlogCards(){
     const rowsHtml=studs.map(o=>{
       const st=o.st, sti=o.i, col=atlColor(st.name);
       const ctrl=editable?`<div class="atl-seg">
-          <button class="${st.status==='غائب'?'on-a':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'غائب')">غائب</button>
+          <button class="${st.status==='حاضر'?'on-p':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'حاضر')">حاضر</button>
           <button class="${st.status==='متأخر'?'on-l':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'متأخر')">متأخر</button>
+          <button class="${st.status==='غائب'?'on-a':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'غائب')">غائب</button>
         </div><button class="atl-del" title="حذف السجل" onclick="event.stopPropagation();admAttDelOne(${si},${sti})">🗑️</button>`
-        :`<span class="pill ${st.status==='متأخر'?'py':'pr'}">${esc(st.status)}</span>`;
+        :`<span class="pill ${st.status==='حاضر'?'pg':st.status==='متأخر'?'py':'pr'}">${esc(st.status)}</span>`;
       return `<div class="atl-srow"><div class="atl-avatar" style="background:${col}">${esc(atlInitials(st.name))}</div>
         <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.name)}</div><div style="font-size:11px;color:var(--muted)">${esc(st.sid)}</div></div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${ctrl}</div></div>`;
@@ -4100,10 +4103,8 @@ async function saveSessionV2(course,code,grp,dateStr){
     // ⭐ الرمز والشعبة من سجل الطالب نفسه (لأن تبويب «الجدول» لا يخزّن رمز المقرر)
     //    وإلا يُحفظ الغياب بلا رمز فتفشل مطابقة النسبة وتظهر 0%
     const sCode=normCode(s.code||code), sGrp=s.grp||grp;
-    // سجل يومي لكل من غاب/تأخر (حتى نمنع التكرار في التبويب)
-    if(mk==='absent'||mk==='late'){
-      dailyLog.push({sid:s.sid,name:s.name,course,code:sCode,grp:sGrp,date:dateStr,status:mk==='absent'?'غائب':'متأخر',days:addDays,term:s.half||''});
-    }
+    // ⭐ سجل يومي لكل متدرب مُعلّم (حاضر/متأخر/غائب) — حتى لو الكل حاضر يُحفظ سجل اليوم
+    dailyLog.push({sid:s.sid,name:s.name,course,code:sCode,grp:sGrp,date:dateStr,status:mk==='absent'?'غائب':mk==='late'?'متأخر':'حاضر',days:addDays,term:s.half||''});
     if(addDays>0){
       // الأيام المحفوظة سابقاً = النسبة الحالية × إجمالي الأيام ÷ 100
       const curDays=(parseFloat(s.abs)||0)/100*totalDays;
@@ -5792,6 +5793,7 @@ const aPgs={
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
       <button class="btn btn-b" onclick="printAcademicReport()">📊 تقرير الأداء العام</button>
       <button class="btn btn-b" onclick="printAbsenceReport()">📉 تقرير الغياب الشامل</button>
+      <button class="btn btn-b" onclick="printDailyAbsenceByCourse()">🗓️ سجل الغياب اليومي لكل مادة</button>
       <button class="btn btn-b" onclick="printGradesReport()">📝 تقرير الدرجات المفصّل</button>
       <button class="btn btn-b" onclick="printRequestsReport()">📋 تقرير الأعذار والطلبات</button>
       <button class="btn btn-b" onclick="printSectionLists()">🧑‍🤝‍🧑 قوائم الشعب</button>
@@ -6880,6 +6882,9 @@ function controlShell(bodyHtml){
   table.cs td.nm,table.cs th.nm{text-align:right;white-space:nowrap;padding-inline:8px}
   table.cs .tot{font-weight:800;background:#eef3f9;color:#0a2348}
   table.cs td.g{color:#c0392b;font-weight:700}
+  table.cs td.l{color:#c77c11;font-weight:700}
+  table.cs td.p{color:#1e8449;font-weight:700}
+  table.cs th.dt{font-size:9px;white-space:nowrap;min-width:30px}
   table.cs .mxr th{background:#c9a227;color:#0a2348;font-weight:700}
   table.cs tbody tr:nth-child(even) td{background:#f6f8fb}
   .noprint{position:fixed;top:8px;left:8px;background:#0a2348;color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:700}
@@ -6959,6 +6964,45 @@ function printControlSheet(){
   openReport(controlShell(body));
 }
 window.printControlSheet=printControlSheet;
+
+// ===== سجل الغياب اليومي لكل مادة (يجمع كل التواريخ في جدول واحد) =====
+function printDailyAbsenceByCourse(){
+  const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
+  if(rows.length<2){showToast('لا يوجد سجل غياب يومي بعد','w');return;}
+  const dig=s=>String(s||'').replace(/[^0-9]/g,'');
+  const fmt=v=>{const s=String(v||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m)return s.slice(0,10);const d=new Date(s);return isNaN(d)?s:(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear());};
+  const dnum=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?((m[3].length===2?'20'+m[3]:m[3])+m[2].padStart(2,'0')+m[1].padStart(2,'0')):'0';};
+  const courses=new Map(); // key=cnk(cname) -> {course, dates:Set, studs:Map(sid->{sid,name,byDate})}
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; const sid=dig(r[0]); if(!sid)continue;
+    const cname=r[2]||'—', date=fmt(r[5]), status=String(r[6]||'').trim()||'غائب';
+    const k=cnk_(cname);
+    if(!courses.has(k))courses.set(k,{course:cname,dates:new Set(),studs:new Map()});
+    const C=courses.get(k); C.dates.add(date);
+    if(!C.studs.has(sid))C.studs.set(sid,{sid,name:r[1]||'',byDate:{}});
+    C.studs.get(sid).byDate[date]=status;
+  }
+  let body='';
+  [...courses.values()].sort((a,b)=>String(a.course).localeCompare(String(b.course),'ar')).forEach(C=>{
+    const dates=[...C.dates].sort((a,b)=>dnum(a).localeCompare(dnum(b)));
+    const studs=[...C.studs.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar'));
+    const head=`<th style="width:26px">م</th><th class="nm">الاسم</th><th style="width:80px">الرقم</th>${dates.map(d=>`<th class="dt">${esc(d)}</th>`).join('')}<th>غياب</th><th>تأخير</th>`;
+    const trs=studs.map((s,i)=>{
+      let absN=0,lateN=0;
+      const cells=dates.map(d=>{const st=s.byDate[d];
+        if(st==='غائب'){absN++;return '<td class="g">غ</td>';}
+        if(st==='متأخر'){lateN++;return '<td class="l">ت</td>';}
+        if(st==='حاضر')return '<td class="p">✓</td>';
+        return '<td></td>';}).join('');
+      return `<tr><td>${i+1}</td><td class="nm">${esc(s.name)}</td><td>${esc(s.sid)}</td>${cells}<td class="g">${absN||''}</td><td class="l">${lateN||''}</td></tr>`;
+    }).join('');
+    body+=`<div class="cs-block"><div class="cs-title">📉 ${esc(C.course)} — سجل الغياب اليومي <span style="font-size:11px;opacity:.85">(${dates.length} يوم · ${studs.length} متدرب)</span></div>
+      <table class="cs"><thead><tr>${head}</tr></thead><tbody>${trs}</tbody></table>
+      <div style="font-size:10px;color:#5a6b85;margin-top:4px">غ = غائب · ت = متأخر · ✓ = حاضر</div></div>`;
+  });
+  openReport(controlShell(body));
+}
+window.printDailyAbsenceByCourse=printDailyAbsenceByCourse;
 
 // ===== 2) تقرير الدرجات المفصّل (لكل شعبة/مادة) =====
 function printGradesReport(){
