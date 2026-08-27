@@ -6755,7 +6755,7 @@ function printAbsenceReport(){
     <div class="kpi"><div class="n" style="color:#d68910">${warn1.length}</div><div class="l">إنذار أول (≥10%)</div></div>
   </div>`;
   grps.forEach(g=>{
-    const gs=uniqStudents(students.filter(s=>s.grp===g&&isActive(s.status)));
+    const gs=uniqStudents(students.filter(s=>s.grp===g));
     if(!gs.length)return;
     const rows=gs.map(s=>{
       const sc=allCourses.filter(c=>c.sid===s.id&&isActive(c.status));
