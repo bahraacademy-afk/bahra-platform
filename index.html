@@ -1007,7 +1007,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzBHA2oOgVEHJoZCvrIS99grkVWAAzwKJvfuoLT__MSh7YRpkkhBLVnL-qfE6YaCE6v/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyp9gahKfYgtYIhDLGxhGH1p7lZ4WZvkjgoKUxsmn_q6wANCIBI9JM025ZtPuHwmP3W/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1445,7 +1445,7 @@ async function loadAdmin(){
   adminsDB=[];
   for(let i=1;i<ad.length;i++){
     const r=ad[i];
-    if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6])});
+    if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6]),spec:n0(r[7])});
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics(), loadLessonPreps()]);
   allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
@@ -4849,7 +4849,14 @@ function accountFormFields(type,data){
   if(type==='student')return f('id','الرقم الأكاديمي *',data.id)+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
   if(type==='trainer')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
   // admin
-  return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('title','المسمى الوظيفي',data.title)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرقم السري *',data.pw)+`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الصلاحية</label><select id="acc_level" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"><option value="مشرف"${data.level==='مشرف'?' selected':''}>مشرف</option><option value="مدير"${(data.level||'').includes('مدير')?' selected':''}>مدير</option></select></div>`;
+  const specOpts=[...new Set(students.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const selStyle="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px";
+  return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('title','المسمى الوظيفي',data.title)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرقم السري *',data.pw)+
+    `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الصلاحية</label><select id="acc_level" style="${selStyle}"><option value="مشرف"${data.level==='مشرف'?' selected':''}>مشرف</option><option value="مدير"${(data.level||'').includes('مدير')?' selected':''}>مدير</option></select></div>`+
+    `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصص المشرف عليه</label><select id="acc_spec" style="${selStyle}">
+       <option value="جميع الدبلومات"${(data.spec==='جميع الدبلومات'||!data.spec)?' selected':''}>جميع الدبلومات (مشرف عام)</option>
+       ${specOpts.map(sp=>`<option value="${esc(sp)}"${data.spec===sp?' selected':''}>${esc(sp)}</option>`).join('')}
+     </select></div>`;
 }
 function accountModal(type,mode,data){
   const tLbl=type==='student'?'متدرب':type==='trainer'?'مدرب':'إداري';
@@ -4873,7 +4880,7 @@ async function saveAccount(type,mode){
   const rec={type,id:g('id'),name:g('name'),ph:g('ph'),email:g('email')};
   if(type==='student'){rec.grp=g('grp');rec.spec=g('spec');rec.pw=g('pw');}
   else if(type==='trainer'){rec.spec=g('spec');rec.pw=g('pw');}
-  else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');}
+  else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');rec.spec=g('spec');}
   if(!rec.id||!rec.name){showToast('الرقم والاسم مطلوبان','w');return;}
   if(type==='admin'&&!rec.pw){showToast('الرقم السري مطلوب للإداري','w');return;}
   showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
@@ -5397,9 +5404,10 @@ const aPgs={
         <td><button onclick='editAccount("trainer",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("trainer","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مدربون</td></tr>`;
     }else{
-      cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الجوال</th><th>البريد</th><th>الصلاحية</th><th>إجراءات</th>`;
+      cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الصلاحية</th><th>التخصص المشرف عليه</th><th>الجوال</th><th>إجراءات</th>`;
       rows=(adminsDB||[]).map(s=>`<tr>
-        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td><td>${s.level||'-'}</td>
+        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td><td>${s.level||'-'}</td>
+        <td>${(!s.spec||s.spec==='جميع الدبلومات')?'<span class="pill pb">جميع الدبلومات</span>':`<span class="pill pg">${esc(s.spec)}</span>`}</td><td style="color:var(--muted)">${esc(s.ph||'-')}</td>
         <td><button onclick='editAccount("admin",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("admin","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
     }
@@ -5586,7 +5594,7 @@ const aPgs={
     const warns=allCourses.filter(hasIssue).length;
     const grps=[...new Set(students.map(s=>s.grp))];
     return `
-    <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div><div class="bpill bp-y">إداري</div></div>
+    <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div><div class="bpill bp-y" style="text-align:center">${(user.level==='director'||!user.spec||user.spec==='جميع الدبلومات')?'مشرف عام · جميع الدبلومات':'مشرف تخصص<br>'+esc(user.spec)}</div></div>
     <div class="metrics">
       <div class="mcard mc-b" data-nav="all_students" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
       <div class="mcard mc-g" data-nav="all_courses" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
