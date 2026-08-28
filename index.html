@@ -1007,7 +1007,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyFe9t_st1r3V5yHee7gjjaaREdXL-v6FWtrlA7Jb63QZ8FmqNwNqVp3JJh6cNur7QA/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzZMoGJ8tOnmmuigtce3qeLFGrlOOaIsp6vIgEH1x9O1ceKio1i90MV_vAdUc8SFKlB/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -4900,6 +4900,136 @@ async function deleteAccount(type,id,name){
 }
 window.addAccount=addAccount;window.editAccount=editAccount;window.deleteAccount=deleteAccount;window.saveAccount=saveAccount;
 
+/* ============ أداة تحديث الأرقام التدريبية بالجملة (قائمة 2026/2027) ============ */
+const NEW_TRAINEE_NUMS=[
+  {n:'عبد العزيز بن محسن بن ابراهيم البليهي',num:'542664'},
+  {n:'زايد بن محمد بن حميد المعبدي الحربي',num:'5428670'},
+  {n:'أصيل بن مهدى بن محمد الشاعرى',num:'5428673'},
+  {n:'موسى بن يحى بن محمد ال رفاعى الشاعرى',num:'5428676'},
+  {n:'مازن بن فيصل بن مطمي الدعدي الهذلي',num:'5430531'},
+  {n:'فهد بن نايف بن حميد الدعدي الهذلي',num:'482652'},
+  {n:'عبد الله بن عجب بن حاظر العجرشي القحطاني',num:'5430534'},
+  {n:'ابراهيم بن صالح بن عبد الله الشيخى الزهراني',num:'5430537'},
+  {n:'فيصل بن عبد الله بن عبيد المعبدي الحربي',num:'5430540'},
+  {n:'عبد المجيد بن عبد الله بن حمدان المعبدى الحربي',num:'4269625'},
+  {n:'محمد بن بندر بن محمد باسيف',num:'5442100'},
+  {n:'سعود بن عبد الله بن ذيب آل سمره الاكلبي',num:'5442097'},
+  {n:'فهد بن خالد بن سعد بني خثيم الغامدي',num:'5320387'},
+  {n:'سعد بن خالد بن سعد بني خثيم الغامدي',num:'5442106'},
+  {n:'يزيد بن عزيز بن سعد البلاهدي الحارثي',num:'5442103'},
+  {n:'عادل بن على سدران أل مخيط العماري',num:'5446240'},
+  {n:'ثامر بن محمد بن عبد الغني الذويبي الدعدي',num:'5442109'},
+  {n:'سالم بن صالح بن ثواب المعبدي',num:'5442094'},
+  {n:'عبد العزيز ماجد عبد الواحد الانصاري',num:'5967080'},
+  {n:'راشد ضيف الله عبد الله الحضرمي',num:'4140767'},
+  {n:'سعيد عثمان محمد البرناوي',num:'5964723'},
+  {n:'تركي أحمد مسلم المالكي',num:'5964503'},
+  {n:'محمد احمد محمد مهدي',num:'5964461'},
+  {n:'سعيد صالح سعيد الزهراني',num:'3246737'},
+  {n:'محمد عبد الله جروان المطيري',num:'5964137'},
+  {n:'علي عبيد علي ابو عروق',num:'5964124'},
+  {n:'رائد احمد رشيد الرشيدي',num:'5964005'},
+  {n:'اسعد ماجد عبد الواحد الانصاري',num:'5963957'},
+  {n:'أحمد سعد حسن الزهراني',num:'5963885'},
+  {n:'عبدالله محمد احمد باخشوين',num:'7332821'},
+  {n:'عبد الرحمن محمد جزاء الحربي',num:'7332835'},
+  {n:'فارس خالد ابراهيم شامى',num:'7332856'},
+  {n:'حسام عبيدالله شريميط المعبدي',num:'7332887'},
+  {n:'احمد سعيد احمد الغامدي',num:'7332902'},
+  {n:'عبدالله مصطفى ادريس برناوي',num:'7332917'},
+  {n:'فوارس فهد طه نتو',num:'7332968'},
+  {n:'محمد نواف موسى هزازي',num:'7333052'},
+  {n:'ماهر عبدالرحمن محمد ال محبه الشهري',num:'4611659'},
+  {n:'محمد هانى محمد باسيف',num:'7333088'},
+  {n:'ريان بندر محمد باسيف',num:'7333099'},
+  {n:'عبدالاله عبدالله عبدالوهاب زيني',num:'46116512'}
+];
+// مفتاح اسم متسامح: يزيل التشكيل و«بن/بنت» والألقاب والفراغات ويوحّد الحروف
+function _nk(v){
+  let t=String(v||'').trim();
+  t=t.replace(/[ً-ْـ]/g,'');
+  t=t.replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ة/g,'ه');
+  t=t.replace(/(^|\s)(بن|بنت|ال|آل|أل)(\s|$)/g,' ');
+  t=t.replace(/[\s.\/\\_\-]+/g,'');
+  return t;
+}
+function _updNumPairs(){
+  // خريطة القائمة الجديدة حسب مفتاح الاسم
+  const nm={}; NEW_TRAINEE_NUMS.forEach(o=>{nm[_nk(o.n)]={num:o.num,name:o.n};});
+  const od=x=>String(x||'').replace(/[^0-9]/g,'');
+  const seen=new Set();
+  const cur=students.filter(s=>{const id=od(s.id);if(!id||seen.has(id))return false;seen.add(id);return true;});
+  const pairs=[];
+  cur.forEach(s=>{
+    const hit=nm[_nk(s.name)];
+    const oldId=od(s.id);
+    if(hit){
+      const changed=od(hit.num)!==oldId;
+      pairs.push({name:s.name,oldId,newId:hit.num,matched:true,changed,newName:hit.name});
+    }else{
+      pairs.push({name:s.name,oldId,newId:'',matched:false,changed:false});
+    }
+  });
+  return pairs;
+}
+function openUpdateNumbers(){
+  const pairs=_updNumPairs();
+  window._updNumPairs=pairs;
+  const changed=pairs.filter(p=>p.matched&&p.changed);
+  const same=pairs.filter(p=>p.matched&&!p.changed);
+  const unmatched=pairs.filter(p=>!p.matched);
+  const row=(p,idx)=>`<tr>
+    <td style="text-align:center">${p.matched&&p.changed?`<input type="checkbox" class="updnum-cb" data-idx="${idx}" checked style="width:16px;height:16px;accent-color:#1a7abf">`:'—'}</td>
+    <td style="font-weight:600">${esc(p.name)}</td>
+    <td style="text-align:center;color:var(--muted)">${esc(p.oldId)}</td>
+    <td style="text-align:center">${p.matched?`<b style="color:${p.changed?'#2ecc71':'var(--muted)'}">${esc(p.newId)}</b>`:'<span style="color:#e74c3c">لا يوجد في القائمة</span>'}</td>
+    <td style="text-align:center;font-size:11px">${!p.matched?'<span class="pill pr">بدون تطابق</span>':p.changed?'<span class="pill pg">تغيير</span>':'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">بلا تغيير</span>'}</td>
+  </tr>`;
+  const overlay=document.createElement('div');
+  overlay.className='modal-overlay'; overlay.id='updNumModal';
+  overlay.innerHTML=`<div class="modal mlist" style="max-width:820px">
+    <div class="modal-title">🔢 تحديث الأرقام التدريبية
+      <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="alert aw" style="margin-bottom:10px"><span class="aicon">⚠️</span>خذ نسخة احتياطية من الشيت قبل التطبيق (ملف ← إنشاء نسخة). التغيير يشمل: الأرقام والدرجات والغياب والطلبات.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <span class="pill pg">${changed.length} تغيير</span>
+      <span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">${same.length} بلا تغيير</span>
+      ${unmatched.length?`<span class="pill pr">${unmatched.length} بدون تطابق</span>`:''}
+    </div>
+    <div class="modal-body" style="max-height:56vh">
+      <div class="gtable"><table style="font-size:12px">
+        <thead><tr><th style="width:40px">تحديث</th><th>الاسم</th><th>الرقم الحالي</th><th>الرقم الجديد</th><th>الحالة</th></tr></thead>
+        <tbody>${pairs.map((p,i)=>row(p,i)).join('')}</tbody>
+      </table></div>
+      ${unmatched.length?`<div style="font-size:12px;color:var(--muted);margin-top:8px">💡 «بدون تطابق»: أسماء ما لقيت لها رقم في القائمة الجديدة (اختلاف كتابة الاسم) — عدّلها يدوياً من زر ✏️.</div>`:''}
+    </div>
+    <div class="btn-row" style="margin-top:12px;justify-content:flex-end">
+      <button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+      <button class="btn btn-b" onclick="applyUpdateNumbers()">✅ تطبيق التحديث (${changed.length})</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+}
+async function applyUpdateNumbers(){
+  const pairs=window._updNumPairs||[];
+  const recs=[...document.querySelectorAll('.updnum-cb:checked')].map(cb=>pairs[+cb.dataset.idx]).filter(Boolean)
+    .filter(p=>p.oldId&&p.newId&&p.oldId!==String(p.newId).replace(/[^0-9]/g,''))
+    .map(p=>({oldId:p.oldId,newId:p.newId}));
+  if(!recs.length){showToast('ما فيه أرقام محددة للتحديث','w');return;}
+  if(!confirm(`سيتم تحديث ${recs.length} رقم تدريبي في كل التبويبات (درجات/غياب/طلبات). هل أخذت نسخة احتياطية؟`))return;
+  showToast('جاري تحديث الأرقام...','i');
+  try{
+    const res=await jsonpCall({action:'updateTraineeNumbers',data:JSON.stringify(recs)});
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر التحديث: '+attErrMsg(res.msg,res.hint),'e');return;}
+    const r=(res&&res.result)||{};
+    showToast(`✅ تم تحديث ${recs.length} رقم — مركزي ${r.central||0} · سجل ${r.records||0} · غياب ${r.absence||0}`,'s');
+    document.getElementById('updNumModal')?.remove();
+    await loadAdmin();
+    showAPage('accounts',document.getElementById('sn-accounts'));
+  }catch(e){showToast('تعذّر التحديث — جرب مرة أخرى','e');}
+}
+window.openUpdateNumbers=openUpdateNumbers;window.applyUpdateNumbers=applyUpdateNumbers;
+
 // ===== شاشة العرض (TV Mode) — ملء الشاشة للعرض على شاشة كبيرة =====
 window._tvTimer=null;
 function buildTVContent(){
@@ -5280,7 +5410,10 @@ const aPgs={
     </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="stitle" style="margin:0">${t==='student'?'🎓 المتدربون':t==='trainer'?'👨‍🏫 المدربون':'⚙️ الإداريون'}</div>
-      <button class="btn btn-b" onclick='addAccount("${t}")'>➕ إضافة ${tLbl}</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${t==='student'?`<button class="btn btn-out" onclick="openUpdateNumbers()">🔢 تحديث الأرقام التدريبية</button>`:''}
+        <button class="btn btn-b" onclick='addAccount("${t}")'>➕ إضافة ${tLbl}</button>
+      </div>
     </div>
     <div data-listwrap>
     ${searchBoxHTML('ابحث بالاسم أو الرقم أو البريد...')}
