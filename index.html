@@ -4770,11 +4770,18 @@ function accountFormFields(type,data){
   const selStyle="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px";
   return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('title','المسمى الوظيفي',data.title)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرقم السري *',data.pw)+
     `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الصلاحية</label><select id="acc_level" style="${selStyle}"><option value="مشرف"${data.level==='مشرف'?' selected':''}>مشرف تخصص</option><option value="مدير"${(data.level||'').includes('مدير')?' selected':''}>مدير الأكاديمية (مشرف عام)</option></select></div>`+
-    `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصص الذي يشرف عليه (للمشرف)</label><select id="acc_spec" style="${selStyle}">
-       <option value="">— اختر التخصص —</option>
-       <option value="جميع الدبلومات"${data.spec==='جميع الدبلومات'?' selected':''}>جميع الدبلومات</option>
-       ${specOpts.map(sp=>`<option value="${esc(sp)}"${data.spec===sp?' selected':''}>${esc(sp)}</option>`).join('')}
-     </select><div style="font-size:11px;color:var(--muted);margin-top:4px">مشرف التخصص يعتمد طلبات تخصصه فقط · المدير يُترك فارغاً ويشرف على جميع التخصصات</div></div>`;
+    (function(){
+      const cur=specListOf(data.spec);
+      const chk=(v,lbl)=>`<label style="display:flex;gap:8px;align-items:center;padding:6px 4px;font-size:13px;cursor:pointer"><input type="checkbox" class="acc_spec_chk" value="${esc(v)}"${cur.indexOf(v)>-1?' checked':''}> ${esc(lbl)}</label>`;
+      return `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصصات التي يشرف عليها (للمشرف — يمكن اختيار أكثر من تخصص)</label>
+        <div style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;max-height:170px;overflow:auto">
+          ${chk('جميع الدبلومات','جميع التخصصات (كل الدبلومات)')}
+          <div style="height:1px;background:var(--border);margin:4px 0"></div>
+          ${specOpts.map(sp=>chk(sp,sp)).join('')||'<div style="font-size:12px;color:var(--muted)">لا توجد تخصصات مسجّلة بعد</div>'}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">مشرف التخصص يعتمد طلبات تخصصاته فقط · المدير يشرف على الجميع تلقائياً (يُترك بدون تحديد)</div>
+      </div>`;
+    })();
 }
 function accountModal(type,mode,data){
   const tLbl=type==='student'?'متدرب':type==='trainer'?'مدرب':'إداري';
@@ -4798,7 +4805,7 @@ async function saveAccount(type,mode){
   const rec={type,id:g('id'),name:g('name'),ph:g('ph'),email:g('email')};
   if(type==='student'){rec.grp=g('grp');rec.spec=g('spec');rec.pw=g('pw');}
   else if(type==='trainer'){rec.spec=g('spec');rec.pw=g('pw');}
-  else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');rec.spec=g('spec');}
+  else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');rec.spec=[...document.querySelectorAll('.acc_spec_chk:checked')].map(c=>c.value).join('، ');}
   if(!rec.id||!rec.name){showToast('الرقم والاسم مطلوبان','w');return;}
   if(type==='admin'&&!rec.pw){showToast('الرقم السري مطلوب للإداري','w');return;}
   showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
@@ -5326,7 +5333,7 @@ const aPgs={
       rows=(adminsDB||[]).map(s=>`<tr>
         <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td>
         <td>${(s.level&&String(s.level).includes('مدير'))?'<span class="pill py">مدير (مشرف عام)</span>':'<span class="pill pb">مشرف تخصص</span>'}</td>
-        <td>${(s.level&&String(s.level).includes('مدير'))?'<span class="pill pg">جميع التخصصات</span>':(s.spec&&s.spec!=='جميع الدبلومات'?esc(s.spec):'<span class="pill pb">غير محدد</span>')}</td>
+        <td>${(s.level&&String(s.level).includes('مدير'))?'<span class="pill pg">جميع التخصصات</span>':specListHtml(s.spec)}</td>
         <td style="color:var(--muted)">${esc(s.ph||'-')}</td>
         <td><button onclick='editAccount("admin",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("admin","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
@@ -7464,12 +7471,22 @@ function reqActiveStage(r){
 function isDirector(u){return !!u&&u.role==='a'&&u.level==='director';} // المدير (لقبه «المشرف العام») يشوف الكل ويعتمد نهائياً
 function isSpecSup(u){return !!u&&u.role==='a'&&u.level!=='director';} // مشرف تخصص — لكل مشرف تخصصه
 function isGenSup(u){return isDirector(u);} // لا يوجد مشرف عام مستقل — المدير هو من يشرف على الكل
-// هل يغطّي تخصص المشرف تخصص الطلب؟ (مشرف بدون تخصص محدد أو «جميع الدبلومات» يرى الكل)
+// تخصصات المشرف قد تكون أكثر من واحد (مفصولة بفاصلة). هل تشمل تخصص الطلب؟
+function specListOf(v){return String(v||'').split(/[،,]/).map(x=>x.trim()).filter(Boolean);}
 function specCovers(uSpec,rSpec){
-  uSpec=String(uSpec||'').trim(); rSpec=String(rSpec||'').trim();
-  if(!uSpec||uSpec==='جميع الدبلومات')return true;
+  rSpec=String(rSpec||'').trim();
+  const list=specListOf(uSpec);
+  if(!list.length)return true;                 // مشرف بدون تخصص محدد → يرى الكل
+  if(list.indexOf('جميع الدبلومات')>-1)return true;
   if(!rSpec)return true;
-  return uSpec===rSpec;
+  return list.indexOf(rSpec)>-1;
+}
+// عرض تخصصات المشرف كوسوم
+function specListHtml(v){
+  const list=specListOf(v);
+  if(list.indexOf('جميع الدبلومات')>-1)return '<span class="pill pg">جميع التخصصات</span>';
+  if(!list.length)return '<span class="pill pb">غير محدد</span>';
+  return list.map(x=>`<span class="pill pg" style="margin:1px">${esc(x)}</span>`).join(' ');
 }
 function trainerOwnsReqCourse(r){
   const cn=((r.details||'').match(/المادة:\s*([^|]+)/)||[])[1];
