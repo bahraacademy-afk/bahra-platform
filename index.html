@@ -1007,7 +1007,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyp9gahKfYgtYIhDLGxhGH1p7lZ4WZvkjgoKUxsmn_q6wANCIBI9JM025ZtPuHwmP3W/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwtX3p-eyHMb0YZKws2ochbhiPGoU_HCU7-Hho2D2Q6OgV1urGmgJHribClP2zjPWi9/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1361,7 +1361,7 @@ function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.
 
 // ===== LOAD DATA =====
 async function loadStudent(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps(), loadStaffDir()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[])
@@ -1384,7 +1384,7 @@ async function loadStudent(){
 }
 
 async function loadTrainer(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps(), loadStaffDir()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[]),
@@ -1519,6 +1519,15 @@ async function loadStaffList(){
   const d=await jsonpTo(AUTH_URL,{action:'staffList',token:SESSION.token}).catch(()=>null);
   staffCache=(d&&d.staff)||[];
   return staffCache;
+}
+// تحميل دليل الطاقم (اسم + صفة + تخصص فقط) للطالب/المدرب لاستخدامه في «طلب عام»
+async function loadStaffDir(){
+  if((typeof adminsDB!=='undefined'&&adminsDB.length)||(typeof trainersDB!=='undefined'&&trainersDB.length))return;
+  const d=await jsonpTo(AUTH_URL,{action:'staffList',token:SESSION.token}).catch(()=>null);
+  if(d&&d.staff){
+    trainersDB=d.staff.filter(s=>s.type==='trainer').map(s=>({id:n0(s.id),name:n0(s.name),spec:n0(s.spec)}));
+    adminsDB=d.staff.filter(s=>s.type==='admin').map(s=>({id:n0(s.id),name:n0(s.name),title:n0(s.title),level:n0(s.level),spec:n0(s.spec)}));
+  }
 }
 // هل يوجد تكليف نشط يمنحني هذه المادة؟ (للمكلَّف — واجهة فقط، والخادم يفرضه فعلياً)
 function myActiveDelegationFor(code,grp){
@@ -7527,16 +7536,31 @@ function reqTimeline(r){
   }).join('')+'</div>';
 }
 function staffList(){
+  const me=user;
+  const admins=(typeof adminsDB!=='undefined'&&adminsDB.length)?adminsDB:[];
+  const trs=(typeof trainersDB!=='undefined'&&trainersDB.length)?trainersDB:[];
+  const isMgr=a=>a.level&&String(a.level).includes('مدير');
   const arr=[];
-  if((typeof adminsDB!=='undefined'&&adminsDB.length)||(typeof trainersDB!=='undefined'&&trainersDB.length)){
-    (adminsDB||[]).forEach(a=>arr.push({name:a.name,role:'a',id:a.id,sub:(a.level&&String(a.level).includes('مدير'))?'مدير الأكاديمية (المشرف العام)':(!a.spec||a.spec==='جميع الدبلومات')?'مشرف':('مشرف تخصص · '+a.spec)}));
-    (trainersDB||[]).forEach(t=>arr.push({name:t.name,role:'t',id:t.id,sub:'مدرب'+(t.spec?(' · '+t.spec):'')}));
+  if(me.role==='s'){
+    // مدربو الترم الحالي فقط — بالاسم وصفته
+    [...new Set((courses||[]).filter(c=>isActive(c.status)).map(c=>c.trainer).filter(Boolean))].forEach(nm=>{
+      const t=trs.find(x=>_nk(x.name)===_nk(nm));
+      arr.push({name:nm,role:'t',id:t?t.id:'',sub:'مدرب'});
+    });
+    // مشرف تخصص الطالب — بالاسم
+    admins.filter(a=>!isMgr(a)&&specCovers(a.spec,me.spec)).forEach(a=>arr.push({name:a.name,role:'a',id:a.id,sub:'مشرف التخصص'}));
+    // مدير الأكاديمية — بالاسم
+    admins.filter(isMgr).forEach(a=>arr.push({name:a.name,role:'a',id:a.id,sub:'مدير الأكاديمية'}));
+    // احتياط لو لم تتوفّر أسماء الإداريين
+    if(!admins.length){
+      arr.push({name:'مشرف التخصص',role:'spec',id:'',sub:'مشرف التخصص'});
+      arr.push({name:'مدير الأكاديمية',role:'dir',id:'',sub:'مدير الأكاديمية'});
+    }
   }else{
-    [...new Set((courses||[]).map(c=>c.trainer).filter(Boolean))].forEach(nm=>arr.push({name:nm,role:'t',id:'',sub:'مدرب المادة'}));
-    arr.push({name:'مشرف تخصصي',role:'spec',id:'',sub:'مشرف التخصص'});
-    arr.push({name:'مدير الأكاديمية (المشرف العام)',role:'dir',id:'',sub:'المدير — يشرف على الكل'});
+    admins.forEach(a=>arr.push({name:a.name,role:'a',id:a.id,sub:isMgr(a)?'مدير الأكاديمية':'مشرف التخصص'}));
+    trs.forEach(t=>arr.push({name:t.name,role:'t',id:t.id,sub:'مدرب'}));
   }
-  return arr;
+  return arr.filter(p=>!p.id||String(p.id)!==String(me.id));
 }
 function reqExcuseParse(r){
   const d=r.details||'';
