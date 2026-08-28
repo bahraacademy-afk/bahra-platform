@@ -1007,7 +1007,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzZMoGJ8tOnmmuigtce3qeLFGrlOOaIsp6vIgEH1x9O1ceKio1i90MV_vAdUc8SFKlB/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzBHA2oOgVEHJoZCvrIS99grkVWAAzwKJvfuoLT__MSh7YRpkkhBLVnL-qfE6YaCE6v/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -4785,7 +4785,10 @@ async function endTerm(){
   try{
     const res=await jsonpCall({action:'endTerm',data:JSON.stringify([{term}])});
     const n=(res&&res.updated)||0;
-    showToast(`✅ تم إنهاء الترم — حُوّلت ${n} مادة إلى سابق`,'s');
+    const arc=(res&&res.archivedAbsence)||0;
+    const al=(res&&res.archivedLessons)||0, aq=(res&&res.archivedRequests)||0;
+    const extra=[arc?`${arc} غياب`:'',al?`${al} تحضير`:'',aq?`${aq} طلب`:''].filter(Boolean).join(' · ');
+    showToast(`✅ تم إنهاء الترم — ${n} مادة إلى سابق`+(extra?` · أُرشِف: ${extra}`:''),'s');
     loadAdmin().then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
   }catch(e){showToast('تعذّر إنهاء الترم — جرب مرة أخرى','e');}
 }
