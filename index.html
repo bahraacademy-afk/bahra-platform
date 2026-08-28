@@ -1463,14 +1463,25 @@ function activeTrainerNames(){
 }
 
 // تحميل طلبات الخدمات من تبويب "طلبات الخدمات"
-// الأعمدة: A=معرف B=الرقم C=الاسم D=الشعبة E=النوع F=التفاصيل G=التاريخ H=اعتماد المشرف I=اعتماد المدير J=الحالة النهائية K=ملاحظات L=اعتماد المدرب M=احتياط
+// الأعمدة: A=معرف B=الرقم C=الاسم D=الشعبة E=النوع F=التفاصيل G=التاريخ H=المشرف العام I=المدير J=الحالة النهائية
+//          K=ملاحظات L=المدرب M=تواريخ N=المشرف العام O=التصنيف P=دور المُرسِل Q=تخصص الطلب R=اسم المستهدف S=دور المستهدف T=قرار المستهدف
 async function loadRequests(){
-  const rq=await fetchSheet('طلبات الخدمات!A:M').catch(()=>[]);
+  const rq=await fetchSheet('طلبات الخدمات!A:T').catch(()=>[]);
   requests=[];
   for(let i=1;i<rq.length;i++){
     const r=rq[i];
     if(!n0(r[0]))continue;
-    requests.push({rid:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),type:n0(r[4]),details:n0(r[5]),date:n0(r[6]),supStatus:n0(r[7])||'معلق',dirStatus:n0(r[8])||'معلق',finalStatus:n0(r[9])||'قيد المراجعة',notes:n0(r[10]),trnStatus:n0(r[11])||'معلق'});
+    const cat=n0(r[14]);
+    requests.push({
+      rid:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),type:n0(r[4]),details:n0(r[5]),date:n0(r[6]),
+      supStatus:n0(r[7])||(cat==='عام'?'—':'معلق'),
+      dirStatus:n0(r[8])||(cat==='عام'?'—':'معلق'),
+      finalStatus:n0(r[9])||'قيد المراجعة',
+      notes:n0(r[10]),trnStatus:n0(r[11])||'معلق',exDates:n0(r[12]),
+      genStatus:n0(r[13])||(cat?'معلق':'معتمد'),
+      cat:cat,reqRole:n0(r[15]),reqSpec:n0(r[16]),
+      targetName:n0(r[17]),targetRole:n0(r[18]),tgtStatus:n0(r[19])||'معلق'
+    });
   }
 }
 
@@ -2701,29 +2712,18 @@ function getNotifications(){
   const list=[];
   if(!requests||!requests.length)return list;
   if(user.role==='s'){
-    // المتدرب: تحديثات على طلباته (اعتماد/رفض) + طلبات ما زالت قيد المراجعة
-    const mine=requests.filter(r=>String(r.sid)===String(user.id));
-    mine.forEach(r=>{
-      const decided=r.finalStatus==='معتمد'||r.dirStatus==='معتمد';
-      const rejected=r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'||r.finalStatus==='مرفوض';
-      if(decided)list.push({type:'as',icon:'✅',msg:`تم اعتماد طلبك: ${esc(r.type)}${r.date?' · '+r.date:''}`});
-      else if(rejected)list.push({type:'ad',icon:'❌',msg:`تم رفض طلبك: ${esc(r.type)}${r.date?' · '+r.date:''}`});
-      else list.push({type:'ab',icon:'⏳',msg:`طلبك قيد المراجعة: ${esc(r.type)}${r.date?' · '+r.date:''}`});
-    });
-  } else if(user.role==='t'){
-    // المدرب: أعذار غياب تنتظر اعتماده
-    requests.filter(r=>r.type==='عذر غياب'&&r.trnStatus==='معلق').forEach(r=>{
-      list.push({type:'aw',icon:'📩',msg:`عذر غياب ينتظر اعتمادك — ${esc(r.sname||'')} · شعبة ${esc(r.grp||'')}${r.date?' · '+r.date:''}`});
+    // المتدرب: تحديثات على طلباته
+    requests.filter(r=>String(r.sid)===String(user.id)).forEach(r=>{
+      const f=reqFinal(r), lbl=REQ_CATS[reqCat(r)].label;
+      if(f==='معتمد')list.push({type:'as',icon:'✅',msg:`تم اعتماد طلبك: ${esc(lbl)}${r.date?' · '+r.date:''}`});
+      else if(f==='مرفوض')list.push({type:'ad',icon:'❌',msg:`تم رفض طلبك: ${esc(lbl)}${r.notes?' — '+esc(r.notes):''}`});
+      else if(f==='بانتظار التعديل')list.push({type:'aw',icon:'✏️',msg:`طلبك يحتاج تعديل: ${esc(lbl)}${r.notes?' — '+esc(r.notes):''}`});
+      else list.push({type:'ab',icon:'⏳',msg:`طلبك قيد المراجعة (بانتظار ${esc(STAGE_LBL[reqActiveStage(r)]||'المراجعة')}): ${esc(lbl)}`});
     });
   } else {
-    // الإداري: مشرف أو مدير
-    const isDir=user.level==='director';
-    requests.filter(r=>{
-      if(isDir)return r.supStatus==='معتمد'&&r.dirStatus==='معلق';
-      if(r.type==='عذر غياب')return r.trnStatus==='معتمد'&&r.supStatus==='معلق';
-      return r.supStatus==='معلق';
-    }).forEach(r=>{
-      list.push({type:'aw',icon:'📩',msg:`${esc(r.type)} ينتظر اعتمادك — ${esc(r.sname||'')} · شعبة ${esc(r.grp||'')}${r.date?' · '+r.date:''}`});
+    // المدرب/الإداري: كل ما وصل مرحلته وينتظر إجراءه
+    requests.filter(r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);}).forEach(r=>{
+      list.push({type:'aw',icon:'📩',msg:`${esc(REQ_CATS[reqCat(r)].label)} ينتظر إجراءك — ${esc(r.sname||'')}${r.grp?' · شعبة '+esc(r.grp):''}${r.date?' · '+r.date:''}`});
     });
   }
   return list;
@@ -3128,66 +3128,13 @@ const sPgs={
     </table></div>`:emptyMsg}`;
   },
   services:()=>{
-    const myReqs=requests.filter(r=>r.sid===user.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    const statusBadge=r=>{
-      if(r.finalStatus==='معتمد'||r.dirStatus==='معتمد')return '<span class="pill pg">معتمد نهائياً ✓</span>';
-      if(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'||r.finalStatus==='مرفوض')return '<span class="pill pr">مرفوض</span>';
-      if(r.supStatus==='معتمد')return '<span class="pill pb">بانتظار المدير</span>';
-      return '<span class="pill py">بانتظار المشرف</span>';
-    };
+    const myReqs=requests.filter(r=>String(r.sid)===String(user.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     return `
     <div class="stitle">📝 الخدمات والطلبات</div>
-    <div class="alert ab"><span class="aicon">ℹ️</span>قدّم طلبك وسيمر على المشرف الأكاديمي ثم مدير الأكاديمية للاعتماد</div>
-    <div class="ccard cc-b" style="margin-bottom:20px">
-      <div class="cc-name" style="margin-bottom:14px">➕ تقديم طلب جديد</div>
-      <div class="mform-group"><label>نوع الطلب</label>
-        <select id="rq-type" onchange="toggleExcuseFields()">
-          <option value="ورقة تعريف">ورقة تعريف بالمتدرب</option>
-          <option value="عذر غياب">عذر غياب</option>
-          <option value="طلب آخر">طلب آخر</option>
-        </select>
-      </div>
-      <div id="excuse-fields" style="display:none">
-        <div class="mform-group"><label>المادة (الغياب فيها)</label>
-          <select id="rq-course" onchange="renderExcuseDates()">
-            <option value="">— اختر المادة —</option>
-            ${[...new Set(courses.filter(c=>isActive(c.status)).map(c=>c.course))].map(cn=>{
-              const c=courses.find(x=>x.course===cn);
-              return `<option value="${cn}" data-code="${normCode(c?.code||'')}">${cn}</option>`;
-            }).join('')}
-          </select>
-        </div>
-        <div class="mform-group"><label>أيام الغياب (اختر التاريخ ثم أضف)</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <input type="date" id="rq-date" max="${new Date().toLocaleDateString('en-CA')}" style="flex:1;min-width:160px">
-            <button type="button" class="btn btn-b btn-sm" onclick="addExcuseDate()">➕ أضف اليوم</button>
-          </div>
-          <div id="rq-dates-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
-          <div id="rq-dates-total" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
-        </div>
-        <div class="mform-group"><label>ملف العذر (PDF)</label>
-          <input type="file" id="rq-file" accept="application/pdf,.pdf">
-          <div style="font-size:11px;color:var(--muted);margin-top:4px">ارفق مستند العذر بصيغة PDF — يُحفظ تلقائياً في أرشيف الأكاديمية (مجلد اعذار الغياب)</div>
-        </div>
-      </div>
-      <div class="mform-group"><label>التفاصيل / السبب</label>
-        <textarea id="rq-details" placeholder="اكتب تفاصيل طلبك هنا..."></textarea>
-      </div>
-      <div class="btn-row"><button class="btn btn-r" onclick="submitRequest()">📨 إرسال الطلب</button></div>
-    </div>
+    <div class="alert ab"><span class="aicon">ℹ️</span>قدّم طلبك وتابع مساره خطوة بخطوة حتى الاعتماد النهائي</div>
+    ${requestFormHtml()}
     <div class="stitle">طلباتي ${myReqs.length?`(${myReqs.length})`:''}</div>
-    ${myReqs.length?myReqs.map(r=>`
-      <div class="ccard ${r.finalStatus==='معتمد'||r.dirStatus==='معتمد'?'cc-g':r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'?'cc-r':'cc-y'}">
-        <div class="cc-top"><div><div class="cc-name">${esc(r.type)}</div><div class="cc-meta">رقم الطلب <b style="color:#6ab8f7">${esc(String(r.rid||'—'))}</b>${r.date?' · '+r.date:''}</div></div>${statusBadge(r)}</div>
-        ${r.details?`<div style="font-size:13px;color:var(--muted);margin-top:8px">${esc(r.details)}</div>`:''}
-        <div style="display:flex;gap:16px;margin-top:10px;font-size:11px;flex-wrap:wrap">
-          ${r.type==='عذر غياب'?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدرب: ${esc(r.trnStatus||'معلق')}</span>`:''}
-          <span style="color:${r.supStatus==='معتمد'?'var(--green)':r.supStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المشرف: ${r.supStatus}</span>
-          <span style="color:${r.dirStatus==='معتمد'?'var(--green)':r.dirStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدير: ${r.dirStatus}</span>
-        </div>
-        ${r.notes?`<div style="font-size:12px;color:#f4c78a;margin-top:6px">📌 ${esc(r.notes)}</div>`:''}
-        ${((r.type||'').includes('تعريف')&&(r.finalStatus==='معتمد'||r.dirStatus==='معتمد'))?`<div style="margin-top:12px"><button class="btn btn-b btn-sm" onclick="printMyIntro()">🖨️ اطبع ورقة التعريف (الإفادة)</button></div>`:''}
-      </div>`).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات سابقة</div>'}`;
+    ${myReqs.length?myReqs.map(r=>reqCard(r,{actionable:false,showRequester:false})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات سابقة</div>'}`;
   },
   attachments:()=>`
     <div class="stitle">المرفقات والمواد العلمية</div>
@@ -3673,47 +3620,17 @@ const tPgs={
   // ===== سجل التحضير (المدرب) — عرض فقط =====
   attlog:()=>renderAttLog(false),
   requests:()=>{
-    // أعذار الغياب لمواد هذا المدرب
-    const myCourses=[...new Set(students.map(s=>s.course))];
-    const mine=requests.filter(r=>{
-      if(r.type!=='عذر غياب')return false;
-      const m=(r.details||'').match(/المادة:\s*([^|]+)/);
-      const cn=m?m[1].trim():'';
-      return myCourses.includes(cn);
-    });
-    const pending=mine.filter(r=>r.trnStatus==='معلق');
-    const done=mine.filter(r=>r.trnStatus!=='معلق').sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    const parseEx=(r)=>{
-      const d=r.details||'';
-      return {
-        course:((d.match(/المادة:\s*([^|]+)/)||[])[1]||'').trim(),
-        days:((d.match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim(),
-        hours:((d.match(/ساعات:\s*([\d.]+)/)||[])[1]||'0'),
-        reason:((d.match(/السبب:\s*([^|]+)/)||[])[1]||'').trim(),
-        file:((d.match(/الملف:\s*(\S+)/)||[])[1]||'').trim()
-      };
-    };
-    const card=(r,actionable)=>{
-      const ex=parseEx(r);
-      const badge=r.trnStatus==='معتمد'?'<span class="pill pg">اعتمدته ✓</span>':r.trnStatus==='مرفوض'?'<span class="pill pr">رفضته</span>':'<span class="pill py">بانتظار اعتمادك</span>';
-      return `<div class="ccard ${actionable?'cc-y':r.trnStatus==='معتمد'?'cc-g':'cc-r'}" style="margin-bottom:12px">
-        <div class="cc-top"><div><div class="cc-name">عذر غياب — ${esc(r.sname)}</div><div class="cc-meta">رقم الطلب <b style="color:#6ab8f7">${esc(String(r.rid||'—'))}</b> · الشعبة ${esc(r.grp)} · ${r.sid} · ${r.date||''}</div></div>${badge}</div>
-        <div style="margin:8px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border)">
-          <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">المادة</span><span style="font-weight:700">${ex.course}</span></div>
-          ${ex.days?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">أيام الغياب</span><span style="font-weight:700;text-align:left;max-width:60%">${ex.days}</span></div>`:''}
-          <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">ساعات الغياب المطلوب عذرها</span><span style="font-weight:700">${ex.hours} ساعة</span></div>
-          ${ex.reason&&ex.reason!=='—'?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">السبب</span><span style="font-weight:600;text-align:left;max-width:60%">${ex.reason}</span></div>`:''}
-          ${ex.file?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الملف</span><a href="${ex.file}" target="_blank" style="color:#6ab8f7;font-weight:700">📎 فتح الملف</a></div>`:'<div style="font-size:11px;color:var(--gold);padding:4px 0">⚠️ لا يوجد ملف مرفق</div>'}
-        </div>
-        ${actionable?`<div class="btn-row"><button class="btn btn-g btn-sm" onclick="actOnRequest('${r.rid}','معتمد')">✓ اعتماد</button><button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','مرفوض')">✕ رفض</button></div>`:'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+(r.trnStatus==='معتمد'?'انتقل للمشرف ثم المدير':'تم الرفض')+'</div>'}
-      </div>`;
-    };
+    const inbox=requests.filter(r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);}).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const mine=requests.filter(r=>String(r.sid)===String(user.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     return `
-    <div class="banner"><div><div class="btitle">📋 أعذار الغياب</div><div class="bsub">راجع أعذار طلابك واعتمدها — أول مرحلة قبل المشرف والمدير</div></div></div>
-    <div class="alert ab"><span class="aicon">ℹ️</span>أنت أول من يعتمد عذر الغياب (أنت أدرى بحضور طلابك)، ثم المشرف، ثم المدير</div>
-    <div class="stitle">🔔 بانتظار اعتمادك ${pending.length?`(${pending.length})`:''}</div>
-    ${pending.length?pending.map(r=>card(r,true)).join(''):'<div class="alert as"><span class="aicon">✅</span>لا توجد أعذار بانتظار اعتمادك</div>'}
-    ${done.length?`<div class="stitle" style="margin-top:24px">السجل (${done.length})</div>${done.map(r=>card(r,false)).join('')}`:''}`;
+    <div class="banner"><div><div class="btitle">📋 الطلبات والموافقات</div><div class="bsub">اعتماد أعذار طلابك والطلبات الموجَّهة لك — وتقديم طلباتك للإدارة</div></div><div class="bpill bp-b">مدرب</div></div>
+    <div class="alert ab"><span class="aicon">ℹ️</span>أنت أول من يعتمد عذر الغياب، ثم مشرف التخصص، ثم مدير الأكاديمية</div>
+    <div class="stitle">🔔 بانتظار إجراءك ${inbox.length?`(${inbox.length})`:''}</div>
+    ${inbox.length?inbox.map(r=>reqCard(r,{actionable:true,showRequester:true})).join(''):'<div class="alert as"><span class="aicon">✅</span>لا يوجد شيء بانتظار إجراءك</div>'}
+    <div class="stitle" style="margin-top:24px">➕ تقديم طلب للإدارة</div>
+    ${requestFormHtml()}
+    <div class="stitle" style="margin-top:8px">طلباتي المرفوعة ${mine.length?`(${mine.length})`:''}</div>
+    ${mine.length?mine.map(r=>reqCard(r,{actionable:false,showRequester:false})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لم ترفع طلبات بعد</div>'}`;
   },
   schedule:()=>{
     // جدول المدرب: نجمع كل حصصه من كل الشعب — مع دمج الشعب المشتركة
@@ -4848,15 +4765,16 @@ function accountFormFields(type,data){
   const f=(id,lbl,val,ph)=>`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">${lbl}</label><input id="acc_${id}" value="${(val||'').toString().replace(/"/g,'&quot;')}" placeholder="${ph||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"></div>`;
   if(type==='student')return f('id','الرقم الأكاديمي *',data.id)+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
   if(type==='trainer')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
-  // admin
+  // admin — مشرف تخصص (لكل تخصص مشرفه يوافق على طلباته)، أو مدير الأكاديمية (المشرف العام) الذي يشرف على الكل ويعتمد نهائياً
   const specOpts=[...new Set(students.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
   const selStyle="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px";
   return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('title','المسمى الوظيفي',data.title)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرقم السري *',data.pw)+
-    `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الصلاحية</label><select id="acc_level" style="${selStyle}"><option value="مشرف"${data.level==='مشرف'?' selected':''}>مشرف</option><option value="مدير"${(data.level||'').includes('مدير')?' selected':''}>مدير</option></select></div>`+
-    `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصص المشرف عليه</label><select id="acc_spec" style="${selStyle}">
-       <option value="جميع الدبلومات"${(data.spec==='جميع الدبلومات'||!data.spec)?' selected':''}>جميع الدبلومات (مشرف عام)</option>
+    `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الصلاحية</label><select id="acc_level" style="${selStyle}"><option value="مشرف"${data.level==='مشرف'?' selected':''}>مشرف تخصص</option><option value="مدير"${(data.level||'').includes('مدير')?' selected':''}>مدير الأكاديمية (مشرف عام)</option></select></div>`+
+    `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصص الذي يشرف عليه (للمشرف)</label><select id="acc_spec" style="${selStyle}">
+       <option value="">— اختر التخصص —</option>
+       <option value="جميع الدبلومات"${data.spec==='جميع الدبلومات'?' selected':''}>جميع الدبلومات</option>
        ${specOpts.map(sp=>`<option value="${esc(sp)}"${data.spec===sp?' selected':''}>${esc(sp)}</option>`).join('')}
-     </select></div>`;
+     </select><div style="font-size:11px;color:var(--muted);margin-top:4px">مشرف التخصص يعتمد طلبات تخصصه فقط · المدير يُترك فارغاً ويشرف على جميع التخصصات</div></div>`;
 }
 function accountModal(type,mode,data){
   const tLbl=type==='student'?'متدرب':type==='trainer'?'مدرب':'إداري';
@@ -5404,10 +5322,12 @@ const aPgs={
         <td><button onclick='editAccount("trainer",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("trainer","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مدربون</td></tr>`;
     }else{
-      cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الصلاحية</th><th>التخصص المشرف عليه</th><th>الجوال</th><th>إجراءات</th>`;
+      cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الصلاحية</th><th>التخصص</th><th>الجوال</th><th>إجراءات</th>`;
       rows=(adminsDB||[]).map(s=>`<tr>
-        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td><td>${s.level||'-'}</td>
-        <td>${(!s.spec||s.spec==='جميع الدبلومات')?'<span class="pill pb">جميع الدبلومات</span>':`<span class="pill pg">${esc(s.spec)}</span>`}</td><td style="color:var(--muted)">${esc(s.ph||'-')}</td>
+        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td>
+        <td>${(s.level&&String(s.level).includes('مدير'))?'<span class="pill py">مدير (مشرف عام)</span>':'<span class="pill pb">مشرف تخصص</span>'}</td>
+        <td>${(s.level&&String(s.level).includes('مدير'))?'<span class="pill pg">جميع التخصصات</span>':(s.spec&&s.spec!=='جميع الدبلومات'?esc(s.spec):'<span class="pill pb">غير محدد</span>')}</td>
+        <td style="color:var(--muted)">${esc(s.ph||'-')}</td>
         <td><button onclick='editAccount("admin",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("admin","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
     }
@@ -5594,7 +5514,7 @@ const aPgs={
     const warns=allCourses.filter(hasIssue).length;
     const grps=[...new Set(students.map(s=>s.grp))];
     return `
-    <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div><div class="bpill bp-y" style="text-align:center">${(user.level==='director'||!user.spec||user.spec==='جميع الدبلومات')?'مشرف عام · جميع الدبلومات':'مشرف تخصص<br>'+esc(user.spec)}</div></div>
+    <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div><div class="bpill bp-y" style="text-align:center">${user.level==='director'?'المشرف العام · إشراف كامل':(user.spec&&user.spec!=='جميع الدبلومات'?'مشرف تخصص · '+esc(user.spec):'مشرف')}</div></div>
     <div class="metrics">
       <div class="mcard mc-b" data-nav="all_students" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
       <div class="mcard mc-g" data-nav="all_courses" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
@@ -5805,65 +5725,18 @@ const aPgs={
     <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اسحب مادة من القائمة الجانبية إلى أي حصة · اسحب حصة لخانة ثانية للنقل · اضغط على خانة معبّأة لحذفها · التعارض يظهر كتنبيه فقط ولا يمنعك</div>`;
   },
   requests:()=>{
-    const isDir=user.level==='director';
-    // المشرف: للأعذار لازم المدرب يعتمد أولاً | المدير: بعد المشرف
-    const pending=requests.filter(r=>{
-      if(isDir)return r.supStatus==='معتمد'&&r.dirStatus==='معلق';
-      // مشرف: عذر غياب يحتاج اعتماد المدرب أولاً
-      if(r.type==='عذر غياب')return r.trnStatus==='معتمد'&&r.supStatus==='معلق';
-      return r.supStatus==='معلق';
-    });
-    const done=requests.filter(r=>!pending.includes(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    // تحليل تفاصيل عذر الغياب من النص
-    const parseExcuse=(r)=>{
-      const d=r.details||'';
-      const course=((d.match(/المادة:\s*([^|]+)/)||[])[1]||'').trim();
-      const days=((d.match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim();
-      const hours=parseFloat((d.match(/ساعات:\s*([\d.]+)/)||[])[1])||parseFloat(r.exHours)||0;
-      const reason=((d.match(/السبب:\s*([^|]+)/)||[])[1]||'').trim();
-      const file=((d.match(/الملف:\s*(\S+)/)||[])[1]||'').trim();
-      return {course,days,hours,reason,file};
-    };
-    // لوحة تفاصيل العذر مع معاينة الخصم
-    const excusePanel=(r)=>{
-      const ex=parseExcuse(r);
-      const cc=allCourses.find(x=>x.sid===r.sid&&x.course===ex.course);
-      const code=cc?cc.code:'';
-      const excusedPct=code&&ex.hours?absHoursToPct(ex.hours,code):0;
-      const curAbs=cc?Math.round(cc.abs*10)/10:0;
-      const newAbs=Math.max(0,Math.round((curAbs-excusedPct)*10)/10);
-      return `<div style="margin:8px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border)">
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">المادة</span><span style="font-weight:700">${ex.course||'—'}</span></div>
-        ${ex.days?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">أيام الغياب</span><span style="font-weight:700;text-align:left;max-width:60%">${ex.days}</span></div>`:''}
-        <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">ساعات الغياب المطلوب عذرها</span><span style="font-weight:700">${ex.hours||0} ساعة</span></div>
-        ${ex.reason&&ex.reason!=='—'?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">السبب</span><span style="font-weight:600;text-align:left;max-width:60%">${ex.reason}</span></div>`:''}
-        ${ex.file?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الملف الداعم</span><a href="${ex.file}" target="_blank" style="color:#6ab8f7;font-weight:700">📎 فتح الملف</a></div>`:'<div style="font-size:11px;color:var(--gold);padding:4px 0">⚠️ لا يوجد ملف داعم مرفق</div>'}
-        ${cc?`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px">
-          <span style="color:var(--muted)">تأثير الاعتماد على الغياب</span>
-          <span><span style="color:var(--red);font-weight:700">${curAbs}%</span> <span style="color:var(--muted)">←</span> <span style="color:var(--green);font-weight:700">${newAbs}%</span></span>
-        </div>`:'<div style="font-size:11px;color:var(--red);margin-top:6px">⚠️ لم يُعثر على سجل المادة لهذا الطالب</div>'}
-      </div>`;
-    };
-    const card=(r,actionable)=>{
-      const finalBadge=(r.finalStatus==='معتمد'||r.dirStatus==='معتمد')?'<span class="pill pg">معتمد نهائياً ✓</span>':(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')?'<span class="pill pr">مرفوض</span>':r.supStatus==='معتمد'?'<span class="pill pb">بانتظار المدير</span>':'<span class="pill py">بانتظار المشرف</span>';
-      const isExcuse=r.type==='عذر غياب';
-      return `<div class="ccard ${actionable?'cc-y':((r.dirStatus==='معتمد')?'cc-g':(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')?'cc-r':'cc-b')}" style="margin-bottom:12px">
-        <div class="cc-top"><div><div class="cc-name">${esc(r.type)} — ${esc(r.sname)}</div><div class="cc-meta">رقم الطلب <b style="color:#6ab8f7">${esc(String(r.rid||'—'))}</b> · الشعبة ${esc(r.grp)} · ${r.sid} · ${r.date||''}</div></div>${finalBadge}</div>
-        ${isExcuse?excusePanel(r):(r.details?`<div style="font-size:13px;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(r.details)}</div>`:'')}
-        <div style="display:flex;gap:16px;font-size:11px;margin-top:6px;flex-wrap:wrap">
-          ${isExcuse?`<span style="color:${r.trnStatus==='معتمد'?'var(--green)':r.trnStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدرب: ${r.trnStatus||'معلق'}</span>`:''}
-          <span style="color:${r.supStatus==='معتمد'?'var(--green)':r.supStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المشرف: ${r.supStatus}</span>
-          <span style="color:${r.dirStatus==='معتمد'?'var(--green)':r.dirStatus==='مرفوض'?'var(--red)':'var(--muted)'}">المدير: ${r.dirStatus}</span>
-        </div>
-        ${actionable?`<div class="btn-row"><button class="btn btn-g btn-sm" onclick="actOnRequest('${r.rid}','معتمد')">✓ اعتماد${isExcuse?' وخصم الساعات':''}</button><button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','مرفوض')">✕ رفض</button></div>`:''}
-      </div>`;
-    };
+    const inbox=requests.filter(r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);}).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const others=requests.filter(r=>!inbox.includes(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const roleLbl=isDirector(user)?'مدير الأكاديمية (المشرف العام) — إشراف واعتماد نهائي':(user.spec&&user.spec!=='جميع الدبلومات'?'مشرف تخصص · '+user.spec:'مشرف');
     return `
-    <div class="banner"><div><div class="btitle">📋 الطلبات والموافقات</div><div class="bsub">${isDir?'مدير الأكاديمية — الاعتماد النهائي':'المشرف الأكاديمي — المراجعة الأولى'}</div></div><div class="bpill ${isDir?'bp-y':'bp-b'}">${isDir?'مدير':'مشرف'}</div></div>
-    <div class="stitle">🔔 بانتظار اعتمادك ${pending.length?`(${pending.length})`:''}</div>
-    ${pending.length?pending.map(r=>card(r,true)).join(''):'<div class="alert as"><span class="aicon">✅</span>لا توجد طلبات بانتظار اعتمادك</div>'}
-    <div class="stitle" style="margin-top:24px">📚 كل الطلبات (${requests.length})</div>
-    ${done.length?done.map(r=>card(r,false)).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات</div>'}`;
+    <div class="banner"><div><div class="btitle">📋 الطلبات والموافقات</div><div class="bsub">${esc(roleLbl)}</div></div><div class="bpill ${isDirector(user)?'bp-y':'bp-b'}">${isDirector(user)?'مدير':'مشرف'}</div></div>
+    <div class="alert ab"><span class="aicon">ℹ️</span>تظهر لك الطلبات التي وصلت مرحلتك في المسار — يمكنك الاعتماد أو الرفض النهائي أو الإرجاع للتعديل</div>
+    <div class="stitle">🔔 بانتظار إجراءك ${inbox.length?`(${inbox.length})`:''}</div>
+    ${inbox.length?inbox.map(r=>reqCard(r,{actionable:true,showRequester:true})).join(''):'<div class="alert as"><span class="aicon">✅</span>لا توجد طلبات بانتظار إجراءك</div>'}
+    <div class="stitle" style="margin-top:24px">➕ تقديم طلب إداري / عام</div>
+    ${requestFormHtml()}
+    <div class="stitle" style="margin-top:8px">📚 كل الطلبات (${requests.length})</div>
+    ${others.length?others.map(r=>reqCard(r,{actionable:false,showRequester:true})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات</div>'}`;
   },
   alerts:()=>{
     // كل المواد (بدون فلتر الحالة — لأن حالة الشيت قد لا تكون "حالي" بالضبط)
@@ -7255,19 +7128,20 @@ function printStudentReport(sid){
 // ===== 4) تقرير الأعذار والطلبات =====
 function printRequestsReport(){
   const reqs=requests||[];
-  const excuses=reqs.filter(r=>r.type==='عذر غياب');
-  const approved=reqs.filter(r=>r.finalStatus==='معتمد'||r.dirStatus==='معتمد');
-  const pending=reqs.filter(r=>r.finalStatus==='قيد المراجعة'||(!r.dirStatus||r.dirStatus==='معلق'));
-  const rejected=reqs.filter(r=>r.supStatus==='مرفوض'||r.dirStatus==='مرفوض'||r.finalStatus==='مرفوض');
+  const approved=reqs.filter(r=>reqFinal(r)==='معتمد');
+  const pending=reqs.filter(r=>{const f=reqFinal(r);return f==='قيد المراجعة'||f==='بانتظار التعديل';});
+  const rejected=reqs.filter(r=>reqFinal(r)==='مرفوض');
   const statusOf=r=>{
-    if(r.finalStatus==='معتمد'||r.dirStatus==='معتمد')return '<span class="badge b-g">معتمد</span>';
-    if(r.supStatus==='مرفوض'||r.dirStatus==='مرفوض')return '<span class="badge b-r">مرفوض</span>';
+    const f=reqFinal(r);
+    if(f==='معتمد')return '<span class="badge b-g">معتمد</span>';
+    if(f==='مرفوض')return '<span class="badge b-r">مرفوض</span>';
+    if(f==='بانتظار التعديل')return '<span class="badge b-y">بانتظار تعديل</span>';
     return '<span class="badge b-y">قيد المراجعة</span>';
   };
   const rows=reqs.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(r=>{
     const days=((String(r.details||'').match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim();
     const hours=((String(r.details||'').match(/ساعات:\s*([\d.]+)/)||[])[1]||'');
-    return `<tr><td>${r.date||'—'}</td><td style="text-align:right">${esc(r.sname||'')}</td><td>${esc(r.grp||'')}</td><td>${esc(r.type||'')}</td><td style="font-size:10px">${days||'—'}</td><td>${hours||'—'}</td><td>${statusOf(r)}</td></tr>`;
+    return `<tr><td>${r.date||'—'}</td><td style="text-align:right">${esc(r.sname||'')}</td><td>${esc(r.grp||'')}</td><td>${esc(REQ_CATS[reqCat(r)].label)}</td><td style="font-size:10px">${days||'—'}</td><td>${hours||'—'}</td><td>${statusOf(r)}</td></tr>`;
   }).join('');
   const body=`<div class="kpis">
     <div class="kpi"><div class="n">${reqs.length}</div><div class="l">إجمالي الطلبات</div></div>
@@ -7483,9 +7357,12 @@ async function submitNewUser(type){
 // الطالب يرسل طلب جديد
 // إظهار/إخفاء حقول العذر حسب نوع الطلب
 function toggleExcuseFields(){
-  const t=document.getElementById('rq-type').value;
+  const sel=document.getElementById('rq-type');
+  const t=sel?sel.value:'';
   const f=document.getElementById('excuse-fields');
   if(f)f.style.display=(t==='عذر غياب')?'block':'none';
+  const tf=document.getElementById('target-fields');
+  if(tf)tf.style.display=(t==='طلب عام')?'block':'none';
 }
 // قائمة تواريخ الغياب المختارة
 let excuseDates=[];
@@ -7535,106 +7412,352 @@ function renderExcuseDates(){
   }
 }
 
+/* ============================================================
+   نظام مسارات الموافقات متعدد المستويات
+   - عذر غياب : المدرب ← مشرف التخصص ← مدير الأكاديمية (المشرف العام)
+   - طلب إداري: مشرف التخصص ← مدير الأكاديمية
+   - ورقة تعريف: مشرف التخصص ← مدير الأكاديمية
+   - طلب عام  : المُرسِل يحدد الشخص → له الاعتماد/الرفض/الإرجاع أو التصعيد للمدير
+   كل مرحلة: اعتماد · رفض نهائي · إرجاع لصاحب الطلب للتعديل
+   ============================================================ */
+const REQ_CATS={
+  'عذر':  {label:'عذر غياب',   icon:'📄', chain:['trn','sup','dir']},
+  'إداري':{label:'طلب إداري',  icon:'🏛️', chain:['sup','dir']},
+  'تعريف':{label:'ورقة تعريف', icon:'📇', chain:['sup','dir']},
+  'عام':  {label:'طلب عام',    icon:'✉️', chain:['tgt']}
+};
+const STAGE_LBL={trn:'المدرب',sup:'مشرف التخصص',gen:'مشرف التخصص',dir:'مدير الأكاديمية',tgt:'المسؤول المحدد'};
+function reqCat(r){
+  if(r.cat&&REQ_CATS[r.cat])return r.cat;
+  if(r.type==='عذر غياب')return 'عذر';
+  if((r.type||'').includes('تعريف'))return 'تعريف';
+  if((r.type||'').includes('عام'))return 'عام';
+  return 'إداري';
+}
+function reqChain(r){
+  const ch=REQ_CATS[reqCat(r)].chain.slice();
+  if(reqCat(r)==='عام'&&r.dirStatus&&r.dirStatus!=='—'&&r.dirStatus!=='')ch.push('dir');
+  return ch;
+}
+function reqChainLast(r){const ch=reqChain(r);return ch[ch.length-1];}
+const _STMAP={trn:'trnStatus',sup:'supStatus',gen:'genStatus',dir:'dirStatus',tgt:'tgtStatus'};
+function stageStatus(r,st){return (r[_STMAP[st]]||'معلق');}
+function setStage(r,st,v){r[_STMAP[st]]=v;}
+function setStageObj(o,st,v){o[_STMAP[st]]=v;}
+function reqFinal(r){
+  const ss=reqChain(r).map(s=>stageStatus(r,s));
+  if(ss.indexOf('مرفوض')>-1)return 'مرفوض';
+  if(ss.indexOf('معاد')>-1)return 'بانتظار التعديل';
+  if(ss.length&&ss.every(x=>x==='معتمد'))return 'معتمد';
+  return 'قيد المراجعة';
+}
+function reqActiveStage(r){
+  const ch=reqChain(r);
+  for(let i=0;i<ch.length;i++){
+    const s=stageStatus(r,ch[i]);
+    if(s==='معتمد')continue;
+    if(s==='معلق'){for(let j=0;j<i;j++)if(stageStatus(r,ch[j])!=='معتمد')return null;return ch[i];}
+    return null; // مرفوض أو معاد → لا مرحلة نشطة
+  }
+  return null;
+}
+function isDirector(u){return !!u&&u.role==='a'&&u.level==='director';} // المدير (لقبه «المشرف العام») يشوف الكل ويعتمد نهائياً
+function isSpecSup(u){return !!u&&u.role==='a'&&u.level!=='director';} // مشرف تخصص — لكل مشرف تخصصه
+function isGenSup(u){return isDirector(u);} // لا يوجد مشرف عام مستقل — المدير هو من يشرف على الكل
+// هل يغطّي تخصص المشرف تخصص الطلب؟ (مشرف بدون تخصص محدد أو «جميع الدبلومات» يرى الكل)
+function specCovers(uSpec,rSpec){
+  uSpec=String(uSpec||'').trim(); rSpec=String(rSpec||'').trim();
+  if(!uSpec||uSpec==='جميع الدبلومات')return true;
+  if(!rSpec)return true;
+  return uSpec===rSpec;
+}
+function trainerOwnsReqCourse(r){
+  const cn=((r.details||'').match(/المادة:\s*([^|]+)/)||[])[1];
+  if(!cn)return true;
+  return [...new Set((students||[]).map(s=>s.course))].includes(cn.trim());
+}
+function reqTargetMatches(r,u){
+  const tr=r.targetRole;
+  if(tr==='dir'||tr==='gen')return isDirector(u);
+  if(tr==='spec')return u.role==='a'&&u.level!=='director'&&specCovers(u.spec,r.reqSpec);
+  if(tr==='t')return u.role==='t'&&_nk(r.targetName)===_nk(u.name);
+  if(tr==='a')return u.role==='a'&&((r.targetId&&String(r.targetId)===String(u.id))||_nk(r.targetName)===_nk(u.name));
+  return false;
+}
+function canActStage(st,r){
+  const u=user;if(!u)return false;
+  if(st==='trn')return u.role==='t'&&trainerOwnsReqCourse(r);
+  if(st==='sup'||st==='gen')return u.role==='a'&&(isDirector(u)||specCovers(u.spec,r.reqSpec)); // مشرف التخصص المطابق (والمدير احتياطاً/إشرافاً)
+  if(st==='dir')return isDirector(u);
+  if(st==='tgt')return reqTargetMatches(r,u);
+  return false;
+}
+function reqStatusPill(r){
+  const f=reqFinal(r);
+  if(f==='معتمد')return '<span class="pill pg">معتمد نهائياً ✓</span>';
+  if(f==='مرفوض')return '<span class="pill pr">مرفوض</span>';
+  if(f==='بانتظار التعديل')return '<span class="pill py">بانتظار تعديل صاحب الطلب</span>';
+  const st=reqActiveStage(r);
+  return '<span class="pill pb">بانتظار '+(STAGE_LBL[st]||'المراجعة')+'</span>';
+}
+function reqTimeline(r){
+  const ch=reqChain(r),act=reqActiveStage(r);
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">'+ch.map(s=>{
+    const v=stageStatus(r,s),on=act===s;
+    const col=v==='معتمد'?'var(--green)':v==='مرفوض'?'var(--red)':v==='معاد'?'var(--gold)':on?'#6ab8f7':'var(--muted)';
+    const ic=v==='معتمد'?'✓':v==='مرفوض'?'✕':v==='معاد'?'↩':on?'⏳':'•';
+    return '<span style="font-size:11px;color:'+col+';border:1px solid '+col+';border-radius:12px;padding:2px 9px;'+(on?'font-weight:700;background:rgba(106,184,247,.08);':'')+'">'+ic+' '+STAGE_LBL[s]+'</span>';
+  }).join('')+'</div>';
+}
+function staffList(){
+  const arr=[];
+  if((typeof adminsDB!=='undefined'&&adminsDB.length)||(typeof trainersDB!=='undefined'&&trainersDB.length)){
+    (adminsDB||[]).forEach(a=>arr.push({name:a.name,role:'a',id:a.id,sub:(a.level&&String(a.level).includes('مدير'))?'مدير الأكاديمية (المشرف العام)':(!a.spec||a.spec==='جميع الدبلومات')?'مشرف':('مشرف تخصص · '+a.spec)}));
+    (trainersDB||[]).forEach(t=>arr.push({name:t.name,role:'t',id:t.id,sub:'مدرب'+(t.spec?(' · '+t.spec):'')}));
+  }else{
+    [...new Set((courses||[]).map(c=>c.trainer).filter(Boolean))].forEach(nm=>arr.push({name:nm,role:'t',id:'',sub:'مدرب المادة'}));
+    arr.push({name:'مشرف تخصصي',role:'spec',id:'',sub:'مشرف التخصص'});
+    arr.push({name:'مدير الأكاديمية (المشرف العام)',role:'dir',id:'',sub:'المدير — يشرف على الكل'});
+  }
+  return arr;
+}
+function reqExcuseParse(r){
+  const d=r.details||'';
+  return {course:((d.match(/المادة:\s*([^|]+)/)||[])[1]||'').trim(),
+    days:((d.match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim(),
+    hours:((d.match(/ساعات:\s*([\d.]+)/)||[])[1]||'0'),
+    reason:((d.match(/السبب:\s*([^|]+)/)||[])[1]||'').trim(),
+    file:((d.match(/الملف:\s*(\S+)/)||[])[1]||'').trim()};
+}
+function reqCard(r,opts){
+  opts=opts||{};
+  const cat=reqCat(r),meta=REQ_CATS[cat],active=reqActiveStage(r),fin=reqFinal(r);
+  const canAct=opts.actionable&&active&&canActStage(active,r);
+  const isOwner=String(r.sid)===String(user.id);
+  const cls=fin==='معتمد'?'cc-g':fin==='مرفوض'?'cc-r':fin==='بانتظار التعديل'?'cc-y':canAct?'cc-y':'cc-b';
+  let body='';
+  if(cat==='عذر'){
+    const ex=reqExcuseParse(r);let dedu='';
+    if(typeof allCourses!=='undefined'&&allCourses.length){
+      const cc=allCourses.find(x=>x.sid===r.sid&&x.course===ex.course);
+      if(cc){const code=cc.code;const exPct=code&&+ex.hours?absHoursToPct(+ex.hours,code):0;const cur=Math.round(cc.abs*10)/10;const nw=Math.max(0,Math.round((cur-exPct)*10)/10);
+        dedu=`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);display:flex;justify-content:space-between;font-size:12px"><span style="color:var(--muted)">تأثير الاعتماد على الغياب</span><span><span style="color:var(--red);font-weight:700">${cur}%</span> <span style="color:var(--muted)">←</span> <span style="color:var(--green);font-weight:700">${nw}%</span></span></div>`;}
+    }
+    body=`<div style="margin:8px 0;padding:12px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">المادة</span><span style="font-weight:700">${esc(ex.course||'—')}</span></div>
+      ${ex.days?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">أيام الغياب</span><span style="font-weight:700;text-align:left;max-width:60%">${esc(ex.days)}</span></div>`:''}
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الساعات المطلوب عذرها</span><span style="font-weight:700">${esc(ex.hours)} ساعة</span></div>
+      ${ex.reason&&ex.reason!=='—'?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">السبب</span><span style="font-weight:600;text-align:left;max-width:60%">${esc(ex.reason)}</span></div>`:''}
+      ${ex.file?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الملف الداعم</span><a href="${ex.file}" target="_blank" style="color:#6ab8f7;font-weight:700">📎 فتح الملف</a></div>`:''}
+      ${dedu}
+    </div>`;
+  }else{
+    body=r.details?`<div style="font-size:13px;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px">${esc(r.details)}</div>`:'';
+  }
+  const targetLine=(cat==='عام'&&r.targetName)?`<div style="font-size:12px;margin-top:6px;color:#6ab8f7">✉️ موجَّه إلى: <b>${esc(r.targetName)}</b></div>`:'';
+  let actions='';
+  if(canAct){
+    const isTgt=active==='tgt', isLast=reqChainLast(r)===active;
+    actions=`<div class="btn-row" style="flex-wrap:wrap;gap:8px">
+      <button class="btn btn-g btn-sm" onclick="actOnRequest('${r.rid}','معتمد')">✓ اعتماد${(cat==='عذر'&&isLast)?' وخصم الساعات':''}</button>
+      ${isTgt?`<button class="btn btn-b btn-sm" onclick="actOnRequest('${r.rid}','تصعيد')">⬆ تصعيد للمدير</button>`:''}
+      <button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','معاد')">↩ إرجاع للتعديل</button>
+      <button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','مرفوض')">✕ رفض نهائي</button>
+    </div>`;
+  }else if(isOwner&&fin==='بانتظار التعديل'){
+    actions=`<div class="btn-row"><button class="btn btn-r btn-sm" onclick="resubmitRequest('${r.rid}')">✏️ تعديل وإعادة إرسال</button></div>`;
+  }else if(isOwner&&cat==='تعريف'&&fin==='معتمد'){
+    actions=`<div class="btn-row"><button class="btn btn-b btn-sm" onclick="printMyIntro()">🖨️ اطبع ورقة التعريف (الإفادة)</button></div>`;
+  }
+  const who=opts.showRequester?` — ${esc(r.sname||'')}`:'';
+  return `<div class="ccard ${cls}" style="margin-bottom:12px">
+    <div class="cc-top"><div><div class="cc-name">${meta.icon} ${esc(meta.label)}${who}</div>
+      <div class="cc-meta">رقم الطلب <b style="color:#6ab8f7">${esc(String(r.rid||'—'))}</b>${r.grp?' · الشعبة '+esc(r.grp):''}${r.sid?' · '+esc(String(r.sid)):''}${r.date?' · '+r.date:''}</div></div>${reqStatusPill(r)}</div>
+    ${targetLine}
+    ${body}
+    ${reqTimeline(r)}
+    ${r.notes?`<div style="font-size:12px;color:#f4c78a;margin-top:8px">📌 ${esc(r.notes)}</div>`:''}
+    ${actions}
+  </div>`;
+}
+// نموذج تقديم الطلب (يتكيّف حسب الدور)
+function requestFormHtml(){
+  const r=user.role;
+  const opts=(r==='s')
+    ? `<option value="عذر غياب">عذر غياب</option><option value="ورقة تعريف">ورقة تعريف بالمتدرب</option><option value="طلب إداري">طلب إداري</option><option value="طلب عام">طلب عام (أوجّهه لشخص)</option>`
+    : `<option value="طلب إداري">طلب إداري</option><option value="طلب عام">طلب عام (أوجّهه لشخص)</option>`;
+  const staff=staffList().filter(p=>!p.id||String(p.id)!==String(user.id));
+  const exCourses=(r==='s')?[...new Set((courses||[]).filter(c=>isActive(c.status)).map(c=>c.course))]:[];
+  return `<div class="ccard cc-b" style="margin-bottom:20px">
+    <div class="cc-name" style="margin-bottom:14px">➕ تقديم طلب جديد</div>
+    <div class="mform-group"><label>نوع الطلب</label>
+      <select id="rq-type" onchange="toggleExcuseFields()">${opts}</select>
+    </div>
+    ${r==='s'?`<div id="excuse-fields" style="display:block">
+      <div class="mform-group"><label>المادة (الغياب فيها)</label>
+        <select id="rq-course" onchange="renderExcuseDates()">
+          <option value="">— اختر المادة —</option>
+          ${exCourses.map(cn=>{const c=(courses||[]).find(x=>x.course===cn);return `<option value="${esc(cn)}" data-code="${normCode(c?c.code:'')}">${esc(cn)}</option>`;}).join('')}
+        </select>
+      </div>
+      <div class="mform-group"><label>أيام الغياب (اختر التاريخ ثم أضف)</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input type="date" id="rq-date" max="${new Date().toLocaleDateString('en-CA')}" style="flex:1;min-width:160px">
+          <button type="button" class="btn btn-b btn-sm" onclick="addExcuseDate()">➕ أضف اليوم</button>
+        </div>
+        <div id="rq-dates-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
+        <div id="rq-dates-total" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
+      </div>
+      <div class="mform-group"><label>ملف العذر (PDF)</label>
+        <input type="file" id="rq-file" accept="application/pdf,.pdf">
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">ارفق مستند العذر بصيغة PDF — يُحفظ تلقائياً في أرشيف الأكاديمية</div>
+      </div>
+    </div>`:''}
+    <div id="target-fields" style="display:none">
+      <div class="mform-group"><label>الشخص الموجَّه له الطلب</label>
+        <select id="rq-target">
+          <option value="">— اختر الشخص —</option>
+          ${staff.map(p=>`<option value="${esc(p.name)}" data-role="${p.role}" data-id="${esc(String(p.id||''))}">${esc(p.name)} · ${esc(p.sub)}</option>`).join('')}
+        </select>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">يصل مباشرة للشخص المحدد، وله أن يعتمده أو يصعّده لمدير الأكاديمية</div>
+      </div>
+    </div>
+    <div class="mform-group"><label>التفاصيل / السبب</label>
+      <textarea id="rq-details" placeholder="اكتب تفاصيل طلبك هنا..."></textarea>
+    </div>
+    <div class="btn-row"><button class="btn btn-r" onclick="submitRequest()">📨 إرسال الطلب</button></div>
+  </div>`;
+}
+function reloadRequestsPage(){
+  if(user.role==='s')showSPage('services',null);
+  else if(user.role==='t')showTPage('requests',null);
+  else showAPage('requests',null);
+}
+
 async function submitRequest(){
-  const type=document.getElementById('rq-type').value;
-  let details=document.getElementById('rq-details').value.trim();
-  let exCourse='',exCode='',exHours='',fileData='',fileName='',exDates='';
-  if(type==='عذر غياب'){
+  const typeSel=document.getElementById('rq-type');
+  if(!typeSel)return;
+  const type=typeSel.value;
+  const cat=({'عذر غياب':'عذر','ورقة تعريف':'تعريف','طلب إداري':'إداري','طلب عام':'عام'})[type]||'إداري';
+  let details=(document.getElementById('rq-details')?document.getElementById('rq-details').value:'').trim();
+  let exCode='',exHours='',exDates='',fileData='',fileName='';
+  let targetName='',targetRole='',targetId='';
+  const raiser=user;
+  const reqSpec=raiser.spec||'';
+  if(cat==='عذر'){
     const sel=document.getElementById('rq-course');
-    exCourse=sel.value;
-    exCode=sel.options[sel.selectedIndex]?.dataset.code||'';
+    const exCourse=sel?sel.value:'';
+    exCode=(sel&&sel.options[sel.selectedIndex])?sel.options[sel.selectedIndex].dataset.code||'':'';
     if(!exCourse){showToast('اختر المادة','w');return}
     if(!excuseDates.length){showToast('أضف يوم غياب واحد على الأقل','w');return}
-    // حساب الساعات تلقائياً من التواريخ (حصص المادة في كل يوم)
     const {totalHrs,breakdown}=excuseHoursFromDates(exCourse,user.grp,excuseDates);
     if(totalHrs<=0){showToast('المادة ما عندها حصص في الأيام المختارة — تأكد من الجدول','w');return}
-    exHours=totalHrs;
-    exDates=excuseDates.join(', ');
-    // وصف الأيام بالتفصيل
+    exHours=totalHrs; exDates=excuseDates.join(', ');
     const daysDesc=breakdown.map(b=>`${b.day} (${b.date})`).join(' · ');
-    // قراءة ملف PDF إن وُجد
     const fileInput=document.getElementById('rq-file');
     if(fileInput&&fileInput.files&&fileInput.files[0]){
       const f=fileInput.files[0];
       if(f.type!=='application/pdf'&&!f.name.toLowerCase().endsWith('.pdf')){showToast('الملف لازم يكون PDF','w');return}
       if(f.size>5*1024*1024){showToast('حجم الملف كبير (الحد 5 ميجا)','w');return}
-      fileName=f.name;
-      showToast('جاري قراءة الملف...','i');
-      fileData=await new Promise((res,rej)=>{
-        const r=new FileReader();
-        r.onload=()=>res(String(r.result).split(',')[1]||'');
-        r.onerror=()=>rej();
-        r.readAsDataURL(f);
-      }).catch(()=>'');
+      fileName=f.name; showToast('جاري قراءة الملف...','i');
+      fileData=await new Promise((res,rej)=>{const rd=new FileReader();rd.onload=()=>res(String(rd.result).split(',')[1]||'');rd.onerror=()=>rej();rd.readAsDataURL(f);}).catch(()=>'');
     }
-    // ندمج تفاصيل العذر (رابط الملف يضيفه Apps Script بعد الحفظ في درايف)
     details=`[عذر غياب] المادة: ${exCourse} | الأيام: ${daysDesc} | ساعات: ${exHours} | السبب: ${details||'—'}`;
+  }
+  if(cat==='عام'){
+    const tsel=document.getElementById('rq-target');
+    if(!tsel||!tsel.value){showToast('اختر الشخص اللي تبغى ترسل له','w');return}
+    const opt=tsel.options[tsel.selectedIndex];
+    targetRole=opt.dataset.role||''; targetId=opt.dataset.id||''; targetName=opt.value;
   }
   if(!details){showToast('يرجى كتابة تفاصيل الطلب','w');return}
   const rid='REQ'+Date.now();
   const now=new Date().toLocaleDateString('en-CA');
-  const rec={rid,sid:user.id,sname:user.name,grp:user.grp,type,details,date:now,supStatus:'معلق',dirStatus:'معلق',finalStatus:'قيد المراجعة',notes:'',
-    exCode,exHours,exDates,trnStatus:type==='عذر غياب'?'معلق':'—',fileData,fileName};
+  const st={trnStatus:'—',supStatus:'—',genStatus:'—',dirStatus:'—',tgtStatus:'—'};
+  REQ_CATS[cat].chain.forEach(s=>setStageObj(st,s,'معلق'));
+  // تخطّي المراحل التي هي بمستوى المُرسِل أو أدنى (لغير الطلبات العامة)
+  if(cat!=='عام'&&raiser.role==='a'){ st.supStatus='معتمد'; } // المشرف نفسه صاحب الطلب → يبدأ من المدير
+  const rec={rid,sid:raiser.id,sname:raiser.name,grp:raiser.grp||'',type,details,date:now,
+    supStatus:st.supStatus,genStatus:st.genStatus,dirStatus:st.dirStatus,trnStatus:st.trnStatus,tgtStatus:st.tgtStatus,
+    finalStatus:'قيد المراجعة',notes:'',exCode,exHours,exDates,fileData,fileName,
+    cat,reqRole:raiser.role,reqSpec,targetName,targetRole,targetId};
+  rec.finalStatus=reqFinal(rec);
   showToast('جاري إرسال الطلب...','i');
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'addRequest',records:[rec]}),headers:{'Content-Type':'text/plain'}});
     showToast('✅ تم إرسال طلبك بنجاح','s');
-    delete rec.fileData; // ما نحتفظ بالـ base64 بالذاكرة
+    delete rec.fileData;
     requests.unshift(rec);
-    document.getElementById('rq-details').value='';
-    excuseDates=[]; // مسح التواريخ بعد الإرسال
-    showSPage('services',null);
+    if(document.getElementById('rq-details'))document.getElementById('rq-details').value='';
+    excuseDates=[];
+    reloadRequestsPage();
   }catch(e){showToast('تعذر الإرسال — جرب مرة أخرى','e');}
 }
+// صاحب الطلب يعدّل ويعيد إرسال طلب مُرجَع
+async function resubmitRequest(rid){
+  const r=requests.find(x=>x.rid===rid);if(!r)return;
+  if(String(r.sid)!==String(user.id)){showToast('هذا الطلب ليس لك','w');return}
+  const nd=(prompt('عدّل تفاصيل طلبك ثم أعد الإرسال:',r.details||'')||'').trim();
+  if(!nd)return;
+  r.details=nd;
+  ['trn','sup','gen','dir','tgt'].forEach(s=>setStage(r,s,'—'));
+  REQ_CATS[reqCat(r)].chain.forEach(s=>setStage(r,s,'معلق'));
+  r.notes='أعاد صاحب الطلب الإرسال بعد التعديل';
+  r.finalStatus=reqFinal(r);
+  const payload={rid,trnStatus:r.trnStatus,supStatus:r.supStatus,genStatus:r.genStatus,dirStatus:r.dirStatus,tgtStatus:r.tgtStatus,finalStatus:r.finalStatus,notes:r.notes,details:r.details,by:user.name};
+  showToast('جاري إعادة الإرسال...','i');
+  try{await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'updateRequest',records:[payload]}),headers:{'Content-Type':'text/plain'}});showToast('✅ تمت إعادة الإرسال','s');reloadRequestsPage();}
+  catch(e){showToast('تعذر — حاول مرة ثانية','e');}
+}
 
-// المدرب/المشرف/المدير يعتمد أو يرفض طلب
+// اتخاذ إجراء على طلب في مرحلته النشطة: اعتماد | رفض | معاد (إرجاع) | تصعيد (للطلب العام)
 async function actOnRequest(rid,decision){
   const r=requests.find(x=>x.rid===rid);
   if(!r)return;
-  const isTrainer=user.role==='t';
-  const isDir=user.role==='a'&&user.level==='director';
-  if(isTrainer){
-    r.trnStatus=decision;
-    if(decision==='مرفوض')r.finalStatus='مرفوض';
-  }else if(isDir){
-    r.dirStatus=decision;
-    r.finalStatus=decision==='معتمد'?'معتمد':'مرفوض';
+  const st=reqActiveStage(r);
+  if(!st||!canActStage(st,r)){showToast('لا يمكنك اتخاذ إجراء على هذا الطلب الآن','w');return}
+  let reason='';
+  if(decision==='مرفوض')reason=(prompt('سبب الرفض (اختياري):')||'').trim();
+  else if(decision==='معاد')reason=(prompt('وش المطلوب تعديله؟ (يظهر لصاحب الطلب):')||'').trim();
+  if(decision==='تصعيد'){
+    if(st!=='tgt'){showToast('التصعيد متاح للطلبات العامة فقط','w');return}
+    setStage(r,'tgt','معتمد'); r.dirStatus='معلق';
+    r.notes='صعّده '+user.name+' لمدير الأكاديمية';
   }else{
-    r.supStatus=decision;
-    if(decision==='مرفوض')r.finalStatus='مرفوض';
+    setStage(r,st,decision);
+    if(decision==='مرفوض')r.notes='رفضه '+STAGE_LBL[st]+' ('+user.name+')'+(reason?' — '+reason:'');
+    else if(decision==='معاد')r.notes='أرجعه '+STAGE_LBL[st]+' ('+user.name+') للتعديل'+(reason?' — '+reason:'');
+    else r.notes='اعتمده '+STAGE_LBL[st]+' ('+user.name+')';
   }
-  const payload={rid,trnStatus:r.trnStatus,supStatus:r.supStatus,dirStatus:r.dirStatus,finalStatus:r.finalStatus,by:user.name,level:isTrainer?'trainer':(user.level||'supervisor')};
-  // ===== خصم ساعات العذر عند الاعتماد النهائي =====
+  r.finalStatus=reqFinal(r);
+  // ===== خصم ساعات العذر عند الاعتماد النهائي فقط =====
   let excuseInfo=null;
-  if(isDir&&decision==='معتمد'&&r.type==='عذر غياب'){
-    // استخرج المادة والساعات (من الحقول أو من نص التفاصيل)
+  if(reqCat(r)==='عذر'&&decision==='معتمد'&&r.finalStatus==='معتمد'){
     let code=r.exCode||'', hrs=parseFloat(r.exHours)||0;
     if(!hrs){const m=(r.details||'').match(/ساعات:\s*([\d.]+)/);if(m)hrs=parseFloat(m[1])||0;}
     if(!code){
       const m=(r.details||'').match(/المادة:\s*([^|]+)/);
       if(m){const cn=m[1].trim();const cc=allCourses.find(x=>x.sid===r.sid&&x.course===cn);if(cc)code=normCode(cc.code);}
     }
-    // ابحث عن سجل المادة للطالب
     const rowC=allCourses.find(x=>x.sid===r.sid&&normCode(x.code)===normCode(code));
     if(rowC&&hrs>0){
       const excusedPct=absHoursToPct(hrs,code);
       const newAbs=Math.max(0,Math.round((rowC.abs-excusedPct)*10)/10);
-      rowC.abs=newAbs; // تحديث محلي
+      rowC.abs=newAbs;
       excuseInfo={key:rowC.key,sid:r.sid,absence:newAbs};
     }
   }
+  const payload={rid,trnStatus:r.trnStatus,supStatus:r.supStatus,genStatus:r.genStatus,dirStatus:r.dirStatus,tgtStatus:r.tgtStatus,finalStatus:r.finalStatus,notes:r.notes,by:user.name};
   showToast('جاري الحفظ...','i');
   try{
     await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'updateRequest',records:[payload]}),headers:{'Content-Type':'text/plain'}});
-    // لو فيه خصم ساعات، احفظ النسبة الجديدة في سجل المقررات
     if(excuseInfo){
       await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveAttendance',records:[excuseInfo]}),headers:{'Content-Type':'text/plain'}});
       showToast('✅ تم الاعتماد وخصم ساعات الغياب','s');
     }else{
-      showToast(decision==='معتمد'?'✅ تم الاعتماد':'تم الرفض','s');
+      showToast(decision==='مرفوض'?'تم الرفض':decision==='معاد'?'تم الإرجاع للتعديل':decision==='تصعيد'?'✅ تم التصعيد للمدير':'✅ تم الاعتماد','s');
     }
-    if(isTrainer)showTPage('requests',null);
-    else showAPage('requests',null);
+    reloadRequestsPage();
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
 function toggleTheme(){
