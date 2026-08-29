@@ -1007,7 +1007,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzHjA7UiLqZCesHKavuBCJmDlLZmGDD1EhC0m3O09PXUh5g9BPZ6UcOXmBnfol3Jx4i/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzJrrqwsNTDh848nn775w4R4gP_HemvHuqQcOk2EmxJZuUWl9Zx-zoou2uIlSiCzv-2/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1017,7 +1017,7 @@ const OTP_ENABLED=false;
 const ADMIN=[]; // التحقق صار في الخادم
 
 
-let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[];
+let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[], graduates=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
 let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakStart:12, breakHours:1};
 let rubrics={}, gradeDetails=[]; // بنود الدرجات لكل مادة + الدرجات التفصيلية
@@ -1068,7 +1068,7 @@ const CACHE_TTL=6*3600*1000; // ٦ ساعات
 function saveDataSnapshot(){
   try{
     const snap={t:Date.now(),role:role,uid:user&&user.id,
-      students, allCourses, catalog, trainersDB, adminsDB,
+      students, allCourses, catalog, trainersDB, adminsDB, graduates,
       absenceRows: (typeof absenceRows!=='undefined'?absenceRows:null),
       scheduleRows:(typeof scheduleRows!=='undefined'?scheduleRows:null),
       schedConfig: (typeof schedConfig!=='undefined'?schedConfig:null),
@@ -1085,7 +1085,7 @@ function loadDataSnapshot(){
     if(!s||s.role!==role||String(s.uid||'')!==String(user&&user.id||''))return false;
     if(Date.now()-(s.t||0)>CACHE_TTL) return false;
     students=s.students||[]; allCourses=s.allCourses||[]; catalog=s.catalog||[];
-    trainersDB=s.trainersDB||[]; adminsDB=s.adminsDB||[];
+    trainersDB=s.trainersDB||[]; adminsDB=s.adminsDB||[]; graduates=s.graduates||[];
     if(s.absenceRows && typeof absenceRows!=='undefined')  absenceRows=s.absenceRows;
     if(s.scheduleRows && typeof scheduleRows!=='undefined') scheduleRows=s.scheduleRows;
     if(s.schedConfig && typeof schedConfig!=='undefined')  schedConfig=s.schedConfig;
@@ -1443,7 +1443,7 @@ async function loadTrainer(){
 
 async function loadAdmin(){
   const [sr,cr,cat,td,ad]=await Promise.all([
-    fetchSheet('قاعدة بيانات مركزي!A:I'),
+    fetchSheet('قاعدة بيانات مركزي!A:K'),
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[]),
     fetchSheet('قاعدة بيانات المدربين!A:F').catch(()=>[]),
@@ -1453,8 +1453,11 @@ async function loadAdmin(){
   for(let i=1;i<sr.length;i++){
     const r=sr[i];
     if(!r[0])continue;
-    students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),pw:n0(r[7]),join:n0(r[8])});
+    students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),pw:n0(r[7]),join:n0(r[8]),status:n0(r[9])||'نشط',gradBatch:n0(r[10])});
   }
+  // افصل الخريجين عن النشطين — يختفون من كل القوائم النشطة ويظهرون في «الخريجون» فقط
+  graduates=[...new Map(students.filter(s=>s.status==='خرّيج').map(s=>[s.id,s])).values()];
+  students=students.filter(s=>s.status!=='خرّيج');
   allCourses=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
@@ -5004,6 +5007,155 @@ async function applyUpdateNumbers(){
 }
 window.openUpdateNumbers=openUpdateNumbers;window.applyUpdateNumbers=applyUpdateNumbers;
 
+/* ============ تخريج دفعة + كشف التخرّج + قائمة الخريجين ============ */
+function gradActiveStudents(){
+  return [...new Map(students.map(s=>[s.id,s])).values()];
+}
+function openGraduateBatch(){
+  const active=gradActiveStudents();
+  const grps=[...new Set(active.map(s=>s.grp).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b)));
+  const specs=[...new Set(active.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const fld="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px";
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='gradModal';
+  ov.innerHTML=`<div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title"><span>🎓 تخريج دفعة</span><button class="modal-close" onclick="document.getElementById('gradModal').remove()">✕</button></div>
+    <div class="alert ab" style="margin:6px 0 14px"><span class="aicon">ℹ️</span>يُعلَّم المختارون «خرّيج» وتُنقل بياناتهم (المقررات والدرجات والغياب والطلبات) إلى الأرشيف — يخفّ النظام ويبقى سجلّهم للرجوع وإصدار الكشوف.</div>
+    <div class="mform-group"><label>اسم الدفعة</label><input id="grad_batch" placeholder="مثال: دفعة 2027" value="دفعة ${new Date().getFullYear()}" style="${fld}"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <select id="grad_grp" onchange="gradFilter()" style="${fld};flex:1;min-width:130px"><option value="">كل الشعب</option>${grps.map(g=>`<option value="${esc(g)}">شعبة ${esc(g)}</option>`).join('')}</select>
+      <select id="grad_spec" onchange="gradFilter()" style="${fld};flex:1;min-width:130px"><option value="">كل التخصصات</option>${specs.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <label style="display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer"><input type="checkbox" id="grad_all" onclick="gradToggleAll(this.checked)"> تحديد كل الظاهر</label>
+      <span id="grad_count" style="font-size:12px;color:var(--muted)">0 مختار</span>
+    </div>
+    <div id="grad_list" style="border:1px solid var(--border);border-radius:10px;max-height:320px;overflow:auto"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn btn-out" style="flex:1" onclick="document.getElementById('gradModal').remove()">إلغاء</button>
+      <button class="btn btn-g" style="flex:1" onclick="applyGraduateBatch()">🎓 تخريج المختارين</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  gradFilter();
+}
+function gradFilter(){
+  const g=(document.getElementById('grad_grp')||{}).value||'';
+  const sp=(document.getElementById('grad_spec')||{}).value||'';
+  const active=gradActiveStudents()
+    .filter(s=>(!g||String(s.grp)===g)&&(!sp||String(s.spec||'').trim()===sp))
+    .sort((a,b)=>String(a.grp).localeCompare(String(b.grp))||String(a.name).localeCompare(b.name,'ar'));
+  const list=document.getElementById('grad_list');
+  if(!list)return;
+  list.innerHTML=active.length?active.map(s=>`<label style="display:flex;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px">
+    <input type="checkbox" class="grad_chk" value="${esc(s.id.toString())}" onchange="gradCount()">
+    <span style="font-weight:600">${esc(s.name)}</span>
+    <span style="color:var(--muted);font-size:12px;margin-inline-start:auto">${esc(s.id.toString())} · شعبة ${esc(s.grp||'—')} · ${esc(s.spec||'—')}</span>
+  </label>`).join(''):'<div style="padding:16px;text-align:center;color:var(--muted);font-size:13px">لا يوجد متدربون مطابقون</div>';
+  const allc=document.getElementById('grad_all');if(allc)allc.checked=false;
+  gradCount();
+}
+function gradToggleAll(ch){document.querySelectorAll('.grad_chk').forEach(c=>c.checked=ch);gradCount();}
+function gradCount(){const n=document.querySelectorAll('.grad_chk:checked').length;const el=document.getElementById('grad_count');if(el)el.textContent=n+' مختار';}
+async function applyGraduateBatch(){
+  const sids=[...document.querySelectorAll('.grad_chk:checked')].map(c=>c.value);
+  if(!sids.length){showToast('اختر متدرباً واحداً على الأقل','w');return;}
+  const batch=(document.getElementById('grad_batch').value||'دفعة').trim();
+  if(!confirm(`تأكيد تخريج ${sids.length} متدرب ضمن «${batch}»؟\nستُنقل بياناتهم إلى الأرشيف ويختفون من القوائم النشطة (سجلّهم يبقى للرجوع).`))return;
+  showToast('جاري التخريج والأرشفة...','i');
+  try{
+    const res=await jsonpCall({action:'graduateBatch',data:JSON.stringify({sids:sids,batch:batch})});
+    if(res&&res.status==='ok'){
+      showToast(`✅ تم تخريج ${res.graduated} متدرب وأرشفة بياناتهم`,'s');
+      document.getElementById('gradModal')?.remove();
+      await loadAdmin().catch(()=>{});
+      showAPage('accounts',null);
+    }else{showToast('تعذّر التخريج — تأكد من نشر الخادم (v14)','e');}
+  }catch(e){showToast('تعذّر الاتصال — حاول مرة أخرى','e');}
+}
+// قائمة الخريجين + كشف التخرّج
+function openGraduatesList(){
+  const grads=[...graduates].sort((a,b)=>String(b.gradBatch||'').localeCompare(String(a.gradBatch||''))||String(a.name).localeCompare(b.name,'ar'));
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='gradsModal';
+  ov.innerHTML=`<div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title"><span>🎓 الخريجون (${grads.length})</span><button class="modal-close" onclick="document.getElementById('gradsModal').remove()">✕</button></div>
+    ${grads.length?`<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">${grads.map(s=>`
+      <div style="display:flex;gap:10px;align-items:center;padding:11px 13px;border-bottom:1px solid var(--border)">
+        <div style="flex:1"><div style="font-weight:600;font-size:14px">${esc(s.name)}</div>
+          <div style="font-size:12px;color:var(--muted)">${esc(s.id.toString())} · ${esc(s.spec||'—')}${s.gradBatch?' · '+esc(s.gradBatch):''}</div></div>
+        <button class="btn btn-b btn-sm" onclick="printGraduateTranscript('${esc(s.id.toString())}')">🖨️ كشف تخرّج</button>
+      </div>`).join('')}</div>`
+    :'<div class="empty"><div class="empty-icon">🎓</div>لا يوجد خريجون بعد</div>'}
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function printGraduateTranscript(sid){
+  showToast('جاري تجهيز كشف التخرّج...','i');
+  const st=graduates.find(s=>String(s.id)===String(sid))||students.find(s=>String(s.id)===String(sid))||{id:sid,name:'',spec:''};
+  let arc=[];
+  try{ arc=await fetchSheet('أرشيف المقررات!A:M'); }catch(e){ arc=[]; }
+  // صفوف هذا الخرّيج (العمود B = الرقم) مع إزالة التكرار حسب المفتاح (العمود A)
+  const seen={},rows=[];
+  for(let i=1;i<arc.length;i++){
+    const r=arc[i]; if(!r||dg(r[1])!==dg(sid))continue;
+    const k=n0(r[0]); if(seen[k])continue; seen[k]=1;
+    rows.push({course:n0(r[5]),code:n0(r[4]),grp:n0(r[3]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),term:n0(r[10])});
+  }
+  if(!rows.length){showToast('لا توجد بيانات مؤرشفة لهذا الخرّيج بعد','w');return;}
+  const done=rows.filter(c=>c.pct>0);
+  const avg=done.length?Math.round(done.reduce((a,c)=>a+c.pct,0)/done.length*10)/10:0;
+  const passed=rows.filter(c=>c.pct>=60).length;
+  const grade=n=>n>=90?'ممتاز':n>=80?'جيد جداً':n>=70?'جيد':n>=60?'مقبول':'راسب';
+  const body=`
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-size:22px;font-weight:800;color:#0a2348">كشف تخرّج المتدرّب</div>
+      <div style="color:#c9a227;font-weight:700;letter-spacing:1px">معهد المعرفة والإبداع العالي للتدريب</div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:13px">
+      <tr><td style="padding:6px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;width:120px">الاسم</td><td style="padding:6px 10px;border:1px solid #c5cfdd">${esc(st.name||'')}</td>
+          <td style="padding:6px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;width:120px">الرقم التدريبي</td><td style="padding:6px 10px;border:1px solid #c5cfdd">${esc(String(sid))}</td></tr>
+      <tr><td style="padding:6px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700">التخصص</td><td style="padding:6px 10px;border:1px solid #c5cfdd">${esc(st.spec||'—')}</td>
+          <td style="padding:6px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700">الدفعة</td><td style="padding:6px 10px;border:1px solid #c5cfdd">${esc(st.gradBatch||'—')}</td></tr>
+    </table>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr>
+        <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">#</th>
+        <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff;text-align:right">المقرر</th>
+        <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الترم</th>
+        <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الدرجة</th>
+        <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">التقدير</th>
+      </tr></thead>
+      <tbody>${rows.map((c,i)=>`<tr>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${i+1}</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:right">${esc(c.course)}</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${esc(c.term||'—')}</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center;font-weight:700">${c.pct?c.pct:'—'}</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${c.pct?grade(c.pct):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+    <table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:13px">
+      <tr>
+        <td style="padding:8px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;text-align:center">عدد المقررات</td>
+        <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center">${rows.length}</td>
+        <td style="padding:8px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;text-align:center">المجتازة</td>
+        <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center">${passed}</td>
+        <td style="padding:8px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;text-align:center">المعدل العام</td>
+        <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center;font-weight:800;color:#0a2348">${avg} — ${grade(avg)}</td>
+      </tr>
+    </table>
+    <div style="display:flex;justify-content:space-between;margin-top:44px;font-size:13px;color:#1a2942">
+      <div style="text-align:center">مدير الأكاديمية<br><br>............................</div>
+      <div style="text-align:center">ختم المعهد<br><br>............................</div>
+    </div>`;
+  if(typeof openReport==='function'&&typeof reportShell==='function'){
+    openReport(reportShell('كشف تخرّج — '+(st.name||sid),'كشف تخرّج',body));
+  }else{
+    const w=window.open('','_blank');
+    w.document.write('<html dir="rtl"><head><meta charset="utf-8"><title>كشف تخرّج</title></head><body style="font-family:Tajawal,Arial,sans-serif;max-width:800px;margin:20px auto;padding:0 20px">'+body+'<div style="text-align:center;margin-top:24px" class="no-print"><button onclick="print()">🖨️ طباعة</button></div></body></html>');
+    w.document.close();
+  }
+}
+window.openGraduateBatch=openGraduateBatch;window.gradFilter=gradFilter;window.gradToggleAll=gradToggleAll;window.gradCount=gradCount;window.applyGraduateBatch=applyGraduateBatch;window.openGraduatesList=openGraduatesList;window.printGraduateTranscript=printGraduateTranscript;
+
 // ===== شاشة العرض (TV Mode) — ملء الشاشة للعرض على شاشة كبيرة =====
 window._tvTimer=null;
 function buildTVContent(){
@@ -5356,7 +5508,7 @@ const aPgs={
     if(t==='student'){
       cols=`<th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>التخصص</th><th>الجوال</th><th>البريد</th><th>إجراءات</th>`;
       const seen=new Set();
-      const uniq=students.filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;});
+      const uniq=students.filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;}).filter(s=>s.status!=='خرّيج');
       rows=uniq.map(s=>`<tr>
         <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.grp||'-')}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
         <td><button onclick='editAccount("student",${JSON.stringify(s).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("student","${esc(s.id.toString())}","${(s.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
@@ -5388,7 +5540,9 @@ const aPgs={
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="stitle" style="margin:0">${t==='student'?'🎓 المتدربون':t==='trainer'?'👨‍🏫 المدربون':'⚙️ الإداريون'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        ${t==='student'?`<button class="btn btn-out" onclick="openUpdateNumbers()">🔢 تحديث الأرقام التدريبية</button>`:''}
+        ${t==='student'?`<button class="btn btn-out" onclick="openUpdateNumbers()">🔢 تحديث الأرقام التدريبية</button>
+        <button class="btn btn-out" onclick="openGraduatesList()">🎓 الخريجون (${graduates.length})</button>
+        <button class="btn btn-g" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>`:''}
         <button class="btn btn-b" onclick='addAccount("${t}")'>➕ إضافة ${tLbl}</button>
       </div>
     </div>
