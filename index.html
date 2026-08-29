@@ -8929,28 +8929,81 @@ function txText(txt){
 // سجلّ الأصول العربية للاسترجاع الكامل عند العودة للعربية
 let _txNodes=[];   // {node, orig}
 let _txAttrs=[];   // {el, attr, orig}
+/* ===== ترجمة آلية تلقائية: أي نص عربي لا يغطّيه القاموس يُترجم عبر خدمة ترجمة ويُخزّن ===== */
+const MT_CACHE={};
+try{Object.assign(MT_CACHE,JSON.parse(localStorage.getItem('bla_mt_cache')||'{}'));}catch(e){}
+let _mtSaveT=null;
+function mtSave(){ if(_mtSaveT)return; _mtSaveT=setTimeout(()=>{_mtSaveT=null;try{localStorage.setItem('bla_mt_cache',JSON.stringify(MT_CACHE));}catch(e){}},1200); }
+function isArabicText(s){ return /[؀-ۿ]/.test(s); }
+async function mtFetch(text){
+  if(MT_CACHE[text]!==undefined)return MT_CACHE[text];
+  // 1) Google (gtx) — جودة أعلى
+  try{
+    const r=await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=ar&tl=en&dt=t&q='+encodeURIComponent(text));
+    if(r.ok){const j=await r.json();const out=((j&&j[0])||[]).map(s=>(s&&s[0])||'').join('').trim();if(out){MT_CACHE[text]=out;mtSave();return out;}}
+  }catch(e){}
+  // 2) MyMemory — احتياطي يدعم CORS
+  try{
+    const r2=await fetch('https://api.mymemory.translated.net/get?langpair=ar|en&q='+encodeURIComponent(text));
+    if(r2.ok){const j2=await r2.json();const out=j2&&j2.responseData&&String(j2.responseData.translatedText||'').trim();if(out&&!/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(out)){MT_CACHE[text]=out;mtSave();return out;}}
+  }catch(e){}
+  return null;
+}
+const _mtQueue=new Map();   // نص -> [عُقد]
+const _mtAttrQueue=[];      // {el,attr,txt}
+let _mtTimer=null,_mtRunning=false;
+function mtQueueNode(node,txt){
+  if(node._txOrig===undefined){node._txOrig=node.textContent;_txNodes.push(node);}
+  if(!_mtQueue.has(txt))_mtQueue.set(txt,[]);
+  _mtQueue.get(txt).push(node); mtSchedule();
+}
+function mtQueueAttr(el,attr,txt){
+  if(!el['_txOrig_'+attr]){el['_txOrig_'+attr]=el.getAttribute(attr);_txAttrs.push({el,attr});}
+  _mtAttrQueue.push({el,attr,txt}); mtSchedule();
+}
+function mtSchedule(){ if(_mtTimer||_mtRunning)return; _mtTimer=setTimeout(mtProcess,250); }
+async function mtProcess(){
+  _mtTimer=null; if(_mtRunning)return; _mtRunning=true;
+  try{
+    const items=[..._mtQueue.entries()]; _mtQueue.clear();
+    const attrs=_mtAttrQueue.splice(0);
+    for(const [txt,nodes] of items){
+      if(currentLang!=='en')break;
+      const en=await mtFetch(txt);
+      if(en)nodes.forEach(nd=>{try{if(nd._txOrig!==undefined)nd.textContent=nd._txOrig.replace(txt,en);}catch(e){}});
+    }
+    for(const it of attrs){
+      if(currentLang!=='en')break;
+      const en=await mtFetch(it.txt);
+      if(en){try{it.el.setAttribute(it.attr,en);}catch(e){}}
+    }
+  }finally{
+    _mtRunning=false;
+    if(_mtQueue.size||_mtAttrQueue.length)mtSchedule();
+  }
+}
+function handleTextNode(node){
+  const raw=node.textContent;const txt=raw.trim();
+  if(!txt)return;
+  const tr=txText(txt);
+  if(tr!==null){ if(node._txOrig===undefined){node._txOrig=raw;_txNodes.push(node);} node.textContent=raw.replace(txt,tr); return; }
+  if(currentLang==='en'&&isArabicText(txt))mtQueueNode(node,txt);
+}
 function translateNode(root){
   if(currentLang!=='en')return;
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null);
   let n;const nodes=[];
   while(n=walker.nextNode())nodes.push(n);
-  nodes.forEach(node=>{
-    const raw=node.textContent;const txt=raw.trim();
-    if(!txt)return;
-    const tr=txText(txt);
-    if(tr!==null){
-      if(node._txOrig===undefined){node._txOrig=raw;_txNodes.push(node);}
-      node.textContent=raw.replace(txt,tr);
-    }
-  });
+  nodes.forEach(handleTextNode);
   (root.querySelectorAll?[...root.querySelectorAll('[placeholder],[title]')]:[]).forEach(el=>{
     ['placeholder','title'].forEach(a=>{
       const v=el.getAttribute&&el.getAttribute(a);
-      if(v){const tr=txText(v.trim());
+      if(v){const t=v.trim();const tr=txText(t);
         if(tr!==null){
           if(!el['_txOrig_'+a]){el['_txOrig_'+a]=v;_txAttrs.push({el,attr:a});}
           el.setAttribute(a,tr);
-        }}
+        } else if(currentLang==='en'&&isArabicText(t)) mtQueueAttr(el,a,t);
+      }
     });
   });
 }
@@ -8967,7 +9020,7 @@ function startTxObserver(){
     muts.forEach(m=>{
       m.addedNodes.forEach(nd=>{
         if(nd.nodeType===1)translateNode(nd);
-        else if(nd.nodeType===3){const txt=nd.textContent.trim();if(txt){const tr=txText(txt);if(tr!==null){if(nd._txOrig===undefined){nd._txOrig=nd.textContent;_txNodes.push(nd);}nd.textContent=nd.textContent.replace(txt,tr);}}}
+        else if(nd.nodeType===3)handleTextNode(nd);
       });
     });
   });
