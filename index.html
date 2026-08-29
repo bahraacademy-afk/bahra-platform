@@ -1024,7 +1024,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzJrrqwsNTDh848nn775w4R4gP_HemvHuqQcOk2EmxJZuUWl9Zx-zoou2uIlSiCzv-2/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxrWO-jcenL06gEDD2oAgXglBEDiPAd7ntvwqDgXNsz-rDi2n32H9PGxZqAdFlbAliA/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1316,7 +1316,46 @@ function finishLogin(){
   const _ldg=document.getElementById('ldg'); if(_ldg)_ldg.style.display='none';
   showApp();
   initIdleGuard();
+  // إلزام تغيير الرمز الافتراضي (رقم الجوال) أول دخول
+  if(user && user.mustChange){ setTimeout(()=>openChangePassword(true), 400); }
 }
+// ===== تغيير كلمة المرور (إلزامي أول دخول · واختياري من الملف الشخصي) =====
+function openChangePassword(forced){
+  const ex=document.getElementById('pwModal'); if(ex)ex.remove();
+  const fld="width:100%;padding:11px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:15px;margin-top:6px";
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='pwModal';ov.style.zIndex='99999';
+  ov.innerHTML=`<div class="modal" style="max-width:420px">
+    <div class="modal-title"><span>🔐 ${forced?'تعيين رمز سري جديد':'تغيير الرمز السري'}</span>${forced?'':`<button class="modal-close" onclick="document.getElementById('pwModal').remove()">✕</button>`}</div>
+    ${forced?`<div class="alert aw" style="margin:6px 0 12px"><span class="aicon">⚠️</span>لأمان حسابك، غيّر الرمز الافتراضي (رقم جوالك) قبل المتابعة.</div>`:''}
+    <div class="mform-group"><label>الرمز الجديد</label><input type="password" id="pw_new" placeholder="4 خانات على الأقل" style="${fld}"></div>
+    <div class="mform-group"><label>تأكيد الرمز</label><input type="password" id="pw_conf" placeholder="أعد كتابة الرمز" style="${fld}"></div>
+    <div style="font-size:11px;color:var(--muted);margin:8px 0 4px">لا تستخدم رقم جوالك · احفظه في مكان آمن</div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      ${forced?'':`<button class="btn btn-out" style="flex:1" onclick="document.getElementById('pwModal').remove()">إلغاء</button>`}
+      <button class="btn btn-r" style="flex:1" onclick="submitChangePassword(${forced?'true':'false'})">حفظ الرمز</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>{const el=document.getElementById('pw_new');if(el)el.focus();},120);
+}
+async function submitChangePassword(forced){
+  const np=(document.getElementById('pw_new').value||'').trim();
+  const cf=(document.getElementById('pw_conf').value||'').trim();
+  if(np.length<4){showToast('الرمز قصير — 4 خانات على الأقل','w');return;}
+  if(np!==cf){showToast('الرمز والتأكيد غير متطابقين','w');return;}
+  if(norm(np)===norm(user.ph||'')){showToast('اختر رمزاً مختلفاً عن رقم جوالك','w');return;}
+  showToast('جاري حفظ الرمز...','i');
+  try{
+    const res=await jsonpCall({action:'changePassword',data:JSON.stringify({newPw:np})});
+    if(res&&res.status==='ok'){
+      showToast('✅ تم تغيير الرمز بنجاح','s');
+      user.mustChange=false;
+      try{localStorage.setItem('bla_user',JSON.stringify(user));}catch(e){}
+      const m=document.getElementById('pwModal'); if(m)m.remove();
+    }else{showToast(res&&res.hint?res.hint:'تعذّر التغيير — تأكد من نشر الخادم (v15)','e');}
+  }catch(e){showToast('تعذّر الاتصال — حاول مرة أخرى','e');}
+}
+window.openChangePassword=openChangePassword;window.submitChangePassword=submitChangePassword;
 
 // ===== تدفق إرسال وإدخال رمز 2FA =====
 let pendingUser=null; // المستخدم المنتظر تأكيد الرمز
@@ -3241,6 +3280,7 @@ const sPgs={
       <div class="iitem"><div class="ilbl">رقم الجوال</div><div class="ival">${esc(user.ph)}</div></div>
       <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival">${avgPct(courses)}%</div></div>
     </div>
+    <div style="margin:14px 0"><button class="btn btn-out" onclick="openChangePassword(false)">🔐 تغيير الرمز السري</button></div>
     <div class="stitle">ملخص الأداء</div>
     <div class="ccard cc-b">
       ${courses.map(c=>`<div class="sbar"><span class="sbar-name">${esc(c.course)}</span><div class="sbar-track"><div class="sbar-fill" style="width:${Math.min(c.pct,100)}%"></div></div><span class="sbar-val">${Math.round(c.pct)}%</span></div>`).join('')}
@@ -3768,7 +3808,7 @@ const tPgs={
       </div>`;
     };
     return `
-    <div class="banner"><div><div class="btitle">مرحباً، ${esc(user.name.split(' ')[0])} 👨‍🏫</div><div class="bsub">${esc(user.spec)}</div></div><div class="bpill bp-b">مدرب</div></div>
+    <div class="banner"><div><div class="btitle">مرحباً، ${esc(user.name.split(' ')[0])} 👨‍🏫</div><div class="bsub">${esc(user.spec)}</div></div><div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end"><div class="bpill bp-b">مدرب</div><button class="btn btn-out btn-sm" onclick="openChangePassword(false)">🔐 تغيير الرمز</button></div></div>
     <div class="metrics">
       <div class="mcard mc-b" onclick="showTrainerStat('students')" style="cursor:pointer"><div class="micon">👥</div><div class="mnum cb" data-target="${[...new Set(students.map(s=>s.sid))].length}">${[...new Set(students.map(s=>s.sid))].length}</div><div class="mlbl">إجمالي المتدربين</div></div>
       <div class="mcard mc-g" onclick="showTrainerStat('current')" style="cursor:pointer"><div class="micon">🟢</div><div class="mnum cg" data-target="${currentCrs.length}">${currentCrs.length}</div><div class="mlbl">مقررات حالية</div></div>
@@ -6097,7 +6137,8 @@ const aPgs={
       <div class="rep-header"><div class="rep-title">⚙️ إعدادات عامة</div></div>
       <div class="iitem" style="margin-bottom:10px"><div class="ilbl">معرف الشيت</div><div class="ival" style="font-size:12px;word-break:break-all">${SID}</div></div>
       <div class="iitem" style="margin-bottom:10px"><div class="ilbl">الإداري</div><div class="ival">${esc(user.name)}</div></div>
-      <div class="iitem"><div class="ilbl">الصلاحية</div><div class="ival">${esc(user.title)}</div></div>
+      <div class="iitem" style="margin-bottom:10px"><div class="ilbl">الصلاحية</div><div class="ival">${esc(user.title)}</div></div>
+      <button class="btn btn-out" onclick="openChangePassword(false)">🔐 تغيير الرمز السري</button>
     </div>
     <div class="rep-card">
       <div class="rep-header"><div class="rep-title">📊 إحصائيات سريعة</div></div>
