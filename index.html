@@ -1024,7 +1024,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxrWO-jcenL06gEDD2oAgXglBEDiPAd7ntvwqDgXNsz-rDi2n32H9PGxZqAdFlbAliA/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxcAfXcRG6yymnJB7NAT0vkNi3l5uxMbySvn6zxorxcOLG-dFxKthdz1AC4s359KeAj/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2896,8 +2896,8 @@ function navHTML(r,pages){
 }
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',lesson:'📝',lessons:'📚',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:'سجل الغياب اليومي',lesson:'تحضير الدروس',lessons:'تحاضير المدربين',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات'};
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',lesson:'📝',lessons:'📚',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖',maintenance:'🧰'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:'سجل الغياب اليومي',lesson:'تحضير الدروس',lessons:'تحاضير المدربين',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات',maintenance:'الصيانة'};
   window._mobPages={pages,role:r,map,lbls,active:pages[0]};
   // إخفاء الشريط القديم إن وُجد، وإظهار الزر العائم
   const mn=document.getElementById('mobNav'); if(mn) mn.style.display='none';
@@ -3021,9 +3021,13 @@ function libAddMat(info){
         <option value="theory">📘 نظري</option><option value="practical">🔧 عملي</option>
       </select>
       <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">اسم المادة (اختياري)</label>
-      <input id="libMatTitle" placeholder="مثال: شرح الوحدة الأولى" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:14px;margin-bottom:12px">
-      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الرابط *</label>
-      <input id="libMatUrl" placeholder="الصق رابط Google Drive أو أي رابط" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:14px">
+      <input id="libMatTitle" placeholder="مثال: شرح الوحدة الأولى" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:14px;margin-bottom:14px">
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">📎 ارفع ملف المادة</label>
+      <input type="file" id="libMatFile" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/*,application/pdf" style="width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:13px">
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">PDF أو مستند أو صورة — يُحفظ تلقائياً (الحد 5 ميجا)</div>
+      <div style="text-align:center;color:var(--muted);font-size:12px;margin:12px 0 8px;position:relative"><span style="background:var(--card2,var(--card));padding:0 10px">— أو —</span></div>
+      <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">🔗 الصق رابطاً (للفيديو والملفات الكبيرة)</label>
+      <input id="libMatUrl" placeholder="رابط Google Drive / YouTube / أي رابط" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:14px">
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn btn-out" style="flex:1" onclick="document.getElementById('libMatModal').remove()">إلغاء</button>
@@ -3034,9 +3038,23 @@ function libAddMat(info){
 }
 async function libSaveMat(code){
   const type=document.getElementById('libMatType').value;
-  const title=document.getElementById('libMatTitle').value.trim();
-  const url=document.getElementById('libMatUrl').value.trim();
-  if(!url){showToast('الصق رابط المادة أولاً','w');return;}
+  let title=document.getElementById('libMatTitle').value.trim();
+  let url=document.getElementById('libMatUrl').value.trim();
+  // إذا اختار ملفاً، نرفعه أولاً ونأخذ رابطه
+  const fileInput=document.getElementById('libMatFile');
+  if(fileInput && fileInput.files && fileInput.files[0]){
+    const f=fileInput.files[0];
+    if(f.size>5*1024*1024){showToast('حجم الملف كبير (الحد 5 ميجا) — للملفات الكبيرة استخدم رابطاً','w');return;}
+    if(!title) title=f.name.replace(/\.[^.]+$/,'');
+    showToast('جاري رفع الملف...','i');
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej();r.readAsDataURL(f);}).catch(()=>'');
+    if(!b64){showToast('تعذّر قراءة الملف','e');return;}
+    let up=null;
+    try{ up=await withRetry(()=>postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'uploadFile',fileData:b64,fileName:f.name,mime:f.type||'application/octet-stream'}),2); }catch(e){ up=null; }
+    if(!up||up.status!=='ok'||!up.url){showToast('تعذّر رفع الملف — جرّب لصق رابط بدلاً منه، أو تأكد من نشر الخادم (v17)','e');return;}
+    url=up.url;
+  }
+  if(!url){showToast('ارفع ملفاً أو الصق رابطاً','w');return;}
   const c=(catalog||[]).find(x=>normCode(x.code)===normCode(code));
   if(!c){showToast('المقرر غير موجود','e');return;}
   const cur=getCourseMaterials(code);
@@ -4409,15 +4427,15 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','lessons','requests','alerts','reports','dashboard','accounts','settings']);
-  buildMobNav('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','lessons','requests','alerts','reports','dashboard','accounts','settings']);
+  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','lessons','requests','alerts','reports','dashboard','accounts','maintenance','settings']);
+  buildMobNav('a',['overview','all_students','all_courses','library','manage_courses','schedule','attlog','lessons','requests','alerts','reports','dashboard','accounts','maintenance','settings']);
   showAPage('overview',null);
 }
 
 function showAPage(pg,el){
   if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active aa'}
   const mc=document.getElementById('mcontent');
-  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';animCards();if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);},10);
+  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';animCards();if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);if(pg==='maintenance')setTimeout(refreshSystemHealth,60);},10);
 }
 // معالج مباشر لزر شاشة العرض (event delegation — يعمل حتى لو onclick inline فشل)
 document.addEventListener('click',function(e){
@@ -6146,8 +6164,113 @@ const aPgs={
       <div class="sbar"><span class="sbar-name">المقررات النشطة</span><div class="sbar-track"><div class="sbar-fill" style="width:80%"></div></div><span class="sbar-val">${totCr}</span></div>
       <div class="sbar"><span class="sbar-name">المدربون</span><div class="sbar-track"><div class="sbar-fill" style="width:60%"></div></div><span class="sbar-val">${totTr}</span></div>
     </div>`;
+  },
+  maintenance:()=>{
+    const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>c.half).filter(t=>t&&t!=='غير محدد'))];
+    const termOpts=activeTerms.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
+    const cadence=[['شهرياً','نسخة احتياطية كاملة للملف'],['نهاية كل ترم','زر «إنهاء الترم»'],['نهاية كل دبلوم','زر «تخريج دفعة»'],['سنوياً','نقل تبويبات الأرشيف لملف منفصل'],['مرّة واحدة','إلزام تغيير كلمة المرور (مفعّل ✓)']];
+    return `
+    <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
+    <div class="stitle">🔍 صحة النظام</div>
+    <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
+    <div style="margin:12px 0 4px"><button class="btn btn-out btn-sm" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button></div>
+
+    <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="ccard cc-b">
+        <div class="cc-name">🗓️ نهاية كل ترم</div>
+        <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">حوّل مواد الترم إلى «سابق» وأرشف الغياب والتحاضير والطلبات، ليبدأ ترم نظيف.</div>
+        ${activeTerms.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
+          <select id="endTermSel" style="flex:1;min-width:140px;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px">${termOpts}</select>
+          <button class="btn btn-sm" style="background:#e74c3c;color:#fff;font-weight:700" onclick="endTerm()">🏁 إنهاء الترم</button>
+        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد تروم نشطة</div>'}
+      </div>
+      <div class="ccard cc-g">
+        <div class="cc-name">🎓 نهاية كل دبلوم</div>
+        <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">خرّج الدفعة المنتهية: تعليمهم «خرّيج» ونقل بياناتهم للأرشيف وإصدار الكشوف.</div>
+        <button class="btn btn-g btn-sm" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>
+      </div>
+      <div class="ccard cc-y">
+        <div class="cc-name">💾 شهرياً — نسخة احتياطية</div>
+        <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">نسخة كاملة تحميك من أي خطأ أو حذف. دقيقتان من Google Sheets.</div>
+        <button class="btn btn-out btn-sm" onclick="showBackupSteps()">📋 عرض الخطوات</button>
+      </div>
+      <div class="ccard cc-b">
+        <div class="cc-name">📦 سنوياً — أرشفة لملف منفصل</div>
+        <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">انقل تبويبات الأرشيف لملف مستقل ليبقى النظام سريعاً للأبد.</div>
+        <button class="btn btn-out btn-sm" onclick="showArchiveSteps()">📋 عرض الخطوات</button>
+      </div>
+    </div>
+
+    <div class="stitle" style="margin-top:26px">📅 جدول الصيانة</div>
+    <div class="ccard cc-b" style="padding:0;overflow:hidden">
+      ${cadence.map((r,i)=>`<div style="display:grid;grid-template-columns:130px 1fr;${i?'border-top:1px solid var(--border)':''}"><div style="padding:11px 14px;font-weight:600;font-size:13px;background:rgba(150,150,150,.05)">${r[0]}</div><div style="padding:11px 14px;color:var(--muted);font-size:13px">${r[1]}</div></div>`).join('')}
+    </div>`;
   }
 };
+
+// ===== صحة النظام (فحص الأحجام) =====
+async function refreshSystemHealth(){
+  const box=document.getElementById('sysHealth'); if(!box)return;
+  box.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري فحص النظام...</div>';
+  let d=null;
+  try{ d=await jsonpTo(AUTH_URL,{action:'systemStats',token:SESSION.token}); }catch(e){}
+  if(!d||!d.ok){ box.innerHTML='<div class="alert ad"><span class="aicon">⚠️</span>تعذّر الفحص — تأكد من نشر الخادم (v16)</div>'; return; }
+  const find=n=>{const s=(d.sheets||[]).find(x=>x.name===n);return s?s.rows:0;};
+  const active=find('سجل المقررات')+find('درجات تفصيلية')+find('قاعدة الغياب');
+  const pct=Math.min(100,Math.round((d.totalCells/(d.limit||1e7))*100));
+  const fmt=n=>Number(n||0).toLocaleString('en-US');
+  let lvl,lcol,acls,aic,lmsg;
+  if(active<8000){lvl='ممتاز';lcol='var(--green)';acls='as';aic='✅';lmsg='النظام خفيف وسريع — لا حاجة لأي إجراء الآن.';}
+  else if(active<20000){lvl='جيد';lcol='var(--gold)';acls='aw';aic='📈';lmsg='النمو طبيعي — تابع الأرشفة نهاية كل ترم ودبلوم.';}
+  else{lvl='ينصح بالأرشفة';lcol='var(--red)';acls='ad';aic='📦';lmsg='الجداول النشطة كبرت — يُنصح بنقل الدفعات المتخرّجة لملف منفصل (خطوات الأرشفة السنوية).';}
+  const rowsHtml=(d.sheets||[]).filter(s=>s.exists).map(s=>{
+    const isArc=String(s.name).indexOf('أرشيف')===0;
+    return `<div style="display:flex;justify-content:space-between;padding:8px 13px;border-top:1px solid var(--border);font-size:13px">
+      <span style="color:${isArc?'var(--muted)':'var(--text)'}">${isArc?'🗄️ ':'📄 '}${esc(s.name)}</span>
+      <span style="font-weight:700;font-variant-numeric:tabular-nums">${fmt(s.rows)} صف</span></div>`;
+  }).join('');
+  box.innerHTML=`
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div class="mcard" style="flex:1;min-width:140px;text-align:center;padding:15px"><div style="font-size:12.5px;color:var(--muted)">حالة النظام</div><div style="font-size:19px;font-weight:800;color:${lcol};margin-top:3px">${lvl}</div></div>
+      <div class="mcard" style="flex:1;min-width:140px;text-align:center;padding:15px"><div style="font-size:12.5px;color:var(--muted)">بيانات نشطة</div><div style="font-size:19px;font-weight:800;margin-top:3px">${fmt(active)} <span style="font-size:11px;color:var(--muted)">صف</span></div></div>
+      <div class="mcard" style="flex:1;min-width:140px;text-align:center;padding:15px"><div style="font-size:12.5px;color:var(--muted)">سعة الملف</div><div style="font-size:19px;font-weight:800;margin-top:3px">${pct}<span style="font-size:11px;color:var(--muted)">٪ من 10M</span></div></div>
+    </div>
+    <div class="alert ${acls}"><span class="aicon">${aic}</span>${lmsg}</div>
+    <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:12px">${rowsHtml.replace('border-top:1px solid var(--border)','')}</div>`;
+}
+function _stepsModal(title,icon,steps,note){
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='stepsModal';ov.style.zIndex='99999';
+  ov.innerHTML=`<div class="modal" style="max-width:480px;max-height:88vh;overflow-y:auto">
+    <div class="modal-title"><span>${icon} ${esc(title)}</span><button class="modal-close" onclick="document.getElementById('stepsModal').remove()">✕</button></div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:6px">
+      ${steps.map((s,i)=>`<div style="display:flex;gap:12px;align-items:flex-start"><span style="font-weight:800;color:var(--accent,#6ab8f7);background:rgba(106,184,247,.12);border-radius:8px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px">${i+1}</span><div style="font-size:13.5px;line-height:1.7">${s}</div></div>`).join('')}
+    </div>
+    ${note?`<div class="alert aw" style="margin-top:14px"><span class="aicon">⚠️</span>${note}</div>`:''}
+    <div class="btn-row" style="margin-top:14px"><button class="btn btn-b" onclick="document.getElementById('stepsModal').remove()">تمام</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function showBackupSteps(){
+  _stepsModal('النسخة الاحتياطية الشهرية','💾',[
+    'افتح ملف Google Sheet الرئيسي للأكاديمية (من حساب مالك الملف).',
+    'من القائمة العلوية: <b>File ← Make a copy</b> (ملف ← إنشاء نسخة). سمّها «نسخة احتياطية — الشهر/السنة».',
+    'أو نزّلها كملف: <b>File ← Download ← Microsoft Excel (.xlsx)</b> واحفظها على درايف/جهازك.',
+    'احتفظ بآخر ٣ نسخ على الأقل، واحذف القديمة جداً حتى لا تتراكم.'
+  ],'خُذ نسخة احتياطية <b>قبل</b> أي عملية كبيرة (إنهاء ترم · تخريج دفعة).');
+}
+function showArchiveSteps(){
+  _stepsModal('الأرشفة السنوية لملف منفصل','📦',[
+    'تأكد أنك خرّجت الدفعات المنتهية عبر زر «تخريج دفعة» (بياناتهم صارت في تبويبات الأرشيف).',
+    'خُذ نسخة احتياطية كاملة أولاً (إلزامي).',
+    'أنشئ ملف Google Sheet جديد باسم «أرشيف الأكاديمية — حتى (السنة)».',
+    'لكل تبويب أرشيف: زر الفأرة الأيمن على اسمه ← <b>Copy to ← Existing spreadsheet</b> ← اختر ملف الأرشيف الجديد.',
+    'افتح الملف الجديد وتأكد أن كل البيانات وصلت كاملة.',
+    'ثم احذف صفوف تلك التبويبات من الملف الرئيسي (اترك صف العناوين فقط) — الآن خفّ الملف.',
+    'احفظ رابط ملف الأرشيف في مكان آمن للرجوع.'
+  ],'رتّب العمل: نسخة احتياطية ← نسخ ← <b>تحقّق</b> ← ثم احذف. لا تعكس الترتيب.');
+}
+window.refreshSystemHealth=refreshSystemHealth;window.showBackupSteps=showBackupSteps;window.showArchiveSteps=showArchiveSteps;
 
 function filterSt(){
   const q=document.getElementById('stSearch').value.toLowerCase();
