@@ -8821,6 +8821,101 @@ EN_PATTERNS.push(
 );
 
 Object.assign(TRANSLATIONS.en, {'المكتبة':'Library','📚 المكتبة العلمية':'📚 Course Library','المكتبة العلمية':'Course Library','أضف مادة علمية':'Add Material','➕ أضف مادة علمية':'➕ Add Material','مادة علمية':'Material','لا مواد':'No materials','لم تُضف مواد لهذا المقرر بعد':'No materials added for this course yet','لا توجد مواد علمية بعد':'No materials yet','المواد العلمية لمقرراتك (نظري + عملي)':'Materials for your courses (Theory + Practical)','كل المواد العلمية لجميع المقررات':'All materials for all courses','النوع':'Type','اسم المادة (اختياري)':'Material name (optional)','الرابط *':'Link *'});
+/* ===== توسعة ترجمة شاملة (الميزات الحديثة + الواجهة الأساسية) ===== */
+Object.assign(TRANSLATIONS.en, {
+  // التنقّل والصيانة
+  'الصيانة':'Maintenance','🧰 صيانة النظام':'🧰 System Maintenance','صيانة النظام':'System Maintenance',
+  'فحص صحة النظام والعمليات الدورية — بضغطة واحدة':'System health check & routine operations — one click',
+  'صحة النظام':'System Health','🔍 صحة النظام':'🔍 System Health',
+  'حالة النظام':'System Status','بيانات نشطة':'Active Data','سعة الملف':'File Capacity','رصيد الإيميل اليوم':'Email Quota Today',
+  'ممتاز':'Excellent','جيد':'Good','ينصح بالأرشفة':'Archiving Recommended',
+  'إعادة الفحص':'Re-check','🔄 إعادة الفحص':'🔄 Re-check','جاري فحص النظام...':'Checking system...','⏳ جاري الفحص...':'⏳ Checking...',
+  'العمليات الدورية':'Routine Operations','🛠️ العمليات الدورية':'🛠️ Routine Operations',
+  'نهاية كل نصف مجزأ':'End of each Split Half','🗓️ نهاية كل نصف مجزأ':'🗓️ End of each Split Half',
+  'إنهاء النصف المجزأ':'End Split Half','🏁 إنهاء النصف المجزأ':'🏁 End Split Half','🏁 إنهاء نصف مجزأ':'🏁 End a Split Half',
+  'اختر النصف المجزأ المنتهي':'Select the split half to end','لا توجد أنصاف مجزأة نشطة':'No active split halves',
+  'حوّل مواد النصف المجزأ إلى «سابق» وأرشف الغياب والتحاضير والطلبات، ليبدأ نصف نظيف.':'Move the split half courses to "Former" and archive absences, lesson preps and requests to start clean.',
+  'نهاية كل دبلوم':'End of each Diploma','🎓 نهاية كل دبلوم':'🎓 End of each Diploma',
+  'خرّج الدفعة المنتهية: تعليمهم «خرّيج» ونقل بياناتهم للأرشيف وإصدار الكشوف.':'Graduate the finished batch: mark them Graduate, archive their data and issue transcripts.',
+  'شهرياً — نسخة احتياطية':'Monthly — Backup','💾 شهرياً — نسخة احتياطية':'💾 Monthly — Backup',
+  'نسخة كاملة تحميك من أي خطأ أو حذف. دقيقتان من Google Sheets.':'A full copy protects you from any mistake or deletion. Two minutes in Google Sheets.',
+  'سنوياً — أرشفة لملف منفصل':'Yearly — Archive to Separate File','📦 سنوياً — أرشفة لملف منفصل':'📦 Yearly — Archive to Separate File',
+  'انقل تبويبات الأرشيف لملف مستقل ليبقى النظام سريعاً للأبد.':'Move archive tabs to a separate file to keep the system fast forever.',
+  'عرض الخطوات':'View Steps','📋 عرض الخطوات':'📋 View Steps',
+  'جدول الصيانة':'Maintenance Schedule','📅 جدول الصيانة':'📅 Maintenance Schedule',
+  'شهرياً':'Monthly','سنوياً':'Yearly','مرّة واحدة':'One-time','نهاية كل ترم':'End of each term',
+  'نسخة احتياطية كاملة للملف':'Full file backup','زر «إنهاء النصف المجزأ»':'“End Split Half” button','زر «تخريج دفعة»':'“Graduate Batch” button',
+  'نقل تبويبات الأرشيف لملف منفصل':'Move archive tabs to a separate file','إلزام تغيير كلمة المرور (مفعّل ✓)':'Force password change (enabled ✓)',
+  // الإيميلات
+  'الإيميلات':'Emails','📧 الإيميلات':'📧 Emails','تغطية الإيميلات':'Email Coverage','📊 تغطية الإيميلات':'📊 Email Coverage',
+  'كم متدرب ناقصه إيميل (الإنذارات لا تصله بدون إيميل).':'How many trainees have no email (warnings will not reach them).',
+  'افحص الآن':'Check Now','👁️ افحص الآن':'👁️ Check Now',
+  'سجل الإيميلات المرسلة':'Sent Emails Log','🗒️ سجل الإيميلات المرسلة':'🗒️ Sent Emails Log','سجل الإيميلات':'Email Log','🗒️ سجل الإيميلات':'🗒️ Email Log',
+  'آخر ما أرسله النظام (لمن ومتى ونجح/فشل).':'The latest emails the system sent (to whom, when, success/failure).',
+  'عرض السجل':'View Log','📜 عرض السجل':'📜 View Log',
+  'إشعارات الطلبات بالبريد':'Request Email Notifications','🔔 إشعارات الطلبات بالبريد':'🔔 Request Email Notifications',
+  'الحالة:':'Status:','مفعّلة':'Enabled','معطّلة':'Disabled','تفعيل / إيقاف':'Enable / Disable','🔁 تفعيل / إيقاف':'🔁 Enable / Disable',
+  'لديهم إيميل':'Have Email','ناقص إيميل':'Missing Email','النسبة':'Percentage',
+  'كل المتدربين لديهم إيميل — ممتاز.':'All trainees have an email — excellent.','لا توجد إيميلات مسجّلة بعد.':'No emails logged yet.',
+  'مرسل':'Sent','فشل':'Failed',
+  // التخريج
+  'اسم الدفعة':'Batch Name','تخريج دفعة':'Graduate Batch','🎓 تخريج دفعة':'🎓 Graduate Batch','🎓 تخريج المختارين':'🎓 Graduate Selected',
+  'كل الشعب':'All Sections','كل التخصصات':'All Specializations','تحديد كل الظاهر':'Select all shown',
+  'الخريجون':'Graduates','كشف تخرّج':'Transcript','🖨️ كشف تخرّج':'🖨️ Transcript',
+  'لا يوجد خريجون بعد':'No graduates yet','لا يوجد متدربون مطابقون':'No matching trainees',
+  'كشف تخرّج المتدرّب':'Trainee Graduation Transcript','عدد المقررات':'Courses','المجتازة':'Passed','المعدل العام':'Overall Average',
+  'الدفعة':'Batch','المقرر':'Course','الترم':'Term','ختم المعهد':'Institute Seal',
+  // كلمة المرور
+  'تعيين رمز سري جديد':'Set New Password','تغيير الرمز السري':'Change Password','🔐 تغيير الرمز السري':'🔐 Change Password','🔐 تغيير الرمز':'🔐 Change Password',
+  'الرمز الجديد':'New Password','تأكيد الرمز':'Confirm Password','حفظ الرمز':'Save Password','أعد كتابة الرمز':'Re-enter password',
+  'لا تستخدم رقم جوالك · احفظه في مكان آمن':'Do not use your phone number · keep it safe','4 خانات على الأقل':'At least 4 characters',
+  '✅ تم تغيير الرمز بنجاح':'✅ Password changed successfully',
+  // المكتبة ورفع الملفات
+  'ارفع ملف المادة':'Upload material file','📎 ارفع ملف المادة':'📎 Upload material file',
+  'PDF أو مستند أو صورة — يُحفظ تلقائياً (الحد 5 ميجا)':'PDF, document or image — saved automatically (5 MB max)',
+  '🔗 الصق رابطاً (للفيديو والملفات الكبيرة)':'🔗 Paste a link (video & large files)','رابط Google Drive / YouTube / أي رابط':'Google Drive / YouTube / any link',
+  'نظري':'Theory','عملي':'Practical','📘 نظري':'📘 Theory','🔧 عملي':'🔧 Practical','جاري رفع الملف...':'Uploading file...','✅ تمت إضافة المادة':'✅ Material added',
+  // الطلبات
+  'الخدمات والطلبات':'Services & Requests','📝 الخدمات والطلبات':'📝 Services & Requests','📝 الخدمات':'📝 Services',
+  'تقديم طلب جديد':'Submit New Request','➕ تقديم طلب جديد':'➕ Submit New Request','نوع الطلب':'Request Type',
+  'عذر غياب':'Absence Excuse','ورقة تعريف':'Enrollment Letter','ورقة تعريف بالمتدرب':'Trainee Enrollment Letter',
+  'طلب إداري':'Administrative Request','طلب عام':'General Request','طلب عام (أوجّهه لشخص)':'General Request (to a person)',
+  'الشخص الموجَّه له الطلب':'Recipient','التفاصيل / السبب':'Details / Reason','إرسال الطلب':'Send Request','📨 إرسال الطلب':'📨 Send Request',
+  'طلباتي':'My Requests','بانتظار إجراءك':'Awaiting your action','مشرف التخصص':'Specialization Supervisor','المشرف العام':'General Supervisor',
+  'المدرب':'Trainer','المسؤول المحدد':'Assigned Person','رفض نهائي':'Reject','✕ رفض نهائي':'✕ Reject',
+  'إرجاع للتعديل':'Return for Editing','↩ إرجاع للتعديل':'↩ Return for Editing','تصعيد للمدير':'Escalate to Director','⬆ تصعيد للمدير':'⬆ Escalate to Director',
+  '✏️ تعديل وإعادة إرسال':'✏️ Edit & Resend','معتمد نهائياً ✓':'Fully Approved ✓','بانتظار تعديل صاحب الطلب':'Awaiting requester edit',
+  'قيد المراجعة':'Under Review','مرفوض':'Rejected','معتمد':'Approved','تقديم طلب للإدارة':'Submit request to admin','➕ تقديم طلب للإدارة':'➕ Submit request to admin',
+  'طلباتي المرفوعة':'My Submitted Requests','تقديم طلب إداري / عام':'Submit Admin / General Request','➕ تقديم طلب إداري / عام':'➕ Submit Admin / General Request',
+  'لم ترفع طلبات بعد':'No requests submitted yet','لا يوجد شيء بانتظار إجراءك':'Nothing awaiting your action',
+  // المصطلحات
+  'الفصل التدريبي':'Training Semester','📅 الفصل التدريبي':'📅 Training Semester','الفصل الأول':'First Semester','الفصل الثاني':'Second Semester','الفصل الصيفي':'Summer Semester',
+  'النصف المجزأ':'Split Half','📖 النصف المجزأ':'📖 Split Half',
+  // الحسابات
+  'إدارة الحسابات':'Account Management','إضافة وتعديل وحذف حسابات المتدربين والمدربين والإداريين':'Add, edit and delete trainee, trainer and admin accounts',
+  '🔢 تحديث الأرقام التدريبية':'🔢 Update Training IDs','الصلاحية':'Role','مشرف تخصص':'Specialization Supervisor','مدير الأكاديمية (مشرف عام)':'Academy Director (General Supervisor)',
+  'مدير (مشرف عام)':'Director (General Supervisor)','جميع التخصصات':'All Specializations','التخصصات التي يشرف عليها (للمشرف — يمكن اختيار أكثر من تخصص)':'Supervised specializations (multiple allowed)',
+  'التخصص الذي يشرف عليه (للمشرف)':'Supervised specialization',
+  // شائع
+  'إلغاء':'Cancel','تمام':'OK','حفظ التعديل':'Save Changes','إضافة':'Add','التخصص':'Specialization','الاسم':'Name','الاسم الكامل':'Full Name',
+  'المسمى':'Title','المسمى الوظيفي':'Job Title','الرقم':'ID','الرقم الوظيفي':'Employee ID','الجوال':'Mobile','البريد':'Email','إجراءات':'Actions',
+  'جاري التحديث...':'Updating...','جاري إرسال الطلب...':'Sending request...','✅ تم إرسال طلبك بنجاح':'✅ Your request was sent',
+  'جاري التخريج والأرشفة...':'Graduating & archiving...','جاري إنهاء النصف المجزأ...':'Ending split half...','جاري تجهيز كشف التخرّج...':'Preparing transcript...',
+  'قدّم طلبك وتابع مساره خطوة بخطوة حتى الاعتماد النهائي':'Submit your request and track it step by step to final approval',
+  'لا توجد طلبات سابقة':'No previous requests','لا توجد طلبات':'No requests','مدرب':'Trainer','مدير':'Director','مشرف':'Supervisor'
+});
+EN_PATTERNS.push(
+  [/^🎓 الخريجون\s*\((\d+)\)$/,'🎓 Graduates ($1)'],[/^الخريجون\s*\((\d+)\)$/,'Graduates ($1)'],
+  [/^(\d+)\s*مختار$/,'$1 selected'],[/^(\d+)\s*صف$/,'$1 rows'],[/^(\d+)\s*رسالة$/,'$1 emails'],
+  [/^الفصل الأول\s+(.+)$/,'First Semester $1'],[/^الفصل الثاني\s+(.+)$/,'Second Semester $1'],[/^الفصل الصيفي\s+(.+)$/,'Summer Semester $1'],
+  [/^بانتظار\s+(.+)$/,'Awaiting $1'],[/^نتيجة طلبك:\s*(.+)$/,'Your request result: $1'],
+  [/^طلباتي\s*\((\d+)\)$/,'My Requests ($1)'],[/^طلباتي المرفوعة\s*\((\d+)\)$/,'My Submitted Requests ($1)'],
+  [/^بانتظار إجراءك\s*\((\d+)\)$/,'Awaiting your action ($1)'],
+  [/^النصف المجزأ:\s*(.+)$/,'Split Half: $1'],[/^الفصل التدريبي:\s*(.+)$/,'Training Semester: $1'],
+  [/^مشرف تخصص\s*·\s*(.+)$/,'Specialization Supervisor · $1'],[/^مشرف\s+(.+)$/,'Supervisor of $1'],
+  [/^(\d+)٪ من 10M$/,'$1% of 10M'],[/^(\d+)\s*مادة إلى سابق$/,'$1 courses set to Former']
+);
+
 let currentLang = 'ar';
 
 function txText(txt){
