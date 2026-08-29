@@ -2958,7 +2958,7 @@ function showSPage(pg,el){
   const mc=document.getElementById('mcontent');
   mc.innerHTML='';
   mc.style.animation='none';
-  setTimeout(()=>{mc.style.animation='fadeIn .3s ease';mc.innerHTML=sPgs[pg]?sPgs[pg]():'';animCards();},10);
+  setTimeout(()=>{mc.style.animation='fadeIn .3s ease';mc.innerHTML=sPgs[pg]?sPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);},10);
 }
 
 // ===== المكتبة العلمية (نظري + عملي لكل المقررات) =====
@@ -3389,7 +3389,7 @@ function buildTrainerApp(){
 function showTPage(pg,el){
   if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active at'}
   const mc=document.getElementById('mcontent');
-  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=tPgs[pg]?tPgs[pg]():'';animCards();},10);
+  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=tPgs[pg]?tPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);},10);
 }
 
 /* ============ سجل التحضير — باني موحّد عالي الجودة (مدرب: عرض · أدمن: تعديل/حذف) ============ */
@@ -4436,7 +4436,7 @@ function buildAdminApp(){
 function showAPage(pg,el){
   if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active aa'}
   const mc=document.getElementById('mcontent');
-  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';animCards();if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);if(pg==='maintenance')setTimeout(refreshSystemHealth,60);},10);
+  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);if(pg==='maintenance')setTimeout(refreshSystemHealth,60);},10);
 }
 // معالج مباشر لزر شاشة العرض (event delegation — يعمل حتى لو onclick inline فشل)
 document.addEventListener('click',function(e){
@@ -8987,7 +8987,11 @@ function handleTextNode(node){
   if(!txt)return;
   const tr=txText(txt);
   if(tr!==null){ if(node._txOrig===undefined){node._txOrig=raw;_txNodes.push(node);} node.textContent=raw.replace(txt,tr); return; }
-  if(currentLang==='en'&&isArabicText(txt))mtQueueNode(node,txt);
+  if(currentLang==='en'&&isArabicText(txt)){
+    const c=MT_CACHE[txt];
+    if(c!==undefined){ if(node._txOrig===undefined){node._txOrig=raw;_txNodes.push(node);} node.textContent=raw.replace(txt,c); } // مخزّن → فوري (لا يرجع عربي)
+    else mtQueueNode(node,txt); // جديد → يُترجم مرة ويُخزّن
+  }
 }
 function translateNode(root){
   if(currentLang!=='en')return;
@@ -9002,7 +9006,11 @@ function translateNode(root){
         if(tr!==null){
           if(!el['_txOrig_'+a]){el['_txOrig_'+a]=v;_txAttrs.push({el,attr:a});}
           el.setAttribute(a,tr);
-        } else if(currentLang==='en'&&isArabicText(t)) mtQueueAttr(el,a,t);
+        } else if(currentLang==='en'&&isArabicText(t)){
+          const c=MT_CACHE[t];
+          if(c!==undefined){ if(!el['_txOrig_'+a]){el['_txOrig_'+a]=v;_txAttrs.push({el,attr:a});} el.setAttribute(a,c); }
+          else mtQueueAttr(el,a,t);
+        }
       }
     });
   });
