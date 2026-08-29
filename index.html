@@ -678,8 +678,25 @@ body.light-mode .att-card{background:#fff!important;border-color:rgba(26,58,107,
 body.light-mode .sch-item{background:#fff!important;border-color:rgba(26,58,107,0.12)!important}
 body.light-mode .banner{background:#fff!important;border-color:rgba(26,58,107,0.12)!important}
 body.light-mode .rep-card{background:#fff!important;border-color:rgba(26,58,107,0.12)!important}
-body.light-mode .stitle{color:#6b7a99}
+body.light-mode .stitle{color:#4a5a72}
 body.light-mode .stitle::after{background:rgba(26,58,107,0.1)}
+
+/* ===== تحسين وضوح النصوص في الوضع النهاري (تباين أعلى على الخلفية البيضاء) ===== */
+body.light-mode{ --muted:#52627a; --green:#12924e; --gold:#b06d10; --red:#cc2130; }
+body.light-mode .cc-meta,body.light-mode .bsub,body.light-mode .iitem .ilbl{color:#556579!important}
+/* الألوان الفاتحة المكتوبة يدوياً كنص → نظيرات أغمق مقروءة على الأبيض */
+body.light-mode [style*="color:#6ab8f7"],body.light-mode [style*="color: #6ab8f7"]{color:#155fa6!important}
+body.light-mode [style*="color:#93c5f7"],body.light-mode [style*="color: #93c5f7"]{color:#155fa6!important}
+body.light-mode [style*="color:#b8c5d8"],body.light-mode [style*="color: #b8c5d8"]{color:#55647a!important}
+body.light-mode [style*="color:#f4c78a"],body.light-mode [style*="color: #f4c78a"]{color:#8f5b0d!important}
+body.light-mode [style*="color:#f4a261"],body.light-mode [style*="color: #f4a261"]{color:#a1500f!important}
+body.light-mode [style*="color:#ff8a92"],body.light-mode [style*="color: #ff8a92"]{color:#c62b38!important}
+body.light-mode [style*="color:#ff8a4c"],body.light-mode [style*="color: #ff8a4c"]{color:#b5551a!important}
+body.light-mode [style*="color:#ff8a3c"],body.light-mode [style*="color: #ff8a3c"]{color:#b5551a!important}
+body.light-mode [style*="color:#ff4757"],body.light-mode [style*="color: #ff4757"]{color:#c62b38!important}
+body.light-mode [style*="color:#2ecc71"],body.light-mode [style*="color: #2ecc71"]{color:#12924e!important}
+body.light-mode [style*="color:#eef4fc"],body.light-mode [style*="color: #eef4fc"]{color:#1a2a4a!important}
+body.light-mode [style*="color:#e8f0f8"],body.light-mode [style*="color: #e8f0f8"]{color:#1a2a4a!important}
 
 /* زر التبديل */
 #themeBtn{
