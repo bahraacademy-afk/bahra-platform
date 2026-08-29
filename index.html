@@ -1728,7 +1728,7 @@ async function openCreateDelegation(){
   const staff=await loadStaffList();
   const meDigits=dg(user.id);
   const opts=staff.filter(s=>dg(s.id)!==meDigits).map(s=>`<option value="${esc(s.id)}" data-name="${esc(s.name)}">${esc(s.name)} · ${s.type==='admin'?'إداري':'مدرب'} (${esc(s.id)})</option>`).join('');
-  const cOpts=courses.map((c,i)=>`<option value="${i}">${esc(c.course||c.code)} · شعبة ${esc(c.grp||'—')}${c.term?' · '+esc(c.term):''}</option>`).join('');
+  const cOpts=courses.map((c,i)=>`<option value="${i}">${esc(c.course||c.code)} · شعبة ${esc(c.grp||'—')}${c.term?' · '+esc(fmtTerm(c.term)):''}</option>`).join('');
   document.getElementById('delegModal')?.remove();
   const overlay=document.createElement('div');
   overlay.className='modal-overlay'; overlay.id='delegCreateModal';
@@ -2889,7 +2889,8 @@ function navHTML(r,pages){
     record:{icon:'🏅',lbl:'السجل التدريبي'},
     services:{icon:'📝',lbl:'الخدمات'},
     library:{icon:'📚',lbl:'المكتبة'},
-    requests:{icon:'📋',lbl:'الطلبات والموافقات'}
+    requests:{icon:'📋',lbl:'الطلبات والموافقات'},
+    maintenance:{icon:'🧰',lbl:'الصيانة'}
   };
   const ac=r==='s'?'active':r==='t'?'active at':'active aa';
   return pages.map(p=>`<div class="sitem" onclick="show${r.toUpperCase()}Page('${p}',this)" id="sn-${p}"><span class="sicon">${map[p]?.icon||'📌'}</span>${map[p]?.lbl||p}</div>`).join('');
@@ -2982,7 +2983,7 @@ function buildLibrary(scope, canAdd){
     const matNames=[...m.theory,...m.practical].map(x=>(x&&(x.name||x.title))||'').join(' ');
     const sTxt=`${c.name||''} ${c.code||''} ${c.term||''} ${matNames}`.toLowerCase();
     return `<div class="ccard libcard" data-s="${esc(sTxt)}" style="cursor:default">
-      <div class="cc-top"><div><div class="cc-name">${esc(c.name||c.code)}</div><div class="cc-meta">${esc(c.code)}${c.term?' · '+c.term:''}</div></div>
+      <div class="cc-top"><div><div class="cc-name">${esc(c.name||c.code)}</div><div class="cc-meta">${esc(c.code)}${c.term?' · '+esc(fmtTerm(c.term)):''}</div></div>
         <span class="pill ${empty?'py':'pg'}">${empty?'لا مواد':(m.theory.length+m.practical.length)+' مادة'}</span></div>
       ${c.prereq?`<div style="margin-top:8px"><span style="display:inline-block;background:rgba(244,162,97,.15);color:#f4a261;border:1px solid rgba(244,162,97,.3);border-radius:10px;padding:3px 10px;font-size:11px;font-weight:600">📌 المتطلب السابق: ${esc(c.prereq)}</span></div>`:''}
       ${secBlock('📘 نظري',m.theory)}${secBlock('🔧 عملي',m.practical)}
@@ -3855,7 +3856,7 @@ const tPgs={
       const ss=uniqStudents(pool.filter(s=>s.course===course));
       const term=ss[0]&&ss[0].half&&ss[0].half!=='غير محدد'?ss[0].half:'';
       return `<div style="margin-bottom:24px">
-        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${esc(course)} <span style="color:var(--muted);font-weight:400">(${ss.length} متدرب)</span>${term?` <span class="pill ${isArch?'py':'pg'}" style="font-size:11px">${esc(term)}</span>`:''}${isArch?' <span class="pill" style="font-size:11px;background:rgba(150,150,150,.15);color:var(--muted);border:1px solid rgba(150,150,150,.25)">مؤرشف</span>':''}</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px;color:#6ab8f7">📚 ${esc(course)} <span style="color:var(--muted);font-weight:400">(${ss.length} متدرب)</span>${term?` <span class="pill ${isArch?'py':'pg'}" style="font-size:11px">${esc(fmtTerm(term))}</span>`:''}${isArch?' <span class="pill" style="font-size:11px;background:rgba(150,150,150,.15);color:var(--muted);border:1px solid rgba(150,150,150,.25)">مؤرشف</span>':''}</div>
         <div class="gtable"><table>
           <thead><tr><th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>الإنجاز</th><th>الغياب</th></tr></thead>
           <tbody>${ss.map(s=>`<tr>
@@ -4600,7 +4601,7 @@ function courseModal(mode,data){
     <div style="padding:8px 0">
       ${f('code','رمز المقرر *',data.code,'مثال: الكت 101')}
       ${f('name','اسم المقرر *',data.name,'مثال: سلامة صناعية')}
-      ${f('term','الترم',data.term,'مثال: ترم أول')}
+      ${f('term','الفصل التدريبي',data.term,'مثال: الفصل الأول')}
       ${f('units','عدد الوحدات',data.units)}
       ${f('hours','عدد الساعات',data.hours)}
       ${f('prereq','📌 المتطلب السابق',data.prereq,'مثال: الكت 101 / ريض 121 — اتركه فارغاً إن لا يوجد')}
@@ -4809,22 +4810,30 @@ document.addEventListener('change',function(e){
   if(e.target&&(e.target.classList.contains('enr-student-cb')||e.target.classList.contains('enr-course-cb')))updateEnrCounts();
 });
 // التسجيل الجماعي: كل طالب محدد × كل مقرر محدد
-// إنهاء ترم: تحويل كل مواده لسابق
+// تنسيق عرض الفصل: القيم المخزّنة تبقى «ترم ...» لكن يُعرض للمستخدم «الفصل ...»
+function fmtTerm(v){
+  return String(v||'')
+    .replace('ترم أول','الفصل الأول')
+    .replace('ترم ثاني','الفصل الثاني')
+    .replace('ترم صيفي','الفصل الصيفي')
+    .replace(/(^|\s)ترم(\s)/g,'$1الفصل$2');
+}
+// إنهاء النصف المجزأ: تحويل كل مواده لسابق
 async function endTerm(){
   const term=document.getElementById('endTermSel')?.value;
-  if(!term){showToast('اختر الترم','w');return;}
-  const termLbl=term.replace(/-/g,' ');
-  if(!confirm(`⚠️ هل تريد إنهاء الترم: ${termLbl}؟\n\nسيتم تحويل كل مواد هذا الترم إلى "سابق" (منتهية).\nلن تظهر بعدها في المواد الحالية.`))return;
-  showToast('جاري إنهاء الترم...','i');
+  if(!term){showToast('اختر النصف المجزأ','w');return;}
+  const termLbl=fmtTerm(term.replace(/-/g,' '));
+  if(!confirm(`⚠️ هل تريد إنهاء النصف المجزأ: ${termLbl}؟\n\nسيتم تحويل كل مواد هذا النصف إلى "سابق" (منتهية).\nلن تظهر بعدها في المواد الحالية.`))return;
+  showToast('جاري إنهاء النصف المجزأ...','i');
   try{
     const res=await jsonpCall({action:'endTerm',data:JSON.stringify([{term}])});
     const n=(res&&res.updated)||0;
     const arc=(res&&res.archivedAbsence)||0;
     const al=(res&&res.archivedLessons)||0, aq=(res&&res.archivedRequests)||0;
     const extra=[arc?`${arc} غياب`:'',al?`${al} تحضير`:'',aq?`${aq} طلب`:''].filter(Boolean).join(' · ');
-    showToast(`✅ تم إنهاء الترم — ${n} مادة إلى سابق`+(extra?` · أُرشِف: ${extra}`:''),'s');
+    showToast(`✅ تم إنهاء النصف المجزأ — ${n} مادة إلى سابق`+(extra?` · أُرشِف: ${extra}`:''),'s');
     loadAdmin().then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
-  }catch(e){showToast('تعذّر إنهاء الترم — جرب مرة أخرى','e');}
+  }catch(e){showToast('تعذّر إنهاء النصف المجزأ — جرب مرة أخرى','e');}
 }
 window.endTerm=endTerm;
 
@@ -4848,7 +4857,7 @@ async function enrollBatch(){
   if(!sids.length){showToast('اختر متدرباً واحداً على الأقل','w');return;}
   if(!crs.length){showToast('اختر مقرراً واحداً على الأقل','w');return;}
   const total=sids.length*crs.length;
-  if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nالترم: ${term}${half?' · '+half:''}\nهل تريد المتابعة؟`))return;
+  if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nالفصل التدريبي: ${fmtTerm(term)}${half?' · '+half:''}\nهل تريد المتابعة؟`))return;
   // بناء السجلات (مع تخطي المسجّلين مسبقاً والمواد المقفلة بمتطلب)
   const records=[];let skipped=0,lockedSkip=0;
   sids.forEach(sid=>{
@@ -5195,14 +5204,14 @@ async function printGraduateTranscript(sid){
       <thead><tr>
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">#</th>
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff;text-align:right">المقرر</th>
-        <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الترم</th>
+        <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الفصل التدريبي</th>
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الدرجة</th>
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">التقدير</th>
       </tr></thead>
       <tbody>${rows.map((c,i)=>`<tr>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${i+1}</td>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:right">${esc(c.course)}</td>
-        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${esc(c.term||'—')}</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${esc(fmtTerm(c.term)||'—')}</td>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center;font-weight:700">${c.pct?c.pct:'—'}</td>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${c.pct?grade(c.pct):'—'}</td>
       </tr>`).join('')}</tbody>
@@ -5441,7 +5450,7 @@ const aPgs={
       const specChip=sp=>String(sp||'').split(/[|,؛;]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span style="display:inline-block;background:rgba(106,184,247,.12);color:#6ab8f7;border-radius:10px;padding:2px 8px;font-size:10px;margin:1px">${x}</span>`).join('')||'<span style="color:var(--muted);font-size:11px">عام</span>';
       const matBadge=c=>{const n=parseMaterials(c.matTheory).length,p=parseMaterials(c.matPractical).length;const parts=[];if(n)parts.push('📘'+n);if(p)parts.push('🔧'+p);return parts.length?`<span style="background:rgba(46,204,113,.15);color:#2ecc71;border-radius:10px;padding:2px 8px;font-size:10px">${parts.join(' ')}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>';};
       const rows=(catalog||[]).map(c=>`<tr>
-        <td style="font-weight:600">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${c.term||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${c.prereq?`<span style="background:rgba(244,162,97,.15);color:#f4a261;border-radius:10px;padding:2px 8px;font-size:10px">📌 ${esc(c.prereq)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
+        <td style="font-weight:600">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(fmtTerm(c.term))||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${c.prereq?`<span style="background:rgba(244,162,97,.15);color:#f4a261;border-radius:10px;padding:2px 8px;font-size:10px">📌 ${esc(c.prereq)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
         <td><button onclick='editCourse(${JSON.stringify(c).replace(/'/g,"&#39;")})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${esc(c.code)}","${(c.name||'').replace(/"/g,'')}")' class="btn btn-sm" style="background:#e74c3c;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="9" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
       // التروم الموجودة فعلاً في سجل المقررات (النشطة فقط)
@@ -5449,18 +5458,18 @@ const aPgs={
         // نأخذ الجزء قبل " · " (الترم بدون النصف) لتجميع النصفين
         return String(c.half||'').split(' · ')[0].trim();
       }).filter(Boolean))].sort();
-      const termOpts=activeTerms.map(t=>`<option value="${t}">${t.replace(/-/g,' ')}</option>`).join('');
+      const termOpts=activeTerms.map(t=>`<option value="${t}">${fmtTerm(t.replace(/-/g,' '))}</option>`).join('');
       body=`
       <div style="background:linear-gradient(135deg,rgba(231,76,60,.08),rgba(201,162,39,.06));border:1px solid rgba(231,76,60,.25);border-radius:12px;padding:16px;margin-bottom:20px">
-        <div style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)">🏁 إنهاء ترم دراسي</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">عند انتهاء ترم، حوّل كل مواده إلى "سابق" (منتهية) بضغطة — تنتقل للتاريخ الأكاديمي وتخرج من المواد الحالية</div>
+        <div style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)">🏁 إنهاء نصف مجزأ</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px">عند انتهاء النصف المجزأ، حوّل كل مواده إلى "سابق" (منتهية) بضغطة — تنتقل للتاريخ الأكاديمي وتخرج من المواد الحالية</div>
         ${activeTerms.length?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
           <div style="flex:1;min-width:200px">
-            <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">اختر الترم المنتهي</label>
+            <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">اختر النصف المجزأ المنتهي</label>
             <select id="endTermSel" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">${termOpts}</select>
           </div>
-          <button class="btn btn-sm" style="background:#e74c3c;color:#fff;font-weight:700;padding:11px 20px" onclick="endTerm()">🏁 إنهاء الترم المحدد</button>
-        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد تروم حالية نشطة</div>'}
+          <button class="btn btn-sm" style="background:#e74c3c;color:#fff;font-weight:700;padding:11px 20px" onclick="endTerm()">🏁 إنهاء النصف المجزأ</button>
+        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة</div>'}
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div class="stitle" style="margin:0">📖 الخطة الدراسية (${(catalog||[]).length} مقرر)</div>
@@ -5470,7 +5479,7 @@ const aPgs={
       <div data-listwrap>
       ${searchBoxHTML('ابحث عن مقرر أو رمز...')}
       <div class="gtable"><table>
-        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الترم</th><th>الوحدات</th><th>الساعات</th><th>المتطلب</th><th>التخصصات</th><th>المادة العلمية</th><th>إجراءات</th></tr></thead>
+        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الفصل التدريبي</th><th>الوحدات</th><th>الساعات</th><th>المتطلب</th><th>التخصصات</th><th>المادة العلمية</th><th>إجراءات</th></tr></thead>
         <tbody>${rows}</tbody>
       </table></div></div>`;
     }else{
@@ -5544,15 +5553,15 @@ const aPgs={
         <select id="enr_trainer" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"><option value="">— اختر المدرب —</option>${trOpts}</select>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
           <div>
-            <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 الترم</label>
+            <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 الفصل التدريبي</label>
             <select id="enr_term" onchange="toggleHalfField()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
-              <option value="ترم صيفي-2025/2026">ترم صيفي 2025/2026</option>
-              <option value="ترم أول-2026/2027">ترم أول 2026/2027</option>
-              <option value="ترم ثاني-2026/2027">ترم ثاني 2026/2027</option>
-              <option value="ترم صيفي-2026/2027">ترم صيفي 2026/2027</option>
-              <option value="ترم أول-2027/2028">ترم أول 2027/2028</option>
-              <option value="ترم ثاني-2027/2028">ترم ثاني 2027/2028</option>
-              <option value="ترم صيفي-2027/2028">ترم صيفي 2027/2028</option>
+              <option value="ترم صيفي-2025/2026">الفصل الصيفي 2025/2026</option>
+              <option value="ترم أول-2026/2027">الفصل الأول 2026/2027</option>
+              <option value="ترم ثاني-2026/2027">الفصل الثاني 2026/2027</option>
+              <option value="ترم صيفي-2026/2027">الفصل الصيفي 2026/2027</option>
+              <option value="ترم أول-2027/2028">الفصل الأول 2027/2028</option>
+              <option value="ترم ثاني-2027/2028">الفصل الثاني 2027/2028</option>
+              <option value="ترم صيفي-2027/2028">الفصل الصيفي 2027/2028</option>
             </select>
           </div>
           <div id="halfFieldWrap">
@@ -5870,12 +5879,12 @@ const aPgs={
       if(c.grp)byCourse[k].grps.add(c.grp);
     });
     const courses=Object.values(byCourse);
-    if(!courses.length)return `<div class="stitle">📚 المقررات الحالية</div><div class="empty"><div class="empty-icon">📭</div>لا توجد مقررات حالية (لا يوجد طلاب مسجّلون هذا الترم)</div>`;
+    if(!courses.length)return `<div class="stitle">📚 المقررات الحالية</div><div class="empty"><div class="empty-icon">📭</div>لا توجد مقررات حالية (لا يوجد طلاب مسجّلون هذا الفصل التدريبي)</div>`;
     // ملخّص علوي
     const totStudents=new Set(active.map(c=>c.sid)).size;
     const avgAll=avgPct(active);
     return `
-    <div class="banner"><div><div class="btitle">📚 المقررات الحالية</div><div class="bsub">المواد التي يدرسها المتدربون هذا الترم — ${courses.length} مقرر · ${totStudents} متدرب</div></div><div class="bpill bp-b">${avgAll}% متوسط</div></div>
+    <div class="banner"><div><div class="btitle">📚 المقررات الحالية</div><div class="bsub">المواد التي يدرسها المتدربون هذا الفصل التدريبي — ${courses.length} مقرر · ${totStudents} متدرب</div></div><div class="bpill bp-b">${avgAll}% متوسط</div></div>
     <div data-listwrap>
     ${searchBoxHTML('ابحث عن مقرر أو رمز أو مدرب...')}
     <div class="gtable"><table>
@@ -6167,8 +6176,8 @@ const aPgs={
   },
   maintenance:()=>{
     const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>c.half).filter(t=>t&&t!=='غير محدد'))];
-    const termOpts=activeTerms.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`).join('');
-    const cadence=[['شهرياً','نسخة احتياطية كاملة للملف'],['نهاية كل ترم','زر «إنهاء الترم»'],['نهاية كل دبلوم','زر «تخريج دفعة»'],['سنوياً','نقل تبويبات الأرشيف لملف منفصل'],['مرّة واحدة','إلزام تغيير كلمة المرور (مفعّل ✓)']];
+    const termOpts=activeTerms.map(t=>`<option value="${esc(t)}">${esc(fmtTerm(String(t).replace(/-/g,' ')))}</option>`).join('');
+    const cadence=[['شهرياً','نسخة احتياطية كاملة للملف'],['نهاية كل نصف مجزأ','زر «إنهاء النصف المجزأ»'],['نهاية كل دبلوم','زر «تخريج دفعة»'],['سنوياً','نقل تبويبات الأرشيف لملف منفصل'],['مرّة واحدة','إلزام تغيير كلمة المرور (مفعّل ✓)']];
     return `
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
@@ -6178,12 +6187,12 @@ const aPgs={
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="ccard cc-b">
-        <div class="cc-name">🗓️ نهاية كل ترم</div>
-        <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">حوّل مواد الترم إلى «سابق» وأرشف الغياب والتحاضير والطلبات، ليبدأ ترم نظيف.</div>
+        <div class="cc-name">🗓️ نهاية كل نصف مجزأ</div>
+        <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">حوّل مواد النصف المجزأ إلى «سابق» وأرشف الغياب والتحاضير والطلبات، ليبدأ نصف نظيف.</div>
         ${activeTerms.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end">
           <select id="endTermSel" style="flex:1;min-width:140px;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px">${termOpts}</select>
-          <button class="btn btn-sm" style="background:#e74c3c;color:#fff;font-weight:700" onclick="endTerm()">🏁 إنهاء الترم</button>
-        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد تروم نشطة</div>'}
+          <button class="btn btn-sm" style="background:#e74c3c;color:#fff;font-weight:700" onclick="endTerm()">🏁 إنهاء النصف المجزأ</button>
+        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة</div>'}
       </div>
       <div class="ccard cc-g">
         <div class="cc-name">🎓 نهاية كل دبلوم</div>
@@ -6327,7 +6336,7 @@ function showBackupSteps(){
     'من القائمة العلوية: <b>File ← Make a copy</b> (ملف ← إنشاء نسخة). سمّها «نسخة احتياطية — الشهر/السنة».',
     'أو نزّلها كملف: <b>File ← Download ← Microsoft Excel (.xlsx)</b> واحفظها على درايف/جهازك.',
     'احتفظ بآخر ٣ نسخ على الأقل، واحذف القديمة جداً حتى لا تتراكم.'
-  ],'خُذ نسخة احتياطية <b>قبل</b> أي عملية كبيرة (إنهاء ترم · تخريج دفعة).');
+  ],'خُذ نسخة احتياطية <b>قبل</b> أي عملية كبيرة (إنهاء نصف مجزأ · تخريج دفعة).');
 }
 function showArchiveSteps(){
   _stepsModal('الأرشفة السنوية لملف منفصل','📦',[
