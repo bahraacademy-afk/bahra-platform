@@ -1030,7 +1030,7 @@ const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكت
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
 // ⭐ فصل الغياب حسب الترم: يتم تلقائياً عبر عمود "الترم" في قاعدة الغياب (لا يحتاج ضبط).
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
-const OTP_ENABLED=true; // التحقق بخطوتين عند الدخول من جهاز جديد (من عنده إيميل صحيح فقط؛ من لا إيميل له يدخل مباشرة)
+const OTP_ENABLED=false; // معطّل مؤقتاً — لإعادة تفعيله غيّره إلى true
 const ADMIN=[]; // التحقق صار في الخادم
 
 
@@ -3903,8 +3903,9 @@ const tPgs={
     <div class="alert ab"><span class="aicon">✅</span>مواد <strong>${dayLabel}</strong> حسب جدولك — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
     ${todayCourses.map(tc=>{
       const course=tc.course, code=tc.code||'';
-      // طلاب هذه المادة (من كل الشعب التي للمدرب اليوم)
-      const ssDedup=uniqStudents(students.filter(s=>s.course===course&&isActive(s.status)));
+      // طلاب هذه المادة — فقط الشُعب المجدولة لهذا المدرب اليوم (يمنع ظهور مواد/شُعب غيره)
+      const myGrps=[...tc.grps].map(g=>String(g));
+      const ssDedup=uniqStudents(students.filter(s=>s.course===course&&myGrps.includes(String(s.grp))&&isActive(s.status)));
       if(!ssDedup.length)return '';
       const grp=ssDedup[0]?.grp||[...tc.grps][0];
       const totalDays=courseTotalDays(course,grp);
