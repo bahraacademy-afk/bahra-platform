@@ -1024,7 +1024,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzts9cOhIhulff4hy475HmOLz85N6RSO4cL1NPXeGTuLZYj3VrdG7B1wqy6lMVm0UVA/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbysXJcqIZCSJdG0aSdKE18zZcRiJB2oXPQO7_PvTl_IHgrW5SnjcXuVn4hv3HC8DKg/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -4931,7 +4931,7 @@ function accountModal(type,mode,data){
   overlay.className='modal-overlay';overlay.id='accModal';
   overlay.innerHTML=`<div class="modal" style="max-width:480px;max-height:88vh;overflow-y:auto">
     <div class="modal-title"><span>${title}</span><button class="modal-close" onclick="document.getElementById('accModal').remove()">✕</button></div>
-    <div style="padding:8px 0">${accountFormFields(type,data)}</div>
+    <div style="padding:8px 0"><input type="hidden" id="acc_oldid" value="${esc((data&&data.id)||'')}">${accountFormFields(type,data)}</div>
     <div style="display:flex;gap:10px;margin-top:12px">
       <button class="btn btn-out" style="flex:1" onclick="document.getElementById('accModal').remove()">إلغاء</button>
       <button class="btn btn-b" style="flex:1" onclick="saveAccount('${type}','${mode}')">${mode==='edit'?'حفظ التعديل':'إضافة'}</button>
@@ -4943,18 +4943,23 @@ function addAccount(type){accountModal(type,'add',{});}
 function editAccount(type,data){accountModal(type,'edit',data);}
 async function saveAccount(type,mode){
   const g=id=>{const el=document.getElementById('acc_'+id);return el?el.value.trim():'';};
-  const rec={type,id:g('id'),name:g('name'),ph:g('ph'),email:g('email')};
+  const rec={type,id:g('id'),name:g('name'),ph:g('ph'),email:g('email'),oldId:g('oldid')||g('id')};
   if(type==='student'){rec.grp=g('grp');rec.spec=g('spec');rec.pw=g('pw');}
   else if(type==='trainer'){rec.spec=g('spec');rec.pw=g('pw');}
   else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');rec.spec=[...document.querySelectorAll('.acc_spec_chk:checked')].map(c=>c.value).join('، ');}
   if(!rec.id||!rec.name){showToast('الرقم والاسم مطلوبان','w');return;}
   if(type==='admin'&&!rec.pw){showToast('الرقم السري مطلوب للإداري','w');return;}
+  const idChanged=mode==='edit'&&String(rec.oldId)!==String(rec.id);
   showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
   try{
     const action=mode==='edit'?'updateUser':'addUser';
     const res=await jsonpCall({action,data:JSON.stringify([rec])});
+    // تحقّق من النتيجة الحقيقية
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الحفظ: '+attErrMsg(res.msg,res.hint),'e');return;}
+    if(mode==='edit'&&res&&res.updated===0){showToast('⚠️ لم يُعثر على السجل — تأكد من الرقم الأصلي','w');return;}
     document.getElementById('accModal')?.remove();
     showToast(mode==='edit'?'✅ تم حفظ التعديل':'✅ تمت الإضافة','s');
+    if(type==='student'&&idChanged)setTimeout(()=>showToast('ℹ️ غيّرت الرقم الأكاديمي — لمزامنته مع المقررات والدرجات استخدم «تحديث الأرقام التدريبية»','i'),1200);
     loadAdmin().then(()=>showAPage('accounts',document.getElementById('sn-accounts'))).catch(()=>{});
   }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى','e');}
 }
