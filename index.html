@@ -3403,13 +3403,15 @@ function atlInitials(name){const p=String(name||'').trim().split(/\s+/).filter(B
 function atlDateBox(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);const dd=m?m[1]:'—';const yy=m?(m[3].length===2?m[3]:m[3].slice(-2)):'';const AR=['','ينا','فبر','مار','أبر','ماي','يون','يول','أغس','سبت','أكت','نوف','ديس'];const mon=m?(AR[parseInt(m[2])]||''):'';return `<div class="atl-datebox"><div class="d">${dd}</div><div class="my">${mon} ${yy}</div></div>`;}
 function atlBuildSessions(editable){
   const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
-  const mineNames=editable?null:new Set(students.map(s=>cnk_(s.course)));
-  const mineCodes=editable?null:new Set(students.map(s=>atlDig(s.code)).filter(Boolean));
+  const gk_=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
+  // ⭐ نطاق المدرب: فقط شُعبه هو (مادة+شعبة) — يمنع ظهور شُعبة مدرب آخر لنفس اسم المادة
+  const mineCG=editable?null:new Set(students.map(s=>cnk_(s.course)+'|'+gk_(s.grp)));
+  const mineKG=editable?null:new Set(students.filter(s=>atlDig(s.code)).map(s=>atlDig(s.code)+'|'+gk_(s.grp)));
   const sessions=new Map();
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!atlDig(r[0]))continue;
-    const cname=r[2]||'', codeR=r[3]||'', codeD=atlDig(r[3]);
-    if(!editable){const mine=mineNames.has(cnk_(cname))||(codeD&&mineCodes.has(codeD));if(!mine)continue;}
+    const cname=r[2]||'', codeR=r[3]||'', codeD=atlDig(r[3]), grpR=gk_(r[4]);
+    if(!editable){const mine=mineCG.has(cnk_(cname)+'|'+grpR)||(codeD&&mineKG.has(codeD+'|'+grpR));if(!mine)continue;}
     const date=atlFmtDate(r[5]), grp=String(r[4]||'').trim(), term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
     const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
     if(!sessions.has(key))sessions.set(key,{date,course:cname,code:codeR,grp,term,students:[]});
@@ -3927,23 +3929,23 @@ const tPgs={
       return `<div style="margin-bottom:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
           <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب)</span></div>
-          ${ssDedup.some(s=>attMarks[s.sid])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[s.sid]).length} علامة معلقة</span>`:''}
+          ${ssDedup.some(s=>attMarks[amKey(course,s.sid)])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[amKey(course,s.sid)]).length} علامة معلقة</span>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:`ℹ️ المادة غير مجدولة بالكامل — ستُحسب بيوم/أسبوع (${WEEKS_PER_HALF} يوم) · المحروم عند ${Math.ceil(WEEKS_PER_HALF*0.25)} أيام`}</div>
         <div class="att-grid">
-          ${ssDedup.map(s=>`<div class="att-card">
+          ${ssDedup.map(s=>{const mk=attMarks[amKey(course,s.sid)];const idb=amId(course,s.sid);return `<div class="att-card">
             <div class="att-name">${esc(s.name.split(' ').slice(0,3).join(' '))}</div>
             <div class="att-id">${s.sid} · غياب حالي <span style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</span></div>
             <div class="att-marks">
-              <button class="amk amk-p" id="mk-${s.sid}-present" onclick="setMark('${s.sid}','present')">✓ حاضر</button>
-              <button class="amk amk-l" id="mk-${s.sid}-late" onclick="setMark('${s.sid}','late')">⏰ متأخر</button>
-              <button class="amk amk-a" id="mk-${s.sid}-absent" onclick="setMark('${s.sid}','absent')">✕ غائب</button>
+              <button class="amk amk-p${mk==='present'?' on':''}" id="${idb}-present" onclick="setMark('${course}','${s.sid}','present')">✓ حاضر</button>
+              <button class="amk amk-l${mk==='late'?' on':''}" id="${idb}-late" onclick="setMark('${course}','${s.sid}','late')">⏰ متأخر</button>
+              <button class="amk amk-a${mk==='absent'?' on':''}" id="${idb}-absent" onclick="setMark('${course}','${s.sid}','absent')">✕ غائب</button>
             </div>
-          </div>`).join('')}
+          </div>`;}).join('')}
         </div>
         <div class="btn-row">
           <button class="btn btn-out btn-sm" onclick="markAll('${course}','present')">✓ تعليم الكل حاضر</button>
-          ${ssDedup.some(s=>attMarks[s.sid])?`<button class="btn btn-sm" style="background:#f4c78a;color:#000;font-weight:700" onclick="if(confirm('🗑️ هل تريد مسح جميع العلامات للمادة: ${course}؟')){Object.keys(attMarks).forEach(k=>{if(document.getElementById('mk-'+k+'-present'))delete attMarks[k]});showTPage('attendance',null)}">🔄 مسح</button>`:''}
+          ${ssDedup.some(s=>attMarks[amKey(course,s.sid)])?`<button class="btn btn-sm" style="background:#f4c78a;color:#000;font-weight:700" onclick="if(confirm('🗑️ هل تريد مسح جميع العلامات للمادة: ${course}؟')){clearMarks('${course}')}">🔄 مسح</button>`:''}
           <button class="btn btn-b" onclick="saveSessionV2('${course}','${normCode(code)}','${grp}','${dateStr}')">💾 حفظ غياب اليوم</button>
         </div>
       </div>`;
@@ -4056,14 +4058,25 @@ function onAbsHours(sid,code,val){
 // ===== تسجيل الحضور (حاضر/متأخر/غائب) =====
 let attMarks={};
 let attCurrentCourse=null; // تتبّع المادة الحالية لتجنب التضارب
-function setMark(sid,mark){
-  attMarks[sid]=mark;
-  ['present','late','absent'].forEach(k=>{const b=document.getElementById('mk-'+sid+'-'+k);if(b)b.classList.remove('on');});
-  const b=document.getElementById('mk-'+sid+'-'+mark);if(b)b.classList.add('on');
+// ⭐ مفتاح العلامة لكل (مادة + طالب) — يمنع أن يغيب الطالب على اليوم كامل بدل المادة الواحدة
+const amKey=(course,sid)=>cnk_(course)+'::'+String(sid);
+const amId=(course,sid)=>('mk-'+cnk_(course)+'-'+String(sid)).replace(/[^\w؀-ۿ-]/g,'_');
+function setMark(course,sid,mark){
+  attMarks[amKey(course,sid)]=mark;
+  const idb=amId(course,sid);
+  ['present','late','absent'].forEach(k=>{const b=document.getElementById(idb+'-'+k);if(b)b.classList.remove('on');});
+  const b=document.getElementById(idb+'-'+mark);if(b)b.classList.add('on');
 }
 function markAll(course,mark){
-  uniqStudents(students.filter(s=>s.course===course&&isActive(s.status))).forEach(s=>setMark(s.sid,mark));
+  uniqStudents(students.filter(s=>s.course===course&&isActive(s.status))).forEach(s=>setMark(course,s.sid,mark));
 }
+// مسح علامات مادة واحدة فقط (لا يمس علامات المواد الأخرى المعلّقة)
+function clearMarks(course){
+  const pre=cnk_(course)+'::';
+  Object.keys(attMarks).forEach(k=>{if(k.indexOf(pre)===0)delete attMarks[k];});
+  showTPage('attendance',null);
+}
+window.clearMarks=clearMarks;
 // ترجمة رسائل خطأ الخادم إلى عربي واضح للمستخدم
 function attErrMsg(msg,hint){
   const m=String(msg||'');
@@ -4143,7 +4156,7 @@ async function saveSessionV2(course,code,grp,dateStr){
   // طلاب هذه المادة (الحاليون)
   const allRecs=students.filter(s=>s.course===course&&isActive(s.status));
   const markByKey={};
-  allRecs.forEach(s=>{const mk=attMarks[s.sid];if(mk)markByKey[sidKey(s)]=mk;});
+  allRecs.forEach(s=>{const mk=attMarks[amKey(course,s.sid)];if(mk)markByKey[sidKey(s)]=mk;});
   const records=[];   // لتحديث نسبة الغياب في سجل المقررات
   const dailyLog=[];  // لتسجيل الغياب اليومي في التبويب الجديد
   let marked=0, absC=0, lateC=0;
@@ -4197,7 +4210,9 @@ async function saveSessionV2(course,code,grp,dateStr){
       }catch(e){ colWarn=' (تعذّر تحديث عمود «نسبة الغياب» — الغياب محفوظ في قاعدة الغياب)'; }
     }
     showToast(`✅ تم حفظ غياب ${dateStr} — ${absC} غياب · ${lateC} تأخير`+(upd?` (${upd} سجل)`:'')+colWarn, colWarn?'w':'s');
-    attMarks={};
+    // ⭐ نمسح علامات هذه المادة فقط — تبقى علامات المواد الأخرى المعلّقة كما هي
+    const pre=cnk_(course)+'::';
+    Object.keys(attMarks).forEach(k=>{if(k.indexOf(pre)===0)delete attMarks[k];});
     attCurrentCourse=null;
     // s.abs تحدّثت في الذاكرة قبل الإرسال → نعرض الصفحة فوراً بالقيم الجديدة
     // (لا نعيد التحميل من الشيت لأن الكتابة قد تتأخر ثانية فتعود القيم القديمة)
