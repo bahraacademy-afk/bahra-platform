@@ -1970,18 +1970,22 @@ async function loadAbsenceBase(){
     for(let i=1;i<rows.length;i++){
       const r=rows[i];
       const sid=onlyDigits(r[0]);
-      const code=onlyDigits(r[3]);
       if(!sid)continue;
       const status=String(r[6]||'').trim();
       if(status==='حاضر')continue; // ⭐ الحضور لا يُحسب في نسبة الغياب
       const days=(status==='متأخر')?0.5:1; // غائب=1 · متأخر=0.5
-      // ⭐ لو فيه رمز نفهرس بالرمز، وإلا نفهرس باسم المادة (شبكة أمان للسجلات القديمة بلا رمز)
-      if(code){
+      // ⭐ نفهرس الغياب دائماً باسم المادة (+الشعبة+الترم) — هذا تعريف «المادة» الذي لا يلتبس.
+      //    الرمز قد يكون فارغاً أو مكرَّراً بين مواد مختلفة، فالاعتماد عليه يخلط غياب مادة بأخرى.
+      const cn=cnk_(r[2]);
+      if(cn){
+        const nkey=sid+'|'+cn+'|'+gk(r[4])+'|'+tk(r[7]);
+        absenceDaysMapByName[nkey]=(absenceDaysMapByName[nkey]||0)+days;
+      }
+      // خريطة الرمز = شبكة أمان فقط للسجلات القديمة التي لا تحمل اسم مادة إطلاقاً
+      const code=onlyDigits(r[3]);
+      if(code&&!cn){
         const key=sid+'|'+code+'|'+gk(r[4])+'|'+tk(r[7]);
         absenceDaysMap[key]=(absenceDaysMap[key]||0)+days;
-      }else{
-        const nkey=sid+'|'+cnk_(r[2])+'|'+gk(r[4])+'|'+tk(r[7]);
-        absenceDaysMapByName[nkey]=(absenceDaysMapByName[nkey]||0)+days;
       }
     }
   }catch(e){}
@@ -1991,11 +1995,15 @@ function absPctFromBase(sid,code,course,grp,term){
   const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
   const gk=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
   const tk=t=>String(t||'').replace(/\s+/g,'');
-  // ⭐ نجمع مطابقة الرمز + مطابقة الاسم (للسجلات القديمة بلا رمز) — كل سجل مفهرس مرة واحدة فقط
-  const key=onlyDigits(sid)+'|'+onlyDigits(code)+'|'+gk(grp)+'|'+tk(term);
+  // ⭐ الغياب يُحسب لكل مادة على حدة عبر اسم المادة (+الشعبة+الترم) — لا يختلط بمواد اليوم الأخرى
   const nkey=onlyDigits(sid)+'|'+cnk_(course)+'|'+gk(grp)+'|'+tk(term);
-  const absDays=(absenceDaysMap[key]||0)+(absenceDaysMapByName[nkey]||0);
-  if(!absDays)return 0; // ⭐ لا يوجد غياب في الشيت = 0% دائماً
+  let absDays=absenceDaysMapByName[nkey];
+  // شبكة أمان للسجلات القديمة بلا اسم مادة فقط: نطابق بالرمز إن لم يوجد أي غياب مطابق للاسم
+  if(absDays===undefined){
+    const key=onlyDigits(sid)+'|'+onlyDigits(code)+'|'+gk(grp)+'|'+tk(term);
+    absDays=absenceDaysMap[key]||0;
+  }
+  if(!absDays)return 0; // ⭐ لا يوجد غياب لهذه المادة بالاسم = 0% دائماً
   // احتياطي: لو المادة غير مجدولة بالكامل، افترض يوم/أسبوع (8 حصص) بدل ما نُخفي الغياب
   let total=courseTotalDays(course,grp);
   if(!total) total=(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
