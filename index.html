@@ -1024,7 +1024,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbysXJcqIZCSJdG0aSdKE18zZcRiJB2oXPQO7_PvTl_IHgrW5SnjcXuVn4hv3HC8DKg/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzoFDYla_d4PaTPgEgw4MerPI5CJ-ZG2lha2WAisMOg2gNFfgLZwDKx9MGQhFmxjxmx/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1034,7 +1034,7 @@ const OTP_ENABLED=false; // معطّل مؤقتاً — لإعادة تفعيل�
 const ADMIN=[]; // التحقق صار في الخادم
 
 
-let role='s', user=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[], graduates=[];
+let role='s', user=null, currentUser=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[], graduates=[];
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
 let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakStart:12, breakHours:1};
 let rubrics={}, gradeDetails=[]; // بنود الدرجات لكل مادة + الدرجات التفصيلية
@@ -1308,6 +1308,7 @@ async function loadUserData(){
 }
 // إتمام تسجيل الدخول (حفظ الجلسة وعرض التطبيق)
 function finishLogin(){
+  currentUser=user; // ⭐ ضروري: بعض الصفحات (كالحضور) تعتمد على currentUser — نضمن تعبئته عند كل دخول
   localStorage.setItem('bla_user', JSON.stringify(user));
   localStorage.setItem('bla_role', role);
   if(SESSION.token) localStorage.setItem('bla_token', SESSION.token);
@@ -7157,7 +7158,7 @@ function buildWarningLetter(sid){
     <div class="to">المكرم المتدرب / ${esc(st.name||'.....................')} &nbsp; المحترم</div>
     <p style="color:#555;margin-top:-8px;font-size:13.5px">${st.grp?`الشعبة: ${esc(st.grp)}`:''}${(st.id||st.sid)?` &nbsp;·&nbsp; الرقم التدريبي: ${st.id||st.sid}`:''}${st.spec?` &nbsp;·&nbsp; ${esc(st.spec)}`:''}</p>
     <p>السلام عليكم ورحمة الله وبركاته،،</p>
-    <p>يفيد معهد المعرفة والابداع العالي للتدريب بأنه وفقاً لسجلات الحضور والغياب، فقد بلغت نسبة غيابك في المقررات التالية الحدود الموضحة أدناه، وذلك حسب لائحة الحضور والغياب المعتمدة (10% إنذار أول · 20% إنذار ثانٍ · 25% حرمان):</p>
+    <p>يفيد معهد المعرفة والإبداع العالي للتدريب بأنه وفقاً لسجلات الحضور والغياب، فقد بلغت نسبة غيابك في المقررات التالية الحدود الموضحة أدناه، وذلك حسب لائحة الحضور والغياب المعتمدة (10% إنذار أول · 20% إنذار ثانٍ · 25% حرمان):</p>
     <table>
       <thead><tr><th>المقرر</th><th>المدرب</th><th>نسبة الغياب والمستوى</th></tr></thead>
       <tbody>${rows||'<tr><td colspan="3">لا يوجد غياب مرتفع</td></tr>'}</tbody>
@@ -7199,7 +7200,7 @@ function introLetterFor(p){
   const joinHtml=joinDate?`<b>${joinDate}</b>`:`<span class="fillline">&nbsp;/&nbsp;&nbsp;/&nbsp;</span>`;
   const body=`
     <div class="to">الى من يهمه الأمر :</div>
-    <p>يفيد معهد المعرفة والابداع العالي للتدريب بأن الطالب / <b>${name}</b> &nbsp; برقم تدريبي <b>${id}</b> &nbsp; قد التحق بالمعهد بتاريخ ${joinHtml} فى دبلوم تخصص <b>${spec}</b> مدته سنتان ونصف وهو مازال مستمر ويدرس بالمعهد حتى تاريخه .</p>
+    <p>يفيد معهد المعرفة والإبداع العالي للتدريب بأن الطالب / <b>${name}</b> &nbsp; برقم تدريبي <b>${id}</b> &nbsp; قد التحق بالمعهد بتاريخ ${joinHtml} فى دبلوم تخصص <b>${spec}</b> مدته سنتان ونصف وهو مازال مستمر ويدرس بالمعهد حتى تاريخه .</p>
     <div class="closing">وهذه افادة منا بذلك ،،</div>
     <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
     <div class="clearfix"></div>`;
@@ -7244,7 +7245,7 @@ function buildAllWarningLetters(){
       <div class="to">المكرم المتدرب / ${esc(s.name||'.....................')} &nbsp; المحترم</div>
       <p style="color:#555;margin-top:-8px;font-size:13.5px">${s.grp?`الشعبة: ${esc(s.grp)}`:''}${(s.id||s.sid)?` &nbsp;·&nbsp; الرقم التدريبي: ${s.id||s.sid}`:''}${s.spec?` &nbsp;·&nbsp; ${esc(s.spec)}`:''}</p>
       <p>السلام عليكم ورحمة الله وبركاته،،</p>
-      <p>يفيد معهد المعرفة والابداع العالي للتدريب بأنه وفقاً لسجلات الحضور والغياب، فقد بلغت نسبة غيابك في المقررات التالية الحدود الموضحة أدناه، وذلك حسب لائحة الحضور والغياب المعتمدة (10% إنذار أول · 20% إنذار ثانٍ · 25% حرمان):</p>
+      <p>يفيد معهد المعرفة والإبداع العالي للتدريب بأنه وفقاً لسجلات الحضور والغياب، فقد بلغت نسبة غيابك في المقررات التالية الحدود الموضحة أدناه، وذلك حسب لائحة الحضور والغياب المعتمدة (10% إنذار أول · 20% إنذار ثانٍ · 25% حرمان):</p>
       <table>
         <thead><tr><th>المقرر</th><th>المدرب</th><th>نسبة الغياب والمستوى</th></tr></thead>
         <tbody>${rows||'<tr><td colspan="3">لا يوجد غياب مرتفع</td></tr>'}</tbody>
