@@ -2966,7 +2966,7 @@ function showSPage(pg,el){
   const mc=document.getElementById('mcontent');
   mc.innerHTML='';
   mc.style.animation='none';
-  setTimeout(()=>{mc.style.animation='fadeIn .3s ease';mc.innerHTML=sPgs[pg]?sPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);},10);
+  setTimeout(()=>{try{mc.style.animation='fadeIn .3s ease';mc.innerHTML=sPgs[pg]?sPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);}catch(err){pageErr(mc,err,()=>showSPage(pg,null));}},10);
 }
 
 // ===== المكتبة العلمية (نظري + عملي لكل المقررات) =====
@@ -3397,7 +3397,19 @@ function buildTrainerApp(){
 function showTPage(pg,el){
   if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active at'}
   const mc=document.getElementById('mcontent');
-  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=tPgs[pg]?tPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);},10);
+  mc.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>جاري التحميل...</div>';
+  setTimeout(()=>{try{
+    mc.innerHTML=tPgs[pg]?tPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);
+  }catch(err){pageErr(mc,err,()=>showTPage(pg,null));}},10);
+}
+// عرض خطأ الصفحة بشكل واضح بدل ما تبقى فاضية «معلّقة»
+function pageErr(mc,err,retry){
+  try{console.error('page render error',err);}catch(_){}
+  const msg=String((err&&err.message)||err||'خطأ غير معروف');
+  mc.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>صار خطأ بسيط أثناء فتح الصفحة — جرّب إعادة المحاولة.'
+    +'<br><span style="font-size:12px;color:var(--muted);direction:ltr;display:inline-block;margin-top:6px">'+esc(msg)+'</span>'
+    +'<br><button class="btn btn-sm btn-b" style="margin-top:12px" onclick="__pgRetry()">🔄 إعادة المحاولة</button></div>';
+  window.__pgRetry=function(){try{retry();}catch(e){pageErr(mc,e,retry);}};
 }
 
 /* ============ سجل التحضير — باني موحّد عالي الجودة (مدرب: عرض · أدمن: تعديل/حذف) ============ */
@@ -4474,7 +4486,7 @@ function buildAdminApp(){
 function showAPage(pg,el){
   if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active aa'}
   const mc=document.getElementById('mcontent');
-  mc.innerHTML='';setTimeout(()=>{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);if(pg==='maintenance')setTimeout(refreshSystemHealth,60);},10);
+  mc.innerHTML='';setTimeout(()=>{try{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';animCards();if(currentLang==='en')translateNode(mc);if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);if(pg==='maintenance')setTimeout(refreshSystemHealth,60);}catch(err){pageErr(mc,err,()=>showAPage(pg,null));}},10);
 }
 // معالج مباشر لزر شاشة العرض (event delegation — يعمل حتى لو onclick inline فشل)
 document.addEventListener('click',function(e){
