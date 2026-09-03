@@ -3412,14 +3412,14 @@ function atlDateBox(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{
 function atlBuildSessions(editable){
   const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
   const gk_=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
-  // ⭐ نطاق المدرب: فقط شُعبه هو (مادة+شعبة) — يمنع ظهور شُعبة مدرب آخر لنفس اسم المادة
+  // ⭐ نطاق المدرب: فقط مواده هو بالاسم (+الشعبة) فقط. لا نطابق بالرمز إطلاقاً لأن الرمز
+  //    قد يكون فارغاً أو مكرَّراً بين مواد مختلفة فيُظهر للمدرب مادة ليست له (مثل الإنجليزي).
   const mineCG=editable?null:new Set(students.map(s=>cnk_(s.course)+'|'+gk_(s.grp)));
-  const mineKG=editable?null:new Set(students.filter(s=>atlDig(s.code)).map(s=>atlDig(s.code)+'|'+gk_(s.grp)));
   const sessions=new Map();
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!atlDig(r[0]))continue;
-    const cname=r[2]||'', codeR=r[3]||'', codeD=atlDig(r[3]), grpR=gk_(r[4]);
-    if(!editable){const mine=mineCG.has(cnk_(cname)+'|'+grpR)||(codeD&&mineKG.has(codeD+'|'+grpR));if(!mine)continue;}
+    const cname=r[2]||'', codeR=r[3]||'', grpR=gk_(r[4]);
+    if(!editable){if(!mineCG.has(cnk_(cname)+'|'+grpR))continue;}
     const date=atlFmtDate(r[5]), grp=String(r[4]||'').trim(), term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
     const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
     if(!sessions.has(key))sessions.set(key,{date,course:cname,code:codeR,grp,term,students:[]});
