@@ -3636,6 +3636,8 @@ function atlInitials(name){const p=String(name||'').trim().split(/\s+/).filter(B
 function atlDateBox(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);const dd=m?m[1]:'—';const yy=m?(m[3].length===2?m[3]:m[3].slice(-2)):'';const AR=['','ينا','فبر','مار','أبر','ماي','يون','يول','أغس','سبت','أكت','نوف','ديس'];const mon=m?(AR[parseInt(m[2])]||''):'';return `<div class="atl-datebox"><div class="d">${dd}</div><div class="my">${mon} ${yy}</div></div>`;}
 // تاريخ مبسّط بسطر واحد (لعرضه موسّطاً تحت اسم المادة)
 function atlDateText(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return String(date||'');const AR=['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];const yy=m[3].length===2?('20'+m[3]):m[3];return `${m[1]} ${AR[parseInt(m[2])]||''} ${yy}`;}
+// تاريخ باسم اليوم (لعرض «أي يوم» داخل مجموعة المادة)
+function atlDayFull(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);const base=atlDateText(date);if(!m)return base;const yy=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);const dt=new Date(yy,parseInt(m[2])-1,parseInt(m[1]));const wd=isNaN(dt.getTime())?'':dt.toLocaleDateString('ar-EG',{weekday:'long'});return (wd?wd+' · ':'')+base;}
 function atlBuildSessions(editable){
   const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
   const gk_=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
@@ -3684,6 +3686,16 @@ function atlCss(){return `<style>
 .atl-seg button.on-p{background:var(--green);color:#062a15}
 .atl-del{width:31px;height:31px;border-radius:8px;border:1px solid rgba(230,57,70,.3);background:rgba(230,57,70,.08);color:#ff8a92;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:.15s}
 .atl-del:hover{background:var(--red);color:#fff}
+/* مجموعة المادة (المستوى الأول): المادة عنوان مستقل وبداخلها الأيام */
+.atl-mat{margin-bottom:14px;padding:0;overflow:hidden}
+.atl-mat>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:15px 18px;background:linear-gradient(135deg,rgba(26,122,191,.12),rgba(26,122,191,.03))}
+.atl-mat>summary::-webkit-details-marker{display:none}
+.atl-mat-name{flex:1;min-width:0;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atl-mat-badges{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.atl-mat[open]>summary .atl-chev{transform:rotate(180deg)}
+.atl-mat-body{padding:12px 14px}
+.atl-mat .atl-card{background:rgba(255,255,255,.02)}
+.pill.pb{background:rgba(26,122,191,.18);color:#6ab8f7}
 </style>`;}
 function renderAttLog(editable){
   const list=atlBuildSessions(editable);
@@ -3717,7 +3729,8 @@ function attlogCards(){
     return s.students.some(st=>st.name.includes(q)||st.sid.includes(q));
   });
   if(!filtered.length)return `<div class="empty"><div class="empty-icon">🔍</div>ما فيه نتائج مطابقة للبحث</div>`;
-  return filtered.map(s=>{
+  // بطاقة يوم واحد (المستوى الثاني): التاريخ عنوانها، وتُفتح لعرض أسماء الغياب
+  const dayCard=(s)=>{
     const si=list.indexOf(s);
     const absC=s.students.filter(x=>x.status==='غائب').length, lateC=s.students.filter(x=>x.status==='متأخر').length;
     let studs=s.students.map((st,i)=>({st,i})).sort((a,b)=>(a.st.status===b.st.status?0:a.st.status==='غائب'?-1:1));
@@ -3738,14 +3751,30 @@ function attlogCards(){
     }).join('')||'<div style="font-size:12px;color:var(--muted);padding:8px">لا توجد أسماء مطابقة</div>';
     const accent=absC>0?'cc-r':'cc-y';
     return `<details class="ccard atl-card ${accent}"${openAttr}>
-      <summary style="flex-direction:column;align-items:stretch;text-align:center;gap:7px">
-        <div class="cc-name" style="white-space:normal">${esc(s.course)}</div>
-        <div class="cc-meta">${s.grp?`شعبة ${esc(String(s.grp).replace(/\.0$/,''))}`:''}${s.grp&&s.term?' · ':''}${s.term?esc(s.term):''}${(!s.grp&&!s.term)?'—':''}</div>
-        <div class="atl-date-line">📅 ${atlDateText(s.date)}</div>
+      <summary style="flex-direction:column;align-items:stretch;text-align:center;gap:6px">
+        <div class="atl-date-line" style="font-size:14px">📅 ${atlDayFull(s.date)}</div>
+        ${(s.grp||s.term)?`<div class="cc-meta">${s.grp?`شعبة ${esc(String(s.grp).replace(/\.0$/,''))}`:''}${s.grp&&s.term?' · ':''}${s.term?esc(s.term):''}</div>`:''}
         <div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap"><span class="pill pr">${absC} غياب</span>${lateC?`<span class="pill py">${lateC} تأخير</span>`:''}<span class="atl-chev">▾</span></div>
       </summary>
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:4px">${rowsHtml}</div>
-      ${editable?`<div class="btn-row" style="margin-top:12px;justify-content:flex-end"><button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" onclick="admAttDelSession(${si})">🗑️ حذف الجلسة كاملة</button></div>`:''}
+      ${editable?`<div class="btn-row" style="margin-top:12px;justify-content:flex-end"><button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" onclick="admAttDelSession(${si})">🗑️ حذف هذا اليوم</button></div>`:''}
+    </details>`;
+  };
+  // ⭐ المستوى الأول: تجميع حسب المادة — كل مادة عنوان مستقل وبداخلها كل الأيام
+  const parseD=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?new Date((m[3].length===2?2000+ +m[3]:+m[3]),+m[2]-1,+m[1]).getTime():0;};
+  const groups=new Map();
+  filtered.forEach(s=>{const k=cnk_(s.course);if(!groups.has(k))groups.set(k,{course:s.course,items:[]});groups.get(k).items.push(s);});
+  return [...groups.values()].map(g=>{
+    const items=g.items.slice().sort((a,b)=>parseD(b.date)-parseD(a.date)); // الأحدث أولاً
+    const totAbs=items.reduce((a,s)=>a+s.students.filter(x=>x.status==='غائب').length,0);
+    const totLate=items.reduce((a,s)=>a+s.students.filter(x=>x.status==='متأخر').length,0);
+    const openG=q?' open':'';
+    return `<details class="ccard atl-mat"${openG}>
+      <summary>
+        <div class="atl-mat-name">📘 ${esc(g.course)}</div>
+        <div class="atl-mat-badges"><span class="pill pb">${items.length} يوم</span>${totAbs?`<span class="pill pr">${totAbs} غياب</span>`:''}${totLate?`<span class="pill py">${totLate} تأخير</span>`:''}<span class="atl-chev">▾</span></div>
+      </summary>
+      <div class="atl-mat-body">${items.map(dayCard).join('')}</div>
     </details>`;
   }).join('');
 }
