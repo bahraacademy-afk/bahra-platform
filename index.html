@@ -928,6 +928,48 @@ a{transition:color .15s,opacity .15s}
   *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
 }
 </style>
+<style id="theme-refresh">
+/* ============================================================
+   🎨 تصميم موحّد (Theme Refresh) — يُطبَّق على كل البوابات
+   يعتمد متغيّرات الألوان الحالية (:root) فيعمل في الوضعين الفاتح والغامق
+   ============================================================ */
+
+/* ===== القائمة الجانبية: عناصر بنمط "الحبوب" + عنصر نشط بتدرّج ===== */
+.sidebar{width:250px}
+.sitem{border-right:0 !important;border-radius:12px !important;margin:2px 12px !important;padding:12px 14px !important;gap:12px;font-weight:600}
+.sitem:hover{background:rgba(100,160,220,.07);transform:none}
+.sitem.active{color:#fff !important;border-right:0 !important;background:linear-gradient(135deg,var(--red),var(--red2)) !important;box-shadow:0 6px 16px rgba(230,57,70,.28)}
+.sitem.active.at{background:linear-gradient(135deg,var(--blue),var(--blue2)) !important;box-shadow:0 6px 16px rgba(26,122,191,.30)}
+.sitem.active.aa{background:linear-gradient(135deg,var(--gold),#d67f38) !important;box-shadow:0 6px 16px rgba(244,162,97,.28)}
+.sitem .sicon{opacity:.85}
+.sitem.active .sicon{opacity:1}
+
+/* ===== بطاقات المؤشرات: أيقونة داخل مربّع ملوّن فوق الرقم ===== */
+.mcard{padding:20px 18px 18px !important}
+.micon{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:14px;
+  font-size:24px;opacity:1 !important;margin:0 auto 12px !important;background:rgba(100,160,220,.12)}
+.mc-r .micon{background:rgba(230,57,70,.16)}
+.mc-b .micon{background:rgba(26,122,191,.16)}
+.mc-g .micon{background:rgba(46,204,113,.16)}
+.mc-y .micon{background:rgba(244,162,97,.16)}
+.mc-p .micon{background:rgba(155,89,182,.16)}
+.mcard .mnum{font-size:32px}
+.mcard::before{height:0 !important} /* نستبدل الشريط العلوي بمربّع الأيقونة */
+
+/* ===== بانر الترحيب: حواف أنعم وتدرّج خفيف ===== */
+.banner{border-radius:22px !important;background:linear-gradient(120deg,var(--bg3),var(--card)) !important}
+.btitle{font-size:22px}
+
+/* ===== لمسات عامة: زوايا أنعم للبطاقات والأزرار الرئيسية ===== */
+.ccard,.panel,.gtable,.glass{border-radius:16px}
+.role-badge{font-weight:800}
+.av{border-radius:12px;width:40px;height:40px;font-size:14px}
+
+/* على الجوال: أعِد الأيقونة لأعلى البطاقة بدل الزاوية (مساحة أضيق) */
+@media(max-width:560px){
+  .micon{position:static;width:40px;height:40px;margin-bottom:8px !important}
+}
+</style>
 </head>
 <body>
 
@@ -4089,22 +4131,27 @@ const tPgs={
     if(isWeekend){
       return header+`<div class="empty"><div class="empty-icon">🕌</div>${dayLabel} — عطلة نهاية الأسبوع، لا توجد حصص. تقدر تختار تاريخاً آخر من الأعلى.</div>`;
     }
-    // مواد المدرب اليوم (من الجدول)
+    // ⭐ المواد تُعرض حسب تسجيل المتدربين (سجل المقررات) لا الجدول فقط —
+    //    يضمن ظهور المواد المشتركة بين عدة مدربين والمواد غير المجدولة.
     const myName=(currentUser&&(currentUser.name||currentUser.sname))||'';
-    const todayCourses=todayCoursesForTrainer(myName,todayName);
+    const nrmC=c=>String(c||'').replace(/\s+/g,' ').trim();
+    const _cmap=new Map(); // nrmC(course) → {course, code}
+    // ابدأ بمواد الجدول اليوم (لأخذ رمز المقرر) ثم أضف كل مواد المدرب من سجل المقررات
+    todayCoursesForTrainer(myName,todayName).forEach(tc=>{ const k=nrmC(tc.course); if(!_cmap.has(k))_cmap.set(k,{course:tc.course,code:tc.code||''}); });
+    uniqStudents(students.filter(s=>isActive(s.status))).forEach(s=>{ const k=nrmC(s.course); if(!k)return; if(!_cmap.has(k))_cmap.set(k,{course:s.course,code:s.code||''}); });
+    const todayCourses=[..._cmap.values()];
     if(!todayCourses.length){
-      return header+`<div class="alert ab"><span class="aicon">📅</span>المواد تظهر حسب جدولك المعتمد لليوم</div>
-      <div class="empty"><div class="empty-icon">📭</div>ما عندك حصص اليوم (${dayLabel}) في الجدول</div>`;
+      return header+`<div class="alert ab"><span class="aicon">📅</span>تظهر هنا المواد المسجّلة لك في «سجل المقررات»</div>
+      <div class="empty"><div class="empty-icon">📭</div>ما عندك مواد حالية مسجّلة لك</div>`;
     }
     return header+`
-    <div class="alert ab"><span class="aicon">✅</span>مواد <strong>${dayLabel}</strong> حسب جدولك — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
+    <div class="alert ab"><span class="aicon">✅</span>موادك المسجّلة (تظهر كل مادة تدرّسها ولو ما جُدولت) — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
     ${todayCourses.map(tc=>{
       const course=tc.course, code=tc.code||'';
-      // طلاب هذه المادة — فقط الشُعب المجدولة لهذا المدرب اليوم (يمنع ظهور مواد/شُعب غيره)
-      const myGrps=[...tc.grps].map(g=>String(g));
-      const ssDedup=uniqStudents(students.filter(s=>s.course===course&&myGrps.includes(String(s.grp))&&isActive(s.status)));
+      // كل متدربي هذا المدرب في هذه المادة (كل الشُعب) — students يحتوي متدربيه فقط
+      const ssDedup=uniqStudents(students.filter(s=>s.course===course&&isActive(s.status)));
       if(!ssDedup.length)return '';
-      const grp=ssDedup[0]?.grp||[...tc.grps][0];
+      const grp=ssDedup[0]?.grp||'';
       const totalDays=courseTotalDays(course,grp);
       const dpw=courseDaysPerWeek(course,grp);
       return `<div style="margin-bottom:24px">
@@ -4116,7 +4163,7 @@ const tPgs={
         <div class="att-grid">
           ${ssDedup.map(s=>{const mk=attMarks[amKey(course,s.sid)];const idb=amId(course,s.sid);return `<div class="att-card">
             <div class="att-name">${esc(s.name.split(' ').slice(0,3).join(' '))}</div>
-            <div class="att-id">${s.sid} · غياب حالي <span style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</span></div>
+            <div class="att-id">${s.sid} · شعبة ${esc(String(s.grp||'').replace(/\.0$/,''))} · غياب حالي <span style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</span></div>
             <div class="att-marks">
               <button class="amk amk-p${mk==='present'?' on':''}" id="${idb}-present" onclick="setMark('${course}','${s.sid}','present')">✓ حاضر</button>
               <button class="amk amk-l${mk==='late'?' on':''}" id="${idb}-late" onclick="setMark('${course}','${s.sid}','late')">⏰ متأخر</button>
