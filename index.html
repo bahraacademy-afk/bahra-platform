@@ -2312,11 +2312,16 @@ function breakAfterPeriod(){
   return schedConfig.periodsPerDay-1;
 }
 // يجلب المواد الحالية لشعبة + مدربيها + يحسب عدد الحصص الأسبوعية
+// بادئة مفتاح جدول الطالب المخصّص (يُخزَّن مكان الشعبة في تبويب «الجدول»)
+const STU_PREFIX='ط#';
+function isStuKey(g){return String(g||'').startsWith(STU_PREFIX);}
+function stuIdOf(g){return String(g||'').slice(STU_PREFIX.length);}
 function coursesForSchedule(grp){
   const seen={};
   const list=[];
+  const _isStu=isStuKey(grp), _sid=_isStu?stuIdOf(grp):null;
   allCourses.forEach(c=>{
-    if(c.grp!==grp)return;
+    if(_isStu){ if(String(c.sid)!==String(_sid))return; } else { if(c.grp!==grp)return; }
     if(!isActive(c.status))return;
     if(isCoopTraining(c.code))return; // التدريب التعاوني ميداني — خارج الجدول الأسبوعي
     const key=normCode(c.code)||c.course;
@@ -3410,15 +3415,22 @@ const sPgs={
     // ⭐ اجمع حصص الطالب من كل الجداول (شعبته + أي شعبة يدرس معها مادة مشتركة كالإعادة)
     // الأولوية لجدول شعبة الطالب عند التعارض على نفس الخانة
     const myGrid={};
-    const ownGrid=schedule[grp]||{};
-    // أولاً من جدول شعبة الطالب
-    for(const slot in ownGrid){if(isMine(ownGrid[slot]))myGrid[slot]=ownGrid[slot];}
-    // ثم من بقية الشعب (لمواده التي يدرسها مع شعبة أخرى)
-    for(const g in schedule){
-      if(g===grp)continue;
-      const gr=schedule[g]||{};
-      for(const slot in gr){
-        if(isMine(gr[slot])&&!myGrid[slot])myGrid[slot]={...gr[slot],_withGrp:g};
+    // ⭐ جدول مخصّص للطالب (إن أنشأته الإدارة) له الأولوية المطلقة على جدول الشعبة
+    const personal=schedule[STU_PREFIX+String(user.id)]||schedule[STU_PREFIX+dg(user.id)]||null;
+    const hasPersonal=personal&&Object.keys(personal).length>0;
+    if(hasPersonal){
+      for(const slot in personal)myGrid[slot]=personal[slot]; // نعرض كل حصص جدوله المخصّص كما هي
+    }else{
+      const ownGrid=schedule[grp]||{};
+      // أولاً من جدول شعبة الطالب
+      for(const slot in ownGrid){if(isMine(ownGrid[slot]))myGrid[slot]=ownGrid[slot];}
+      // ثم من بقية الشعب (لمواده التي يدرسها مع شعبة أخرى)
+      for(const g in schedule){
+        if(g===grp||isStuKey(g))continue;
+        const gr=schedule[g]||{};
+        for(const slot in gr){
+          if(isMine(gr[slot])&&!myGrid[slot])myGrid[slot]={...gr[slot],_withGrp:g};
+        }
       }
     }
     const hasMine=Object.keys(myGrid).length>0;
@@ -3445,9 +3457,9 @@ const sPgs={
       ? '<div class="empty"><div class="empty-icon">📅</div><div>لم يُعتمد جدولك بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">عندك مواد حالية — سيظهر جدولك هنا فور اعتماده من الإدارة</div></div>'
       : '<div class="empty"><div class="empty-icon">📭</div><div>ما عندك جدول حالياً</div><div style="font-size:12px;color:var(--muted);margin-top:8px">لأنه ما عندك مواد مسجّلة هذا الفصل · راجع الإدارة لو تتوقع غير ذلك</div></div>';
     return `
-    <div class="stitle">📅 جدولي الأسبوعي — الشعبة ${grp}</div>
+    <div class="stitle">📅 جدولي الأسبوعي — ${hasPersonal?'<span style="color:var(--gold)">جدول مخصّص لك</span>':'الشعبة '+grp}</div>
     ${hasMine?`
-    <div class="alert ab"><span class="aicon">🗓️</span>جدول حصصك الأسبوعي المعتمد (موادك المسجّلة فقط)</div>
+    <div class="alert ab"><span class="aicon">🗓️</span>${hasPersonal?'جدولك المخصّص المعتمد من الإدارة':'جدول حصصك الأسبوعي المعتمد (موادك المسجّلة فقط)'}</div>
     <div class="sch-wrap"><table class="sch-table">
       <thead><tr><th>اليوم</th>${headCells}</tr></thead>
       <tbody>${days.map(d=>`<tr><td class="sch-pnum">${d}</td>${rowCells(d)}</tr>`).join('')}</tbody>
@@ -3622,6 +3634,8 @@ const _ATL_COLORS=['#1a7abf','#2ecc71','#9b59b6','#e67e22','#16a085','#2980b9','
 function atlColor(str){let h=0;const s=String(str||'');for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return _ATL_COLORS[h%_ATL_COLORS.length];}
 function atlInitials(name){const p=String(name||'').trim().split(/\s+/).filter(Boolean);return(((p[0]||'').charAt(0))+((p[1]||'').charAt(0)||'')).trim()||'؟';}
 function atlDateBox(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);const dd=m?m[1]:'—';const yy=m?(m[3].length===2?m[3]:m[3].slice(-2)):'';const AR=['','ينا','فبر','مار','أبر','ماي','يون','يول','أغس','سبت','أكت','نوف','ديس'];const mon=m?(AR[parseInt(m[2])]||''):'';return `<div class="atl-datebox"><div class="d">${dd}</div><div class="my">${mon} ${yy}</div></div>`;}
+// تاريخ مبسّط بسطر واحد (لعرضه موسّطاً تحت اسم المادة)
+function atlDateText(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return String(date||'');const AR=['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];const yy=m[3].length===2?('20'+m[3]):m[3];return `${m[1]} ${AR[parseInt(m[2])]||''} ${yy}`;}
 function atlBuildSessions(editable){
   const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
   const gk_=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
@@ -3650,6 +3664,8 @@ function atlCss(){return `<style>
 .atl-search input{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:inherit;font-size:14px;padding:12px 0}
 .atl-select{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;font-size:13px;padding:12px 14px;cursor:pointer;min-width:150px}
 .atl-card{margin-bottom:12px;padding:16px 18px}
+.atl-date-line{font-size:13px;font-weight:800;color:var(--blue);background:rgba(26,122,191,.10);border:1px solid rgba(26,122,191,.28);border-radius:9px;padding:4px 14px;display:inline-block;margin:0 auto}
+.atl-card>summary .cc-name{font-size:16px}
 .atl-card>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px}
 .atl-card>summary::-webkit-details-marker{display:none}
 .atl-chev{transition:transform .25s;color:var(--muted);font-size:13px;flex-shrink:0}
@@ -3722,10 +3738,11 @@ function attlogCards(){
     }).join('')||'<div style="font-size:12px;color:var(--muted);padding:8px">لا توجد أسماء مطابقة</div>';
     const accent=absC>0?'cc-r':'cc-y';
     return `<details class="ccard atl-card ${accent}"${openAttr}>
-      <summary>${atlDateBox(s.date)}
-        <div style="flex:1;min-width:0"><div class="cc-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.course)}</div>
-        <div class="cc-meta">${s.grp?`شعبة ${esc(s.grp)}`:''}${s.grp&&s.term?' · ':''}${s.term?esc(s.term):''}${(!s.grp&&!s.term)?'—':''}</div></div>
-        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0"><span class="pill pr">${absC} غياب</span>${lateC?`<span class="pill py">${lateC} تأخير</span>`:''}<span class="atl-chev">▾</span></div>
+      <summary style="flex-direction:column;align-items:stretch;text-align:center;gap:7px">
+        <div class="cc-name" style="white-space:normal">${esc(s.course)}</div>
+        <div class="cc-meta">${s.grp?`شعبة ${esc(String(s.grp).replace(/\.0$/,''))}`:''}${s.grp&&s.term?' · ':''}${s.term?esc(s.term):''}${(!s.grp&&!s.term)?'—':''}</div>
+        <div class="atl-date-line">📅 ${atlDateText(s.date)}</div>
+        <div style="display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap"><span class="pill pr">${absC} غياب</span>${lateC?`<span class="pill py">${lateC} تأخير</span>`:''}<span class="atl-chev">▾</span></div>
       </summary>
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:4px">${rowsHtml}</div>
       ${editable?`<div class="btn-row" style="margin-top:12px;justify-content:flex-end"><button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" onclick="admAttDelSession(${si})">🗑️ حذف الجلسة كاملة</button></div>`:''}
@@ -6178,6 +6195,10 @@ const aPgs={
     const cur=window._schedGrp||'all';
     window._schedGrp=cur;
     const isAll=cur==='all';
+    // ⭐ وضع الإعداد: 'grp' جدول شعبة · 'stu' جدول طالب مخصّص
+    const schMode=window._schedMode||'grp';
+    const schStu=window._schedStu||'';
+    const stuKey=STU_PREFIX+schStu;
     const P=schedConfig.periodsPerDay;
     const days=activeDays();
     // خلية الجدول لشعبة معينة
@@ -6199,6 +6220,9 @@ const aPgs={
     };
     // جدول شعبة واحدة (HTML)
     const tableFor=(g)=>{
+      // تسمية العنوان: شعبة أو اسم طالب حسب نوع المفتاح
+      const _stu=isStuKey(g)?(students.find(x=>String(x.id)===String(stuIdOf(g)))||{}):null;
+      const gLbl=_stu?('الطالب '+esc(_stu.name||stuIdOf(g))):('الشعبة '+g);
       const cListInfo=coursesForSchedule(g);
       const placedCount=Object.keys(schedule[g]||{}).length;
       const neededCount=cListInfo.reduce((a,c)=>a+c.sessions,0);
@@ -6218,7 +6242,7 @@ const aPgs={
       Object.values(schedule[g]||{}).forEach(c=>{const k=normCode(c.code)||c.course;placedByCode[k]=(placedByCode[k]||0)+1;});
       const palette=cListInfo.length?`
         <div class="sch-palette">
-          <div class="sch-pal-title">📚 مواد الشعبة ${g} — اسحبها للحصص</div>
+          <div class="sch-pal-title">📚 مواد ${gLbl} — اسحبها للحصص</div>
           ${cListInfo.map(c=>{
             const k=normCode(c.code)||c.course;
             const placed=placedByCode[k]||0;
@@ -6232,8 +6256,8 @@ const aPgs={
           }).join('')}
         </div>`:'';
       return `
-      ${isAll?`<div class="stitle" style="margin-top:20px">📋 الشعبة ${g}</div>`:''}
-      ${cListInfo.length?`<div class="alert ab"><span class="aicon">📚</span>الشعبة ${g}: ${cListInfo.length} مواد حالية · تحتاج ${neededCount} حصة · ${placedCount} موزّعة</div>`:'<div class="alert aw"><span class="aicon">⚠️</span>لا توجد مواد حالية للشعبة '+g+' (تأكد من حالة المواد = حالي)</div>'}
+      ${isAll?`<div class="stitle" style="margin-top:20px">📋 ${gLbl}</div>`:''}
+      ${cListInfo.length?`<div class="alert ab"><span class="aicon">📚</span>${gLbl}: ${cListInfo.length} مواد حالية · تحتاج ${neededCount} حصة · ${placedCount} موزّعة</div>`:'<div class="alert aw"><span class="aicon">⚠️</span>لا توجد مواد حالية لـ '+gLbl+' (تأكد من حالة المواد = حالي)</div>'}
       <div class="sch-layout">
         ${palette}
         <div class="sch-wrap"><table class="sch-table">
@@ -6242,17 +6266,32 @@ const aPgs={
         </table></div>
       </div>`;
     };
-    const genBtn=isAll?`<button class="btn btn-b" onclick="genAllSchedule()">⚡ ولّد كل الشعب</button>`:`<button class="btn btn-b" onclick="genSchedule('${cur}')">⚡ ولّد الجدول</button>`;
+    const genBtn=(schMode==='stu')
+      ? (schStu?`<button class="btn btn-b" onclick="genSchedule('${stuKey}')">⚡ ولّد جدول الطالب</button>`:'')
+      : (isAll?`<button class="btn btn-b" onclick="genAllSchedule()">⚡ ولّد كل الشعب</button>`:`<button class="btn btn-b" onclick="genSchedule('${cur}')">⚡ ولّد الجدول</button>`);
+    // منتقي: شعبة (وضع الشعبة) أو طالب (وضع الطالب)
+    const selectorCfg=(schMode==='stu')
+      ? `<div class="sch-cfg"><label>الطالب</label>
+          <select onchange="window._schedStu=this.value;showAPage('schedule',null)">
+            <option value="">— اختر طالباً —</option>
+            ${students.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar')).map(s=>`<option value="${esc(String(s.id))}" ${String(s.id)===schStu?'selected':''}>${esc(s.name)} · ${esc(String(s.id))}${s.grp?' · شعبة '+esc(String(s.grp).replace(/\.0$/,'')):''}</option>`).join('')}
+          </select>
+        </div>`
+      : `<div class="sch-cfg"><label>الشعبة</label>
+          <select onchange="window._schedGrp=this.value;showAPage('schedule',null)">
+            ${grps.map(g=>`<option value="${g}" ${g===cur?'selected':''}>الشعبة ${g}</option>`).join('')}
+            <option value="all" ${isAll?'selected':''}>🏫 كل الشعب</option>
+          </select>
+        </div>`;
     return `
     <div class="banner"><div><div class="btitle">📅 مولّد الجدول الأوتوماتيكي</div><div class="bsub">تعبئة ذكية من الأحد · أوقات مبكرة · قابل للتعديل بالسحب</div></div></div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn btn-sm ${schMode==='grp'?'btn-b':'btn-out'}" onclick="window._schedMode='grp';showAPage('schedule',null)">📋 جدول شعبة</button>
+      <button class="btn btn-sm ${schMode==='stu'?'btn-b':'btn-out'}" onclick="window._schedMode='stu';showAPage('schedule',null)">👤 جدول طالب مخصّص</button>
+    </div>
+    ${schMode==='stu'?`<div class="alert ab" style="margin-bottom:10px"><span class="aicon">👤</span>اختر طالباً وابنِ له جدولاً خاصاً — يظهر له بدل جدول شعبته. المواد المعروضة هي مواد الطالب المسجّلة.</div>`:''}
     <div class="sch-controls">
-      <div class="sch-cfg">
-        <label>الشعبة</label>
-        <select onchange="window._schedGrp=this.value;showAPage('schedule',null)">
-          ${grps.map(g=>`<option value="${g}" ${g===cur?'selected':''}>الشعبة ${g}</option>`).join('')}
-          <option value="all" ${isAll?'selected':''}>🏫 كل الشعب</option>
-        </select>
-      </div>
+      ${selectorCfg}
       <div class="sch-cfg"><label>عدد الأيام</label>
         <input type="number" min="1" max="5" value="${schedConfig.daysCount}" onchange="schedConfig.daysCount=parseInt(this.value)||5;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>حصص باليوم</label>
@@ -6269,7 +6308,9 @@ const aPgs={
       <button class="btn btn-g" onclick="saveSchedule()">💾 حفظ الجدول</button>
       <button class="btn btn-out" onclick="openSchedPrintOptions()">🖨️ طباعة تقرير</button>
     </div>
-    ${isAll?grps.map(g=>tableFor(g)).join(''):tableFor(cur)}
+    ${schMode==='stu'
+      ? (schStu?tableFor(stuKey):`<div class="empty"><div class="empty-icon">👤</div>اختر طالباً من الأعلى لإنشاء جدول مخصّص له</div>`)
+      : (isAll?grps.map(g=>tableFor(g)).join(''):tableFor(cur))}
     <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اسحب مادة من القائمة الجانبية إلى أي حصة · اسحب حصة لخانة ثانية للنقل · اضغط على خانة معبّأة لحذفها · التعارض يظهر كتنبيه فقط ولا يمنعك</div>`;
   },
   requests:()=>{
