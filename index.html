@@ -1066,7 +1066,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyrHo6zluijj8jtAtjEFjGc74R4SzP8xxYkhdY3Wj3dXXRsSjrjMxQeC-C0YyWOaTfT/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxB0iG1lhPyoDjMpewoUJQEflAjLGYKTFFRc0-8rXRqU0qp9jkYTNC-FINnwya91LjL/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -4181,17 +4181,26 @@ const tPgs={
     //    يضمن ظهور المواد المشتركة بين عدة مدربين والمواد غير المجدولة.
     const myName=(currentUser&&(currentUser.name||currentUser.sname))||'';
     const nrmC=c=>String(c||'').replace(/\s+/g,' ').trim();
+    // المواد المجدولة لهذا المدرب بأي يوم (لمعرفة أيها مجدول أصلاً)
+    const myScheduled=new Set();
+    for(const g in schedule){for(const sl in (schedule[g]||{})){const c=schedule[g][sl];if(c&&nrmC(c.trainer)===nrmC(myName))myScheduled.add(nrmC(c.course));}}
     const _cmap=new Map(); // nrmC(course) → {course, code}
-    // ابدأ بمواد الجدول اليوم (لأخذ رمز المقرر) ثم أضف كل مواد المدرب من سجل المقررات
-    todayCoursesForTrainer(myName,todayName).forEach(tc=>{ const k=nrmC(tc.course); if(!_cmap.has(k))_cmap.set(k,{course:tc.course,code:tc.code||''}); });
-    uniqStudents(students.filter(s=>isActive(s.status))).forEach(s=>{ const k=nrmC(s.course); if(!k)return; if(!_cmap.has(k))_cmap.set(k,{course:s.course,code:s.code||''}); });
+    // 1) مواد اليوم من الجدول فقط (مراعاة الأيام) — مع استبعاد التدريب التعاوني
+    todayCoursesForTrainer(myName,todayName).forEach(tc=>{ const k=nrmC(tc.course); if(isCoopTraining(tc.code))return; if(!_cmap.has(k))_cmap.set(k,{course:tc.course,code:tc.code||''}); });
+    // 2) مواد المدرب من سجل المقررات التي ليست مجدولة إطلاقاً (المشتركة/غير المجدولة) — بلا تدريب تعاوني
+    uniqStudents(students.filter(s=>isActive(s.status))).forEach(s=>{
+      const k=nrmC(s.course); if(!k)return;
+      if(isCoopTraining(s.code))return;      // ⛔ التدريب التعاوني ميداني — لا يُحضَّر
+      if(myScheduled.has(k))return;          // مجدولة → تظهر في أيامها فقط (عبر المصدر 1)
+      if(!_cmap.has(k))_cmap.set(k,{course:s.course,code:s.code||''});
+    });
     const todayCourses=[..._cmap.values()];
     if(!todayCourses.length){
-      return header+`<div class="alert ab"><span class="aicon">📅</span>تظهر هنا المواد المسجّلة لك في «سجل المقررات»</div>
-      <div class="empty"><div class="empty-icon">📭</div>ما عندك مواد حالية مسجّلة لك</div>`;
+      return header+`<div class="alert ab"><span class="aicon">📅</span>تظهر مواد اليوم حسب جدولك + أي مادة تدرّسها غير مجدولة (عدا التدريب التعاوني)</div>
+      <div class="empty"><div class="empty-icon">📭</div>ما عندك مواد للتحضير اليوم (${dayLabel})</div>`;
     }
     return header+`
-    <div class="alert ab"><span class="aicon">✅</span>موادك المسجّلة (تظهر كل مادة تدرّسها ولو ما جُدولت) — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
+    <div class="alert ab"><span class="aicon">✅</span>مواد اليوم للتحضير — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
     ${todayCourses.map(tc=>{
       const course=tc.course, code=tc.code||'';
       // كل متدربي هذا المدرب في هذه المادة (كل الشُعب) — students يحتوي متدربيه فقط
