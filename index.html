@@ -9000,8 +9000,8 @@ document.addEventListener('click', function(e){
   if(card){
     const target = card.dataset.nav;
     if(target === 'trainers'){
-      // عرض المدربين كنافذة
-      const trainerNames = [...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
+      // عرض المدربين الفعليين فقط (نفس مصدر العدد في البطاقة) — لا كل اسم ظهر بسجل المقررات
+      const trainerNames = activeTrainerNames();
       const overlay=document.createElement('div');
       overlay.className='modal-overlay';
       overlay.id='trainersModal';
