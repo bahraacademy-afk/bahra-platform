@@ -1368,7 +1368,7 @@ function assistChipsList(){
 }
 function assistRenderChips(){
   const h=document.getElementById('assistChips'); if(!h)return;
-  h.innerHTML=assistChipsList().map(c=>`<button class="assist-chip" onclick="assistAsk(${JSON.stringify(c)})">${esc(c)}</button>`).join('');
+  h.innerHTML=assistChipsList().map(c=>`<button class="assist-chip" type="button" onclick='assistAsk(${JSON.stringify(c)})'>${esc(c)}</button>`).join('');
 }
 function assistAddMsg(html,who){
   const body=document.getElementById('assistBody'); if(!body)return;
@@ -1394,31 +1394,57 @@ function assistAsk(text){
 function assistReply(qRaw){
   const q=assistNorm(qRaw);
   const has=(...ws)=>ws.some(w=>q.includes(assistNorm(w)));
-  if(has('مرحبا','السلام','هلا','هاي','اهلا','هلا')) return 'أهلاً '+esc(((user&&user.name)||'').split(' ')[0]||'')+'! 👋 كيف أقدر أساعدك؟';
-  if(has('شكرا','يعطيك','تسلم','مشكور','يعطيك العافيه')) return 'العفو! 🌟 أي وقت.';
-  if(has('وش تسوي','ايش تسوي','وش تقدر','ايش تقدر','قدراتك','تساعدني','مساعده','وش عندك')) return assistCaps();
+  if(has('اسمك','مين انت','من انت','منت','شنو انت','عرف نفسك')) return 'أنا <b>مساعد بحرة</b> 🤖 — مساعدك داخل المنصة، أجاوبك من بياناتك مباشرة.';
+  if(has('مرحبا','السلام','هلا','هاي','اهلا','صباح','مساء','كيفك')) return 'أهلاً '+esc(((user&&user.name)||'').split(' ')[0]||'')+'! 👋 كيف أقدر أساعدك؟'+assistSuggest();
+  if(has('شكرا','يعطيك','تسلم','مشكور')) return 'العفو! 🌟 أي وقت.';
+  if(has('وش تسوي','ايش تسوي','وش تقدر','ايش تقدر','قدراتك','تساعدني','مساعده','مساعدة','وش عندك','ساعدني')) return assistCaps()+assistSuggest();
   let r=null;
-  if(role==='s') r=assistStudent(has); else if(role==='t') r=assistTrainer(has); else if(role==='a') r=assistAdmin(has);
+  if(role==='s') r=assistStudent(has,q); else if(role==='t') r=assistTrainer(has,q); else if(role==='a') r=assistAdmin(has,q);
   if(r) return r;
   return 'ما فهمت سؤالك تماماً 🤔 جرّب أحد هذه:'+assistSuggest();
 }
 // اقتراحات قابلة للضغط (للرد الاحتياطي)
 function assistSuggest(){
-  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+assistChipsList().map(c=>`<button class="assist-chip" onclick="assistAsk(${JSON.stringify(c)})">${esc(c)}</button>`).join('')+'</div>';
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+assistChipsList().map(c=>`<button class="assist-chip" type="button" onclick='assistAsk(${JSON.stringify(c)})'>${esc(c)}</button>`).join('')+'</div>';
 }
 function assistCaps(){
-  if(role==='s') return 'أقدر أجاوبك عن: <b>دوراتك</b> · <b>جدولك</b> · <b>غيابك</b> · <b>معدّلك</b> · <b>شهادتك</b> · <b>كيف تطلب خدمة</b>.';
-  if(role==='t') return 'أقدر أجاوبك عن: <b>موادك</b> · <b>طلابك</b> · <b>جدولك</b> · <b>كيف تسجّل الحضور</b>.';
-  return 'أقدر أجاوبك عن: <b>عدد المتدربين</b> · <b>المقررات</b> · <b>التنبيهات</b> · <b>كيف تضيف حساب/خبر/جدول</b>.';
+  if(role==='s') return 'أقدر أجاوبك عن: <b>موادك الحالية والسابقة</b> · تفاصيل أي مادة (اكتب اسمها) · <b>جدولك</b> · <b>غيابك</b> · <b>معدّلك</b> · <b>شهادتك</b> · <b>طلباتك</b>.';
+  if(role==='t') return 'أقدر أجاوبك عن: <b>موادك الحالية والسابقة</b> · متدربي أي مادة (اكتب اسمها) · <b>عدد طلابك</b> · <b>جدولك</b> · طريقة الحضور والدرجات.';
+  return 'أقدر أجاوبك عن: <b>عدد المتدربين والمدربين</b> · <b>المقررات</b> · تفاصيل أي مقرر (اكتب اسمه) · <b>التنبيهات</b> · طريقة إضافة حساب/خبر/جدول.';
 }
+// بطاقة تفاصيل مادة واحدة
+function assistCourseCard(c){
+  const a=Math.round(c.abs||0);
+  return '📖 <b>'+esc(c.course)+'</b>'+(c.code?' <span style="color:var(--muted);font-size:11px">('+esc(c.code)+')</span>':'')+'<br>'
+    +'• الحالة: '+esc(c.status||'—')+'<br>'
+    +'• الدرجة: '+(c.pct?Math.round(c.pct)+'%':'—')+(c.letter?' — تقدير '+esc(c.letter):'')+'<br>'
+    +'• الغياب: '+a+'%'+(a>=25?' ⛔ محروم':a>=20?' ⚠️ إنذار ثاني':a>=10?' ⚠️ إنذار أول':'')+'<br>'
+    +(c.trainer?'• المدرب: '+esc(c.trainer)+'<br>':'')
+    +(c.grp?'• الشعبة: '+esc(String(c.grp).replace(/\.0$/,'')):'')
+    +(c.half?((c.grp?' · ':'• '))+'الترم: '+esc(c.half):'');
+}
+// إيجاد مادة يُذكر اسمها داخل السؤال
+function assistFindCourse(list,q){ return (list||[]).find(c=>{const n=assistNorm(c.course);return n.length>3 && q.includes(n);}); }
 // ---- متدرب ----
-function assistStudent(has){
-  if(has('دوراتي','موادي','مقرراتي','موادي الحاليه','موادي الحاليه')){
+function assistStudent(has,q){
+  const hit=assistFindCourse(courses,q);
+  if(hit && !has('كل','جميع','كامل')) return assistCourseCard(hit);
+  if(has('السابقه','سابقه','المنتهيه','مواد سابقه','مواد قديمه','منتهيه')){
+    const past=(courses||[]).filter(c=>String(c.status)==='سابق');
+    if(!past.length) return 'ما عندك مواد سابقة (منتهية) بعد. 📭';
+    return '📘 موادك السابقة ('+past.length+'):<br>'+past.map(c=>'• <b>'+esc(c.course)+'</b> — '+(c.pct?Math.round(c.pct)+'%':'—')+(c.letter?' ('+esc(c.letter)+')':'')+(c.half?' · '+esc(c.half):'')).join('<br>')+'<br><span style="color:var(--muted);font-size:11px">اكتب اسم مادة لتفاصيلها.</span>';
+  }
+  if(has('دوراتي','موادي','مقرراتي','الحاليه','مواد حاليه','عندي مواد','مقرراتي الحاليه')){
     const cs=(courses||[]).filter(c=>isActive(c.status));
     if(!cs.length) return 'ما عندك مواد حالية مسجّلة. 📭';
-    return '📚 موادك الحالية ('+cs.length+'):<br>'+cs.map(c=>'• '+esc(c.course)+' — '+Math.round(c.pct||0)+'%').join('<br>');
+    return '📚 موادك الحالية ('+cs.length+'):<br>'+cs.map(c=>'• <b>'+esc(c.course)+'</b> — '+(c.pct?Math.round(c.pct)+'%':'—')+(c.letter?' ('+esc(c.letter)+')':'')+' · غياب '+Math.round(c.abs||0)+'%').join('<br>')+'<br><span style="color:var(--muted);font-size:11px">اكتب اسم مادة لتفاصيلها الكاملة.</span>';
   }
-  if(has('جدول','حصص','جلسات','جلساتي','متى حصت','القادمه','متى درس','حصصي')) return assistStudentSchedule();
+  if(has('بياناتي','ملفي','معلوماتي','وضعي','ملخص','كل شي')){
+    const cur=(courses||[]).filter(c=>isActive(c.status)).length, past=(courses||[]).filter(c=>String(c.status)==='سابق').length;
+    const gpa=(typeof gpaDisplay==='function')?gpaDisplay(courses):'—';
+    return '👤 <b>'+esc(user.name||'')+'</b>'+(user.grp?' · شعبة '+esc(String(user.grp).replace(/\.0$/,'')):'')+(user.spec?' · '+esc(user.spec):'')+'<br>📚 مواد حالية: <b>'+cur+'</b> · سابقة: <b>'+past+'</b><br>🏆 المعدّل التراكمي: <b>'+gpa+'</b> / 5';
+  }
+  if(has('جدول','حصص','جلسات','جلساتي','متى حصت','القادمه','متى درس','حصصي','محاضراتي')) return assistStudentSchedule();
   if(has('غياب','غيابي','حضوري','نسبه الغياب','كم غيابي')){
     const cs=(courses||[]).filter(c=>isActive(c.status));
     if(!cs.length) return 'ما عندك مواد حالية. 📭';
@@ -1433,7 +1459,11 @@ function assistStudent(has){
     if(user&&user.cert&&/^https?:/i.test(user.cert)) return '🎓 شهادتك الإلكترونية جاهزة: <a href="'+escUrl(user.cert)+'" target="_blank">اضغط للعرض</a>';
     return 'ما فيه شهادة إلكترونية مرفوعة لك حالياً. راجع الإدارة. 🎓';
   }
-  if(has('طلب','خدمه','اطلب','افاده','عذر','كيف اسجل طلب','اقدم طلب')) return '📝 لتقديم طلب: افتح «الخدمات» من القائمة → اختر نوع الطلب → املأ التفاصيل → إرسال، وتابع حالته من نفس الصفحة.';
+  if(has('طلباتي','طلبي','حاله طلب','طلباتى')){
+    const mine=(typeof requests!=='undefined'&&requests)?requests.filter(r=>String(r.sid)===String(user.id)):[];
+    return mine.length?('📋 عندك <b>'+mine.length+'</b> طلب. افتح «الخدمات» لمتابعة حالتها.'):'ما عندك طلبات مقدّمة. لتقديم طلب افتح «الخدمات».';
+  }
+  if(has('طلب','خدمه','اطلب','افاده','عذر','كيف اسجل طلب','اقدم طلب')) return '📝 لتقديم طلب: افتح «الخدمات» → اختر نوع الطلب → املأ التفاصيل → إرسال، وتابع حالته من نفس الصفحة.';
   return null;
 }
 function assistStudentSchedule(){
@@ -1461,37 +1491,64 @@ function assistStudentSchedule(){
   }catch(e){ return '📅 جدولك في صفحة «الجدول».'; }
 }
 // ---- مدرب ----
-function assistTrainer(has){
-  if(has('موادي','مقرراتي','موادي الحاليه')){
-    const crs=[...new Set((students||[]).map(s=>s.course))].filter(Boolean);
+function assistTrainer(has,q){
+  // تفاصيل مادة: متدربوها إذا ذُكر اسمها
+  const hit=assistFindCourse(students,q);
+  if(hit && !has('كل','جميع')){
+    const ss=uniqStudents((students||[]).filter(s=>s.course===hit.course));
+    if(!ss.length) return '📖 <b>'+esc(hit.course)+'</b> — ما فيه متدربون مسجّلون.';
+    return '📖 <b>'+esc(hit.course)+'</b> — '+ss.length+' متدرب:<br>'+ss.slice(0,15).map(s=>'• '+esc(s.name)+' — '+Math.round(s.pct||0)+'% · غياب '+Math.round(s.abs||0)+'%').join('<br>')+(ss.length>15?'<br>… و'+(ss.length-15)+' غيرهم':'');
+  }
+  if(has('السابقه','سابقه','المنتهيه','مواد سابقه')){
+    const p=[...new Set((students||[]).filter(s=>String(s.status)==='سابق').map(s=>s.course))].filter(Boolean);
+    if(!p.length) return 'ما عندك مواد سابقة. 📭';
+    return '📘 موادك السابقة ('+p.length+'):<br>'+p.map(c=>'• '+esc(c)).join('<br>');
+  }
+  if(has('موادي','مقرراتي','الحاليه','دوراتي','مواد حاليه')){
+    const crs=[...new Set((students||[]).filter(s=>isActive(s.status)).map(s=>s.course))].filter(Boolean);
     if(!crs.length) return 'ما عندك مواد مسجّلة لك حالياً. 📭';
-    return '📚 موادك ('+crs.length+'):<br>'+crs.map(c=>{const n=uniqStudents((students||[]).filter(s=>s.course===c)).length;return '• '+esc(c)+' — '+n+' متدرب';}).join('<br>');
+    return '📚 موادك الحالية ('+crs.length+'):<br>'+crs.map(c=>{const ss=uniqStudents((students||[]).filter(s=>s.course===c&&isActive(s.status)));const gs=[...new Set(ss.map(s=>String(s.grp).replace(/\.0$/,'')))].filter(Boolean).join('، ');return '• <b>'+esc(c)+'</b> — '+ss.length+' متدرب'+(gs?' · شعب: '+esc(gs):'');}).join('<br>')+'<br><span style="color:var(--muted);font-size:11px">اكتب اسم مادة لعرض متدربيها.</span>';
   }
   if(has('طلابي','متدربيني','طلاب','متدربين','كم طالب')){
-    const n=uniqStudents(students||[]).length; return '👥 إجمالي متدربيك: <b>'+n+'</b>.';
+    const n=uniqStudents((students||[]).filter(s=>isActive(s.status))).length;
+    return '👥 إجمالي متدربيك الحاليين: <b>'+n+'</b>.<br><span style="color:var(--muted);font-size:11px">اكتب اسم مادة لعرض متدربيها بالتفصيل.</span>';
   }
-  if(has('جدول','حصص','جلسات','جدولي')) return '📅 جدولك يظهر في صفحة «الجدول»، وحصص اليوم تظهر أيضاً في «تسجيل الحضور».';
-  if(has('حضور','تحضير','اسجل حضور','كيف اسجل','غياب')) return '✅ لتسجيل الحضور: افتح «تسجيل الحضور» → اختر التاريخ → لكل متدرب اضغط حاضر/متأخر/غائب → «حفظ غياب اليوم». (غائب=يوم كامل · متأخر=نص يوم)';
-  if(has('درجات','رصد','تقييم')) return '📝 لرصد الدرجات: افتح «رصد الدرجات» → اختر المادة → أدخل الدرجات → حفظ.';
+  if(has('جدول','حصص','جلسات','جدولي')) return '📅 جدولك في صفحة «الجدول»، وحصص اليوم في «تسجيل الحضور».';
+  if(has('حضور','تحضير','اسجل حضور','كيف اسجل','غياب')) return '✅ لتسجيل الحضور: «تسجيل الحضور» → اختر التاريخ → لكل متدرب حاضر/متأخر/غائب → «حفظ غياب اليوم». (غائب=يوم · متأخر=نص يوم)';
+  if(has('درجات','رصد','تقييم')) return '📝 لرصد الدرجات: «رصد الدرجات» → اختر المادة → أدخل الدرجات → حفظ.';
+  if(has('تحضير درس','تحضير الدرس','خطه الدرس','خطة الدرس')) return '📄 لتحضير درس: افتح «تحضير الدروس» → املأ الحقول → إرسال.';
   return null;
 }
 // ---- إداري ----
-function assistAdmin(has){
+function assistAdmin(has,q){
+  const hit=assistFindCourse(allCourses,q);
+  if(hit && !has('كل','جميع')){
+    const ss=uniqStudents((allCourses||[]).filter(c=>c.course===hit.course&&isActive(c.status)));
+    const avg=ss.length?Math.round(ss.reduce((a,s)=>a+(parseFloat(s.pct)||0),0)/ss.length):0;
+    return '📖 <b>'+esc(hit.course)+'</b>:<br>• متدربون نشطون: <b>'+ss.length+'</b><br>• متوسط الدرجات: <b>'+avg+'%</b><br>• المدرب: '+esc(hit.trainer||'—');
+  }
   if(has('كم متدرب','عدد المتدربين','متدربين','الطلاب','كم طالب')){
     return '🎓 المتدربون النشطون: <b>'+((students||[]).length)+'</b>'+((typeof graduates!=='undefined'&&graduates&&graduates.length)?('<br>🏅 الخريجون: <b>'+graduates.length+'</b>'):'')+'.';
   }
+  if(has('كم مدرب','المدربين','عدد المدربين')){
+    const t=(typeof trainersDB!=='undefined'&&trainersDB&&trainersDB.length)?trainersDB.length:[...new Set((allCourses||[]).map(c=>c.trainer).filter(Boolean))].length;
+    return '👨‍🏫 عدد المدربين: <b>'+t+'</b>.';
+  }
   if(has('كم مقرر','المقررات','عدد المقررات','مواد','الخطه')){
     const n=(catalog||[]).length; const act=[...new Set((allCourses||[]).filter(c=>isActive(c.status)).map(c=>normCode(c.code)))].length;
-    return '📚 المقررات في الخطة: <b>'+n+'</b> · نشطة حالياً: <b>'+act+'</b>.';
+    return '📚 المقررات في الخطة: <b>'+n+'</b> · نشطة حالياً: <b>'+act+'</b>.<br><span style="color:var(--muted);font-size:11px">اكتب اسم مقرر لتفاصيله.</span>';
   }
-  if(has('تنبيهات','انذارات','مشاكل','محروم','حرمان','اشعارات')){
-    const dep=(allCourses||[]).filter(c=>isActive(c.status)&&(parseFloat(c.abs)||0)>=25).length;
-    return '🔔 حالات الحرمان (غياب ≥ 25%): <b>'+dep+'</b>. للتفاصيل افتح «الإشعارات».';
+  if(has('تنبيهات','انذارات','مشاكل','محروم','حرمان','اشعارات','راسب','ضعيف')){
+    const A=allCourses||[]; const ac=A.filter(c=>isActive(c.status));
+    const dep=ac.filter(c=>(parseFloat(c.abs)||0)>=25).length;
+    const warn=ac.filter(c=>{const a=parseFloat(c.abs)||0;return a>=10&&a<25;}).length;
+    const weak=ac.filter(c=>{const p=parseFloat(c.pct)||0;return p>0&&p<60;}).length;
+    return '🔔 مؤشرات التنبيه:<br>• حرمان (غياب ≥25%): <b>'+dep+'</b><br>• قرب الحرمان (10–25%): <b>'+warn+'</b><br>• درجات ضعيفة (<60%): <b>'+weak+'</b><br><span style="color:var(--muted);font-size:11px">التفاصيل في «الإشعارات».</span>';
   }
-  if(has('اضيف حساب','اضافه حساب','حساب جديد','سجل حساب','اضيف متدرب','اضيف مدرب')) return '👥 لإضافة حساب: افتح «إضافة الحسابات» → اختر النوع (متدرب/مدرب/إداري) → املأ البيانات → حفظ.';
-  if(has('اضيف خبر','خبر جديد','اعلان','انشر','نشر خبر')) return '📰 لنشر خبر: «الأخبار والإعلانات» → «＋ خبر جديد» → اكتب العنوان والنص، وارفع صورة/مرفقات إن حبيت، وحدّد الفئة والجدولة → نشر.';
-  if(has('جدول','اسوي جدول','انشئ جدول','جدول طالب')) return '📅 لإنشاء جدول: «الجدول» → اختر شعبة أو «جدول طالب مخصّص» → اسحب المواد للحصص أو «ولّد الجدول» → «حفظ الجدول».';
-  if(has('صيانه','نسخه احتياطيه','باك اب','ارشفه')) return '🧰 من «الصيانة» تقدر تفحص صحة النظام، وتاخذ نسخة احتياطية، وتؤرشف الدفعات المتخرجة.';
+  if(has('اضيف حساب','اضافه حساب','حساب جديد','سجل حساب','اضيف متدرب','اضيف مدرب')) return '👥 لإضافة حساب: «إضافة الحسابات» → اختر النوع (متدرب/مدرب/إداري) → املأ البيانات → حفظ.';
+  if(has('اضيف خبر','خبر جديد','اعلان','انشر','نشر خبر')) return '📰 لنشر خبر: «الأخبار والإعلانات» → «＋ خبر جديد» → اكتب العنوان والنص، وارفع صورة/مرفقات، وحدّد الفئة والجدولة → نشر.';
+  if(has('جدول','اسوي جدول','انشئ جدول','جدول طالب')) return '📅 لإنشاء جدول: «الجدول» → اختر شعبة أو «جدول طالب مخصّص» → اسحب المواد أو «ولّد الجدول» → «حفظ الجدول».';
+  if(has('صيانه','نسخه احتياطيه','باك اب','ارشفه','نسخه')) return '🧰 من «الصيانة»: فحص صحة النظام، نسخة احتياطية، وأرشفة الدفعات المتخرجة.';
   return null;
 }
 
