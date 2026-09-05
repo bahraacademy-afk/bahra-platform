@@ -7751,6 +7751,8 @@ function officialLetterDoc(innerHtml,title){
   .sign{margin-top:60px;text-align:center;margin-inline-start:auto;width:260px;float:left}
   .sign .role{font-weight:800;font-size:16px;color:#0a2348;margin-bottom:6px}
   .sign .stamp{margin-top:8px;font-size:12px;color:#999;border-top:1px dashed #bbb;padding-top:8px}
+  .signs{display:flex;justify-content:space-around;gap:30px;margin-top:60px}
+  .signs .sign{float:none;margin:0;width:auto;flex:1;max-width:250px}
   .clearfix{clear:both}
   .noprint{position:fixed;top:12px;left:12px;background:#0a2348;color:#fff;border:none;padding:11px 22px;border-radius:10px;cursor:pointer;font-weight:700;font-family:'Cairo',sans-serif;box-shadow:0 3px 10px rgba(10,35,72,.3)}
   .closebtn{position:fixed;top:12px;right:12px;background:#e74c3c;color:#fff;border:none;width:46px;height:46px;border-radius:50%;cursor:pointer;font-size:22px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.3)}
@@ -7798,7 +7800,10 @@ function buildWarningLetter(sid){
     </table>
     <p>وعليه نأمل منك تدارك الأمر والانتظام في الحضور، علماً بأنه عند بلوغ نسبة الغياب <b style="color:#c0392b">25%</b> في أي مقرر يُحرم المتدرب من دخول الاختبار النهائي لذلك المقرر، ولك تقديم الأعذار الرسمية عبر المنصة إن وُجدت.</p>
     <div class="closing">وهذه إفادة منا بذلك ،،</div>
-    <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
+    <div class="signs">
+      <div class="sign"><div class="role">مشرف البرنامج</div><div class="stamp">التوقيع</div></div>
+      <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
+    </div>
     <div class="clearfix"></div>`;
   return officialLetterShell('إشعار غياب',body);
 }
