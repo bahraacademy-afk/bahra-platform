@@ -969,6 +969,29 @@ a{transition:color .15s,opacity .15s}
 @media(max-width:560px){
   .micon{position:static;width:40px;height:40px;margin-bottom:8px !important}
 }
+
+/* ===== 🤖 المساعد الذكي ===== */
+#assistWidget{position:fixed;inset-inline-start:20px;bottom:20px;z-index:9998}
+.assist-fab{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),#0e4a78);color:#fff;font-size:24px;box-shadow:0 8px 24px rgba(26,122,191,.45);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.assist-fab:hover{transform:scale(1.08)}
+.assist-panel{position:absolute;bottom:70px;inset-inline-start:0;width:344px;max-width:calc(100vw - 40px);height:490px;max-height:calc(100vh - 130px);background:var(--card2,#112240);border:1px solid var(--border);border-radius:18px;box-shadow:0 18px 55px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden}
+.assist-head{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(135deg,var(--blue),#0e4a78);color:#fff;flex-shrink:0}
+.assist-ava{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px}
+.assist-title{font-weight:800;font-size:15px}
+.assist-sub{font-size:11px;opacity:.85}
+.assist-x{margin-inline-start:auto;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;opacity:.9}
+.assist-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.assist-msg{max-width:86%;padding:10px 13px;border-radius:14px;font-size:13.5px;line-height:1.85;word-wrap:break-word}
+.assist-msg a{color:#6ab8f7}
+.assist-bot{align-self:flex-start;background:rgba(100,160,220,.10);border:1px solid var(--border);border-top-inline-start-radius:4px;color:var(--text)}
+.assist-user{align-self:flex-end;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-top-inline-end-radius:4px}
+.assist-chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 8px;flex-shrink:0}
+.assist-chip{background:rgba(26,122,191,.12);border:1px solid rgba(26,122,191,.3);color:#6ab8f7;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.assist-chip:hover{background:rgba(26,122,191,.22)}
+.assist-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0}
+.assist-input input{flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px;outline:none}
+.assist-send{width:44px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;font-size:15px;cursor:pointer;flex-shrink:0}
+@media(max-width:560px){#assistWidget{inset-inline-start:14px;bottom:78px}}
 </style>
 </head>
 <body>
@@ -1059,6 +1082,24 @@ a{transition:color .15s,opacity .15s}
       <span class="fab-dot" id="fabDot"></span>
     </button>
   </div>
+
+  <!-- ===== 🤖 المساعد الذكي (يقرأ بيانات المنصة) ===== -->
+  <div id="assistWidget">
+    <div id="assistPanel" class="assist-panel" hidden>
+      <div class="assist-head">
+        <div class="assist-ava">🤖</div>
+        <div style="flex:1;min-width:0"><div class="assist-title">مساعد بحرة</div><div class="assist-sub">يجاوبك من بيانات المنصة</div></div>
+        <button class="assist-x" onclick="toggleAssist(false)" aria-label="إغلاق">✕</button>
+      </div>
+      <div id="assistBody" class="assist-body"></div>
+      <div id="assistChips" class="assist-chips"></div>
+      <div class="assist-input">
+        <input id="assistInput" placeholder="اكتب سؤالك..." autocomplete="off" onkeydown="if(event.key==='Enter')assistSend()">
+        <button class="assist-send" onclick="assistSend()" aria-label="إرسال">➤</button>
+      </div>
+    </div>
+    <button id="assistFab" class="assist-fab" onclick="toggleAssist()" title="مساعد بحرة">💬</button>
+  </div>
 </div>
 
 <script>
@@ -1066,7 +1107,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxB0iG1lhPyoDjMpewoUJQEflAjLGYKTFFRc0-8rXRqU0qp9jkYTNC-FINnwya91LjL/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbw--H9w-PZufvKlgjugxskflajztT5GJQh6SllcgYht_JkD-5dSh4sVZVsuMijV6L6j/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1100,16 +1141,34 @@ async function loadLessonPreps(){
 // ===== 📰 تحميل الأخبار والإعلانات =====
 // الخادم يرجّع للمتدرب/المدرب الأخبار الموجّهة له فقط؛ الإداري يستلم الكل لإدارتها
 async function loadNews(){
-  const rows=await fetchSheet('الأخبار!A:K').catch(()=>[]);
+  const rows=await fetchSheet('الأخبار!A:L').catch(()=>[]);
   news=[];
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!n0(r[0]))continue;
     news.push({id:n0(r[0]),title:n0(r[1]),body:n0(r[2]),imageUrl:n0(r[3]),
       audience:n0(r[4])||'الكل',grp:n0(r[5]),pinned:n0(r[6])==='نعم',
-      startDate:n0(r[7]),endDate:n0(r[8]),author:n0(r[9]),createdAt:n0(r[10])});
+      startDate:n0(r[7]),endDate:n0(r[8]),author:n0(r[9]),createdAt:n0(r[10]),
+      attachments:parseAttach(n0(r[11]))});
   }
   // المثبّت أولاً ثم الأحدث (حسب تاريخ الإنشاء)
   news.sort((a,b)=>(b.pinned-a.pinned)||String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+}
+// المرفقات مخزّنة كـ name::url::type مفصولة بـ | — نحوّلها لمصفوفة
+function parseAttach(s){
+  return String(s||'').split('|').map(x=>x.trim()).filter(Boolean).map(x=>{
+    const p=x.split('::'); return {name:p[0]||'ملف',url:p[1]||'',type:p[2]||'link'};
+  }).filter(a=>a.url);
+}
+function serializeAttach(arr){
+  return (arr||[]).filter(a=>a&&a.url).map(a=>`${String(a.name||'ملف').replace(/[|:]/g,' ')}::${a.url}::${a.type||'link'}`).join('|');
+}
+// رفع ملف واحد للخادم → يرجّع {url, img, name}
+async function uploadOne(file){
+  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej();r.readAsDataURL(file);}).catch(()=>'');
+  if(!b64)throw new Error('read');
+  const up=await withRetry(()=>postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'uploadFile',fileData:b64,fileName:file.name,mime:file.type||'application/octet-stream'}),2);
+  if(!up||up.status!=='ok'||!up.url)throw new Error(up&&up.msg||'upload');
+  return up;
 }
 // هل الخبر ضمن نافذة العرض الآن؟ (للعرض عند الإداري الذي يستلم كل الأخبار)
 function newsIsLive(nw){
@@ -1152,6 +1211,7 @@ function newsCardHTML(nw,isAdmin){
       ${pin}
     </div>
     <div style="font-size:14px;line-height:1.9;color:var(--text);white-space:pre-wrap">${esc(nw.body)}</div>
+    ${(nw.attachments&&nw.attachments.length)?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${nw.attachments.map(a=>`<a href="${escUrl(a.url)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:6px;background:rgba(26,122,191,.12);border:1px solid rgba(26,122,191,.3);color:#6ab8f7;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;text-decoration:none">${a.type==='file'?'📎':'🔗'} ${esc(a.name)}</a>`).join('')}</div>`:''}
     <div style="font-size:11px;color:var(--muted);margin-top:10px">${newsMeta(nw)}</div>
     ${admBadges}${admBtns}
   </div>`;
@@ -1179,7 +1239,9 @@ function adminNewsPage(){
 }
 // نموذج إضافة/تعديل خبر
 function openNewsForm(id){
-  const nw=(id?(news||[]).find(x=>x.id===id):null)||{id:'',title:'',body:'',imageUrl:'',audience:'الكل',grp:'',pinned:false,startDate:'',endDate:''};
+  const nw=(id?(news||[]).find(x=>x.id===id):null)||{id:'',title:'',body:'',imageUrl:'',audience:'الكل',grp:'',pinned:false,startDate:'',endDate:'',attachments:[]};
+  window._nwAttach=(nw.attachments||[]).slice(); // المرفقات الحالية
+  window._nwImgFile=null;                          // صورة مرفوعة جديدة (إن وُجدت)
   document.getElementById('newsFormModal')?.remove();
   const overlay=document.createElement('div');
   overlay.className='modal-overlay'; overlay.id='newsFormModal';
@@ -1191,7 +1253,14 @@ function openNewsForm(id){
     <input type="hidden" id="nwId" value="${escAttr(nw.id)}">
     <div class="mform-group"><label>العنوان *</label><input id="nwTitle" class="grade-input" style="width:100%" value="${escAttr(nw.title)}" placeholder="عنوان الخبر"></div>
     <div class="mform-group"><label>النص *</label><textarea id="nwBody" class="grade-input" style="width:100%;min-height:120px;resize:vertical" placeholder="تفاصيل الخبر أو الإعلان">${esc(nw.body)}</textarea></div>
-    <div class="mform-group"><label>رابط صورة (اختياري)</label><input id="nwImg" class="grade-input" style="width:100%" value="${escAttr(nw.imageUrl)}" placeholder="https://..."></div>
+    <div class="mform-group"><label>صورة الخبر (اختياري)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="nwImg" class="grade-input" style="flex:1;min-width:200px" value="${escAttr(nw.imageUrl)}" placeholder="ألصق رابط صورة، أو ارفع ملفاً ←">
+        <input type="file" id="nwImgFile" accept="image/*" style="display:none" onchange="nwPickImg(this)">
+        <button type="button" class="btn btn-out btn-sm" onclick="document.getElementById('nwImgFile').click()">📤 رفع صورة</button>
+      </div>
+      <div id="nwImgName" style="font-size:11px;color:var(--green);margin-top:4px"></div>
+    </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <div class="mform-group" style="flex:1;min-width:180px"><label>الفئة المستهدفة</label>
         <select id="nwAud" class="grade-input" style="width:100%" onchange="document.getElementById('nwGrpWrap').style.display=(this.value==='متدرب')?'block':'none'">
@@ -1204,15 +1273,203 @@ function openNewsForm(id){
       <div class="mform-group" style="flex:1;min-width:150px"><label>تاريخ البدء (اختياري)</label><input type="date" id="nwStart" class="grade-input" style="width:100%" value="${escAttr(nw.startDate)}"></div>
       <div class="mform-group" style="flex:1;min-width:150px"><label>تاريخ الانتهاء (اختياري)</label><input type="date" id="nwEnd" class="grade-input" style="width:100%" value="${escAttr(nw.endDate)}"></div>
     </div>
+    <div class="mform-group"><label>مرفقات وروابط (اختياري)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <input type="file" id="nwAttFile" style="display:none" onchange="nwAddFile(this)">
+        <button type="button" class="btn btn-out btn-sm" onclick="document.getElementById('nwAttFile').click()">📎 إضافة ملف</button>
+        <button type="button" class="btn btn-out btn-sm" onclick="nwAddLink()">🔗 إضافة رابط</button>
+      </div>
+      <div id="nwAttList"></div>
+    </div>
     <div class="mform-group"><label style="display:flex;gap:8px;align-items:center;cursor:pointer"><input type="checkbox" id="nwPin" ${nw.pinned?'checked':''}> 📌 تثبيت الخبر أعلى الصفحة</label></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <button class="btn btn-b" onclick="saveNewsForm()">${id?'حفظ التعديلات':'نشر الخبر'}</button>
       <button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:10px">الصورة تُضاف برابط مباشر (مثلاً من Google Drive بصيغة عرض عام، أو أي رابط صورة).</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:10px">الحد الأقصى لحجم الملف 5 ميجا. الصورة/الملفات تُرفع تلقائياً إلى Drive عند اختيارها.</div>
   </div>`;
   document.body.appendChild(overlay);
+  nwRenderAttach();
 }
+// عرض قائمة المرفقات المضافة داخل النموذج
+function nwRenderAttach(){
+  const host=document.getElementById('nwAttList'); if(!host)return;
+  const arr=window._nwAttach||[];
+  host.innerHTML=arr.length?arr.map((a,i)=>`<div style="display:flex;align-items:center;gap:8px;background:rgba(26,122,191,.08);border:1px solid var(--border);border-radius:8px;padding:7px 10px;margin-bottom:6px">
+    <span>${a.type==='file'?'📎':'🔗'}</span>
+    <span style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(a.name)}</span>
+    <button type="button" onclick="nwRemoveAttach(${i})" style="background:none;border:none;color:#ff8a92;cursor:pointer;font-weight:800">✕</button>
+  </div>`).join(''):'<div style="font-size:11px;color:var(--muted)">لا توجد مرفقات — أضف ملفاً أو رابطاً.</div>';
+}
+function nwRemoveAttach(i){ (window._nwAttach||[]).splice(i,1); nwRenderAttach(); }
+// اختيار صورة الخبر (تُرفع عند الحفظ)
+function nwPickImg(inp){
+  const f=inp.files&&inp.files[0]; const lbl=document.getElementById('nwImgName');
+  if(!f){window._nwImgFile=null;if(lbl)lbl.textContent='';return;}
+  if(f.size>5*1024*1024){showToast('حجم الصورة كبير (الحد 5 ميجا)','w');inp.value='';return;}
+  window._nwImgFile=f; if(lbl)lbl.textContent='📷 '+f.name+' — ستُرفع عند الحفظ';
+}
+// إضافة ملف مرفق (يُرفع فوراً)
+async function nwAddFile(inp){
+  const f=inp.files&&inp.files[0]; if(!f)return;
+  if(f.size>5*1024*1024){showToast('حجم الملف كبير (الحد 5 ميجا)','w');inp.value='';return;}
+  showToast('جاري رفع الملف...','i');
+  try{
+    const up=await uploadOne(f);
+    (window._nwAttach=window._nwAttach||[]).push({name:f.name,url:up.url,type:'file'});
+    nwRenderAttach(); showToast('✅ تم رفع الملف','s');
+  }catch(e){ showToast('تعذّر رفع الملف — تأكد من نشر الخادم','e'); }
+  inp.value='';
+}
+// إضافة رابط خارجي
+function nwAddLink(){
+  const url=prompt('ألصق الرابط (https://...):'); if(!url)return;
+  const u=String(url).trim(); if(!/^https?:\/\//i.test(u)){showToast('الرابط غير صالح','w');return;}
+  const name=(prompt('اسم يظهر للرابط (اختياري):')||u).trim();
+  (window._nwAttach=window._nwAttach||[]).push({name:name||u,url:u,type:'link'});
+  nwRenderAttach();
+}
+
+// ================= 🤖 المساعد الذكي (يجاوب من بيانات المنصة) =================
+function assistNorm(s){return String(s||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();}
+function toggleAssist(force){
+  const p=document.getElementById('assistPanel'); if(!p)return;
+  const open=(force===undefined)?p.hidden:!!force;
+  p.hidden=!open;
+  if(open){
+    const body=document.getElementById('assistBody');
+    if(body && !body.dataset.init){ body.dataset.init='1'; assistAddMsg(assistWelcome(),'bot'); assistRenderChips(); }
+    setTimeout(()=>{const i=document.getElementById('assistInput');if(i)i.focus();},50);
+  }
+}
+function assistWelcome(){
+  const nm=((user&&user.name)||'').split(' ')[0]||'';
+  const scope=role==='s'?'دوراتك، جدولك، غيابك، درجاتك، وشهادتك':role==='t'?'موادك، طلابك، وجدولك':'المتدربين، المقررات، والتنبيهات';
+  return 'أهلاً '+esc(nm)+'! 👋 أنا مساعد بحرة، أقدر أجاوبك عن '+scope+'. اختر زراً تحت أو اكتب سؤالك.';
+}
+function assistChipsList(){
+  if(role==='s')return ['دوراتي','جدولي','غيابي','معدّلي','شهادتي','كيف أطلب خدمة؟'];
+  if(role==='t')return ['موادي','طلابي','جدولي','كيف أسجّل الحضور؟'];
+  return ['عدد المتدربين','المقررات','التنبيهات','كيف أضيف خبر؟'];
+}
+function assistRenderChips(){
+  const h=document.getElementById('assistChips'); if(!h)return;
+  h.innerHTML=assistChipsList().map(c=>`<button class="assist-chip" onclick="assistAsk(${JSON.stringify(c)})">${esc(c)}</button>`).join('');
+}
+function assistAddMsg(html,who){
+  const body=document.getElementById('assistBody'); if(!body)return;
+  const d=document.createElement('div'); d.className='assist-msg '+(who==='user'?'assist-user':'assist-bot'); d.innerHTML=html;
+  body.appendChild(d); body.scrollTop=body.scrollHeight;
+}
+function assistSend(){
+  const i=document.getElementById('assistInput'); if(!i)return;
+  const t=i.value.trim(); if(!t)return; i.value='';
+  assistAsk(t);
+}
+function assistAsk(text){
+  assistAddMsg(esc(text),'user');
+  setTimeout(()=>{ try{ assistAddMsg(assistReply(text),'bot'); }catch(e){ assistAddMsg('صار خطأ بسيط — جرّب سؤالاً آخر.','bot'); } },160);
+}
+function assistReply(qRaw){
+  const q=assistNorm(qRaw);
+  const has=(...ws)=>ws.some(w=>q.includes(assistNorm(w)));
+  if(has('مرحبا','السلام','هلا','هاي','اهلا','هلا')) return 'أهلاً '+esc(((user&&user.name)||'').split(' ')[0]||'')+'! 👋 كيف أقدر أساعدك؟';
+  if(has('شكرا','يعطيك','تسلم','مشكور','يعطيك العافيه')) return 'العفو! 🌟 أي وقت.';
+  if(has('وش تسوي','ايش تسوي','وش تقدر','ايش تقدر','قدراتك','تساعدني','مساعده','وش عندك')) return assistCaps();
+  let r=null;
+  if(role==='s') r=assistStudent(has); else if(role==='t') r=assistTrainer(has); else if(role==='a') r=assistAdmin(has);
+  if(r) return r;
+  return 'ما فهمت سؤالك تماماً 🤔<br>'+assistCaps();
+}
+function assistCaps(){
+  if(role==='s') return 'أقدر أجاوبك عن: <b>دوراتك</b> · <b>جدولك</b> · <b>غيابك</b> · <b>معدّلك</b> · <b>شهادتك</b> · <b>كيف تطلب خدمة</b>.';
+  if(role==='t') return 'أقدر أجاوبك عن: <b>موادك</b> · <b>طلابك</b> · <b>جدولك</b> · <b>كيف تسجّل الحضور</b>.';
+  return 'أقدر أجاوبك عن: <b>عدد المتدربين</b> · <b>المقررات</b> · <b>التنبيهات</b> · <b>كيف تضيف حساب/خبر/جدول</b>.';
+}
+// ---- متدرب ----
+function assistStudent(has){
+  if(has('دوراتي','موادي','مقرراتي','موادي الحاليه','موادي الحاليه')){
+    const cs=(courses||[]).filter(c=>isActive(c.status));
+    if(!cs.length) return 'ما عندك مواد حالية مسجّلة. 📭';
+    return '📚 موادك الحالية ('+cs.length+'):<br>'+cs.map(c=>'• '+esc(c.course)+' — '+Math.round(c.pct||0)+'%').join('<br>');
+  }
+  if(has('جدول','حصص','جلسات','جلساتي','متى حصت','القادمه','متى درس','حصصي')) return assistStudentSchedule();
+  if(has('غياب','غيابي','حضوري','نسبه الغياب','كم غيابي')){
+    const cs=(courses||[]).filter(c=>isActive(c.status));
+    if(!cs.length) return 'ما عندك مواد حالية. 📭';
+    return '🚫 نسبة غيابك:<br>'+cs.map(c=>{const a=Math.round(c.abs||0);const tag=a>=25?' ⛔ محروم':a>=20?' ⚠️ إنذار ثاني':a>=10?' ⚠️ إنذار أول':'';return '• '+esc(c.course)+' — '+a+'%'+tag;}).join('<br>')+'<br><span style="color:var(--muted);font-size:11px">الحرمان عند 25%.</span>';
+  }
+  if(has('درجاتي','درجتي','معدلي','معدل','تقديري','مجموعي','نتيجتي')){
+    const gpa=(typeof gpaDisplay==='function')?gpaDisplay(courses):'—';
+    const avg=(typeof avgPct==='function')?avgPct(courses):'';
+    return '🏆 معدّلك التراكمي: <b>'+gpa+'</b> / 5'+(avg!==''?'<br>📈 متوسط درجاتك: <b>'+avg+'%</b>':'')+'<br><span style="color:var(--muted);font-size:11px">التفاصيل في صفحة «أدائي».</span>';
+  }
+  if(has('شهاده','شهادتي','شهاداتي','سيرتي')){
+    if(user&&user.cert&&/^https?:/i.test(user.cert)) return '🎓 شهادتك الإلكترونية جاهزة: <a href="'+escUrl(user.cert)+'" target="_blank">اضغط للعرض</a>';
+    return 'ما فيه شهادة إلكترونية مرفوعة لك حالياً. راجع الإدارة. 🎓';
+  }
+  if(has('طلب','خدمه','اطلب','افاده','عذر','كيف اسجل طلب','اقدم طلب')) return '📝 لتقديم طلب: افتح «الخدمات» من القائمة → اختر نوع الطلب → املأ التفاصيل → إرسال، وتابع حالته من نفس الصفحة.';
+  return null;
+}
+function assistStudentSchedule(){
+  try{
+    const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+    const grid={};
+    const personal=schedule[STU_PREFIX+String(user.id)]||schedule[STU_PREFIX+dg(user.id)];
+    if(personal&&Object.keys(personal).length){Object.assign(grid,personal);}
+    else{
+      const mine=new Set((courses||[]).filter(c=>isActive(c.status)).map(c=>nrm(c.course)));
+      const og=schedule[user.grp]||{};
+      for(const sl in og){if(mine.has(nrm(og[sl].course)))grid[sl]=og[sl];}
+      for(const g in schedule){if(g===user.grp||isStuKey(g))continue;const gr=schedule[g]||{};for(const sl in gr){if(mine.has(nrm(gr[sl].course))&&!grid[sl])grid[sl]=gr[sl];}}
+    }
+    const wk=Object.keys(grid).length;
+    if(!wk) return '📅 ما عندك جدول معتمد حالياً. راجع الإدارة أو افتح صفحة «الجدول».';
+    const d=new Date(); const idx=d.getDay(); const isWk=(idx===5||idx===6); const dayName=DAYS[idx===0?0:(idx<=4?idx:-1)];
+    let out='📅 عندك <b>'+wk+'</b> حصة بالأسبوع.';
+    if(isWk){ out+='<br>اليوم عطلة نهاية الأسبوع 🕌.'; }
+    else{
+      const todays=Object.keys(grid).filter(sl=>sl.split('|')[0]===dayName).sort((a,b)=>(+a.split('|')[1])-(+b.split('|')[1]));
+      out+= todays.length? ('<br>حصص اليوم ('+dayName+'):<br>'+todays.map(sl=>{const c=grid[sl];return '• '+esc(c.course)+' — '+periodTime(+sl.split('|')[1])+(c.room?' · '+esc(c.room):'');}).join('<br>')) : ('<br>ما عندك حصص اليوم ('+dayName+').');
+    }
+    return out+'<br><span style="color:var(--muted);font-size:11px">التفاصيل الكاملة في صفحة «الجدول».</span>';
+  }catch(e){ return '📅 جدولك في صفحة «الجدول».'; }
+}
+// ---- مدرب ----
+function assistTrainer(has){
+  if(has('موادي','مقرراتي','موادي الحاليه')){
+    const crs=[...new Set((students||[]).map(s=>s.course))].filter(Boolean);
+    if(!crs.length) return 'ما عندك مواد مسجّلة لك حالياً. 📭';
+    return '📚 موادك ('+crs.length+'):<br>'+crs.map(c=>{const n=uniqStudents((students||[]).filter(s=>s.course===c)).length;return '• '+esc(c)+' — '+n+' متدرب';}).join('<br>');
+  }
+  if(has('طلابي','متدربيني','طلاب','متدربين','كم طالب')){
+    const n=uniqStudents(students||[]).length; return '👥 إجمالي متدربيك: <b>'+n+'</b>.';
+  }
+  if(has('جدول','حصص','جلسات','جدولي')) return '📅 جدولك يظهر في صفحة «الجدول»، وحصص اليوم تظهر أيضاً في «تسجيل الحضور».';
+  if(has('حضور','تحضير','اسجل حضور','كيف اسجل','غياب')) return '✅ لتسجيل الحضور: افتح «تسجيل الحضور» → اختر التاريخ → لكل متدرب اضغط حاضر/متأخر/غائب → «حفظ غياب اليوم». (غائب=يوم كامل · متأخر=نص يوم)';
+  if(has('درجات','رصد','تقييم')) return '📝 لرصد الدرجات: افتح «رصد الدرجات» → اختر المادة → أدخل الدرجات → حفظ.';
+  return null;
+}
+// ---- إداري ----
+function assistAdmin(has){
+  if(has('كم متدرب','عدد المتدربين','متدربين','الطلاب','كم طالب')){
+    return '🎓 المتدربون النشطون: <b>'+((students||[]).length)+'</b>'+((typeof graduates!=='undefined'&&graduates&&graduates.length)?('<br>🏅 الخريجون: <b>'+graduates.length+'</b>'):'')+'.';
+  }
+  if(has('كم مقرر','المقررات','عدد المقررات','مواد','الخطه')){
+    const n=(catalog||[]).length; const act=[...new Set((allCourses||[]).filter(c=>isActive(c.status)).map(c=>normCode(c.code)))].length;
+    return '📚 المقررات في الخطة: <b>'+n+'</b> · نشطة حالياً: <b>'+act+'</b>.';
+  }
+  if(has('تنبيهات','انذارات','مشاكل','محروم','حرمان','اشعارات')){
+    const dep=(allCourses||[]).filter(c=>isActive(c.status)&&(parseFloat(c.abs)||0)>=25).length;
+    return '🔔 حالات الحرمان (غياب ≥ 25%): <b>'+dep+'</b>. للتفاصيل افتح «الإشعارات».';
+  }
+  if(has('اضيف حساب','اضافه حساب','حساب جديد','سجل حساب','اضيف متدرب','اضيف مدرب')) return '👥 لإضافة حساب: افتح «إضافة الحسابات» → اختر النوع (متدرب/مدرب/إداري) → املأ البيانات → حفظ.';
+  if(has('اضيف خبر','خبر جديد','اعلان','انشر','نشر خبر')) return '📰 لنشر خبر: «الأخبار والإعلانات» → «＋ خبر جديد» → اكتب العنوان والنص، وارفع صورة/مرفقات إن حبيت، وحدّد الفئة والجدولة → نشر.';
+  if(has('جدول','اسوي جدول','انشئ جدول','جدول طالب')) return '📅 لإنشاء جدول: «الجدول» → اختر شعبة أو «جدول طالب مخصّص» → اسحب المواد للحصص أو «ولّد الجدول» → «حفظ الجدول».';
+  if(has('صيانه','نسخه احتياطيه','باك اب','ارشفه')) return '🧰 من «الصيانة» تقدر تفحص صحة النظام، وتاخذ نسخة احتياطية، وتؤرشف الدفعات المتخرجة.';
+  return null;
+}
+
 async function saveNewsForm(){
   const item={
     id:document.getElementById('nwId').value.trim(),
@@ -1227,6 +1484,13 @@ async function saveNewsForm(){
   };
   if(!item.title||!item.body){showToast('العنوان والنص مطلوبان','w');return;}
   if(item.startDate&&item.endDate&&item.endDate<item.startDate){showToast('تاريخ الانتهاء قبل تاريخ البدء','w');return;}
+  // ارفع صورة الخبر إن اختيرت كملف
+  if(window._nwImgFile){
+    showToast('جاري رفع الصورة...','i');
+    try{ const up=await uploadOne(window._nwImgFile); item.imageUrl=up.img||up.url; }
+    catch(e){ showToast('تعذّر رفع الصورة — تأكد من نشر الخادم','e'); return; }
+  }
+  item.attachments=serializeAttach(window._nwAttach||[]); // المرفقات والروابط
   showToast('جاري الحفظ...','i');
   try{
     const res=await jsonpCall({action:'saveNews',data:JSON.stringify(item)});
