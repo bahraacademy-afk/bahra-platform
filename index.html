@@ -7801,7 +7801,7 @@ function buildWarningLetter(sid){
     <p>وعليه نأمل منك تدارك الأمر والانتظام في الحضور، علماً بأنه عند بلوغ نسبة الغياب <b style="color:#c0392b">25%</b> في أي مقرر يُحرم المتدرب من دخول الاختبار النهائي لذلك المقرر، ولك تقديم الأعذار الرسمية عبر المنصة إن وُجدت.</p>
     <div class="closing">وهذه إفادة منا بذلك ،،</div>
     <div class="signs">
-      <div class="sign"><div class="role">مشرف البرنامج</div><div class="stamp">التوقيع</div></div>
+      <div class="sign"><div class="role">المشرف الأكاديمي</div><div class="stamp">التوقيع</div></div>
       <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
     </div>
     <div class="clearfix"></div>`;
@@ -7840,7 +7840,10 @@ function introLetterFor(p){
     <div class="to">الى من يهمه الأمر :</div>
     <p>يفيد معهد المعرفة والإبداع العالي للتدريب بأن الطالب / <b>${name}</b> &nbsp; برقم تدريبي <b>${id}</b> &nbsp; قد التحق بالمعهد بتاريخ ${joinHtml} فى دبلوم تخصص <b>${spec}</b> مدته سنتان ونصف وهو مازال مستمر ويدرس بالمعهد حتى تاريخه .</p>
     <div class="closing">وهذه افادة منا بذلك ،،</div>
-    <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
+    <div class="signs">
+      <div class="sign"><div class="role">المشرف الأكاديمي</div><div class="stamp">التوقيع</div></div>
+      <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
+    </div>
     <div class="clearfix"></div>`;
   return officialLetterShell('افادة',body);
 }
@@ -7890,7 +7893,10 @@ function buildAllWarningLetters(){
       </table>
       <p>وعليه نأمل منك تدارك الأمر والانتظام في الحضور، علماً بأنه عند بلوغ نسبة الغياب <b style="color:#c0392b">25%</b> في أي مقرر يُحرم المتدرب من دخول الاختبار النهائي لذلك المقرر، ولك تقديم الأعذار الرسمية عبر المنصة إن وُجدت.</p>
       <div class="closing">وهذه إفادة منا بذلك ،،</div>
-      <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
+      <div class="signs">
+        <div class="sign"><div class="role">المشرف الأكاديمي</div><div class="stamp">التوقيع</div></div>
+        <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
+      </div>
       <div class="clearfix"></div>`;
     return officialLetterSheet('إشعار غياب',body)+(i<list.length-1?'<div class="pagebreak"></div>':'');
   }).join('');
