@@ -972,9 +972,18 @@ a{transition:color .15s,opacity .15s}
 
 /* ===== 🤖 المساعد الذكي ===== */
 #assistWidget{position:fixed;inset-inline-start:20px;bottom:20px;z-index:9998}
-.assist-fab{width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),#0e4a78);color:#fff;font-size:24px;box-shadow:0 8px 24px rgba(26,122,191,.45);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.assist-fab{position:relative;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),#0e4a78);color:#fff;font-size:24px;box-shadow:0 8px 24px rgba(26,122,191,.45);display:flex;align-items:center;justify-content:center;transition:transform .2s}
 .assist-fab:hover{transform:scale(1.08)}
-.assist-panel{position:absolute;bottom:70px;inset-inline-start:0;width:344px;max-width:calc(100vw - 40px);height:490px;max-height:calc(100vh - 130px);background:var(--card2,#112240);border:1px solid var(--border);border-radius:18px;box-shadow:0 18px 55px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden}
+.assist-panel{position:absolute;bottom:70px;inset-inline-start:0;width:344px;max-width:calc(100vw - 40px);height:490px;max-height:calc(100vh - 130px);background:var(--card2,#112240);border:1px solid var(--border);border-radius:18px;box-shadow:0 18px 55px rgba(0,0,0,.55);flex-direction:column;overflow:hidden;display:none}
+.assist-panel.open{display:flex;animation:assistIn .22s cubic-bezier(.16,1,.3,1)}
+@keyframes assistIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.assist-typing{display:inline-flex;gap:4px;align-items:center;padding:4px 2px}
+.assist-typing span{width:7px;height:7px;border-radius:50%;background:var(--muted);opacity:.6;animation:assistDot 1s infinite}
+.assist-typing span:nth-child(2){animation-delay:.15s}
+.assist-typing span:nth-child(3){animation-delay:.3s}
+@keyframes assistDot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-4px);opacity:1}}
+.assist-fab.pulse::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--blue);animation:assistPulse 1.8s ease-out infinite}
+@keyframes assistPulse{0%{opacity:.7;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
 .assist-head{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(135deg,var(--blue),#0e4a78);color:#fff;flex-shrink:0}
 .assist-ava{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px}
 .assist-title{font-weight:800;font-size:15px}
@@ -1085,7 +1094,7 @@ a{transition:color .15s,opacity .15s}
 
   <!-- ===== 🤖 المساعد الذكي (يقرأ بيانات المنصة) ===== -->
   <div id="assistWidget">
-    <div id="assistPanel" class="assist-panel" hidden>
+    <div id="assistPanel" class="assist-panel">
       <div class="assist-head">
         <div class="assist-ava">🤖</div>
         <div style="flex:1;min-width:0"><div class="assist-title">مساعد بحرة</div><div class="assist-sub">يجاوبك من بيانات المنصة</div></div>
@@ -1098,7 +1107,7 @@ a{transition:color .15s,opacity .15s}
         <button class="assist-send" onclick="assistSend()" aria-label="إرسال">➤</button>
       </div>
     </div>
-    <button id="assistFab" class="assist-fab" onclick="toggleAssist()" title="مساعد بحرة">💬</button>
+    <button id="assistFab" class="assist-fab pulse" onclick="toggleAssist()" title="مساعد بحرة" type="button">💬</button>
   </div>
 </div>
 
@@ -1334,14 +1343,19 @@ function nwAddLink(){
 function assistNorm(s){return String(s||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();}
 function toggleAssist(force){
   const p=document.getElementById('assistPanel'); if(!p)return;
-  const open=(force===undefined)?p.hidden:!!force;
-  p.hidden=!open;
+  const isOpen=p.classList.contains('open');
+  const open=(force===undefined)?!isOpen:!!force;
+  p.classList.toggle('open',open);
+  const fab=document.getElementById('assistFab');
+  if(fab){ fab.classList.remove('pulse'); fab.textContent=open?'✕':'💬'; }
   if(open){
     const body=document.getElementById('assistBody');
     if(body && !body.dataset.init){ body.dataset.init='1'; assistAddMsg(assistWelcome(),'bot'); assistRenderChips(); }
-    setTimeout(()=>{const i=document.getElementById('assistInput');if(i)i.focus();},50);
+    setTimeout(()=>{const i=document.getElementById('assistInput');if(i)i.focus();},60);
   }
 }
+// إغلاق بمفتاح Esc
+document.addEventListener('keydown',function(e){ if(e.key==='Escape'){const p=document.getElementById('assistPanel'); if(p&&p.classList.contains('open'))toggleAssist(false);} });
 function assistWelcome(){
   const nm=((user&&user.name)||'').split(' ')[0]||'';
   const scope=role==='s'?'دوراتك، جدولك، غيابك، درجاتك، وشهادتك':role==='t'?'موادك، طلابك، وجدولك':'المتدربين، المقررات، والتنبيهات';
@@ -1368,7 +1382,14 @@ function assistSend(){
 }
 function assistAsk(text){
   assistAddMsg(esc(text),'user');
-  setTimeout(()=>{ try{ assistAddMsg(assistReply(text),'bot'); }catch(e){ assistAddMsg('صار خطأ بسيط — جرّب سؤالاً آخر.','bot'); } },160);
+  const body=document.getElementById('assistBody');
+  if(body){ const t=document.createElement('div'); t.className='assist-msg assist-bot'; t.id='assistTyping';
+    t.innerHTML='<span class="assist-typing"><span></span><span></span><span></span></span>';
+    body.appendChild(t); body.scrollTop=body.scrollHeight; }
+  setTimeout(()=>{
+    document.getElementById('assistTyping')?.remove();
+    try{ assistAddMsg(assistReply(text),'bot'); }catch(e){ assistAddMsg('صار خطأ بسيط — جرّب سؤالاً آخر.','bot'); }
+  }, 480);
 }
 function assistReply(qRaw){
   const q=assistNorm(qRaw);
@@ -1379,7 +1400,11 @@ function assistReply(qRaw){
   let r=null;
   if(role==='s') r=assistStudent(has); else if(role==='t') r=assistTrainer(has); else if(role==='a') r=assistAdmin(has);
   if(r) return r;
-  return 'ما فهمت سؤالك تماماً 🤔<br>'+assistCaps();
+  return 'ما فهمت سؤالك تماماً 🤔 جرّب أحد هذه:'+assistSuggest();
+}
+// اقتراحات قابلة للضغط (للرد الاحتياطي)
+function assistSuggest(){
+  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+assistChipsList().map(c=>`<button class="assist-chip" onclick="assistAsk(${JSON.stringify(c)})">${esc(c)}</button>`).join('')+'</div>';
 }
 function assistCaps(){
   if(role==='s') return 'أقدر أجاوبك عن: <b>دوراتك</b> · <b>جدولك</b> · <b>غيابك</b> · <b>معدّلك</b> · <b>شهادتك</b> · <b>كيف تطلب خدمة</b>.';
