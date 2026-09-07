@@ -1116,7 +1116,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycby5NQa8TRyqJLAJlqrRXW4gWptuUBLZfA7nyJvIO5dlt_c75cWRjMeZe3rCz9X7FVbN/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbz97fD4rljscsw5nAI5OVHOLWTiL-4eO5EiYHj6SnRCnpKJmHk6i8fuw4Pq-fF5T5nn/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -4153,7 +4153,7 @@ function lpSessionRowHtml(date,period,cls){
     <input type="date" class="lp-in lp-sdate" value="${esc(date||'')}" style="color-scheme:light dark">
     <input class="lp-in lp-speriod" placeholder="الحصة" value="${esc(period||'')}">
     <input class="lp-in lp-scls" placeholder="الفصل/الشعبة" value="${esc(cls||'')}">
-    <button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" title="حذف" onclick="const c=this.closest('#lp_sessions');if(c&&c.querySelectorAll('.lp-srow').length>1)this.closest('.lp-srow').remove();else showToast('لازم تاريخ واحد على الأقل','w')">🗑️</button>
+    <button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" title="حذف" onclick="const wrap=this.closest('.lp-srow').parentElement;if(wrap&&wrap.querySelectorAll('.lp-srow').length>1)this.closest('.lp-srow').remove();else showToast('لازم تاريخ واحد على الأقل','w')">🗑️</button>
   </div>`;
 }
 function lpAddSession(){
@@ -4178,6 +4178,7 @@ function lessonCard(lp,showTrainer,canDelete){
         <div class="cc-meta" style="opacity:.7">أُرسل: ${esc(lp.sentAt||'')}</div></div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn btn-sm btn-b" onclick="viewLessonPrep('${esc(lp.id)}')">👁️ عرض/طباعة</button>
+        ${canDelete?`<button class="btn btn-sm btn-out" onclick="editLessonPrep('${esc(lp.id)}')">✏️ تعديل</button>`:''}
         ${canDelete?`<button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" onclick="delLessonPrep('${esc(lp.id)}')">🗑️</button>`:''}
       </div>
     </div></div>`;
@@ -4293,6 +4294,69 @@ function viewLessonPrep(id){
   if(!lp){showToast('التحضير غير موجود','w');return;}
   openReport(buildLessonDoc(lp));
 }
+// ✏️ نافذة تعديل التحضير (للإداري ولصاحب التحضير) — معرّفات مستقلة تجنّباً للتكرار
+function editLessonPrep(id){
+  const lp=lessonPreps.find(x=>String(x.id)===String(id));
+  if(!lp){showToast('التحضير غير موجود','w');return;}
+  const sessions=lpSessions(lp);
+  const sessRows=(sessions.length?sessions:[{date:'',period:'',cls:lp.grade||''}]).map(s=>lpSessionRowHtml(s.date,s.period,s.cls)).join('');
+  document.getElementById('lpEditModal')?.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='lpEditModal';
+  ov.innerHTML=`<div class="modal-box" style="max-width:640px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:18px;padding:20px;max-height:90vh;overflow-y:auto">
+    <style>${LP_CSS}</style>
+    <div class="modal-title" style="display:flex;align-items:center;margin-bottom:14px">✏️ تعديل التحضير${lp.tname?` — ${esc(lp.tname)}`:''}
+      <button class="modal-close" style="margin-inline-start:auto;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer" onclick="this.closest('.modal-overlay').remove()">✕</button>
+    </div>
+    <input type="hidden" id="e_id" value="${escAttr(lp.id)}">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+      ${lpFld('المادة',`<input id="e_material" class="lp-in" value="${escAttr(lp.material)}">`)}
+      ${lpFld('الفرع/التخصص',`<input id="e_branch" class="lp-in" value="${escAttr(lp.branch)}">`)}
+      ${lpFld('الصف/الشعبة',`<input id="e_grade" class="lp-in" value="${escAttr(lp.grade)}">`)}
+    </div>
+    ${lpFld('التواريخ والحصص',`<div id="e_sessions">${sessRows}</div><button class="btn btn-sm btn-out" type="button" onclick="document.getElementById('e_sessions').insertAdjacentHTML('beforeend', lpSessionRowHtml('','',''))" style="margin-top:4px">➕ إضافة تاريخ</button>`)}
+    ${lpFld('موضوع الدرس',`<input id="e_topic" class="lp-in" value="${escAttr(lp.topic)}">`)}
+    ${lpFld('نواتج التعلم',`<textarea id="e_outcomes" rows="3" class="lp-in">${esc(lp.outcomes)}</textarea>`)}
+    ${lpFld('التمهيد',`<textarea id="e_intro" rows="2" class="lp-in">${esc(lp.intro)}</textarea>`)}
+    ${lpFld('عرض الدرس',`<textarea id="e_present" rows="5" class="lp-in">${esc(lp.present)}</textarea>`)}
+    ${lpFld('التقويم',`<textarea id="e_eval" rows="2" class="lp-in">${esc(lp.eval)}</textarea>`)}
+    ${lpFld('الواجب المنزلي',`<textarea id="e_homework" rows="2" class="lp-in">${esc(lp.homework)}</textarea>`)}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-top:6px">
+      <div><div class="lp-gt">أساليب التعليم والتعلم</div><div class="lp-chips">${lpChk('e-m',LP_METHODS,lp.methods)}</div></div>
+      <div><div class="lp-gt">مصادر التعلم</div><div class="lp-chips">${lpChk('e-s',LP_SOURCES,lp.sources)}</div></div>
+      <div><div class="lp-gt">الوسائل التعليمية</div><div class="lp-chips">${lpChk('e-w',LP_MEDIA,lp.media)}</div></div>
+      <div><div class="lp-gt">الأنشطة</div><div class="lp-chips">${lpChk('e-a',LP_ACTS,lp.activities)}</div></div>
+    </div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-b" type="button" onclick="saveLessonEdit()">💾 حفظ التعديلات</button>
+      <button class="btn btn-out" type="button" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function saveLessonEdit(){
+  const box=document.getElementById('lpEditModal'); if(!box)return;
+  const g=id=>String((box.querySelector('#'+id)||{}).value||'').trim();
+  const chk=cls=>[...box.querySelectorAll('.'+cls+':checked')].map(x=>x.value).join('، ');
+  const sess=[...box.querySelectorAll('#e_sessions .lp-srow')].map(r=>({
+    date:(r.querySelector('.lp-sdate')||{}).value||'',
+    period:((r.querySelector('.lp-speriod')||{}).value||'').trim(),
+    cls:((r.querySelector('.lp-scls')||{}).value||'').trim()
+  })).filter(x=>x.date||x.period||x.cls);
+  const serial=sess.map(x=>[x.date,x.period,x.cls].join('~')).join('|');
+  const obj={id:g('e_id'),material:g('e_material'),branch:g('e_branch'),grade:g('e_grade'),date:serial,period:'',topic:g('e_topic'),outcomes:g('e_outcomes'),intro:g('e_intro'),present:g('e_present'),eval:g('e_eval'),homework:g('e_homework'),methods:chk('e-m'),sources:chk('e-s'),media:chk('e-w'),activities:chk('e-a')};
+  if(!obj.material||!obj.topic){showToast('أدخل المادة وموضوع الدرس على الأقل','w');return;}
+  showToast('جاري حفظ التعديلات...','i');
+  try{
+    const res=await jsonpCall({action:'saveLessonPrep',data:JSON.stringify(obj)});
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الحفظ: '+attErrMsg(res.msg,res.hint),'e');return;}
+    showToast('✅ تم حفظ التعديلات','s');
+    box.remove();
+    await loadLessonPreps();
+    if(user&&user.role==='a')showAPage('lessons',document.getElementById('sn-lessons'));
+    else showTPage('lesson',document.getElementById('sn-lesson'));
+  }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى','e');}
+}
+window.editLessonPrep=editLessonPrep;window.saveLessonEdit=saveLessonEdit;
 // مستند تحضير مُعبّأ قابل للطباعة (مطابق للنموذج)
 function buildLessonDoc(lp){
   const v=x=>esc(x||'');
