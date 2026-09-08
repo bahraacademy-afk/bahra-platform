@@ -1116,7 +1116,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbz97fD4rljscsw5nAI5OVHOLWTiL-4eO5EiYHj6SnRCnpKJmHk6i8fuw4Pq-fF5T5nn/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbz_H521ATvMObBRvVG_QxNoAXx32MjHI7dyVdH0uxzZJCsebEq9TAK7YzRHTYYXMe3D/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1803,9 +1803,15 @@ async function doLogin(){
   document.getElementById('ldg').style.display='block';
   let d=null, netErr=null;
   try{
-    // الرمز يُرسل داخل جسم الطلب (POST) لا في الرابط؛ وعند تعذّر ذلك (متصفح قديم) نرجع لـ JSONP
-    try{ d=await withRetry(()=>postJSONRead(AUTH_URL,{action:'login',role:role,id:sid,pw:sph}),2); }
-    catch(_){ d=await callServer(AUTH_URL,{action:'login',role:role,id:sid,pw:sph}); }
+    // الرمز يُرسل داخل جسم الطلب (POST) لإخفائه؛ لكن على الجوال/Safari كثيراً ما يُحظر POST،
+    // فننتقل بسرعة (خلال 7 ثوانٍ) إلى JSONP الموثوق على كل الأجهزة — لا انتظار طويل.
+    const _lp={action:'login',role:role,id:sid,pw:sph};
+    try{
+      const _guard=new Promise((_,rej)=>setTimeout(()=>rej(new Error('slow')),7000));
+      d=await Promise.race([postJSONRead(AUTH_URL,_lp),_guard]);
+    }catch(_){
+      d=await callServer(AUTH_URL,_lp); // JSONP ثم fetch — يعمل على الجوال
+    }
   }catch(e){ netErr=e&&e.message||'network'; }
   try{
     if(netErr){
@@ -5070,44 +5076,32 @@ async function saveDetailGrades(code,course){
 }
 async function saveGrades(course){
   const ss=students.filter(s=>s.course===course&&isActive(s.status));
-  const records=[];
+  const records=[]; let deprived=0;
   ss.forEach(s=>{
     const grade=gradesData[s.key];
     if(grade!==undefined&&grade!==''){
-      // تحقق من الحرمان - غياب أكثر من 25%
-      if(isDeprived(s.abs)){
-        showToast('⚠️ '+s.name.split(' ')[0]+' محروم (غياب '+Math.round(s.abs)+'%)','w');
-        return;
-      }
+      if(isDeprived(s.abs)){ deprived++; return; } // المحروم يُستبعد من الحفظ
       records.push({key:s.key,sid:s.sid,code:s.code,grp:s.grp,grade:parseFloat(grade)||0});
     }
   });
-  if(!records.length){showToast('لم يتم إدخال أي درجات','w');return}
-  showToast('جاري الحفظ...','i');
+  if(!records.length){showToast('لم تُدخل أي درجات'+(deprived?` (${deprived} محروم مستبعد)`:''),'w');return;}
+  showToast('جاري حفظ درجات '+course+'...','i');
   try{
-    const url=SCRIPT_URL+'?action=saveGrades&data='+encodeURIComponent(JSON.stringify(records))+'&token='+encodeURIComponent(SESSION.token);
-    await new Promise((resolve,reject)=>{
-      const cb='cb_'+Date.now();
-      window[cb]=(d)=>{
-        delete window[cb];
-        document.getElementById('jsonp_'+cb)?.remove();
-        if(d.status==='ok') resolve(d);
-        else reject(new Error(d.msg));
-      };
-      const s=document.createElement('script');
-      s.id='jsonp_'+cb;
-      s.src=url+'&callback='+cb;
-      s.onerror=()=>{delete window[cb];reject(new Error('network'))};
-      document.head.appendChild(s);
-    });
-    showToast('✅ تم حفظ الدرجات في الشيت','s');
-  }catch(e){
-    // fallback - no-cors
-    try{
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveGrades',records}),headers:{'Content-Type':'text/plain'}});
-      showToast('✅ تم إرسال الدرجات','s');
-    }catch(e2){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
-  }
+    // ⭐ jsonpCall يقرأ رد الخادم فعلاً (مع إعادة محاولة) — لا نخفي الفشل خلف no-cors
+    const r=await jsonpCall({action:'saveGrades',data:JSON.stringify(records)});
+    if(!r||(r.status&&r.status!=='ok')){
+      showToast('❌ تعذّر حفظ درجات '+course+': '+attErrMsg(r&&r.msg,r&&r.hint),'e');return;
+    }
+    const n=(r&&typeof r.updated!=='undefined')?r.updated:records.length;
+    if(n===0){
+      showToast('⚠️ ما تطابق أي طالب في «'+course+'» — تأكد أنك مدرّب المادة وأن الشعبة صحيحة','w');return;
+    }
+    // تحديث فوري بالذاكرة ليظهر الحفظ مباشرة
+    ss.forEach(s=>{const g=gradesData[s.key];if(g!==undefined&&g!==''&&!isDeprived(s.abs))s.pct=parseFloat(g)||0;});
+    showToast('✅ تم حفظ درجات '+course+' ('+n+' طالب)'+(deprived?` · ${deprived} محروم مستبعد`:''),'s');
+    // مزامنة صامتة بعد ثوانٍ (الكتابة بالشيت قد تتأخر)
+    setTimeout(()=>{if(typeof loadTrainer==='function')loadTrainer().catch(()=>{});},2500);
+  }catch(e){showToast('تعذّر الاتصال بالخادم — جرّب مرة أخرى','e');}
 }
 
 function triggerUpload(course){
