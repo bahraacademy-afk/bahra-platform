@@ -1803,14 +1803,14 @@ async function doLogin(){
   document.getElementById('ldg').style.display='block';
   let d=null, netErr=null;
   try{
-    // الرمز يُرسل داخل جسم الطلب (POST) لإخفائه؛ لكن على الجوال/Safari كثيراً ما يُحظر POST،
-    // فننتقل بسرعة (خلال 7 ثوانٍ) إلى JSONP الموثوق على كل الأجهزة — لا انتظار طويل.
+    // ⚡ الدخول السريع: JSONP هو الطريقة الأساسية (يرد فوراً ويعمل على كل الأجهزة بما فيها الجوال).
+    // POST/fetch احتياطي فقط إن تعذّر JSONP (نادر).
     const _lp={action:'login',role:role,id:sid,pw:sph};
     try{
-      const _guard=new Promise((_,rej)=>setTimeout(()=>rej(new Error('slow')),7000));
-      d=await Promise.race([postJSONRead(AUTH_URL,_lp),_guard]);
+      d=await jsonpTo(AUTH_URL,_lp);
     }catch(_){
-      d=await callServer(AUTH_URL,_lp); // JSONP ثم fetch — يعمل على الجوال
+      try{ d=await postJSONRead(AUTH_URL,_lp); }
+      catch(__){ d=await fetchGet(AUTH_URL,_lp); }
     }
   }catch(e){ netErr=e&&e.message||'network'; }
   try{
