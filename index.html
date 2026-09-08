@@ -5066,13 +5066,19 @@ async function saveDetailGrades(code,course){
     if(any)totals.push({key:s.key,sid:s.sid,grp:s.grp,total:Math.round(sum*10)/10});
   });
   if(!details.length){showToast('أدخل درجة واحدة على الأقل','w');return;}
-  showToast('جاري حفظ الدرجات...','i');
+  showToast('جاري حفظ درجات '+course+'...','i');
   try{
-    const r=await jsonpCall({action:'saveDetailGrades',data:JSON.stringify({code,grp:(ss[0]||{}).grp,details,totals})});
-    if(r&&r.status!=='ok'&&r.ok!==true){showToast('تعذّر الحفظ'+(r.hint?' — '+r.hint:''),'e');return;}
-    showToast('✅ تم حفظ الدرجات ('+r.updated+' طالب)','s');
+    const payload={token:SESSION.token,action:'saveDetailGrades',code,grp:(ss[0]||{}).grp,details,totals};
+    // ⭐ POST يقرأ الرد ولا يتقيّد بطول الرابط (يناسب كثرة البنود/الطلاب) — و JSONP احتياطي
+    let r=null;
+    try{ r=await withRetry(()=>postJSONRead(SCRIPT_URL,payload),2); }
+    catch(_){ r=await jsonpCall({action:'saveDetailGrades',data:JSON.stringify({code,grp:(ss[0]||{}).grp,details,totals})}); }
+    if(!r||(r.status&&r.status!=='ok'&&r.ok!==true)){showToast('❌ تعذّر حفظ درجات '+course+': '+attErrMsg(r&&r.msg,r&&r.hint),'e');return;}
+    const n=(r&&typeof r.updated!=='undefined')?r.updated:details.length;
+    showToast('✅ تم حفظ درجات '+course+' ('+n+' طالب)','s');
     await loadRubrics();
-  }catch(e){showToast('تعذّر الاتصال بالخادم','e');}
+    if(typeof loadTrainer==='function')setTimeout(()=>loadTrainer().catch(()=>{}),2500);
+  }catch(e){showToast('تعذّر الاتصال بالخادم — جرّب مرة أخرى','e');}
 }
 async function saveGrades(course){
   const ss=students.filter(s=>s.course===course&&isActive(s.status));
@@ -5087,8 +5093,10 @@ async function saveGrades(course){
   if(!records.length){showToast('لم تُدخل أي درجات'+(deprived?` (${deprived} محروم مستبعد)`:''),'w');return;}
   showToast('جاري حفظ درجات '+course+'...','i');
   try{
-    // ⭐ jsonpCall يقرأ رد الخادم فعلاً (مع إعادة محاولة) — لا نخفي الفشل خلف no-cors
-    const r=await jsonpCall({action:'saveGrades',data:JSON.stringify(records)});
+    // ⭐ POST يقرأ الرد ولا يتقيّد بطول الرابط (يناسب الفصول الكبيرة) — و JSONP احتياطي
+    let r=null;
+    try{ r=await withRetry(()=>postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'saveGrades',records}),2); }
+    catch(_){ r=await jsonpCall({action:'saveGrades',data:JSON.stringify(records)}); }
     if(!r||(r.status&&r.status!=='ok')){
       showToast('❌ تعذّر حفظ درجات '+course+': '+attErrMsg(r&&r.msg,r&&r.hint),'e');return;
     }
