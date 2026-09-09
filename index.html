@@ -1116,7 +1116,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx-RC6mxsTbkHR0kNuSrlxmpndlbOKeWVDULtUeNgVxZu8foCSOavMgisqIOzMQZHNF/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzYRY97prP9MGv8PAGwjtoNs6nr68iOLgRJlsvvK5L-zSKc3R_eUy7pGqACojO2kZaJ/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -8745,10 +8745,27 @@ function specListHtml(v){
   if(!list.length)return '<span class="pill pb">غير محدد</span>';
   return list.map(x=>`<span class="pill pg" style="margin:1px">${esc(x)}</span>`).join(' ');
 }
+// هل هذا الطلب يخصّني أنا كمدرب؟
+// الشرط الصحيح: عندي سجل لـ«هذا الطالب بالذات» في «هذه المادة بالذات» (ونفس الشعبة).
+// المنطق القديم كان يقارن اسم المادة بقائمة كل موادي بدون ربطها بالطالب/الشعبة،
+// ولو تعذّرت قراءة اسم المادة كان يُرجع true → فيظهر الطلب لمدربين لا يدرّسون المادة.
+function reqNrmName(v){
+  return String(v||'').replace(/[ً-ْـ]/g,'')
+    .replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي')
+    .replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();
+}
 function trainerOwnsReqCourse(r){
-  const cn=((r.details||'').match(/المادة:\s*([^|]+)/)||[])[1];
-  if(!cn)return true;
-  return [...new Set((students||[]).map(s=>s.course))].includes(cn.trim());
+  const u=user; if(!u||u.role!=='t')return false;
+  const cn=reqNrmName(((r.details||'').match(/المادة:\s*([^|]+)/)||[])[1]||'');
+  if(!cn)return false;                                   // ما قدرنا نحدد المادة → لا تُعرض لأي مدرب
+  const sid=dg(r.sid), grp=dg(r.grp);
+  const mine=(students||[]).filter(s=>dg(s.sid)===sid);  // سجلات هذا الطالب التي أدرّسها أنا فقط
+  if(!mine.length)return false;                          // ليس من طلابي أصلاً
+  return mine.some(s=>{
+    if(reqNrmName(s.course)!==cn)return false;           // لازم نفس المادة بالاسم
+    const sg=dg(s.grp);
+    return !grp||!sg||sg===grp;                          // ونفس الشعبة إن توفّرت
+  });
 }
 function reqTargetMatches(r,u){
   const tr=r.targetRole;
@@ -9039,9 +9056,17 @@ async function actOnRequest(rid,decision){
   const payload={rid,trnStatus:r.trnStatus,supStatus:r.supStatus,genStatus:r.genStatus,dirStatus:r.dirStatus,tgtStatus:r.tgtStatus,finalStatus:r.finalStatus,notes:r.notes,by:user.name};
   showToast('جاري الحفظ...','i');
   try{
-    await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'updateRequest',records:[payload]}),headers:{'Content-Type':'text/plain'}});
+    // ⭐ POST يقرأ الرد — حتى لا يُبلَّغ عن نجاح وهمي إذا رفض الخادم الإجراء
+    let ur=null;
+    try{ ur=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'updateRequest',records:[payload]}); }
+    catch(_){ ur=await jsonpCall({action:'updateRequest',data:JSON.stringify([payload])}); }
+    if(!ur||(ur.status&&ur.status!=='ok')){
+      showToast('❌ تعذّر الحفظ: '+((ur&&(ur.hint||ur.msg))||'راجع صلاحيتك على هذا الطلب'),'e');
+      reloadRequestsPage(); return;
+    }
     if(excuseInfo){
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveAttendance',records:[excuseInfo]}),headers:{'Content-Type':'text/plain'}});
+      try{ await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'saveAttendance',records:[excuseInfo]}); }
+      catch(_){ await jsonpCall({action:'saveAttendance',data:JSON.stringify([excuseInfo])}); }
       showToast('✅ تم الاعتماد وخصم ساعات الغياب','s');
     }else{
       showToast(decision==='مرفوض'?'تم الرفض':decision==='معاد'?'تم الإرجاع للتعديل':decision==='تصعيد'?'✅ تم التصعيد للمدير':'✅ تم الاعتماد','s');
