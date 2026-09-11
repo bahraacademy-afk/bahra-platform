@@ -8633,6 +8633,23 @@ function controlShell(bodyHtml){
   .hdr .meta{margin-right:auto;text-align:left;font-size:11px;color:#5a6b85}
   .cs-title{font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:7px 12px;border-radius:6px;margin:16px 0 8px}
   .cs-block{margin-bottom:22px}
+  /* ⭐ كل شعبة في صفحة طباعة مستقلة */
+  @media print{
+    .cs-block{break-after:page;page-break-after:always}
+    .cs-block:last-of-type{break-after:auto;page-break-after:auto}
+    .cs-block.hidden{display:none}
+    table.cs thead{display:table-header-group}      /* تتكرّر الترويسة في كل صفحة */
+    table.cs tr{break-inside:avoid;page-break-inside:avoid}
+    .hdr{break-after:avoid;page-break-after:avoid}
+  }
+  .cs-block.hidden{display:none}
+  .cs-sub{font-size:10px;color:#5a6b85;margin:0 2px 6px;display:none}
+  @media print{.cs-sub{display:block}}
+  .cs-bar{position:fixed;top:8px;left:60px;display:flex;gap:8px;align-items:center;background:#0a2348;
+    padding:7px 12px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:50}
+  .cs-bar label{color:#dbe7f5;font-size:12px;font-weight:700}
+  .cs-bar select{font-family:'Tajawal',sans-serif;font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #2b4a7a;background:#fff;color:#0a2348;font-weight:700}
+  .cs-hint{color:#c9a227;font-size:11px;font-weight:700}
   table.cs{width:100%;border-collapse:collapse;font-size:10px}
   table.cs th,table.cs td{border:1px solid #6b7a90;padding:3px 4px;text-align:center;line-height:1.35}
   table.cs th{background:#0a2348;color:#fff;font-weight:700}
@@ -8657,8 +8674,27 @@ function controlShell(bodyHtml){
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
   <button class="closebtn" onclick="window.close()">✕</button>
+  <div class="cs-bar noprint">
+    <label for="csPick">اطبع:</label>
+    <select id="csPick" onchange="csFilter(this.value)"></select>
+    <span class="cs-hint">💡 اختر «أفقي / Landscape» في إعدادات الطباعة</span>
+  </div>
   <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">شيت الكنترول — كشف درجات مجمّع لكل شعبة</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
   ${bodyHtml}
+  <script>
+  // كل شعبة في صفحة مستقلة عند الطباعة · ويمكن طباعة شعبة واحدة فقط
+  (function(){
+    var blocks=[].slice.call(document.querySelectorAll('.cs-block'));
+    var sel=document.getElementById('csPick');
+    if(!sel)return;
+    var opts='<option value="all">كل الشعب ('+blocks.length+') — كل شعبة في صفحة</option>';
+    blocks.forEach(function(b,i){ opts+='<option value="'+i+'">الشعبة '+(b.getAttribute('data-grp')||(i+1))+' فقط</option>'; });
+    sel.innerHTML=opts;
+    window.csFilter=function(v){
+      blocks.forEach(function(b,i){ b.classList.toggle('hidden', v!=='all' && String(i)!==String(v)); });
+    };
+  })();
+  <\/script>
   </body></html>`;
 }
 function printControlSheet(){
@@ -8728,7 +8764,8 @@ function printControlSheet(){
       });
       return `<tr>${tds}</tr>`;
     }).join('');
-    body+=`<div class="cs-block"><div class="cs-title">🎛️ شيت كنترول — الشعبة ${esc(String(g))} <span style="font-size:11px;opacity:.85">(${gs.length} متدرب · ${courses.length} مادة)</span></div>
+    body+=`<div class="cs-block" data-grp="${esc(String(g))}"><div class="cs-title">🎛️ شيت كنترول — الشعبة ${esc(String(g))} <span style="font-size:11px;opacity:.85">(${gs.length} متدرب · ${courses.length} مادة)</span></div>
+      <div class="cs-sub">معهد المعرفة والإبداع العالي للتدريب · ${esc(new Date().toLocaleDateString('en-GB'))}</div>
       <table class="cs"><thead>
         <tr>${h1}</tr>
         <tr>${h2}</tr>
