@@ -225,34 +225,43 @@ body.light-mode .m-shadow{fill:rgba(26,58,107,.14)}
 .m-pupil{fill:#0a2348;transition:transform .22s cubic-bezier(.2,.8,.3,1)}
 .m-shine{fill:#fff;opacity:.9;transition:transform .22s cubic-bezier(.2,.8,.3,1)}
 .m-mouth{fill:none;stroke:#0a2348;stroke-width:3.4;stroke-linecap:round;transition:d .3s}
-.m-arm{fill:none;stroke:#12558f;stroke-width:13;stroke-linecap:round;
-  transform-box:fill-box;transform-origin:center;transition:transform .38s cubic-bezier(.2,.9,.3,1)}
-.m-tassel,.m-tassel-b{transform-origin:186px 54px;animation:mTassel 3.4s ease-in-out infinite}
+/* الذراع: يتغيّر مسارها فتتبعها اليد — حركة عضو واحد لا قطعتين */
+.m-arm{fill:none;stroke:#59a6e0;stroke-width:15;stroke-linecap:round;
+  transition:d .44s cubic-bezier(.2,.9,.3,1),stroke .3s}
+/* نسخة أغمق خلف الذراع تعطيها حداً واضحاً فوق الوجه */
+.m-armo{stroke:#0d4a80;stroke-width:21}
+.m-tassel,.m-tassel-b{transform-origin:186px 44px;animation:mTassel 3.4s ease-in-out infinite}
 @keyframes mTassel{0%,100%{transform:rotate(0)}50%{transform:rotate(9deg)}}
 /* الرمش */
 .m-lid{fill:url(#mBody);transform-origin:center;transform:scaleY(0);animation:mBlink 5.2s infinite}
 @keyframes mBlink{0%,93%,100%{transform:scaleY(0)}95.5%,97%{transform:scaleY(1)}}
 /* الأيدي — تحت الشاشة افتراضياً */
-.m-hand ellipse{fill:#6fb6ea;stroke:#0d4a80;stroke-width:3.2;filter:drop-shadow(0 4px 8px rgba(4,20,40,.45))}
-.m-fing{stroke:#0d4a80;stroke-width:2.2;stroke-linecap:round;opacity:.55;fill:none}
-.m-hand{transform:translate(120px,215px);opacity:0;
-  transition:transform .42s cubic-bezier(.2,.9,.3,1),opacity .2s}
-/* 👀 يتابع الكتابة */
+.m-hand ellipse{fill:#6fb6ea;stroke:#0d4a80;stroke-width:3;filter:drop-shadow(0 4px 8px rgba(4,20,40,.4))}
+.m-fing{stroke:#0d4a80;stroke-width:2;stroke-linecap:round;opacity:0;fill:none;transition:opacity .3s}
+/* اليد في الوضع العادي: مستريحة بجانب الجسم عند نهاية الذراع */
+.m-hand{transition:transform .44s cubic-bezier(.2,.9,.3,1)}
+.m-hand-r{transform:translate(58px,150px)}
+.m-hand-l{transform:translate(182px,150px)}
+/* 👀 يتابع الكتابة — يلوّح بيده قليلاً */
 .mascot.look .m-pupil,.mascot.look .m-shine,
 .mascot.gaze .m-pupil,.mascot.gaze .m-shine{transform:translate(var(--px,0px),var(--py,2px))}
-.mascot.look .m-arm-r{transform:rotate(-16deg)}
-.mascot.look .m-arm-l{transform:rotate(16deg)}
-/* 🙈 يغطّي عينيه عند الرمز السري */
-.mascot.cover .m-hand{opacity:1}
-.mascot.cover .m-hand-r{transform:translate(100px,92px) rotate(-8deg)}
-.mascot.cover .m-hand-l{transform:translate(140px,92px) rotate(8deg)}
+.mascot.look .m-arm-r{d:path("M74 126 Q56 134 52 140")}
+.mascot.look .m-hand-r{transform:translate(52px,140px) rotate(-12deg)}
+.mascot.look .m-arm-l{d:path("M166 126 Q184 134 188 140")}
+.mascot.look .m-hand-l{transform:translate(188px,140px) rotate(12deg)}
+/* 🙈 يرفع ذراعيه ويغطّي عينيه بيديه */
+.mascot.cover .m-arm-r{d:path("M74 126 Q64 108 98 92")}
+.mascot.cover .m-hand-r{transform:translate(98px,92px) rotate(-14deg)}
+.mascot.cover .m-arm-l{d:path("M166 126 Q176 108 142 92")}
+.mascot.cover .m-hand-l{transform:translate(142px,92px) rotate(14deg)}
+.mascot.cover .m-fing{opacity:.42}
 .mascot.cover .m-lid{transform:scaleY(1);animation:none}
 .mascot.cover .m-mouth{d:path("M108 122 q12 6 24 0")}
-.mascot.cover .m-arm-r{transform:rotate(-58deg)}
-.mascot.cover .m-arm-l{transform:rotate(58deg)}
-/* 🫣 يسترق النظر عند إظهار الرمز */
-.mascot.cover.peek .m-hand-r{transform:translate(100px,112px) rotate(-14deg)}
-.mascot.cover.peek .m-hand-l{transform:translate(140px,112px) rotate(14deg)}
+/* 🫣 ينزّل يديه شوي ويسترق النظر */
+.mascot.cover.peek .m-arm-r{d:path("M74 126 Q68 120 98 110")}
+.mascot.cover.peek .m-hand-r{transform:translate(98px,110px) rotate(-16deg)}
+.mascot.cover.peek .m-arm-l{d:path("M166 126 Q172 120 142 110")}
+.mascot.cover.peek .m-hand-l{transform:translate(142px,110px) rotate(16deg)}
 .mascot.cover.peek .m-lid{transform:scaleY(0)}
 /* 🎉 عند نجاح الدخول */
 .mascot.happy .m-body{animation:mHop .6s cubic-bezier(.2,1.4,.4,1) 2}
@@ -262,9 +271,68 @@ body.light-mode .m-shadow{fill:rgba(26,58,107,.14)}
 .mascot.oops .m-body{animation:mShake .45s ease}
 .mascot.oops .m-mouth{d:path("M108 124 q12 -10 24 0")}
 @keyframes mShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}45%{transform:translateX(8px)}70%{transform:translateX(-5px)}}
+/* ===== ✨ حركات إضافية ===== */
+/* 👋 تلويح ترحيبي عند فتح الشاشة */
+.mascot.wave .m-arm-r{d:path("M74 126 Q46 108 40 84")}
+@keyframes mWaveR{0%,100%{transform:translate(40px,84px) rotate(-24deg)}50%{transform:translate(40px,84px) rotate(10deg)}}
+.mascot.wave .m-hand-r{animation:mWaveR .46s ease-in-out 4 both}
+.mascot.wave .m-mouth{d:path("M106 116 q14 13 28 0")}
+/* 🤔 يفكّر أثناء التحقق من الدخول */
+.mascot.think .m-arm-r{d:path("M74 126 Q86 142 106 132")}
+.mascot.think .m-hand-r{transform:translate(106px,132px) rotate(-34deg)}
+.mascot.think .m-pupil,.mascot.think .m-shine{transform:translate(5px,-5px)}
+.mascot.think .m-mouth{d:path("M110 122 q10 2 20 -2")}
+.m-think circle{fill:#9fc4e8;opacity:0}
+.mascot.think .m-think circle{animation:mThink 1.5s ease-in-out infinite}
+.mascot.think .m-think circle:nth-child(2){animation-delay:.2s}
+.mascot.think .m-think circle:nth-child(3){animation-delay:.4s}
+@keyframes mThink{0%,100%{opacity:0;transform:translateY(4px)}45%{opacity:.9;transform:translateY(0)}}
+/* 🎉 احتفال موسّع عند نجاح الدخول */
+.m-spark path{fill:#ffd76a;opacity:0;transform-box:fill-box;transform-origin:center}
+.mascot.celebrate .m-spark path{animation:mSpark 1s ease-out 2 both}
+.mascot.celebrate .m-spark path:nth-child(2){animation-delay:.12s}
+.mascot.celebrate .m-spark path:nth-child(3){animation-delay:.26s}
+.mascot.celebrate .m-spark path:nth-child(4){animation-delay:.38s}
+.mascot.celebrate .m-spark path:nth-child(5){animation-delay:.5s}
+@keyframes mSpark{0%{opacity:0;transform:scale(.2) rotate(-40deg)}45%{opacity:1;transform:scale(1) rotate(0)}100%{opacity:0;transform:scale(.55) rotate(30deg)}}
+.mascot.celebrate .m-body{animation:mCheer 1.9s cubic-bezier(.2,1.3,.35,1) both}
+@keyframes mCheer{0%{transform:translateY(0)}14%{transform:translateY(-24px) scale(1.04)}28%{transform:translateY(0)}
+  42%{transform:translateY(-18px) scale(1.03)}56%{transform:translateY(0)}70%{transform:translateY(-9px)}100%{transform:translateY(0)}}
+.mascot.celebrate .m-arm-r{d:path("M74 126 Q48 96 42 62")}
+.mascot.celebrate .m-hand-r{transform:translate(42px,62px) rotate(-26deg)}
+.mascot.celebrate .m-arm-l{d:path("M166 126 Q192 96 198 62")}
+.mascot.celebrate .m-hand-l{transform:translate(198px,62px) rotate(26deg)}
+.mascot.celebrate .m-mouth{d:path("M102 114 q18 19 36 0")}
+.mascot.celebrate .m-cap{animation:mCapToss 1.9s cubic-bezier(.2,1.3,.35,1) both;transform-box:fill-box;transform-origin:center bottom}
+@keyframes mCapToss{0%{transform:translateY(0) rotate(0)}16%{transform:translateY(-16px) rotate(-13deg)}
+  34%{transform:translateY(0) rotate(4deg)}52%{transform:translateY(-9px) rotate(-6deg)}100%{transform:translateY(0) rotate(0)}}
+/* 😴 ينعس إذا طال السكون */
+.mascot.sleep .m-lid{transform:scaleY(1);animation:none}
+.mascot.sleep .m-mouth{d:path("M112 122 q8 5 16 0")}
+.m-zzz text{fill:#9fc4e8;font-size:17px;font-weight:900;opacity:0;font-family:system-ui,sans-serif}
+.mascot.sleep .m-zzz text{animation:mZzz 2.6s ease-in-out infinite}
+.mascot.sleep .m-zzz text:nth-child(2){animation-delay:.55s}
+.mascot.sleep .m-zzz text:nth-child(3){animation-delay:1.1s}
+@keyframes mZzz{0%{opacity:0;transform:translate(0,6px) scale(.7)}35%{opacity:.95}100%{opacity:0;transform:translate(6px,-12px) scale(1.15)}}
+/* 💬 فقاعة كلام الشخصية */
+.m-bubble{position:absolute;top:-2px;inset-inline-end:-6px;max-width:200px;background:var(--card2,#112240);
+  color:var(--text,#e8f0f8);border:1px solid var(--border,rgba(255,255,255,.14));border-radius:14px;
+  padding:8px 12px;font-size:12.5px;font-weight:700;line-height:1.7;box-shadow:0 10px 28px rgba(0,0,0,.4);
+  opacity:0;transform:translateY(8px) scale(.9);transform-origin:bottom right;pointer-events:none;
+  transition:opacity .28s,transform .28s cubic-bezier(.2,1.3,.35,1);z-index:3}
+.m-bubble.on{opacity:1;transform:none}
+.m-bubble::after{content:'';position:absolute;bottom:-7px;inset-inline-end:22px;width:12px;height:12px;
+  background:inherit;border-inline-end:1px solid var(--border,rgba(255,255,255,.14));
+  border-bottom:1px solid var(--border,rgba(255,255,255,.14));transform:rotate(45deg)}
+@media(max-width:420px){.m-bubble{max-width:150px;font-size:11.5px;padding:6px 10px}}
+/* ===== 🤖 نسخة مصغّرة تُستخدم داخل المساعد ===== */
+.mascot.mini{width:100%;margin:0;animation:none;position:static}
+.mascot.mini .m-shadow{display:none}
+.mascot.mini .m-head{filter:none}
+.mascot.mini .m-hand ellipse{filter:none}
 @media (prefers-reduced-motion:reduce){
-  .m-body,.m-shadow,.m-tassel,.m-tassel-b,.m-lid{animation:none!important}
-  .m-pupil,.m-shine,.m-hand,.m-arm{transition:none!important}
+  .m-body,.m-shadow,.m-tassel,.m-tassel-b,.m-lid,.m-spark path,.m-think circle,.m-zzz text,.m-cap{animation:none!important}
+  .m-pupil,.m-shine,.m-hand,.m-arm,.m-fing,.m-bubble{transition:none!important}
 }
 @media(max-height:700px){.mascot{width:140px;margin-bottom:-10px}}
 @media(max-width:420px){.mascot{width:160px}}
@@ -1175,8 +1243,17 @@ a{transition:color .15s,opacity .15s}
 
 /* ===== 🤖 المساعد الذكي ===== */
 #assistWidget{position:fixed;inset-inline-start:20px;bottom:20px;z-index:9998}
-.assist-fab{position:relative;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),#0e4a78);color:#fff;font-size:24px;box-shadow:0 8px 24px rgba(26,122,191,.45);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.assist-fab{position:relative;width:58px;height:58px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,var(--blue),#0e4a78);color:#fff;font-size:22px;box-shadow:0 8px 24px rgba(26,122,191,.45);display:flex;align-items:center;justify-content:center;transition:transform .2s;overflow:hidden;padding:0}
 .assist-fab:hover{transform:scale(1.08)}
+.assist-fab:active{transform:scale(.95)}
+/* 🎓 وجه الشخصية داخل الزر بدل الإيموجي */
+.fab-face{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:opacity .2s,transform .2s}
+.fab-face .mascot.mini{width:104%}
+.fab-x{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:0;transform:scale(.6);transition:opacity .2s,transform .2s}
+.assist-fab.open .fab-face{opacity:0;transform:scale(.6)}
+.assist-fab.open .fab-x{opacity:1;transform:none}
+/* 🔴 نقطة تنبيه عند وجود جديد */
+.fab-dot{position:absolute;top:6px;inset-inline-end:6px;width:12px;height:12px;border-radius:50%;background:#ff4757;border:2px solid var(--card2,#112240);box-shadow:0 0 0 2px rgba(255,71,87,.25)}
 .assist-panel{position:absolute;bottom:70px;inset-inline-start:0;width:344px;max-width:calc(100vw - 40px);height:490px;max-height:calc(100vh - 130px);background:var(--card2,#112240);border:1px solid var(--border);border-radius:18px;box-shadow:0 18px 55px rgba(0,0,0,.55);flex-direction:column;overflow:hidden;display:none}
 .assist-panel.open{display:flex;animation:assistIn .22s cubic-bezier(.16,1,.3,1)}
 @keyframes assistIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
@@ -1188,7 +1265,8 @@ a{transition:color .15s,opacity .15s}
 .assist-fab.pulse::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--blue);animation:assistPulse 1.8s ease-out infinite}
 @keyframes assistPulse{0%{opacity:.7;transform:scale(1)}100%{opacity:0;transform:scale(1.5)}}
 .assist-head{display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(135deg,var(--blue),#0e4a78);color:#fff;flex-shrink:0}
-.assist-ava{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px}
+.assist-ava{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;overflow:hidden}
+.assist-ava .mascot.mini{width:106%}
 .assist-title{font-weight:800;font-size:15px}
 .assist-sub{font-size:11px;opacity:.85}
 .assist-x{margin-inline-start:auto;background:none;border:none;color:#fff;font-size:18px;cursor:pointer;opacity:.9}
@@ -1200,6 +1278,17 @@ a{transition:color .15s,opacity .15s}
 .assist-chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 12px 8px;flex-shrink:0}
 .assist-chip{background:rgba(26,122,191,.12);border:1px solid rgba(26,122,191,.3);color:#6ab8f7;border-radius:14px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .assist-chip:hover{background:rgba(26,122,191,.22)}
+/* صف أزرار داخل ردّ المساعد (ينقلك للصفحة مباشرة) */
+.assist-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.assist-acts .assist-chip{font-size:11.5px;padding:5px 10px}
+/* شريط نسبة صغير داخل الرد */
+.assist-bar{display:inline-block;width:52px;height:6px;border-radius:4px;background:rgba(255,255,255,.13);
+  overflow:hidden;vertical-align:middle;margin-inline-start:4px}
+.assist-bar i{display:block;height:100%;border-radius:4px}
+body.light-mode .assist-bar{background:rgba(26,58,107,.12)}
+/* صندوق الملخّص الاستباقي */
+.assist-brief{margin-top:9px;padding:9px 11px;border-radius:11px;background:rgba(26,122,191,.10);
+  border:1px solid rgba(26,122,191,.26);font-size:12.5px;line-height:1.95}
 .assist-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0}
 .assist-input input{flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px;outline:none}
 .assist-send{width:44px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;font-size:15px;cursor:pointer;flex-shrink:0}
@@ -1230,6 +1319,18 @@ a{transition:color .15s,opacity .15s}
 </div>
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- ===== 🎨 تدرّجات الشخصية: معرّفة مرة واحدة ليستطيع أي نسخة منها استخدامها ===== -->
+<svg id="mDefs" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+  <defs>
+    <linearGradient id="mBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f7fc4"/><stop offset="1" stop-color="#12558f"/>
+    </linearGradient>
+    <linearGradient id="mCap" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#123a66"/><stop offset="1" stop-color="#0a2348"/>
+    </linearGradient>
+  </defs>
+</svg>
+
 <!-- ===== LOGIN ===== -->
 <div id="loginPage">
   <div style="position:fixed;top:16px;left:16px;z-index:200;display:flex;gap:10px">
@@ -1244,20 +1345,10 @@ a{transition:color .15s,opacity .15s}
     <!-- ===== 🎓 شخصية تسجيل الدخول: تتابعك وأنت تكتب رقمك، وتغطّي عينيها عند الرمز السري ===== -->
     <div class="mascot" id="mascot" aria-hidden="true">
       <svg viewBox="0 0 240 168" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="mBody" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#2f7fc4"/><stop offset="1" stop-color="#12558f"/>
-          </linearGradient>
-          <linearGradient id="mCap" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#123a66"/><stop offset="1" stop-color="#0a2348"/>
-          </linearGradient>
-        </defs>
         <!-- الظل -->
         <ellipse class="m-shadow" cx="120" cy="156" rx="56" ry="8"/>
         <!-- الجسم -->
         <g class="m-body">
-          <path class="m-arm m-arm-r" d="M64 108 q-26 6 -30 30" />
-          <path class="m-arm m-arm-l" d="M176 108 q26 6 30 30" />
           <ellipse class="m-head" cx="120" cy="98" rx="58" ry="52" fill="url(#mBody)"/>
           <!-- الخدود -->
           <ellipse class="m-cheek" cx="84" cy="112" rx="10" ry="6"/>
@@ -1277,22 +1368,44 @@ a{transition:color .15s,opacity .15s}
           <path class="m-mouth" d="M108 120 q12 11 24 0"/>
           <!-- القبعة -->
           <g class="m-cap">
-            <path d="M120 32 L186 54 L120 76 L54 54 Z" fill="url(#mCap)"/>
-            <rect x="104" y="56" width="32" height="12" rx="3" fill="#0a2348"/>
-            <path class="m-tassel" d="M186 54 L186 76" stroke="#c9a227" stroke-width="3" stroke-linecap="round" fill="none"/>
-            <circle class="m-tassel-b" cx="186" cy="80" r="5" fill="#c9a227"/>
+            <path d="M120 22 L186 44 L120 66 L54 44 Z" fill="url(#mCap)"/>
+            <rect x="104" y="46" width="32" height="12" rx="3" fill="#0a2348"/>
+            <path class="m-tassel" d="M186 44 L186 66" stroke="#c9a227" stroke-width="3" stroke-linecap="round" fill="none"/>
+            <circle class="m-tassel-b" cx="186" cy="70" r="5" fill="#c9a227"/>
           </g>
-          <!-- الأيدي (ترتفع لتغطية العينين) -->
+          <!-- ⭐ الذراعان: مرسومتان أمام الجسم وتنتهيان عند اليد تماماً،
+               فترتفع اليد بذراعها بدل أن تطير وحدها -->
+          <path class="m-arm m-armo m-arm-r" d="M74 126 Q60 140 58 150"/>
+          <path class="m-arm m-arm-r" d="M74 126 Q60 140 58 150"/>
+          <path class="m-arm m-armo m-arm-l" d="M166 126 Q180 140 182 150"/>
+          <path class="m-arm m-arm-l" d="M166 126 Q180 140 182 150"/>
           <g class="m-hand m-hand-r">
-            <ellipse cx="0" cy="0" rx="24" ry="19"/>
-            <path class="m-fing" d="M-11 -13 V13 M0 -15 V15 M11 -13 V13"/>
+            <ellipse cx="0" cy="0" rx="19" ry="15.5"/>
+            <path class="m-fing" d="M-8 -10 V10 M0 -11.5 V11.5 M8 -10 V10"/>
           </g>
           <g class="m-hand m-hand-l">
-            <ellipse cx="0" cy="0" rx="24" ry="19"/>
-            <path class="m-fing" d="M-11 -13 V13 M0 -15 V15 M11 -13 V13"/>
+            <ellipse cx="0" cy="0" rx="19" ry="15.5"/>
+            <path class="m-fing" d="M-8 -10 V10 M0 -11.5 V11.5 M8 -10 V10"/>
+          </g>
+          <!-- ✨ لمعات الاحتفال عند نجاح الدخول -->
+          <g class="m-spark">
+            <path d="M36 74 l3.4 9 9 3.4 -9 3.4 -3.4 9 -3.4 -9 -9 -3.4 9 -3.4z"/>
+            <path d="M206 66 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z"/>
+            <path d="M198 118 l2.6 7 7 2.6 -7 2.6 -2.6 7 -2.6 -7 -7 -2.6 7 -2.6z"/>
+            <path d="M44 124 l2.6 7 7 2.6 -7 2.6 -2.6 7 -2.6 -7 -7 -2.6 7 -2.6z"/>
+            <path d="M120 8 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z"/>
+          </g>
+          <!-- 💭 نقاط التفكير أثناء التحقق من الدخول -->
+          <g class="m-think">
+            <circle cx="182" cy="58" r="4"/><circle cx="194" cy="46" r="5.5"/><circle cx="208" cy="32" r="7"/>
+          </g>
+          <!-- 💤 عند طول الخمول -->
+          <g class="m-zzz">
+            <text x="196" y="64">z</text><text x="210" y="48">z</text><text x="224" y="32">z</text>
           </g>
         </g>
       </svg>
+      <div class="m-bubble" id="mBubble" role="status" aria-live="polite"></div>
     </div>
     <div class="glass">
       <div class="role-tabs">
@@ -1355,8 +1468,8 @@ a{transition:color .15s,opacity .15s}
   <div id="assistWidget">
     <div id="assistPanel" class="assist-panel">
       <div class="assist-head">
-        <div class="assist-ava">🤖</div>
-        <div style="flex:1;min-width:0"><div class="assist-title">مساعد بحرة</div><div class="assist-sub">يجاوبك من بيانات المنصة</div></div>
+        <div class="assist-ava" id="assistAva"></div>
+        <div style="flex:1;min-width:0"><div class="assist-title">مساعد بحرة</div><div class="assist-sub" id="assistSub">مساعدك الشخصي داخل المنصة</div></div>
         <button class="assist-x" onclick="toggleAssist(false)" aria-label="إغلاق">✕</button>
       </div>
       <div id="assistBody" class="assist-body"></div>
@@ -1366,7 +1479,10 @@ a{transition:color .15s,opacity .15s}
         <button class="assist-send" onclick="assistSend()" aria-label="إرسال">➤</button>
       </div>
     </div>
-    <button id="assistFab" class="assist-fab pulse" onclick="toggleAssist()" title="مساعد بحرة" type="button">💬</button>
+    <button id="assistFab" class="assist-fab pulse" onclick="toggleAssist()" title="مساعد بحرة" aria-label="مساعد بحرة" type="button">
+      <span class="fab-face" id="fabFace"></span><span class="fab-x">✕</span>
+      <span class="fab-dot" id="fabDot" hidden></span>
+    </button>
   </div>
 </div>
 
@@ -1622,30 +1738,101 @@ function nwAddLink(){
 
 // ================= 🤖 المساعد الذكي (يجاوب من بيانات المنصة) =================
 function assistNorm(s){return String(s||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();}
+// 🎓 تركيب وجه الشخصية في زر المساعد ورأس المحادثة (نسخة من شخصية شاشة الدخول)
+function assistMountFaces(){
+  if(typeof mascotClone!=='function')return;
+  [['fabFace',''],['assistAva','']].forEach(function(pair){
+    const h=document.getElementById(pair[0]);
+    if(!h||h.querySelector('.mascot'))return;
+    const c=mascotClone(pair[1]); if(c)h.appendChild(c);
+  });
+}
+function assistFace(){ return document.getElementById('assistAva'); }
 function toggleAssist(force){
   const p=document.getElementById('assistPanel'); if(!p)return;
   const isOpen=p.classList.contains('open');
   const open=(force===undefined)?!isOpen:!!force;
   p.classList.toggle('open',open);
   const fab=document.getElementById('assistFab');
-  if(fab){ fab.classList.remove('pulse'); fab.textContent=open?'✕':'💬'; }
+  if(fab){ fab.classList.remove('pulse'); fab.classList.toggle('open',open); }
+  const dot=document.getElementById('fabDot'); if(dot&&open)dot.hidden=true;
   if(open){
+    assistMountFaces();
     const body=document.getElementById('assistBody');
     if(body && !body.dataset.init){ body.dataset.init='1'; assistAddMsg(assistWelcome(),'bot'); assistRenderChips(); }
+    if(typeof miniReact==='function')setTimeout(()=>miniReact(assistFace(),'happy',1400),120);
     setTimeout(()=>{const i=document.getElementById('assistInput');if(i)i.focus();},60);
   }
 }
 // إغلاق بمفتاح Esc
 document.addEventListener('keydown',function(e){ if(e.key==='Escape'){const p=document.getElementById('assistPanel'); if(p&&p.classList.contains('open'))toggleAssist(false);} });
+/* ---------- أدوات مشتركة للمساعد ---------- */
+// 🔗 زر ينقلك مباشرة للصفحة المقصودة
+function assistGo(pg){
+  try{
+    toggleAssist(false);
+    const it=document.getElementById('sn-'+pg)||null;
+    const fn=(role==='s')?showSPage:(role==='t')?showTPage:showAPage;
+    fn(pg,it);
+    const mc=document.getElementById('mcontent'); if(mc&&mc.scrollIntoView)mc.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(e){ if(typeof showToast==='function')showToast('تعذّر فتح الصفحة','w'); }
+}
+function assistAct(label,pg){ return `<button class="assist-chip" type="button" onclick="assistGo('${pg}')">${esc(label)}</button>`; }
+function assistActs(){ const a=[].slice.call(arguments).filter(Boolean); return a.length?'<div class="assist-acts">'+a.join('')+'</div>':''; }
+function assistPct(v){ const n=parseFloat(v); return isFinite(n)?Math.round(n):0; }
+function assistBar(p){
+  const v=Math.max(0,Math.min(100,assistPct(p)));
+  const c=v>=75?'#2ed573':v>=60?'#ffa502':'#ff4757';
+  return `<span class="assist-bar"><i style="width:${v}%;background:${c}"></i></span>`;
+}
+// قائمة مرتّبة مختصرة
+function assistList(arr,n){ const a=arr.slice(0,n||8); return a.join('<br>')+(arr.length>a.length?`<br><span style="color:var(--muted);font-size:11px">… و${arr.length-a.length} غيرهم</span>`:''); }
+function assistHint(t){ return `<br><span style="color:var(--muted);font-size:11px">${t}</span>`; }
+function assistDays(){ return ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][new Date().getDay()]; }
+function assistTomorrow(){ return ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][(new Date().getDay()+1)%7]; }
+
 function assistWelcome(){
   const nm=((user&&user.name)||'').split(' ')[0]||'';
-  const scope=role==='s'?'دوراتك، جدولك، غيابك، درجاتك، وشهادتك':role==='t'?'موادك، طلابك، وجدولك':'المتدربين، المقررات، والتنبيهات';
-  return 'أهلاً '+esc(nm)+'! 👋 أنا مساعد بحرة، أقدر أجاوبك عن '+scope+'. اختر زراً تحت أو اكتب سؤالك.';
+  return 'أهلاً '+esc(nm)+'! 👋 أنا <b>مساعد بحرة</b> — مساعدك الشخصي داخل المنصة.'+assistBriefing()+
+         assistHint('اسألني بلغتك العادية، أو اختر زراً تحت.');
+}
+/* 📌 ملخّص استباقي: أهم شي يخصّك الآن */
+function assistBriefing(){
+  try{
+    const L=[];
+    if(role==='s'){
+      const cur=(courses||[]).filter(c=>isActive(c.status));
+      const td=(typeof todayLessons==='function')?(todayLessons()||[]):[];
+      if(td.length)L.push('📅 عندك <b>'+td.length+'</b> حصة اليوم ('+assistDays()+')');
+      const risky=cur.filter(c=>(parseFloat(c.abs)||0)>=20);
+      if(risky.length)L.push('⚠️ <b>'+risky.length+'</b> مادة غيابك فيها قارب الحرمان');
+      let weak=0; cur.forEach(c=>{ weak+=weakItemsOf(c).length; });
+      if(weak)L.push('📝 <b>'+weak+'</b> بند يحتاج تحسين');
+      const mine=(requests||[]).filter(r=>String(r.sid)===String(user.id)&&/قيد|معلق/.test(r.finalStatus||''));
+      if(mine.length)L.push('📋 <b>'+mine.length+'</b> طلب قيد المراجعة');
+    }else if(role==='t'){
+      const cur=(students||[]).filter(s=>isActive(s.status));
+      const risky=cur.filter(s=>(parseFloat(s.abs)||0)>=20);
+      if(risky.length)L.push('⚠️ <b>'+risky.length+'</b> متدرب قارب الحرمان');
+      const miss=assistMissingGrading(); if(miss.total)L.push('📝 ناقص رصد في <b>'+miss.courses.length+'</b> مادة');
+      const rq=(requests||[]).filter(r=>/معلق/.test(r.trnStatus||'')&&assistMineCourse(r));
+      if(rq.length)L.push('📋 <b>'+rq.length+'</b> طلب ينتظر ردّك');
+    }else{
+      const ac=(allCourses||[]).filter(c=>isActive(c.status));
+      const dep=ac.filter(c=>(parseFloat(c.abs)||0)>=25).length;
+      if(dep)L.push('⛔ <b>'+dep+'</b> حالة حرمان');
+      const rq=(requests||[]).filter(r=>/قيد|معلق/.test(r.finalStatus||'')).length;
+      if(rq)L.push('📋 <b>'+rq+'</b> طلب قيد المراجعة');
+      const orph=assistOrphans(); if(orph.length)L.push('👤 <b>'+orph.length+'</b> متدرب له سجلات بلا حساب');
+    }
+    if(!L.length)return '';
+    return '<div class="assist-brief">'+L.join('<br>')+'</div>';
+  }catch(e){ return ''; }
 }
 function assistChipsList(){
-  if(role==='s')return ['دوراتي','جدولي','غيابي','معدّلي','شهادتي','كيف أطلب خدمة؟'];
-  if(role==='t')return ['موادي','طلابي','جدولي','كيف أسجّل الحضور؟'];
-  return ['عدد المتدربين','المقررات','التنبيهات','كيف أضيف خبر؟'];
+  if(role==='s')return ['ملخصي','وش ناقصني؟','حصص اليوم','غيابي','مقرراتي','الأخبار','شهادتي'];
+  if(role==='t')return ['ملخصي','ناقص رصد','المعرضون للحرمان','أضعف الطلاب','موادي','الطلبات'];
+  return ['ملخص اليوم','الطلبات المعلقة','المعرضون للحرمان','ناقص رصد','أضعف المقررات','بحث عن متدرب'];
 }
 function assistRenderChips(){
   const h=document.getElementById('assistChips'); if(!h)return;
@@ -1661,92 +1848,498 @@ function assistSend(){
   const t=i.value.trim(); if(!t)return; i.value='';
   assistAsk(t);
 }
+
+/* ---------- مساعدات بيانات مشتركة ---------- */
+// مواد ناقصة الرصد (للمدرب/الإداري)
+function assistMissingGrading(){
+  const src=(role==='t')?(students||[]):(allCourses||[]);
+  const map={};
+  src.filter(r=>isActive(r.status)).forEach(r=>{
+    const st=rubricStanding(r);
+    if(!st.hasRubric||st.complete)return;
+    const k=r.course||'—';
+    map[k]=map[k]||{course:k,n:0,missing:0};
+    map[k].n++; map[k].missing+=(st.total-st.graded);
+  });
+  const courses=Object.keys(map).map(k=>map[k]).sort((a,b)=>b.missing-a.missing);
+  return {courses,total:courses.reduce((a,c)=>a+c.missing,0)};
+}
+// هل هذا الطلب يخصّ مادة يدرّسها المدرب الحالي؟
+function assistMineCourse(r){
+  if(role!=='t')return false;
+  const mine=[...new Set((students||[]).map(s=>s.course))];
+  return !r.reqSpec || mine.some(c=>assistNorm(c)===assistNorm(r.reqSpec));
+}
+// متدربون لهم سجلات مقررات بلا حساب في القاعدة المركزية (إداري)
+function assistOrphans(){
+  try{
+    const have=new Set((students||[]).map(s=>String(s.id)));
+    const seen={};
+    (allCourses||[]).forEach(c=>{ const id=String(c.sid||''); if(id&&!have.has(id))seen[id]=c.sname||id; });
+    return Object.keys(seen).map(id=>({id,name:seen[id]}));
+  }catch(e){ return []; }
+}
+// كم يوم غياب باقٍ قبل الحرمان (25%)
+function assistDaysLeft(rec){
+  try{
+    if(typeof courseTotalDays!=='function')return null;
+    const tot=courseTotalDays(rec.course,rec.grp);
+    if(!tot)return null;
+    const used=(parseFloat(rec.abs)||0)/100*tot;   // أيام مستهلكة
+    return {left:Math.max(0,Math.round((tot*0.25-used)*10)/10),total:tot};
+  }catch(e){ return null; }
+}
+// بطاقة بنود مادة
+function assistRubricCard(rec){
+  const st=rubricStanding(rec);
+  if(!st.hasRubric)return '📖 <b>'+esc(rec.course)+'</b> — ما حدّد المدرب بنود الدرجات لهذه المادة بعد.';
+  const rows=st.items.map(i=>{
+    if(!i.has)return '• '+esc(i.cat)+' — <span style="color:var(--muted)">لم تُرصد بعد</span> (من '+i.max+')';
+    const tag=i.weak?' ⚠️':'';
+    return '• '+esc(i.cat)+' — <b>'+i.val+'</b>/'+i.max+' ('+Math.round(i.pct)+'%)'+tag+' '+assistBar(i.pct);
+  });
+  let head='📖 <b>'+esc(rec.course)+'</b> — رُصد '+st.graded+' من '+st.total+' بند';
+  if(st.pctOfGraded!==null)head+='<br>المجموع الحالي: <b>'+st.earned+'</b>/'+st.possible+' ('+st.pctOfGraded+'%)';
+  const w=st.weak.length?assistHint('⚠️ يحتاج تحسين: '+st.weak.map(x=>esc(x.cat)).join('، ')):'';
+  return head+'<br>'+rows.join('<br>')+w;
+}
+function assistCourseCard(c){
+  const st=rubricStanding(c);
+  let s='📖 <b>'+esc(c.course)+'</b>'+(c.code?' <span style="color:var(--muted);font-size:11px">('+esc(c.code)+')</span>':'')+'<br>'
+   +'• الدرجة: <b>'+(c.pct?assistPct(c.pct)+'%':'—')+'</b>'+(c.letter?' ('+esc(c.letter)+')':'')+' '+assistBar(c.pct)+'<br>'
+   +'• الغياب: <b>'+assistPct(c.abs)+'%</b>'+((parseFloat(c.abs)||0)>=25?' ⛔ محروم':(parseFloat(c.abs)||0)>=20?' ⚠️ قارب الحرمان':'')+'<br>'
+   +'• المدرب: '+esc(c.trainer||'—')+(c.half?'<br>• الفصل: '+esc(c.half):'');
+  if(st.hasRubric)s+='<br>• البنود: رُصد <b>'+st.graded+'</b> من '+st.total+(st.weak.length?' · ⚠️ '+st.weak.length+' يحتاج تحسين':'');
+  return s+assistHint('اكتب «بنود '+esc(c.course)+'» لتفاصيل الدرجات.');
+}
+function assistFindCourse(list,q){
+  let best=null,bl=0;
+  (list||[]).forEach(c=>{ const n=assistNorm(c.course); if(n.length>3&&q.includes(n)&&n.length>bl){best=c;bl=n.length;} });
+  return best;
+}
+
+/* ================= 🎓 مهارات المتدرب ================= */
+function assistStudent(has,q){
+  const cur=()=>(courses||[]).filter(c=>isActive(c.status));
+  // بنود مادة معيّنة
+  if(has('بنود','البنود','تفاصيل الدرجه','تفاصيل درجه','توزيع الدرجات','من وين الدرجه')){
+    const hit=assistFindCourse(courses,q);
+    if(hit)return assistRubricCard(hit);
+    const cs=cur(); if(!cs.length)return 'ما عندك مواد حالية. 📭';
+    return '📝 اكتب «بنود» متبوعة باسم المادة، مثل: <b>بنود '+esc(cs[0].course)+'</b>'+
+      assistHint('موادك: '+cs.map(c=>esc(c.course)).join(' · '));
+  }
+  const hit=assistFindCourse(courses,q);
+  if(hit && !has('كل','جميع','كامل')) return assistCourseCard(hit)+assistActs(assistAct('📚 مقرراتي','courses'),assistAct('📊 أدائي','performance'));
+
+  // ⭐ وش ناقصني — البنود الضعيفة عبر كل المواد
+  if(has('ناقصني','ينقصني','احسن','اطور','وش علي','ايش علي','ضعفي','نقاط ضعف','وش اسوي','احتاج احسن','تحسين')){
+    const cs=cur(); const out=[];
+    cs.forEach(c=>{ const w=weakItemsOf(c); if(w.length)out.push('• <b>'+esc(c.course)+'</b>: '+w.map(x=>esc(x.cat)+' '+x.val+'/'+x.max+' ('+Math.round(x.pct)+'%)').join('، ')); });
+    const risky=cs.filter(c=>(parseFloat(c.abs)||0)>=20).map(c=>'• <b>'+esc(c.course)+'</b>: غيابك '+assistPct(c.abs)+'% — قارب الحرمان ⚠️');
+    if(!out.length&&!risky.length)return '🌟 ما فيه شي ناقص عليك — كل بنودك المرصودة فوق '+gradeAlertPct()+'% وغيابك سليم. استمر!';
+    return '📝 اللي يحتاج تحسين:<br>'+out.concat(risky).join('<br>')+
+      assistHint('النسبة المرجعية للتنبيه: '+gradeAlertPct()+'% من درجة البند.')+
+      assistActs(assistAct('📊 أدائي','performance'));
+  }
+  // ⏳ كم باقي لي قبل الحرمان
+  if(has('كم باقي','متى انحرم','حرمان','احرم','باقي لي غياب','كم غياب باقي','متى احرم')){
+    const cs=cur(); if(!cs.length)return 'ما عندك مواد حالية. 📭';
+    const rows=cs.map(c=>{
+      const a=assistPct(c.abs); const d=assistDaysLeft(c);
+      if(a>=25)return '• '+esc(c.course)+' — <b>محروم</b> ⛔ ('+a+'%)';
+      return '• '+esc(c.course)+' — '+a+'%'+(d?(' · يتبقّى لك <b>'+d.left+'</b> يوم قبل الحرمان'):'');
+    });
+    return '⏳ رصيد غيابك:<br>'+rows.join('<br>')+assistHint('الحرمان عند 25% · الغياب يوم كامل = ١ · التأخير = ٠٫٥');
+  }
+  // 📅 حصص اليوم / بكرة
+  if(has('بكره','بكرا','غدا','باچر')) return assistLessonsFor(assistTomorrow(),'غداً');
+  if(has('حصص اليوم','اليوم عندي','عندي اليوم','وش عندي اليوم','حصتي')) return assistLessonsFor(assistDays(),'اليوم');
+  if(has('جدول','حصص','جلسات','جلساتي','القادمه','متى درس','حصصي','محاضراتي')) return assistStudentSchedule()+assistActs(assistAct('📅 جدولي','schedule'));
+
+  if(has('السابقه','سابقه','المنتهيه','مواد سابقه','مواد قديمه','منتهيه')){
+    const past=(courses||[]).filter(c=>!isActive(c.status));
+    if(!past.length) return 'ما عندك مواد سابقة (منتهية) بعد. 📭';
+    return '📘 موادك السابقة ('+past.length+'):<br>'+assistList(past.map(c=>'• <b>'+esc(c.course)+'</b> — '+(c.pct?assistPct(c.pct)+'%':'—')+(c.letter?' ('+esc(c.letter)+')':'')+(c.half?' · '+esc(c.half):'')),10)+
+      assistHint('اكتب اسم مادة لتفاصيلها.')+assistActs(assistAct('🏅 سجلي','record'));
+  }
+  if(has('دوراتي','موادي','مقرراتي','الحاليه','مواد حاليه','عندي مواد')){
+    const cs=cur();
+    if(!cs.length) return 'ما عندك مواد حالية مسجّلة. 📭';
+    return '📚 موادك الحالية ('+cs.length+'):<br>'+cs.map(c=>'• <b>'+esc(c.course)+'</b> — '+(c.pct?assistPct(c.pct)+'%':'—')+(c.letter?' ('+esc(c.letter)+')':'')+' · غياب '+assistPct(c.abs)+'%').join('<br>')+
+      assistHint('اكتب اسم مادة لتفاصيلها الكاملة.')+assistActs(assistAct('📚 مقرراتي','courses'));
+  }
+  // 🏆 أفضل / أضعف مادة
+  if(has('افضل ماده','احسن ماده','اقوى ماده','اعلى درجه')){
+    const cs=cur().filter(c=>parseFloat(c.pct)>0).sort((a,b)=>b.pct-a.pct);
+    if(!cs.length)return 'ما فيه درجات مرصودة بعد. 📭';
+    return '🏆 أفضل مادة عندك: <b>'+esc(cs[0].course)+'</b> — '+assistPct(cs[0].pct)+'% '+assistBar(cs[0].pct);
+  }
+  if(has('اضعف ماده','اقل ماده','اسوا ماده','ادنى درجه')){
+    const cs=cur().filter(c=>parseFloat(c.pct)>0).sort((a,b)=>a.pct-b.pct);
+    if(!cs.length)return 'ما فيه درجات مرصودة بعد. 📭';
+    return '📉 أضعف مادة عندك: <b>'+esc(cs[0].course)+'</b> — '+assistPct(cs[0].pct)+'% '+assistBar(cs[0].pct)+assistHint('اكتب «بنود '+esc(cs[0].course)+'» تشوف وين الخلل.');
+  }
+  // 👨‍🏫 مدربيني
+  if(has('مدربي','مدربين','من يدرسني','المدرب','استاذي','معلمي','ايميل المدرب')){
+    const cs=cur(); if(!cs.length)return 'ما عندك مواد حالية. 📭';
+    const seen={}; cs.forEach(c=>{ if(c.trainer)seen[c.trainer]=(seen[c.trainer]||[]).concat(c.course); });
+    const ks=Object.keys(seen); if(!ks.length)return 'ما فيه مدرب مسجّل لموادك بعد.';
+    return '👨‍🏫 مدربوك:<br>'+ks.map(t=>'• <b>'+esc(t)+'</b> — '+seen[t].map(esc).join('، ')).join('<br>');
+  }
+  if(has('بياناتي','ملفي','معلوماتي','وضعي','ملخص','ملخصي','كل شي','وين وصلت')){
+    const c=cur().length, pastN=(courses||[]).length-c;
+    const gpa=(typeof gpaDisplay==='function')?gpaDisplay(courses):'—';
+    const avg=(()=>{const a=cur().filter(x=>parseFloat(x.pct)>0);return a.length?Math.round(a.reduce((s,x)=>s+(+x.pct),0)/a.length):null;})();
+    return '👤 <b>'+esc(user.name||'')+'</b>'+(user.grp?' · شعبة '+esc(String(user.grp).replace(/\.0$/,'')):'')+(user.spec?' · '+esc(user.spec):'')+
+      '<br>📚 مواد حالية: <b>'+c+'</b> · سابقة: <b>'+pastN+'</b>'+
+      (avg!==null?'<br>📈 متوسط درجاتك الحالية: <b>'+avg+'%</b> '+assistBar(avg):'')+
+      '<br>🏆 المعدّل التراكمي: <b>'+gpa+'</b> / 5'+
+      assistBriefing()+assistActs(assistAct('📊 أدائي','performance'),assistAct('📚 مقرراتي','courses'));
+  }
+  if(has('غياب','غيابي','حضوري','نسبه الغياب','كم غيابي')){
+    const cs=cur();
+    if(!cs.length) return 'ما عندك مواد حالية. 📭';
+    return '🚫 نسبة غيابك:<br>'+cs.map(c=>{const a=assistPct(c.abs);const tag=a>=25?' ⛔ محروم':a>=20?' ⚠️ إنذار ثاني':a>=10?' ⚠️ إنذار أول':'';return '• '+esc(c.course)+' — '+a+'%'+tag;}).join('<br>')+
+      assistHint('الحرمان عند 25%.')+assistActs(assistAct('📊 أدائي','performance'));
+  }
+  if(has('درجاتي','درجتي','معدلي','معدل','تقديري','مجموعي','نتيجتي')){
+    const gpa=(typeof gpaDisplay==='function')?gpaDisplay(courses):'—';
+    const a=cur().filter(x=>parseFloat(x.pct)>0);
+    const avg=a.length?Math.round(a.reduce((s,x)=>s+(+x.pct),0)/a.length):'';
+    return '🏆 معدّلك التراكمي: <b>'+gpa+'</b> / 5'+(avg!==''?'<br>📈 متوسط درجاتك: <b>'+avg+'%</b> '+assistBar(avg):'')+
+      assistActs(assistAct('📊 أدائي','performance'));
+  }
+  if(has('شهاده','شهادتي','شهاداتي','سيرتي')){
+    if(user&&user.cert&&/^https?:/i.test(user.cert)) return '🎓 شهادتك الإلكترونية جاهزة: <a href="'+escUrl(user.cert)+'" target="_blank">اضغط للعرض</a>';
+    return 'ما فيه شهادة إلكترونية مرفوعة لك حالياً. راجع الإدارة. 🎓';
+  }
+  if(has('اخبار','الاخبار','اعلانات','جديد','وش الجديد')) return assistNews();
+  if(has('طلباتي','طلبي','حاله طلب','طلباتى','وين طلبي')){
+    const mine=(requests||[]).filter(r=>String(r.sid)===String(user.id));
+    if(!mine.length)return 'ما عندك طلبات مقدّمة. لتقديم طلب افتح «الخدمات».'+assistActs(assistAct('📝 الخدمات','services'));
+    const last=mine.slice(-5).reverse().map(r=>'• '+esc(r.type||'طلب')+' — <b>'+esc(r.finalStatus||'قيد المراجعة')+'</b>'+(r.date?' · '+esc(r.date):''));
+    return '📋 طلباتك ('+mine.length+'):<br>'+last.join('<br>')+assistActs(assistAct('📝 الخدمات','services'));
+  }
+  if(has('طلب','خدمه','اطلب','افاده','عذر','كيف اسجل طلب','اقدم طلب')) return '📝 لتقديم طلب: افتح «الخدمات» → اختر نوع الطلب → املأ التفاصيل → إرسال، وتابع حالته من نفس الصفحة.'+assistActs(assistAct('📝 الخدمات','services'));
+  if(has('مكتبه','مواد علميه','ملفات','مراجع','كتب')) return '📚 المكتبة العلمية فيها المواد النظرية والعملية لمقرراتك.'+assistActs(assistAct('📚 المكتبة','library'));
+  return null;
+}
+// حصص يوم معيّن
+function assistLessonsFor(dayName,label){
+  try{
+    const grid=(typeof myGridForStudent==='function')?myGridForStudent():null;
+    if(!grid)return '📅 ما لقيت جدولك — افتح صفحة «الجدول».'+assistActs(assistAct('📅 جدولي','schedule'));
+    const slots=Object.keys(grid).filter(k=>k.split('|')[0]===dayName)
+      .sort((a,b)=>(+a.split('|')[1])-(+b.split('|')[1]));
+    if(!slots.length)return '📅 ما عندك حصص '+label+' ('+dayName+'). استرح 🌿';
+    return '📅 حصص '+label+' ('+dayName+'):<br>'+slots.map(k=>{const c=grid[k];
+      return '• <b>'+esc(c.course)+'</b> — '+periodTime(+k.split('|')[1])+(c.room?' · '+esc(c.room):'');}).join('<br>')+
+      assistActs(assistAct('📅 جدولي','schedule'));
+  }catch(e){ return '📅 جدولك في صفحة «الجدول».'+assistActs(assistAct('📅 جدولي','schedule')); }
+}
+function assistNews(){
+  const n=(news||[]).slice(0,4);
+  if(!n.length)return '📰 ما فيه أخبار منشورة حالياً.';
+  return '📰 آخر الأخبار:<br>'+n.map(x=>'• <b>'+esc(x.title||'')+'</b>'+(x.date?' <span style="color:var(--muted);font-size:11px">'+esc(String(x.date).slice(0,10))+'</span>':'')).join('<br>')+
+    assistActs(role==='a'?assistAct('📰 الأخبار','news'):assistAct('🏠 الرئيسية',role==='s'?'home':'home'));
+}
+
+/* ================= 👨‍🏫 مهارات المدرب ================= */
+function assistTrainer(has,q){
+  const cur=()=>(students||[]).filter(s=>isActive(s.status));
+  const myCourses=()=>[...new Set(cur().map(s=>s.course))].filter(Boolean);
+
+  // ⭐ ناقص رصد — أهم سؤال للمدرب
+  if(has('ناقص رصد','ما رصدت','لم ارصد','باقي رصد','ناقص درجات','وش باقي','بنود ناقصه','ناقصني')){
+    const m=assistMissingGrading();
+    if(!m.total)return '✅ ما فيه شي ناقص — كل بنود موادك مرصودة.'+assistActs(assistAct('📝 الدرجات','grades'));
+    return '📝 ناقص رصد في '+m.courses.length+' مادة:<br>'+
+      m.courses.map(c=>'• <b>'+esc(c.course)+'</b> — '+c.missing+' درجة ناقصة على '+c.n+' متدرب').join('<br>')+
+      assistActs(assistAct('📝 رصد الدرجات','grades'));
+  }
+  // ⚠️ المعرضون للحرمان
+  if(has('معرضين','معرضون','قارب الحرمان','قرب الحرمان','خطر','انذار','محرومين','حرمان','غياب عالي')){
+    const r=cur().filter(s=>(parseFloat(s.abs)||0)>=20).sort((a,b)=>b.abs-a.abs);
+    if(!r.length)return '✅ ما فيه متدرب قارب الحرمان في موادك.';
+    return '⚠️ متدربون في منطقة الخطر ('+r.length+'):<br>'+
+      assistList(r.map(s=>'• '+esc(s.name)+' — '+esc(s.course)+' · غياب <b>'+assistPct(s.abs)+'%</b>'+(assistPct(s.abs)>=25?' ⛔':'')),10)+
+      assistHint('الحرمان عند 25%.')+assistActs(assistAct('✅ الحضور','attendance'),assistAct('🗂️ سجل الغياب','attlog'));
+  }
+  // 📉 أضعف الطلاب
+  if(has('اضعف الطلاب','اضعف المتدربين','الاقل','متعثرين','ضعاف','اقل درجات','المتاخرين دراسيا')){
+    const r=cur().filter(s=>parseFloat(s.pct)>0).sort((a,b)=>a.pct-b.pct);
+    if(!r.length)return 'ما فيه درجات مرصودة بعد. 📭';
+    return '📉 الأقل درجة عندك:<br>'+assistList(r.slice(0,8).map(s=>'• '+esc(s.name)+' — '+esc(s.course)+' · <b>'+assistPct(s.pct)+'%</b> '+assistBar(s.pct)),8)+
+      assistActs(assistAct('📝 الدرجات','grades'));
+  }
+  if(has('افضل الطلاب','الاوائل','اقوى','اعلى درجات','المتفوقين')){
+    const r=cur().filter(s=>parseFloat(s.pct)>0).sort((a,b)=>b.pct-a.pct);
+    if(!r.length)return 'ما فيه درجات مرصودة بعد. 📭';
+    return '🏆 الأعلى درجة عندك:<br>'+assistList(r.slice(0,8).map(s=>'• '+esc(s.name)+' — '+esc(s.course)+' · <b>'+assistPct(s.pct)+'%</b> '+assistBar(s.pct)),8);
+  }
+  // 📖 ملخّص مادة
+  const hit=assistFindCourse(students,q);
+  if(hit && !has('كل','جميع')){
+    const ss=uniqStudents(cur().filter(s=>s.course===hit.course));
+    if(!ss.length) return '📖 <b>'+esc(hit.course)+'</b> — ما فيه متدربون مسجّلون.';
+    const g=ss.filter(s=>parseFloat(s.pct)>0);
+    const avg=g.length?Math.round(g.reduce((a,s)=>a+(+s.pct),0)/g.length):0;
+    const risky=ss.filter(s=>(parseFloat(s.abs)||0)>=20).length;
+    const m=assistMissingGrading().courses.find(c=>c.course===hit.course);
+    return '📖 <b>'+esc(hit.course)+'</b><br>'+
+      '• المتدربون: <b>'+ss.length+'</b><br>'+
+      '• المتوسط: <b>'+avg+'%</b> '+assistBar(avg)+'<br>'+
+      (risky?'• ⚠️ قاربوا الحرمان: <b>'+risky+'</b><br>':'')+
+      (m?'• 📝 ناقص رصد: <b>'+m.missing+'</b> درجة<br>':'• ✅ الرصد مكتمل<br>')+
+      assistHint('القائمة الكاملة في «الفصول».')+
+      assistActs(assistAct('👥 الفصول','students'),assistAct('📝 الدرجات','grades'));
+  }
+  if(has('السابقه','سابقه','المنتهيه','مواد سابقه')){
+    const p=[...new Set((students||[]).filter(s=>!isActive(s.status)).map(s=>s.course))].filter(Boolean);
+    if(!p.length) return 'ما عندك مواد سابقة. 📭';
+    return '📘 موادك السابقة ('+p.length+'):<br>'+p.map(c=>'• '+esc(c)).join('<br>');
+  }
+  if(has('موادي','مقرراتي','الحاليه','دوراتي','مواد حاليه')){
+    const crs=myCourses();
+    if(!crs.length) return 'ما عندك مواد مسجّلة لك حالياً. 📭';
+    return '📚 موادك الحالية ('+crs.length+'):<br>'+crs.map(c=>{
+      const ss=uniqStudents(cur().filter(s=>s.course===c));
+      const gs=[...new Set(ss.map(s=>String(s.grp).replace(/\.0$/,'')))].filter(Boolean).join('، ');
+      const dl=cur().some(s=>s.course===c&&s.delegated)?' 🤝':'';
+      return '• <b>'+esc(c)+'</b>'+dl+' — '+ss.length+' متدرب'+(gs?' · شعب: '+esc(gs):'');}).join('<br>')+
+      assistHint('اكتب اسم مادة لملخّصها. 🤝 = مادة مكلَّف بها.')+assistActs(assistAct('👥 الفصول','students'));
+  }
+  if(has('طلابي','متدربيني','طلاب','متدربين','كم طالب','كم متدرب')){
+    const n=uniqStudents(cur()).length;
+    const gs=[...new Set(cur().map(s=>String(s.grp).replace(/\.0$/,'')))].filter(Boolean);
+    return '👥 إجمالي متدربيك الحاليين: <b>'+n+'</b>'+(gs.length?'<br>📋 الشعب: '+esc(gs.join('، ')):'')+
+      assistHint('اكتب اسم مادة لعرض تفاصيلها.')+assistActs(assistAct('👥 الفصول','students'));
+  }
+  // 📋 الطلبات التي تنتظره
+  if(has('طلبات','الطلبات','موافقات','ينتظر ردي','معلقه')){
+    const rq=(requests||[]).filter(r=>/معلق/.test(r.trnStatus||'')&&assistMineCourse(r));
+    if(!rq.length)return '✅ ما فيه طلبات تنتظر ردّك.'+assistActs(assistAct('📋 الطلبات','requests'));
+    return '📋 طلبات تنتظر ردّك ('+rq.length+'):<br>'+assistList(rq.map(r=>'• '+esc(r.sname||'')+' — '+esc(r.type||'طلب')+(r.date?' · '+esc(r.date):'')),8)+
+      assistActs(assistAct('📋 الطلبات','requests'));
+  }
+  if(has('جدول','حصص','جلسات','جدولي')) return '📅 جدولك في صفحة «الجدول»، وحصص اليوم في «تسجيل الحضور».'+assistActs(assistAct('📅 الجدول','schedule'),assistAct('✅ الحضور','attendance'));
+  if(has('حضور','تحضير','اسجل حضور','كيف اسجل','غياب')) return '✅ لتسجيل الحضور: «تسجيل الحضور» → اختر التاريخ → لكل متدرب حاضر/متأخر/غائب → «حفظ غياب اليوم». (غائب=يوم · متأخر=نص يوم)'+assistActs(assistAct('✅ تسجيل الحضور','attendance'));
+  if(has('درجات','رصد','تقييم','بنود')) return '📝 لرصد الدرجات: «رصد الدرجات» → اختر المادة → حدّد البنود ودرجاتها → أدخل الدرجات → حفظ.'+assistActs(assistAct('📝 رصد الدرجات','grades'));
+  if(has('تحضير درس','تحضير الدرس','خطه الدرس','خطة الدرس','تحاضير')) return '📄 لتحضير درس: افتح «تحضير الدروس» → املأ الحقول → إرسال.'+assistActs(assistAct('📝 تحضير الدروس','lesson'));
+  if(has('ملخص','ملخصي','وضعي','كل شي','الوضع')){
+    const n=uniqStudents(cur()).length, crs=myCourses().length;
+    const m=assistMissingGrading();
+    return '👨‍🏫 <b>'+esc(user.name||'')+'</b><br>📚 موادك: <b>'+crs+'</b> · 👥 متدربوك: <b>'+n+'</b>'+
+      (m.total?'<br>📝 ناقص رصد: <b>'+m.total+'</b> درجة':'<br>✅ الرصد مكتمل')+assistBriefing();
+  }
+  if(has('اخبار','الاخبار','اعلانات','جديد')) return assistNews();
+  return null;
+}
+
+/* ================= 🛠️ مهارات الإداري ================= */
+function assistAdmin(has,q){
+  const ac=()=>(allCourses||[]).filter(c=>isActive(c.status));
+  // 🔎 بحث عن متدرب بالاسم أو الرقم
+  if(has('ابحث','بحث','دور على','وين','معلومات عن','من هو','ملف')){
+    const m=String(q).match(/\d{5,}/);
+    let hitS=null;
+    if(m) hitS=(students||[]).find(s=>String(s.id)===m[0]);
+    if(!hitS){
+      const toks=String(q).split(/\s+/).filter(w=>w.length>2);
+      hitS=(students||[]).find(s=>{const n=assistNorm(s.name);return toks.filter(t=>n.includes(assistNorm(t))).length>=2;});
+    }
+    if(hitS)return assistStudentCard(hitS);
+    return '🔎 اكتب <b>رقم المتدرب</b> أو اسمه الثلاثي، مثل: «ابحث عن 7333073».';
+  }
+  const dm=String(q).match(/\b\d{6,}\b/);
+  if(dm){ const s=(students||[]).find(x=>String(x.id)===dm[0]); if(s)return assistStudentCard(s); }
+
+  if(has('ملخص اليوم','ملخص','التقرير','نظره عامه','الوضع','كيف الوضع','احصائيات')){
+    const A=ac();
+    const dep=A.filter(c=>(parseFloat(c.abs)||0)>=25).length;
+    const warn=A.filter(c=>{const a=parseFloat(c.abs)||0;return a>=20&&a<25;}).length;
+    const g=A.filter(c=>parseFloat(c.pct)>0);
+    const avg=g.length?Math.round(g.reduce((a,c)=>a+(+c.pct),0)/g.length):0;
+    const rq=(requests||[]).filter(r=>/قيد|معلق/.test(r.finalStatus||'')).length;
+    const m=assistMissingGrading();
+    return '📊 <b>ملخص اليوم</b> — '+assistDays()+'<br>'+
+      '• 🎓 المتدربون النشطون: <b>'+((students||[]).length)+'</b><br>'+
+      '• 📈 متوسط الدرجات العام: <b>'+avg+'%</b> '+assistBar(avg)+'<br>'+
+      '• ⛔ حالات حرمان: <b>'+dep+'</b> · ⚠️ قاربوا: <b>'+warn+'</b><br>'+
+      '• 📋 طلبات قيد المراجعة: <b>'+rq+'</b><br>'+
+      '• 📝 ناقص رصد: <b>'+m.total+'</b> درجة في '+m.courses.length+' مادة'+
+      assistActs(assistAct('🏠 الرئيسية','overview'),assistAct('📋 الطلبات','requests'));
+  }
+  if(has('طلبات معلقه','الطلبات المعلقه','طلبات','معلقه','موافقات','قيد المراجعه')){
+    const rq=(requests||[]).filter(r=>/قيد|معلق/.test(r.finalStatus||''));
+    if(!rq.length)return '✅ ما فيه طلبات معلقة.'+assistActs(assistAct('📋 الطلبات','requests'));
+    const byType={}; rq.forEach(r=>{const t=r.type||'طلب';byType[t]=(byType[t]||0)+1;});
+    return '📋 طلبات قيد المراجعة: <b>'+rq.length+'</b><br>'+
+      Object.keys(byType).map(t=>'• '+esc(t)+' — <b>'+byType[t]+'</b>').join('<br>')+
+      assistActs(assistAct('📋 فتح الطلبات','requests'));
+  }
+  if(has('معرضين','معرضون','قارب الحرمان','قرب الحرمان','محرومين','حرمان','خطر','غياب عالي')){
+    const r=ac().filter(c=>(parseFloat(c.abs)||0)>=20).sort((a,b)=>b.abs-a.abs);
+    if(!r.length)return '✅ ما فيه حالات قاربت الحرمان.';
+    return '⚠️ حالات الغياب الحرجة ('+r.length+'):<br>'+
+      assistList(r.map(c=>'• '+esc(c.sname)+' — '+esc(c.course)+' · <b>'+assistPct(c.abs)+'%</b>'+(assistPct(c.abs)>=25?' ⛔':'')),10)+
+      assistActs(assistAct('🎓 المتدربون','all_students'));
+  }
+  if(has('ناقص رصد','ما رصد','لم يرصد','باقي رصد','ناقص درجات','المدربين المتاخرين')){
+    const m=assistMissingGrading();
+    if(!m.total)return '✅ كل البنود مرصودة في جميع المواد.';
+    return '📝 مواد ناقصة الرصد ('+m.courses.length+'):<br>'+
+      assistList(m.courses.map(c=>'• <b>'+esc(c.course)+'</b> — '+c.missing+' درجة ناقصة'),10)+
+      assistActs(assistAct('📚 المقررات','all_courses'));
+  }
+  if(has('اضعف المقررات','اقل المقررات','اضعف الماده','مقررات ضعيفه','اسوا')){
+    const g={}; ac().forEach(c=>{ if(!(parseFloat(c.pct)>0))return; (g[c.course]=g[c.course]||[]).push(+c.pct); });
+    const rows=Object.keys(g).map(k=>({c:k,a:Math.round(g[k].reduce((x,y)=>x+y,0)/g[k].length),n:g[k].length})).sort((a,b)=>a.a-b.a);
+    if(!rows.length)return 'ما فيه درجات مرصودة بعد. 📭';
+    return '📉 أضعف المقررات:<br>'+rows.slice(0,7).map(r=>'• <b>'+esc(r.c)+'</b> — '+r.a+'% '+assistBar(r.a)+' <span style="color:var(--muted);font-size:11px">('+r.n+' متدرب)</span>').join('<br>');
+  }
+  if(has('افضل المقررات','اعلى المقررات','اقوى مقرر','مقررات قويه')){
+    const g={}; ac().forEach(c=>{ if(!(parseFloat(c.pct)>0))return; (g[c.course]=g[c.course]||[]).push(+c.pct); });
+    const rows=Object.keys(g).map(k=>({c:k,a:Math.round(g[k].reduce((x,y)=>x+y,0)/g[k].length),n:g[k].length})).sort((a,b)=>b.a-a.a);
+    if(!rows.length)return 'ما فيه درجات مرصودة بعد. 📭';
+    return '🏆 أفضل المقررات:<br>'+rows.slice(0,7).map(r=>'• <b>'+esc(r.c)+'</b> — '+r.a+'% '+assistBar(r.a)).join('<br>');
+  }
+  if(has('بدون حساب','بلا حساب','ناقص حساب','ما لهم حساب','غير مسجلين','بدون حسابات')){
+    const o=assistOrphans();
+    if(!o.length)return '✅ كل من له سجلات مقررات عنده حساب في القاعدة المركزية.';
+    return '👤 متدربون لهم سجلات بلا حساب ('+o.length+'):<br>'+
+      assistList(o.map(x=>'• '+esc(x.name)+' — <b>'+esc(x.id)+'</b>'),10)+
+      assistHint('أضف لهم حسابات من «إضافة الحسابات».')+assistActs(assistAct('👥 الحسابات','accounts'));
+  }
+  if(has('الشعب','شعبه','كم شعبه','التخصصات')){
+    const gs={}; (students||[]).forEach(s=>{const g=String(s.grp||'').replace(/\.0$/,'');if(g)gs[g]=(gs[g]||0)+1;});
+    const ks=Object.keys(gs).sort();
+    if(!ks.length)return 'ما فيه شعب مسجّلة. 📭';
+    return '📋 الشعب ('+ks.length+'):<br>'+ks.map(k=>'• شعبة <b>'+esc(k)+'</b> — '+gs[k]+' متدرب').join('<br>')+
+      assistActs(assistAct('🎓 المتدربون','all_students'));
+  }
+  const hit=assistFindCourse(allCourses,q);
+  if(hit && !has('كل','جميع')){
+    const ss=uniqStudents(ac().filter(c=>c.course===hit.course));
+    const g=ss.filter(s=>parseFloat(s.pct)>0);
+    const avg=g.length?Math.round(g.reduce((a,s)=>a+(+s.pct),0)/g.length):0;
+    const risky=ss.filter(s=>(parseFloat(s.abs)||0)>=20).length;
+    return '📖 <b>'+esc(hit.course)+'</b>:<br>• متدربون نشطون: <b>'+ss.length+'</b><br>• متوسط الدرجات: <b>'+avg+'%</b> '+assistBar(avg)+
+      (risky?'<br>• ⚠️ قاربوا الحرمان: <b>'+risky+'</b>':'')+'<br>• المدرب: '+esc(hit.trainer||'—')+
+      assistActs(assistAct('📚 المقررات','all_courses'));
+  }
+  if(has('كم متدرب','عدد المتدربين','متدربين','الطلاب','كم طالب')){
+    return '🎓 المتدربون النشطون: <b>'+((students||[]).length)+'</b>'+((typeof graduates!=='undefined'&&graduates&&graduates.length)?('<br>🏅 الخريجون: <b>'+graduates.length+'</b>'):'')+'.'+
+      assistActs(assistAct('🎓 المتدربون','all_students'));
+  }
+  if(has('كم مدرب','المدربين','عدد المدربين')){
+    const t=(typeof trainersDB!=='undefined'&&trainersDB&&trainersDB.length)?trainersDB.length:[...new Set((allCourses||[]).map(c=>c.trainer).filter(Boolean))].length;
+    const noCourse=(trainersDB||[]).filter(x=>!(allCourses||[]).some(c=>c.trainer===x.name&&isActive(c.status)));
+    return '👨‍🏫 عدد المدربين: <b>'+t+'</b>'+(noCourse.length?'<br>• بلا مواد حالية: <b>'+noCourse.length+'</b>':'')+
+      assistActs(assistAct('👥 الحسابات','accounts'));
+  }
+  if(has('كم مقرر','المقررات','عدد المقررات','مواد','الخطه')){
+    const n=(catalog||[]).length; const act=[...new Set(ac().map(c=>normCode(c.code)))].length;
+    return '📚 المقررات في الخطة: <b>'+n+'</b> · نشطة حالياً: <b>'+act+'</b>.'+assistHint('اكتب اسم مقرر لتفاصيله.')+
+      assistActs(assistAct('📚 المقررات','all_courses'));
+  }
+  if(has('تنبيهات','انذارات','مشاكل','اشعارات','راسب','ضعيف')){
+    const A=ac();
+    const dep=A.filter(c=>(parseFloat(c.abs)||0)>=25).length;
+    const warn=A.filter(c=>{const a=parseFloat(c.abs)||0;return a>=10&&a<25;}).length;
+    const weak=A.filter(c=>weakItemsOf(c).length).length;
+    return '🔔 مؤشرات التنبيه:<br>• حرمان (غياب ≥25%): <b>'+dep+'</b><br>• قرب الحرمان (10–25%): <b>'+warn+'</b><br>• بنود تحتاج تحسين: <b>'+weak+'</b> سجل'+
+      assistHint('التنبيه الآن مبني على بنود الدرجات لا على المجموع الناقص.')+
+      assistActs(assistAct('🎓 المتدربون','all_students'));
+  }
+  if(has('اخبار','الاخبار','اعلانات','جديد')) return assistNews();
+  if(has('اضيف حساب','اضافه حساب','حساب جديد','سجل حساب','اضيف متدرب','اضيف مدرب')) return '👥 لإضافة حساب: «إضافة الحسابات» → اختر النوع (متدرب/مدرب/إداري) → املأ البيانات → حفظ.'+assistActs(assistAct('👥 الحسابات','accounts'));
+  if(has('اضيف خبر','خبر جديد','اعلان','انشر','نشر خبر')) return '📰 لنشر خبر: «الأخبار والإعلانات» → «＋ خبر جديد» → اكتب العنوان والنص، وارفع صورة/مرفقات، وحدّد الفئة والجدولة → نشر.'+assistActs(assistAct('📰 الأخبار','news'));
+  if(has('جدول','اسوي جدول','انشئ جدول','جدول طالب')) return '📅 لإنشاء جدول: «الجدول» → اختر شعبة أو «جدول طالب مخصّص» → اسحب المواد أو «ولّد الجدول» → «حفظ الجدول».'+assistActs(assistAct('📅 الجدول','schedule'));
+  if(has('صيانه','نسخه احتياطيه','باك اب','ارشفه','نسخه','اصلاح','مفاتيح')) return '🧰 من «الصيانة»: فحص صحة النظام، 🛠️ إصلاح التبويبات، 🔑 فحص المفاتيح، 🧹 تنبيهات أُرسلت بالخطأ، نسخة احتياطية، وأرشفة الدفعات.'+assistActs(assistAct('🧰 الصيانة','maintenance'));
+  if(has('شيت كنترول','كنترول','الكنترول','طباعه')) return '🖨️ شيت الكنترول من «المقررات» → «شيت الكنترول»، وكل شعبة تُطبع في صفحة مستقلة.'+assistActs(assistAct('📚 المقررات','all_courses'));
+  return null;
+}
+// بطاقة متدرب (للإداري فقط)
+function assistStudentCard(s){
+  const recs=(allCourses||[]).filter(c=>String(c.sid)===String(s.id));
+  const cur=recs.filter(c=>isActive(c.status));
+  const g=cur.filter(c=>parseFloat(c.pct)>0);
+  const avg=g.length?Math.round(g.reduce((a,c)=>a+(+c.pct),0)/g.length):null;
+  const risky=cur.filter(c=>(parseFloat(c.abs)||0)>=20);
+  return '👤 <b>'+esc(s.name)+'</b> — '+esc(String(s.id))+'<br>'+
+    '• الشعبة: '+esc(String(s.grp||'—').replace(/\.0$/,''))+(s.spec?' · '+esc(s.spec):'')+'<br>'+
+    '• الحالة: '+esc(s.status||'—')+'<br>'+
+    '• مواد حالية: <b>'+cur.length+'</b> · سابقة: <b>'+(recs.length-cur.length)+'</b>'+
+    (avg!==null?'<br>• المتوسط الحالي: <b>'+avg+'%</b> '+assistBar(avg):'')+
+    (risky.length?'<br>• ⚠️ غياب حرج في: '+risky.map(c=>esc(c.course)+' ('+assistPct(c.abs)+'%)').join('، '):'')+
+    (s.ph?'<br>• الجوال: '+esc(s.ph):'')+(s.email?'<br>• البريد: '+esc(s.email):'')+
+    assistActs(assistAct('🎓 المتدربون','all_students'));
+}
+
 function assistAsk(text){
   assistAddMsg(esc(text),'user');
   const body=document.getElementById('assistBody');
   if(body){ const t=document.createElement('div'); t.className='assist-msg assist-bot'; t.id='assistTyping';
     t.innerHTML='<span class="assist-typing"><span></span><span></span><span></span></span>';
     body.appendChild(t); body.scrollTop=body.scrollHeight; }
+  if(typeof miniReact==='function')miniReact(assistFace(),'think');   // 🤔 يفكّر وهو يبحث في بياناتك
   setTimeout(()=>{
     document.getElementById('assistTyping')?.remove();
-    try{ assistAddMsg(assistReply(text),'bot'); }catch(e){ assistAddMsg('صار خطأ بسيط — جرّب سؤالاً آخر.','bot'); }
+    let okAns=true;
+    try{ assistAddMsg(assistReply(text),'bot'); }
+    catch(e){ okAns=false; assistAddMsg('صار خطأ بسيط — جرّب سؤالاً آخر.','bot'); }
+    if(typeof miniReact==='function')miniReact(assistFace(),okAns?'happy':'oops',1400);
   }, 480);
 }
 function assistReply(qRaw){
   const q=assistNorm(qRaw);
   const has=(...ws)=>ws.some(w=>q.includes(assistNorm(w)));
-  if(has('اسمك','مين انت','من انت','منت','شنو انت','عرف نفسك')) return 'أنا <b>مساعد بحرة</b> 🤖 — مساعدك داخل المنصة، أجاوبك من بياناتك مباشرة.';
-  if(has('مرحبا','السلام','هلا','هاي','اهلا','صباح','مساء','كيفك')) return 'أهلاً '+esc(((user&&user.name)||'').split(' ')[0]||'')+'! 👋 كيف أقدر أساعدك؟'+assistSuggest();
-  if(has('شكرا','يعطيك','تسلم','مشكور')) return 'العفو! 🌟 أي وقت.';
-  if(has('وش تسوي','ايش تسوي','وش تقدر','ايش تقدر','قدراتك','تساعدني','مساعده','مساعدة','وش عندك','ساعدني')) return assistCaps()+assistSuggest();
+  if(has('اسمك','مين انت','من انت','منت','شنو انت','عرف نفسك','وش انت'))
+    return 'أنا <b>مساعد بحرة</b> 🎓 — مساعدك الشخصي داخل المنصة، أقرأ بياناتك مباشرة وأجاوبك منها، وأقدر أنقلك للصفحة اللي تحتاجها بضغطة.'+assistSuggest();
+  if(has('مرحبا','السلام','هلا','هاي','اهلا','صباح','مساء','كيفك','هلو'))
+    return 'أهلاً '+esc(((user&&user.name)||'').split(' ')[0]||'')+'! 👋 كيف أقدر أساعدك؟'+assistBriefing()+assistSuggest();
+  if(has('شكرا','يعطيك','تسلم','مشكور','ما قصرت')) return 'العفو! 🌟 أي وقت.';
+  if(has('وش تسوي','ايش تسوي','وش تقدر','ايش تقدر','قدراتك','تساعدني','مساعده','مساعدة','وش عندك','ساعدني','كيف استخدمك'))
+    return assistCaps()+assistSuggest();
+  // أسئلة عامة عن المنصة
+  if(has('غير الرمز','تغيير الرمز','كلمه السر','نسيت الرمز','باسورد'))
+    return '🔑 لتغيير رمزك: افتح قائمة حسابك (صورتك بالأعلى) → «تغيير الرمز السري». إذا نسيته تواصل مع الإدارة لإعادة تعيينه.';
+  if(has('الوضع الليلي','الثيم','داكن','فاتح','اللغه','english'))
+    return '⚙️ من قائمة حسابك تقدر تبدّل بين الوضع الفاتح والداكن، وتغيّر اللغة عربي/إنجليزي.';
+  if(has('خروج','تسجيل الخروج','اطلع')) return '🚪 زر الخروج داخل قائمة حسابك بالأعلى.';
   let r=null;
   if(role==='s') r=assistStudent(has,q); else if(role==='t') r=assistTrainer(has,q); else if(role==='a') r=assistAdmin(has,q);
   if(r) return r;
   return 'ما فهمت سؤالك تماماً 🤔 جرّب أحد هذه:'+assistSuggest();
 }
-// اقتراحات قابلة للضغط (للرد الاحتياطي)
 function assistSuggest(){
-  return '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">'+assistChipsList().map(c=>`<button class="assist-chip" type="button" onclick='assistAsk(${JSON.stringify(c)})'>${esc(c)}</button>`).join('')+'</div>';
+  return '<div class="assist-acts">'+assistChipsList().map(c=>`<button class="assist-chip" type="button" onclick='assistAsk(${JSON.stringify(c)})'>${esc(c)}</button>`).join('')+'</div>';
 }
 function assistCaps(){
-  if(role==='s') return 'أقدر أجاوبك عن: <b>موادك الحالية والسابقة</b> · تفاصيل أي مادة (اكتب اسمها) · <b>جدولك</b> · <b>غيابك</b> · <b>معدّلك</b> · <b>شهادتك</b> · <b>طلباتك</b>.';
-  if(role==='t') return 'أقدر أجاوبك عن: <b>موادك الحالية والسابقة</b> · متدربي أي مادة (اكتب اسمها) · <b>عدد طلابك</b> · <b>جدولك</b> · طريقة الحضور والدرجات.';
-  return 'أقدر أجاوبك عن: <b>عدد المتدربين والمدربين</b> · <b>المقررات</b> · تفاصيل أي مقرر (اكتب اسمه) · <b>التنبيهات</b> · طريقة إضافة حساب/خبر/جدول.';
+  if(role==='s') return 'أقدر أساعدك في:<br>'+
+    '• 📚 <b>مقرراتك</b> الحالية والسابقة — واكتب اسم أي مادة لتفاصيلها<br>'+
+    '• 📝 <b>بنود الدرجات</b> — «بنود &lt;المادة&gt;» تشوف كل بند وكم أخذت فيه<br>'+
+    '• 🎯 <b>وش ناقصني</b> — البنود اللي تحتاج تحسين قبل نهاية الترم<br>'+
+    '• ⏳ <b>كم باقي لي</b> قبل الحرمان في كل مادة<br>'+
+    '• 📅 <b>حصص اليوم وبكرة</b> وجدولك<br>'+
+    '• 🏆 معدّلك · أفضل وأضعف مادة · 👨‍🏫 مدربوك · 📰 الأخبار · 🎓 شهادتك · 📋 طلباتك';
+  if(role==='t') return 'أقدر أساعدك في:<br>'+
+    '• 📝 <b>ناقص رصد</b> — أي مادة باقي فيها بنود ما رُصدت<br>'+
+    '• ⚠️ <b>المعرضون للحرمان</b> في موادك<br>'+
+    '• 📉 <b>أضعف</b> و🏆 <b>أفضل</b> المتدربين<br>'+
+    '• 📖 ملخّص أي مادة (اكتب اسمها): المتوسط، الغياب الحرج، ناقص الرصد<br>'+
+    '• 📋 الطلبات اللي تنتظر ردّك · 📚 موادك وشعبك · ✅ طريقة الحضور والدرجات';
+  return 'أقدر أساعدك في:<br>'+
+    '• 📊 <b>ملخص اليوم</b> — نظرة شاملة على المعهد<br>'+
+    '• 🔎 <b>بحث عن متدرب</b> بالاسم أو الرقم → بطاقته كاملة<br>'+
+    '• ⚠️ <b>المعرضون للحرمان</b> · 📝 <b>ناقص رصد</b> · 📋 <b>الطلبات المعلقة</b><br>'+
+    '• 📉 أضعف و🏆 أفضل المقررات · 📋 الشعب<br>'+
+    '• 👤 <b>متدربون بلا حساب</b> — سجلات موجودة بدون حساب في القاعدة المركزية<br>'+
+    '• 🧰 الصيانة · 📰 الأخبار · 🖨️ شيت الكنترول';
 }
-// بطاقة تفاصيل مادة واحدة
-function assistCourseCard(c){
-  const a=Math.round(c.abs||0);
-  return '📖 <b>'+esc(c.course)+'</b>'+(c.code?' <span style="color:var(--muted);font-size:11px">('+esc(c.code)+')</span>':'')+'<br>'
-    +'• الحالة: '+esc(c.status||'—')+'<br>'
-    +'• الدرجة: '+(c.pct?Math.round(c.pct)+'%':'—')+(c.letter?' — تقدير '+esc(c.letter):'')+'<br>'
-    +'• الغياب: '+a+'%'+(a>=25?' ⛔ محروم':a>=20?' ⚠️ إنذار ثاني':a>=10?' ⚠️ إنذار أول':'')+'<br>'
-    +(c.trainer?'• المدرب: '+esc(c.trainer)+'<br>':'')
-    +(c.grp?'• الشعبة: '+esc(String(c.grp).replace(/\.0$/,'')):'')
-    +(c.half?((c.grp?' · ':'• '))+'الترم: '+esc(c.half):'');
-}
-// إيجاد مادة يُذكر اسمها داخل السؤال
-function assistFindCourse(list,q){ return (list||[]).find(c=>{const n=assistNorm(c.course);return n.length>3 && q.includes(n);}); }
-// ---- متدرب ----
-function assistStudent(has,q){
-  const hit=assistFindCourse(courses,q);
-  if(hit && !has('كل','جميع','كامل')) return assistCourseCard(hit);
-  if(has('السابقه','سابقه','المنتهيه','مواد سابقه','مواد قديمه','منتهيه')){
-    const past=(courses||[]).filter(c=>String(c.status)==='سابق');
-    if(!past.length) return 'ما عندك مواد سابقة (منتهية) بعد. 📭';
-    return '📘 موادك السابقة ('+past.length+'):<br>'+past.map(c=>'• <b>'+esc(c.course)+'</b> — '+(c.pct?Math.round(c.pct)+'%':'—')+(c.letter?' ('+esc(c.letter)+')':'')+(c.half?' · '+esc(c.half):'')).join('<br>')+'<br><span style="color:var(--muted);font-size:11px">اكتب اسم مادة لتفاصيلها.</span>';
-  }
-  if(has('دوراتي','موادي','مقرراتي','الحاليه','مواد حاليه','عندي مواد','مقرراتي الحاليه')){
-    const cs=(courses||[]).filter(c=>isActive(c.status));
-    if(!cs.length) return 'ما عندك مواد حالية مسجّلة. 📭';
-    return '📚 موادك الحالية ('+cs.length+'):<br>'+cs.map(c=>'• <b>'+esc(c.course)+'</b> — '+(c.pct?Math.round(c.pct)+'%':'—')+(c.letter?' ('+esc(c.letter)+')':'')+' · غياب '+Math.round(c.abs||0)+'%').join('<br>')+'<br><span style="color:var(--muted);font-size:11px">اكتب اسم مادة لتفاصيلها الكاملة.</span>';
-  }
-  if(has('بياناتي','ملفي','معلوماتي','وضعي','ملخص','كل شي')){
-    const cur=(courses||[]).filter(c=>isActive(c.status)).length, past=(courses||[]).filter(c=>String(c.status)==='سابق').length;
-    const gpa=(typeof gpaDisplay==='function')?gpaDisplay(courses):'—';
-    return '👤 <b>'+esc(user.name||'')+'</b>'+(user.grp?' · شعبة '+esc(String(user.grp).replace(/\.0$/,'')):'')+(user.spec?' · '+esc(user.spec):'')+'<br>📚 مواد حالية: <b>'+cur+'</b> · سابقة: <b>'+past+'</b><br>🏆 المعدّل التراكمي: <b>'+gpa+'</b> / 5';
-  }
-  if(has('جدول','حصص','جلسات','جلساتي','متى حصت','القادمه','متى درس','حصصي','محاضراتي')) return assistStudentSchedule();
-  if(has('غياب','غيابي','حضوري','نسبه الغياب','كم غيابي')){
-    const cs=(courses||[]).filter(c=>isActive(c.status));
-    if(!cs.length) return 'ما عندك مواد حالية. 📭';
-    return '🚫 نسبة غيابك:<br>'+cs.map(c=>{const a=Math.round(c.abs||0);const tag=a>=25?' ⛔ محروم':a>=20?' ⚠️ إنذار ثاني':a>=10?' ⚠️ إنذار أول':'';return '• '+esc(c.course)+' — '+a+'%'+tag;}).join('<br>')+'<br><span style="color:var(--muted);font-size:11px">الحرمان عند 25%.</span>';
-  }
-  if(has('درجاتي','درجتي','معدلي','معدل','تقديري','مجموعي','نتيجتي')){
-    const gpa=(typeof gpaDisplay==='function')?gpaDisplay(courses):'—';
-    const avg=(typeof avgPct==='function')?avgPct(courses):'';
-    return '🏆 معدّلك التراكمي: <b>'+gpa+'</b> / 5'+(avg!==''?'<br>📈 متوسط درجاتك: <b>'+avg+'%</b>':'')+'<br><span style="color:var(--muted);font-size:11px">التفاصيل في صفحة «أدائي».</span>';
-  }
-  if(has('شهاده','شهادتي','شهاداتي','سيرتي')){
-    if(user&&user.cert&&/^https?:/i.test(user.cert)) return '🎓 شهادتك الإلكترونية جاهزة: <a href="'+escUrl(user.cert)+'" target="_blank">اضغط للعرض</a>';
-    return 'ما فيه شهادة إلكترونية مرفوعة لك حالياً. راجع الإدارة. 🎓';
-  }
-  if(has('طلباتي','طلبي','حاله طلب','طلباتى')){
-    const mine=(typeof requests!=='undefined'&&requests)?requests.filter(r=>String(r.sid)===String(user.id)):[];
-    return mine.length?('📋 عندك <b>'+mine.length+'</b> طلب. افتح «الخدمات» لمتابعة حالتها.'):'ما عندك طلبات مقدّمة. لتقديم طلب افتح «الخدمات».';
-  }
-  if(has('طلب','خدمه','اطلب','افاده','عذر','كيف اسجل طلب','اقدم طلب')) return '📝 لتقديم طلب: افتح «الخدمات» → اختر نوع الطلب → املأ التفاصيل → إرسال، وتابع حالته من نفس الصفحة.';
-  return null;
-}
+
 function assistStudentSchedule(){
   try{
     const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -1772,66 +2365,6 @@ function assistStudentSchedule(){
   }catch(e){ return '📅 جدولك في صفحة «الجدول».'; }
 }
 // ---- مدرب ----
-function assistTrainer(has,q){
-  // تفاصيل مادة: متدربوها إذا ذُكر اسمها
-  const hit=assistFindCourse(students,q);
-  if(hit && !has('كل','جميع')){
-    const ss=uniqStudents((students||[]).filter(s=>s.course===hit.course));
-    if(!ss.length) return '📖 <b>'+esc(hit.course)+'</b> — ما فيه متدربون مسجّلون.';
-    return '📖 <b>'+esc(hit.course)+'</b> — '+ss.length+' متدرب:<br>'+ss.slice(0,15).map(s=>'• '+esc(s.name)+' — '+Math.round(s.pct||0)+'% · غياب '+Math.round(s.abs||0)+'%').join('<br>')+(ss.length>15?'<br>… و'+(ss.length-15)+' غيرهم':'');
-  }
-  if(has('السابقه','سابقه','المنتهيه','مواد سابقه')){
-    const p=[...new Set((students||[]).filter(s=>String(s.status)==='سابق').map(s=>s.course))].filter(Boolean);
-    if(!p.length) return 'ما عندك مواد سابقة. 📭';
-    return '📘 موادك السابقة ('+p.length+'):<br>'+p.map(c=>'• '+esc(c)).join('<br>');
-  }
-  if(has('موادي','مقرراتي','الحاليه','دوراتي','مواد حاليه')){
-    const crs=[...new Set((students||[]).filter(s=>isActive(s.status)).map(s=>s.course))].filter(Boolean);
-    if(!crs.length) return 'ما عندك مواد مسجّلة لك حالياً. 📭';
-    return '📚 موادك الحالية ('+crs.length+'):<br>'+crs.map(c=>{const ss=uniqStudents((students||[]).filter(s=>s.course===c&&isActive(s.status)));const gs=[...new Set(ss.map(s=>String(s.grp).replace(/\.0$/,'')))].filter(Boolean).join('، ');return '• <b>'+esc(c)+'</b> — '+ss.length+' متدرب'+(gs?' · شعب: '+esc(gs):'');}).join('<br>')+'<br><span style="color:var(--muted);font-size:11px">اكتب اسم مادة لعرض متدربيها.</span>';
-  }
-  if(has('طلابي','متدربيني','طلاب','متدربين','كم طالب')){
-    const n=uniqStudents((students||[]).filter(s=>isActive(s.status))).length;
-    return '👥 إجمالي متدربيك الحاليين: <b>'+n+'</b>.<br><span style="color:var(--muted);font-size:11px">اكتب اسم مادة لعرض متدربيها بالتفصيل.</span>';
-  }
-  if(has('جدول','حصص','جلسات','جدولي')) return '📅 جدولك في صفحة «الجدول»، وحصص اليوم في «تسجيل الحضور».';
-  if(has('حضور','تحضير','اسجل حضور','كيف اسجل','غياب')) return '✅ لتسجيل الحضور: «تسجيل الحضور» → اختر التاريخ → لكل متدرب حاضر/متأخر/غائب → «حفظ غياب اليوم». (غائب=يوم · متأخر=نص يوم)';
-  if(has('درجات','رصد','تقييم')) return '📝 لرصد الدرجات: «رصد الدرجات» → اختر المادة → أدخل الدرجات → حفظ.';
-  if(has('تحضير درس','تحضير الدرس','خطه الدرس','خطة الدرس')) return '📄 لتحضير درس: افتح «تحضير الدروس» → املأ الحقول → إرسال.';
-  return null;
-}
-// ---- إداري ----
-function assistAdmin(has,q){
-  const hit=assistFindCourse(allCourses,q);
-  if(hit && !has('كل','جميع')){
-    const ss=uniqStudents((allCourses||[]).filter(c=>c.course===hit.course&&isActive(c.status)));
-    const avg=ss.length?Math.round(ss.reduce((a,s)=>a+(parseFloat(s.pct)||0),0)/ss.length):0;
-    return '📖 <b>'+esc(hit.course)+'</b>:<br>• متدربون نشطون: <b>'+ss.length+'</b><br>• متوسط الدرجات: <b>'+avg+'%</b><br>• المدرب: '+esc(hit.trainer||'—');
-  }
-  if(has('كم متدرب','عدد المتدربين','متدربين','الطلاب','كم طالب')){
-    return '🎓 المتدربون النشطون: <b>'+((students||[]).length)+'</b>'+((typeof graduates!=='undefined'&&graduates&&graduates.length)?('<br>🏅 الخريجون: <b>'+graduates.length+'</b>'):'')+'.';
-  }
-  if(has('كم مدرب','المدربين','عدد المدربين')){
-    const t=(typeof trainersDB!=='undefined'&&trainersDB&&trainersDB.length)?trainersDB.length:[...new Set((allCourses||[]).map(c=>c.trainer).filter(Boolean))].length;
-    return '👨‍🏫 عدد المدربين: <b>'+t+'</b>.';
-  }
-  if(has('كم مقرر','المقررات','عدد المقررات','مواد','الخطه')){
-    const n=(catalog||[]).length; const act=[...new Set((allCourses||[]).filter(c=>isActive(c.status)).map(c=>normCode(c.code)))].length;
-    return '📚 المقررات في الخطة: <b>'+n+'</b> · نشطة حالياً: <b>'+act+'</b>.<br><span style="color:var(--muted);font-size:11px">اكتب اسم مقرر لتفاصيله.</span>';
-  }
-  if(has('تنبيهات','انذارات','مشاكل','محروم','حرمان','اشعارات','راسب','ضعيف')){
-    const A=allCourses||[]; const ac=A.filter(c=>isActive(c.status));
-    const dep=ac.filter(c=>(parseFloat(c.abs)||0)>=25).length;
-    const warn=ac.filter(c=>{const a=parseFloat(c.abs)||0;return a>=10&&a<25;}).length;
-    const weak=ac.filter(c=>{const p=parseFloat(c.pct)||0;return p>0&&p<60;}).length;
-    return '🔔 مؤشرات التنبيه:<br>• حرمان (غياب ≥25%): <b>'+dep+'</b><br>• قرب الحرمان (10–25%): <b>'+warn+'</b><br>• درجات ضعيفة (<60%): <b>'+weak+'</b><br><span style="color:var(--muted);font-size:11px">التفاصيل في «الإشعارات».</span>';
-  }
-  if(has('اضيف حساب','اضافه حساب','حساب جديد','سجل حساب','اضيف متدرب','اضيف مدرب')) return '👥 لإضافة حساب: «إضافة الحسابات» → اختر النوع (متدرب/مدرب/إداري) → املأ البيانات → حفظ.';
-  if(has('اضيف خبر','خبر جديد','اعلان','انشر','نشر خبر')) return '📰 لنشر خبر: «الأخبار والإعلانات» → «＋ خبر جديد» → اكتب العنوان والنص، وارفع صورة/مرفقات، وحدّد الفئة والجدولة → نشر.';
-  if(has('جدول','اسوي جدول','انشئ جدول','جدول طالب')) return '📅 لإنشاء جدول: «الجدول» → اختر شعبة أو «جدول طالب مخصّص» → اسحب المواد أو «ولّد الجدول» → «حفظ الجدول».';
-  if(has('صيانه','نسخه احتياطيه','باك اب','ارشفه','نسخه')) return '🧰 من «الصيانة»: فحص صحة النظام، نسخة احتياطية، وأرشفة الدفعات المتخرجة.';
-  return null;
-}
 
 async function saveNewsForm(){
   const item={
@@ -2086,6 +2619,8 @@ async function doLogin(){
   document.getElementById('errBox').style.display='none';
   document.getElementById('lbtn').disabled=true;
   document.getElementById('ldg').style.display='block';
+  if(typeof mascotReact==='function')mascotReact('think',true);   // 🤔 يفكّر أثناء التحقق
+  if(typeof mascotSay==='function')mascotSay('لحظة أتأكد من بياناتك…',4000);
   let d=null, netErr=null;
   try{
     // ⚡ الدخول السريع: JSONP هو الطريقة الأساسية (يرد فوراً ويعمل على كل الأجهزة بما فيها الجوال).
@@ -2129,6 +2664,7 @@ async function doLogin(){
     }
     return;
   }catch(e){/* تم عرض الخطأ أعلاه */}
+  if(typeof mascotReact==='function')mascotReact('oops');          // 😖 يوقف التفكير ويهتز
   document.getElementById('lbtn').disabled=false;
   document.getElementById('ldg').style.display='none';
 }
@@ -2142,7 +2678,14 @@ async function loadUserData(){
 }
 // إتمام تسجيل الدخول (حفظ الجلسة وعرض التطبيق)
 function finishLogin(){
-  if(typeof mascotReact==='function')mascotReact('happy');   // 🎉 الشخصية تقفز عند نجاح الدخول
+  // 🎉 احتفال موسّع: قفز + رفع اليدين + رمي القبعة + لمعات + ترحيب باسمه
+  const _first=String((user&&user.name)||'').split(' ')[0]||'';
+  let _hold=0;
+  if(typeof mascotReact==='function'){
+    mascotReact('celebrate');
+    if(typeof mascotSay==='function')mascotSay('يا هلا '+_first+'! 🎉',2200);
+    try{ _hold=window.matchMedia('(prefers-reduced-motion:reduce)').matches?0:900; }catch(_){ _hold=900; }
+  }
   currentUser=user; // ⭐ ضروري: بعض الصفحات (كالحضور) تعتمد على currentUser — نضمن تعبئته عند كل دخول
   localStorage.setItem('bla_user', JSON.stringify(user));
   localStorage.setItem('bla_role', role);
@@ -2150,10 +2693,13 @@ function finishLogin(){
   // ⭐ نظّف حالة تحميل نموذج الدخول حتى تكون الشاشة جاهزة عند الخروج لاحقاً
   const _lb=document.getElementById('lbtn'); if(_lb)_lb.disabled=false;
   const _ldg=document.getElementById('ldg'); if(_ldg)_ldg.style.display='none';
-  showApp();
-  initIdleGuard();
-  // إلزام تغيير الرمز الافتراضي (رقم الجوال) أول دخول
-  if(user && user.mustChange){ setTimeout(()=>openChangePassword(true), 400); }
+  const _go=()=>{
+    showApp();
+    initIdleGuard();
+    // إلزام تغيير الرمز الافتراضي (رقم الجوال) أول دخول
+    if(user && user.mustChange){ setTimeout(()=>openChangePassword(true), 400); }
+  };
+  if(_hold) setTimeout(_go,_hold); else _go();
 }
 // ===== تغيير كلمة المرور (إلزامي أول دخول · واختياري من الملف الشخصي) =====
 function openChangePassword(forced){
@@ -2316,13 +2862,51 @@ function cancelOTP(){
     if(on){ m.classList.remove('look'); m.classList.toggle('peek',pwShown); }
     else m.classList.remove('peek');
   }
-  window.mascotReact=function(kind){
-    var m=M(); if(!m)return;
-    m.classList.remove('happy','oops');
-    void m.offsetWidth;                                // إعادة تشغيل الأنيميشن
-    if(kind)m.classList.add(kind);
-    if(kind==='oops')setTimeout(function(){m.classList.remove('oops');},700);
+  // ⏱️ حالات مؤقّتة: نلغي المؤقّت السابق حتى لا تتداخل الحركات
+  var tmr=null;
+  function clearTmp(m){ if(tmr){clearTimeout(tmr);tmr=null;} m.classList.remove('happy','oops','celebrate','wave','think'); }
+  function reduced(){ try{ return window.matchMedia('(prefers-reduced-motion:reduce)').matches; }catch(e){ return false; } }
+
+  // 💬 فقاعة كلام فوق الشخصية
+  window.mascotSay=function(text,ms){
+    var b=el('mBubble'); if(!b)return;
+    if(!text){ b.classList.remove('on'); return; }
+    b.textContent=String(text);
+    b.classList.add('on');
+    if(b._t)clearTimeout(b._t);
+    b._t=setTimeout(function(){ b.classList.remove('on'); }, ms||2600);
   };
+
+  /* الحالات المتاحة:
+     wave 👋 ترحيب · think 🤔 أثناء التحقق · celebrate 🎉 نجاح الدخول
+     happy 😄 · oops 😖 خطأ · sleep 😴 خمول                                */
+  window.mascotReact=function(kind,keep){
+    var m=M(); if(!m)return;
+    clearTmp(m);
+    m.classList.remove('sleep');
+    void m.offsetWidth;                                // إعادة تشغيل الأنيميشن
+    if(!kind)return;
+    if(reduced()&&(kind==='celebrate'||kind==='wave'))kind='happy';
+    m.classList.add(kind);
+    var life={oops:700,happy:1400,wave:2200,celebrate:2000}[kind];
+    if(life&&!keep)tmr=setTimeout(function(){ m.classList.remove(kind); tmr=null; },life);
+  };
+
+  // 😴 ينعس بعد سكون طويل، ويصحو عند أول حركة
+  var sleepT=null;
+  function wake(){
+    var m=M(); if(!m)return;
+    if(m.classList.contains('sleep')){ m.classList.remove('sleep'); }
+    if(sleepT)clearTimeout(sleepT);
+    sleepT=setTimeout(function(){
+      var mm=M(); if(!mm)return;
+      var lp=el('loginPage');
+      if(lp&&lp.style.display==='none')return;          // ما عاد في شاشة دخول
+      if(mm.classList.contains('cover'))return;         // لا ينام والرمز مفتوح
+      mm.classList.add('sleep');
+    }, 22000);
+  }
+
   window.togglePw=function(){
     var i=el('inpPh'), b=el('pwEye'); if(!i)return;
     pwShown=(i.type==='password');
@@ -2335,22 +2919,60 @@ function cancelOTP(){
   function wire(){
     var id=el('inpId'), ph=el('inpPh');
     if(!id||!ph)return;
-    ['focus','input','keyup','click'].forEach(function(ev){ id.addEventListener(ev,function(){look(id);}); });
+    ['focus','input','keyup','click'].forEach(function(ev){ id.addEventListener(ev,function(){look(id);wake();}); });
     id.addEventListener('blur',idle);
-    ph.addEventListener('focus',function(){cover(true);});
+    ph.addEventListener('focus',function(){cover(true);wake();});
     ph.addEventListener('blur',function(){cover(false);});
     if(window.matchMedia&&window.matchMedia('(hover:hover)').matches)
-      document.addEventListener('mousemove',follow,{passive:true});
+      document.addEventListener('mousemove',function(e){follow(e);wake();},{passive:true});
+    ['click','touchstart','keydown'].forEach(function(ev){ document.addEventListener(ev,wake,{passive:true}); });
     ph.addEventListener('input',function(){
       var m=M(); if(!m)return;
       m.classList.remove('oops');
       m.classList.add('cover'); m.classList.toggle('peek',pwShown);
     });
+    // 👋 ترحيب أول ما تظهر الشاشة (بعد شاشة البداية)
+    setTimeout(function(){
+      var lp=el('loginPage'); if(lp&&lp.style.display==='none')return;
+      var m=M(); if(!m||m.classList.contains('cover'))return;
+      window.mascotReact('wave');
+      window.mascotSay('أهلاً! أنا مساعدك 👋',2600);
+    }, 1900);
+    wake();
   }
   if(document.readyState!=='loading')wire(); else document.addEventListener('DOMContentLoaded',wire);
 })();
 
-function showErr(m){const e=document.getElementById('errBox');e.textContent=m;e.style.display='block';if(typeof mascotReact==='function')mascotReact('oops');}
+/* ============================================================
+ *  🤖 نفس الشخصية تصير وجه المساعد الشخصي داخل المنصة
+ * ============================================================ */
+function mascotClone(extraClass){
+  var src=document.querySelector('#mascot svg');
+  if(!src)return null;
+  var wrap=document.createElement('div');
+  wrap.className='mascot mini'+(extraClass?' '+extraClass:'');
+  var svg=src.cloneNode(true);
+  svg.removeAttribute('id');
+  svg.setAttribute('aria-hidden','true');
+  svg.setAttribute('viewBox','52 18 136 136');   // إطار مربّع على الوجه والقبعة فقط
+  wrap.appendChild(svg);
+  return wrap;
+}
+// تفاعل نسخة المساعد (مستقلة عن شخصية شاشة الدخول)
+function miniReact(host,kind,ms){
+  if(!host)return;
+  var m=host.querySelector('.mascot.mini')||host;
+  m.classList.remove('happy','oops','think','celebrate','wave');
+  void m.offsetWidth;
+  if(kind)m.classList.add(kind);
+  if(ms)setTimeout(function(){ m.classList.remove(kind); }, ms);
+}
+
+function showErr(m){
+  const e=document.getElementById('errBox');e.textContent=m;e.style.display='block';
+  if(typeof mascotReact==='function')mascotReact('oops');
+  if(typeof mascotSay==='function')mascotSay('تأكد من بياناتك 🙁',2600);
+}
 
 // ===== LOAD DATA =====
 async function loadStudent(){
@@ -2714,6 +3336,7 @@ async function revokeDeleg(id){
 function showApp(){
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appShell').style.display='block';
+  if(typeof assistMountFaces==='function')assistMountFaces();   // 🎓 نفس الشخصية تصير وجه المساعد
   const init=user.name.split(' ').slice(0,2).map(w=>w[0]||'').join('');
   document.getElementById('topAv').textContent=init;
   document.getElementById('topAv').className='av av-'+user.role;
@@ -8141,7 +8764,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // Ripple effect on all buttons
 document.addEventListener('click', function(e){
-  const btn = e.target.closest('button, .btn, .mcard, .ccard');
+  const btn = e.target && e.target.closest && e.target.closest('button, .btn, .mcard, .ccard');
   if(!btn) return;
   const ripple = document.createElement('span');
   ripple.className = 'ripple-effect';
@@ -10076,7 +10699,7 @@ function showGroupDetail(grp){
 
 // ربط البطاقات بالتنقل
 document.addEventListener('click', function(e){
-  const card = e.target.closest('[data-nav]');
+  const card = e.target && e.target.closest && e.target.closest('[data-nav]');
   if(card){
     const target = card.dataset.nav;
     if(target === 'trainers'){
