@@ -1501,7 +1501,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyV-_P1s7ufcR-ouGG45I_KnOPP0PRRcx0j0ZnPznrFWVjZVEqjaOwaV6ri2HSp_JVf/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby6py9vzV49kpvE7rRKmkHuedUR35x6hF2bzCkbiZoC9MmHjd4rF-5O0jawS4QEbvQi/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2323,6 +2323,7 @@ async function assistAI(q){
   }
   if(d&&d.error==='quota')  return '⏳ '+esc(d.msg||'وصلت الحد اليومي للأسئلة الذكية.');
   if(d&&d.error==='no_key'){ AI_ON=false; return assistNoMatch(); }
+  if(d&&d.error==='no_permission') return '🔐 '+esc(d.msg||'')+'<br><span style="color:var(--muted);font-size:11px">الإداري يقدر يتأكد من: الصيانة ← 🤖 فحص المساعد الذكي</span>';
   return '⚠️ تعذّر التحليل الآن — '+esc((d&&d.msg)||'جرّب مرة ثانية بعد قليل.');
 }
 /* ⭐ أسئلة التحليل تذهب للذكاء مباشرة حتى لو طابقت قاعدة —
@@ -8606,7 +8607,8 @@ async function aiPingTest(){
     const h=document.getElementById('assistSub'); if(h)h.textContent='مساعدك الشخصي — يحلّل بياناتك ✨';
   }else{
     const hint=
-      (d&&d.error==='no_key')?'أضف خاصية باسم <code>AI_API_KEY</code> بالضبط في Apps Script ← ⚙️ Project Settings ← Script Properties، ثم انشر نسخة جديدة.'
+      (d&&d.error==='no_permission')?'السكربت ما عنده إذن الاتصال بالإنترنت. افتح محرر Apps Script ← اختر الدالة <code>authorizeAI</code> من القائمة فوق ← اضغط ▶ تشغيل ← وافق على الأذونات (لو ظهر تحذير: Advanced ← Go to project) ← ثم انشر نسخة جديدة.'
+      :(d&&d.error==='no_key')?'أضف خاصية باسم <code>AI_API_KEY</code> بالضبط في Apps Script ← ⚙️ Project Settings ← Script Properties، ثم انشر نسخة جديدة.'
       :(d&&d.httpCode===401)?'المفتاح مرفوض. أنشئ مفتاحاً جديداً من aistudio.google.com وتأكد أن مشروع جوجل المرتبط به مفعّل عليه Generative Language API.'
       :(d&&d.httpCode===403)?'المفتاح صالح لكن الخدمة غير مفعّلة أو محظورة على هذا المشروع — فعّل Generative Language API من Google Cloud.'
       :(d&&d.httpCode===404)?'اسم النموذج غير موجود. غيّر الخاصية <code>AI_MODEL</code> إلى <code>gemini-3.5-flash-lite</code> أو <code>gemini-2.5-flash</code>.'
