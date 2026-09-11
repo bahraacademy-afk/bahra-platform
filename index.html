@@ -65,6 +65,25 @@ body{font-family:'Tajawal',sans-serif;background:var(--bg);color:var(--text);min
 @keyframes gridMove{0%{transform:translateY(0)}100%{transform:translateY(50px)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 /* ===== قائمة المزيد المنبثقة (جوال) ===== */
+/* صورة الخبر: كاملة بلا قص + قابلة للتكبير */
+.news-img-wrap{position:relative;display:block;width:fit-content;max-width:100%;margin:0 auto 12px;border-radius:12px;
+  overflow:hidden;background:rgba(255,255,255,.04);border:1px solid var(--border);cursor:zoom-in;line-height:0}
+/* width:auto حتى يلتصق الإطار بالصورة — بلا قصّ وبلا فراغات جانبية */
+.news-img-wrap img{display:block;width:auto;height:auto;max-width:100%;max-height:70vh;object-fit:contain;background:#fff}
+.news-img-zoom{position:absolute;inset-inline-end:10px;bottom:10px;background:rgba(6,14,26,.78);color:#dbe7f5;
+  font-size:11px;font-weight:700;padding:5px 10px;border-radius:20px;line-height:1.4;
+  backdrop-filter:blur(6px);opacity:0;transition:opacity .2s}
+.news-img-wrap:hover .news-img-zoom{opacity:1}
+@media(hover:none){.news-img-zoom{opacity:1}}
+/* عارض الصورة */
+.img-viewer{position:fixed;inset:0;z-index:100000;background:rgba(4,9,17,.94);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:16px;animation:fadeIn .2s ease}
+.img-viewer img{max-width:100%;max-height:calc(100vh - 120px);object-fit:contain;border-radius:10px;background:#fff;
+  box-shadow:0 20px 60px rgba(0,0,0,.6);touch-action:pinch-zoom}
+.img-viewer .iv-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:14px}
+.img-viewer .iv-title{color:#dbe7f5;font-size:14px;font-weight:700;margin-bottom:10px;text-align:center;max-width:90vw}
+body.light-mode .img-viewer{background:rgba(240,244,250,.96)}
+body.light-mode .img-viewer .iv-title{color:#0a2348}
 .more-backdrop{position:fixed;inset:0;background:rgba(5,10,20,.55);backdrop-filter:blur(3px);z-index:290;animation:fadeIn .2s ease}
 body.light-mode .more-backdrop{background:rgba(26,58,107,.3)}
 .more-menu{position:fixed;bottom:calc(80px + env(safe-area-inset-bottom));left:12px;right:12px;background:rgba(10,18,33,.97);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:12px;z-index:300;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;box-shadow:0 16px 48px rgba(0,0,0,.5);animation:fadeUp .25s cubic-bezier(.2,.8,.3,1)}
@@ -1162,7 +1181,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx8jyxlSWbAKreZQ6hzs0pR1FVr67BhGxz_BcOgOEpqPOfGaaoRjUWwaC01ArP0htYS/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyuCWCmy1PPOJIBCT98yZs9109Gvkpu3w0m-vvL4vulXti02jLmW3foV7sQF-ciwz6H/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1240,7 +1259,12 @@ function newsMeta(nw){
   return bits.join(' · ');
 }
 function newsCardHTML(nw,isAdmin){
-  const img=nw.imageUrl?`<img src="${escUrl(nw.imageUrl)}" alt="" style="width:100%;max-height:280px;object-fit:cover;border-radius:12px;margin-bottom:12px" onerror="this.style.display='none'">`:'';
+  // ⚠️ كان object-fit:cover يقصّ الصورة (جدول التقويم مثلاً يضيع نصفه).
+  //    الآن تُعرض كاملة، وبالضغط عليها تُفتح بالحجم الأصلي.
+  const img=nw.imageUrl?`<div class="news-img-wrap" onclick="openImgViewer('${jsq(nw.imageUrl)}','${jsq(nw.title)}')" title="اضغط لعرض الصورة كاملة">
+      <img src="${escUrl(nw.imageUrl)}" alt="${escAttr(nw.title)}" loading="lazy" onerror="this.closest('.news-img-wrap').style.display='none'">
+      <span class="news-img-zoom">🔍 عرض كامل</span>
+    </div>`:'';
   const pin=nw.pinned?`<span class="bpill bp-y" style="font-size:11px">📌 مثبّت</span>`:'';
   let admBadges='',admBtns='';
   if(isAdmin){
@@ -1271,6 +1295,23 @@ function newsCardHTML(nw,isAdmin){
     ${admBadges}${admBtns}
   </div>`;
 }
+// عارض صورة بملء الشاشة (للأخبار والمرفقات)
+function openImgViewer(url,title){
+  if(!url)return;
+  document.getElementById('imgViewer')?.remove();
+  const v=document.createElement('div'); v.className='img-viewer'; v.id='imgViewer';
+  v.innerHTML=`${title?`<div class="iv-title">${esc(title)}</div>`:''}
+    <img src="${escUrl(url)}" alt="${escAttr(title||'')}">
+    <div class="iv-bar">
+      <a class="btn btn-out btn-sm" href="${escUrl(url)}" target="_blank" rel="noopener">↗️ فتح في تبويب</a>
+      <button class="btn btn-b btn-sm" onclick="document.getElementById('imgViewer').remove()">✕ إغلاق</button>
+    </div>`;
+  v.addEventListener('click',e=>{ if(e.target===v)v.remove(); });
+  document.body.appendChild(v);
+  const esc2=(e)=>{ if(e.key==='Escape'){ v.remove(); document.removeEventListener('keydown',esc2); } };
+  document.addEventListener('keydown',esc2);
+}
+window.openImgViewer=openImgViewer;
 function newsFeedHTML(){
   const list=(news||[]);
   const cards=list.length?list.map(nw=>newsCardHTML(nw,false)).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد أخبار أو إعلانات حالياً</div>';
