@@ -1289,6 +1289,15 @@ body.light-mode .assist-bar{background:rgba(26,58,107,.12)}
 /* صندوق الملخّص الاستباقي */
 .assist-brief{margin-top:9px;padding:9px 11px;border-radius:11px;background:rgba(26,122,191,.10);
   border:1px solid rgba(26,122,191,.26);font-size:12.5px;line-height:1.95}
+/* ✨ وسم يميّز ردّ الذكاء الاصطناعي عن الردّ المباشر */
+.ai-tag{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:9px;
+  background:linear-gradient(135deg,rgba(155,89,232,.22),rgba(26,122,191,.22));
+  border:1px solid rgba(155,89,232,.40);color:#c8a6f5;margin-bottom:5px}
+body.light-mode .ai-tag{color:#6b3fa0;background:linear-gradient(135deg,rgba(155,89,232,.12),rgba(26,122,191,.12))}
+/* زر «حلّل لي» بجانب حقل الكتابة */
+.assist-ai-btn{background:linear-gradient(135deg,#7b4fd0,#1a7abf);border:none;color:#fff;border-radius:12px;
+  padding:0 12px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.assist-ai-btn:disabled{opacity:.45;cursor:default}
 .assist-input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--border);flex-shrink:0}
 .assist-input input{flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px;outline:none}
 .assist-send{width:44px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;font-size:15px;cursor:pointer;flex-shrink:0}
@@ -1475,7 +1484,8 @@ body.light-mode .assist-bar{background:rgba(26,58,107,.12)}
       <div id="assistBody" class="assist-body"></div>
       <div id="assistChips" class="assist-chips"></div>
       <div class="assist-input">
-        <input id="assistInput" placeholder="اكتب سؤالك..." autocomplete="off" onkeydown="if(event.key==='Enter')assistSend()">
+        <input id="assistInput" placeholder="اسألني أو اطلب تحليلاً..." autocomplete="off" onkeydown="if(event.key==='Enter')assistSend()">
+        <button class="assist-ai-btn" id="assistAiBtn" onclick="assistSend(true)" title="اطلب تحليلاً معمّقاً من الذكاء الاصطناعي" hidden>✨ حلّل</button>
         <button class="assist-send" onclick="assistSend()" aria-label="إرسال">➤</button>
       </div>
     </div>
@@ -1491,7 +1501,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyuCWCmy1PPOJIBCT98yZs9109Gvkpu3w0m-vvL4vulXti02jLmW3foV7sQF-ciwz6H/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyV-_P1s7ufcR-ouGG45I_KnOPP0PRRcx0j0ZnPznrFWVjZVEqjaOwaV6ri2HSp_JVf/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1758,6 +1768,7 @@ function toggleAssist(force){
   const dot=document.getElementById('fabDot'); if(dot&&open)dot.hidden=true;
   if(open){
     assistMountFaces();
+    const aiBtn=document.getElementById('assistAiBtn'); if(aiBtn)aiBtn.hidden=!AI_ON;
     const body=document.getElementById('assistBody');
     if(body && !body.dataset.init){ body.dataset.init='1'; assistAddMsg(assistWelcome(),'bot'); assistRenderChips(); }
     if(typeof miniReact==='function')setTimeout(()=>miniReact(assistFace(),'happy',1400),120);
@@ -1843,10 +1854,10 @@ function assistAddMsg(html,who){
   const d=document.createElement('div'); d.className='assist-msg '+(who==='user'?'assist-user':'assist-bot'); d.innerHTML=html;
   body.appendChild(d); body.scrollTop=body.scrollHeight;
 }
-function assistSend(){
+function assistSend(forceAI){
   const i=document.getElementById('assistInput'); if(!i)return;
   const t=i.value.trim(); if(!t)return; i.value='';
-  assistAsk(t);
+  assistAsk(t,forceAI===true);
 }
 
 /* ---------- مساعدات بيانات مشتركة ---------- */
@@ -2278,20 +2289,87 @@ function assistStudentCard(s){
     assistActs(assistAct('🎓 المتدربون','all_students'));
 }
 
-function assistAsk(text){
+// حالة الذكاء الاصطناعي (تُفحص مرة بعد الدخول)
+let AI_ON=false, AI_BUSY=false;
+async function assistCheckAI(){
+  try{ const d=await jsonpAi({action:'aiStatus'},12000); AI_ON=!!(d&&d.enabled); }
+  catch(e){ AI_ON=false; }
+  const h=document.getElementById('assistSub');
+  if(h)h.textContent=AI_ON?'مساعدك الشخصي — يحلّل بياناتك ✨':'مساعدك الشخصي داخل المنصة';
+}
+function assistTyping(txt){
+  const body=document.getElementById('assistBody'); if(!body)return;
+  const t=document.createElement('div'); t.className='assist-msg assist-bot'; t.id='assistTyping';
+  t.innerHTML=(txt?'<span style="color:var(--muted);font-size:12px">'+esc(txt)+'</span><br>':'')
+    +'<span class="assist-typing"><span></span><span></span><span></span></span>';
+  body.appendChild(t); body.scrollTop=body.scrollHeight;
+}
+// إعادة الأسماء الحقيقية مكان الرموز المُجهَّلة (الاستبدال يتم في متصفحك وحدك)
+function assistDeAnon(html,names){
+  if(!names)return html;
+  const keys=Object.keys(names).sort((a,b)=>b.length-a.length);   // الأطول أولاً: «متدرب 12» قبل «متدرب 1»
+  let out=html;
+  keys.forEach(k=>{
+    const rx=new RegExp(k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');
+    out=out.replace(rx,'<b>'+esc(names[k])+'</b>');
+  });
+  return out;
+}
+async function assistAI(q){
+  const d=await jsonpAi({action:'aiAsk',q:q});
+  if(d&&d.ok&&d.answer){
+    const tools=(d.tools&&d.tools.length)?'<br><span style="color:var(--muted);font-size:10.5px">راجع '+d.tools.length+' مصدر بيانات</span>':'';
+    return '<span class="ai-tag">✨ تحليل ذكي</span><br>'+assistDeAnon(d.answer,d.names)+tools;
+  }
+  if(d&&d.error==='quota')  return '⏳ '+esc(d.msg||'وصلت الحد اليومي للأسئلة الذكية.');
+  if(d&&d.error==='no_key'){ AI_ON=false; return assistNoMatch(); }
+  return '⚠️ تعذّر التحليل الآن — '+esc((d&&d.msg)||'جرّب مرة ثانية بعد قليل.');
+}
+/* ⭐ أسئلة التحليل تذهب للذكاء مباشرة حتى لو طابقت قاعدة —
+   «ليش درجات الشعبة نازلة؟» ما ينفع يردّ عليها بقائمة شعب. */
+const AI_MARKERS=['ليش','ليه','لماذا','وش السبب','ايش السبب','سبب ','السبب','وين الخلل','ما المشكله','وش المشكله',
+  'قارن','مقارنه','قارني','حلل','حللي','تحليل','فسر','فسري','علل',
+  'رايك','رايح','نصيحه','انصحني','اقترح','اقتراح','توصيه','توصيات','خطه','خطة','استراتيجيه',
+  'كيف احسن','كيف ارفع','كيف اطور','كيف اعالج','كيف اتعامل','وش الحل','ايش الحل','شنو الحل',
+  'وش تنصح','ايش تنصح','وش تشوف','ايش تشوف','برايك','افضل طريقه','ايش اسوي عشان','وش اسوي عشان',
+  'توقع','متوقع','هل تتوقع','مقارنة بين','الفرق بين','علاقه بين'];
+function assistWantsAnalysis(text){
+  const q=assistNorm(text);
+  return AI_MARKERS.some(w=>q.includes(assistNorm(w)));
+}
+function assistAsk(text,forceAI){
+  if(AI_BUSY)return;
   assistAddMsg(esc(text),'user');
-  const body=document.getElementById('assistBody');
-  if(body){ const t=document.createElement('div'); t.className='assist-msg assist-bot'; t.id='assistTyping';
-    t.innerHTML='<span class="assist-typing"><span></span><span></span><span></span></span>';
-    body.appendChild(t); body.scrollTop=body.scrollHeight; }
   if(typeof miniReact==='function')miniReact(assistFace(),'think');   // 🤔 يفكّر وهو يبحث في بياناتك
-  setTimeout(()=>{
+  let quick=null;
+  const wantsAI=(forceAI===true)||(AI_ON&&assistWantsAnalysis(text));
+  if(!wantsAI){ try{ quick=assistReply(text); }catch(e){ quick='صار خطأ بسيط — جرّب سؤالاً آخر.'; } }
+  if(quick!=null){                                   // ⚡ جواب مباشر من بياناتك: فوري ودقيق وبلا تكلفة
+    assistTyping('');
+    setTimeout(()=>{
+      document.getElementById('assistTyping')?.remove();
+      assistAddMsg(quick,'bot');
+      if(typeof miniReact==='function')miniReact(assistFace(),'happy',1400);
+    },420);
+    return;
+  }
+  if(!AI_ON){                                        // الذكاء غير مفعّل → الرد الاحتياطي
+    assistTyping('');
+    setTimeout(()=>{ document.getElementById('assistTyping')?.remove();
+      assistAddMsg(assistNoMatch(),'bot'); },420);
+    return;
+  }
+  AI_BUSY=true;
+  assistTyping('أحلّل بياناتك…');
+  assistAI(text).then(html=>{
     document.getElementById('assistTyping')?.remove();
-    let okAns=true;
-    try{ assistAddMsg(assistReply(text),'bot'); }
-    catch(e){ okAns=false; assistAddMsg('صار خطأ بسيط — جرّب سؤالاً آخر.','bot'); }
-    if(typeof miniReact==='function')miniReact(assistFace(),okAns?'happy':'oops',1400);
-  }, 480);
+    assistAddMsg(html,'bot');
+    if(typeof miniReact==='function')miniReact(assistFace(),/⚠️|⏳/.test(html)?'oops':'happy',1600);
+  }).catch(e=>{
+    document.getElementById('assistTyping')?.remove();
+    assistAddMsg('⚠️ التحليل أخذ وقتاً أطول من المتوقع — جرّب مرة ثانية.','bot');
+    if(typeof miniReact==='function')miniReact(assistFace(),'oops',1400);
+  }).then(()=>{ AI_BUSY=false; });
 }
 function assistReply(qRaw){
   const q=assistNorm(qRaw);
@@ -2312,8 +2390,10 @@ function assistReply(qRaw){
   let r=null;
   if(role==='s') r=assistStudent(has,q); else if(role==='t') r=assistTrainer(has,q); else if(role==='a') r=assistAdmin(has,q);
   if(r) return r;
-  return 'ما فهمت سؤالك تماماً 🤔 جرّب أحد هذه:'+assistSuggest();
+  return null;                 // ⭐ لا قاعدة طابقت → يتولّاها الذكاء الاصطناعي
 }
+// الرد الاحتياطي حين يكون الذكاء معطّلاً
+function assistNoMatch(){ return 'ما فهمت سؤالك تماماً 🤔 جرّب أحد هذه:'+assistSuggest(); }
 function assistSuggest(){
   return '<div class="assist-acts">'+assistChipsList().map(c=>`<button class="assist-chip" type="button" onclick='assistAsk(${JSON.stringify(c)})'>${esc(c)}</button>`).join('')+'</div>';
 }
@@ -2492,6 +2572,20 @@ function jsonpCallOnce(params){
     s.src=SCRIPT_URL+'?'+qs+'&callback='+cb;
     s.onerror=()=>{clearTimeout(timer);delete window[cb];reject(new Error('network'))};
     document.head.appendChild(s);
+  });
+}
+// 🤖 نداء الذكاء: مهلة أطول (التحليل يأخذ ثوانٍ) وبلا إعادة محاولة حتى لا نستهلك الحصة مرتين
+function jsonpAi(params,ms){
+  params=Object.assign({token:SESSION.token},params);
+  return new Promise((resolve,reject)=>{
+    const cb='ai_'+Date.now()+'_'+Math.floor(Math.random()*1000);
+    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},ms||60000);
+    window[cb]=(d)=>{clearTimeout(timer);delete window[cb];document.getElementById('jsonp_'+cb)?.remove();resolve(d);};
+    const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v==null?'':v)).join('&');
+    const sc=document.createElement('script');
+    sc.id='jsonp_'+cb; sc.src=SCRIPT_URL+'?'+qs+'&callback='+cb;
+    sc.onerror=()=>{clearTimeout(timer);delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('network'))};
+    document.head.appendChild(sc);
   });
 }
 function jsonpTo(url,params){
@@ -3337,6 +3431,7 @@ function showApp(){
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appShell').style.display='block';
   if(typeof assistMountFaces==='function')assistMountFaces();   // 🎓 نفس الشخصية تصير وجه المساعد
+  if(typeof assistCheckAI==='function')assistCheckAI();         // 🤖 هل الذكاء مفعّل على الخادم؟
   const init=user.name.split(' ').slice(0,2).map(w=>w[0]||'').join('');
   document.getElementById('topAv').textContent=init;
   document.getElementById('topAv').className='av av-'+user.role;
@@ -8182,7 +8277,7 @@ const aPgs={
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
     <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
-    <div style="margin:12px 0 4px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-out btn-sm" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out btn-sm" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out btn-sm" onclick="repairKeys(true)">🔑 فحص المفاتيح</button></div>
+    <div style="margin:12px 0 4px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-out btn-sm" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out btn-sm" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out btn-sm" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out btn-sm" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button></div>
     <div class="alert ab" style="margin-top:8px;font-size:12.5px"><span class="aicon">💡</span>«إصلاح التبويبات» يوسّع أعمدة التبويبات الضيقة في Google Sheets · «فحص المفاتيح» يعرض السجلات التي مفتاحها لا يطابق الرقم الأكاديمي الحالي (يحدث بعد تحديث الأرقام) ويصلحها بضغطة.</div>
 
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
@@ -8493,6 +8588,49 @@ async function setGradeAlertPct(){
 window.setGradeAlertPct=setGradeAlertPct;
 
 // ===== صحة النظام (فحص الأحجام) =====
+/* 🩺 فحص المساعد الذكي: يتحقق من المفتاح والنموذج بلا إرسال أي بيانات متدربين */
+async function aiPingTest(){
+  showToast('جاري فحص المساعد الذكي...','i');
+  let d=null;
+  try{ d=await jsonpAi({action:'aiPing'},45000); }
+  catch(e){ d={ok:false,error:'net',msg:'تعذّر الوصول للخادم — تأكد أنك نشرت النسخة الجديدة.'}; }
+  const row=(k,v)=>`<div style="display:flex;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><b style="min-width:120px">${esc(k)}</b><span style="flex:1;word-break:break-word">${v}</span></div>`;
+  let body='';
+  if(d&&d.ok){
+    body=`<div class="alert as" style="margin-bottom:10px"><span class="aicon">✅</span><b>المساعد الذكي شغّال.</b></div>`
+      +row('النموذج',esc(d.model||'—'))
+      +row('شكل المفتاح',esc(d.keyShape||'—'))
+      +row('طريقة المصادقة',d.auth==='query'?'المعامل ?key= (الترويسة لم تُقبل)':'ترويسة x-goog-api-key')
+      +row('رد تجريبي',esc(d.reply||'—'));
+    AI_ON=true;
+    const h=document.getElementById('assistSub'); if(h)h.textContent='مساعدك الشخصي — يحلّل بياناتك ✨';
+  }else{
+    const hint=
+      (d&&d.error==='no_key')?'أضف خاصية باسم <code>AI_API_KEY</code> بالضبط في Apps Script ← ⚙️ Project Settings ← Script Properties، ثم انشر نسخة جديدة.'
+      :(d&&d.httpCode===401)?'المفتاح مرفوض. أنشئ مفتاحاً جديداً من aistudio.google.com وتأكد أن مشروع جوجل المرتبط به مفعّل عليه Generative Language API.'
+      :(d&&d.httpCode===403)?'المفتاح صالح لكن الخدمة غير مفعّلة أو محظورة على هذا المشروع — فعّل Generative Language API من Google Cloud.'
+      :(d&&d.httpCode===404)?'اسم النموذج غير موجود. غيّر الخاصية <code>AI_MODEL</code> إلى <code>gemini-3.5-flash-lite</code> أو <code>gemini-2.5-flash</code>.'
+      :(d&&d.httpCode===429)?'تجاوزت الحد المسموح مؤقتاً — انتظر دقيقة وأعد الفحص.'
+      :'راجع نص الخطأ أعلاه.';
+    body=`<div class="alert ad" style="margin-bottom:10px"><span class="aicon">⚠️</span><b>ما اشتغل.</b></div>`
+      +row('النموذج',esc((d&&d.model)||'—'))
+      +row('شكل المفتاح',esc((d&&d.keyShape)||'لا يوجد مفتاح'))
+      +(d&&d.httpCode?row('رمز الخطأ',esc(String(d.httpCode))):'')
+      +row('رسالة الخادم',esc((d&&d.msg)||'—'))
+      +`<div class="alert ab" style="margin-top:10px"><span class="aicon">💡</span>${hint}</div>`;
+  }
+  document.getElementById('aiPingModal')?.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='aiPingModal'; ov.style.zIndex='99999';
+  ov.innerHTML=`<div class="modal mlist" style="max-width:560px">
+    <div class="modal-title"><span>🤖 فحص المساعد الذكي</span>
+      <button class="modal-close" onclick="document.getElementById('aiPingModal').remove()">✕</button></div>
+    <div class="modal-body">${body}</div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-out" style="flex:1" onclick="document.getElementById('aiPingModal').remove()">إغلاق</button>
+      <button class="btn" style="flex:1" onclick="document.getElementById('aiPingModal').remove();aiPingTest()">🔄 أعد الفحص</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+}
 async function refreshSystemHealth(){
   const box=document.getElementById('sysHealth'); if(!box)return;
   box.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري فحص النظام...</div>';
