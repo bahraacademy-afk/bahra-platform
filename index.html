@@ -367,10 +367,13 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 
 /* ===== MODAL ===== */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;animation:fadeIn .3s ease}
-.modal{background:#0d1d30;border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:480px;animation:modalIn .4s cubic-bezier(.16,1,.3,1)}
-.modal.mlist{max-height:85vh;display:flex;flex-direction:column}
+.modal{background:#0d1d30;border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:480px;animation:modalIn .4s cubic-bezier(.16,1,.3,1);max-height:88vh;overflow-y:auto;overscroll-behavior:contain}
+.modal.mlist{max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
 .modal-title{font-size:17px;font-weight:700;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-.modal-body{overflow-y:auto;flex:1;margin:-4px -6px 0;padding:4px 6px;display:flex;flex-direction:column;gap:8px}
+.modal-body{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;flex:1 1 auto;min-height:0;margin:-4px -6px 0;padding:4px 6px;display:flex;flex-direction:column;gap:8px}
+.modal-body>*{flex-shrink:0}                       /* لا يتقلّص المحتوى داخل المنطقة القابلة للتمرير */
+.modal-body .gtable{min-height:0;max-height:none}
+.modal.mlist>*:not(.modal-body){flex-shrink:0}   /* العنوان وصف الأزرار يبقيان ظاهرين */
 .modal-close{background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;transition:color .2s}
 .modal-close:hover{color:var(--text)}
 .mform-group{margin-bottom:14px}
