@@ -8640,6 +8640,12 @@ function controlShell(bodyHtml){
   table.cs td.nm,table.cs th.nm{text-align:right;white-space:nowrap;padding-inline:8px}
   table.cs .tot{font-weight:800;background:#eef3f9;color:#0a2348}
   table.cs td.g{color:#c0392b;font-weight:700}
+  /* خلية «غير مسجّل في المادة» — تُميَّز بصرياً ولا تُقرأ كغياب رصد */
+  table.cs td.na{background:repeating-linear-gradient(135deg,#eceff4 0 6px,#e3e8ef 6px 12px)!important;color:#9aa7ba;font-weight:700}
+  table.cs tbody tr:nth-child(even) td.na{background:repeating-linear-gradient(135deg,#e7ebf1 0 6px,#dde3ec 6px 12px)!important}
+  .cs-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:#5a6b85;margin:6px 2px 0}
+  .cs-legend span{display:inline-flex;align-items:center;gap:5px}
+  .cs-legend i{width:14px;height:12px;border:1px solid #6b7a90;display:inline-block;font-style:normal;text-align:center;line-height:11px;font-size:9px;font-weight:700}
   table.cs td.l{color:#c77c11;font-weight:700}
   table.cs td.p{color:#1e8449;font-weight:700}
   table.cs th.dt{font-size:9px;white-space:nowrap;min-width:30px}
@@ -8678,7 +8684,10 @@ function printControlSheet(){
     courses.forEach(co=>{
       const cats=co.cats||[];
       const span=(cats.length||1)+1;
-      h1+=`<th colspan="${span}" class="cgrp">${esc(co.course||co.code)}</th>`;
+      // كم متدرب من الشعبة مسجّل فعلاً في هذه المادة
+      const enr=gs.filter(st=>(allCourses||[]).some(x=>String(x.sid)===String(st.id||st.sid)&&normCode(x.code)===normCode(co.code)&&isActive(x.status))).length;
+      const part=(enr<gs.length)?` <span style="font-weight:400;font-size:9px;opacity:.9">(${enr} من ${gs.length})</span>`:'';
+      h1+=`<th colspan="${span}" class="cgrp">${esc(co.course||co.code)}${part}</th>`;
       if(cats.length){
         cats.forEach(ct=>{h2+=`<th>${esc(ct.cat)}</th>`;});
         h2+=`<th class="tot">مجموع</th>`;
@@ -8695,18 +8704,26 @@ function printControlSheet(){
       courses.forEach(co=>{
         const c=(allCourses||[]).find(x=>String(x.sid)===ssid&&normCode(x.code)===normCode(co.code)&&isActive(x.status));
         const key=c?c.key:'';
-        if((co.cats||[]).length){
+        const cats=co.cats||[];
+        // ⭐ الطالب غير مسجّل في هذه المادة → خانات مظلّلة بـ«·» لا «غ».
+        //   («غ» تعني «مسجّل ولم تُرصد درجته» — كانت تظهر للجميع حتى غير المسجّلين)
+        if(!c){
+          const n=(cats.length||1)+1;
+          tds+=Array(n).fill('<td class="na">·</td>').join('');
+          return;
+        }
+        if(cats.length){
           let sum=0,any=false,cells='';
-          co.cats.forEach(ct=>{
-            const v=key?detailGrade(key,co.code,ct.cat):'';
+          cats.forEach(ct=>{
+            const v=detailGrade(key,co.code,ct.cat);
             if(v!==''&&v!=null){sum+=parseFloat(v)||0;any=true;cells+=`<td>${v}</td>`;}
             else cells+=`<td class="g">غ</td>`;
           });
-          const total=any?(Math.round(sum*10)/10):(c&&c.pct?Math.round(c.pct):'');
+          const total=any?(Math.round(sum*10)/10):(c.pct?Math.round(c.pct):'');
           tds+=cells+`<td class="tot">${total!==''?total:'—'}</td>`;
         }else{
-          const grade=(c&&c.pct)?Math.round(c.pct):'';
-          tds+=`<td>${grade!==''?grade:'—'}</td><td class="tot">${grade!==''?grade:'—'}</td>`;
+          const grade=c.pct?Math.round(c.pct):'';
+          tds+=`<td>${grade!==''?grade:'<span style="color:#c0392b;font-weight:700">غ</span>'}</td><td class="tot">${grade!==''?grade:'—'}</td>`;
         }
       });
       return `<tr>${tds}</tr>`;
@@ -8716,7 +8733,12 @@ function printControlSheet(){
         <tr>${h1}</tr>
         <tr>${h2}</tr>
         <tr class="mxr"><th colspan="3" style="text-align:center">الدرجة العظمى ←</th>${h3}</tr>
-      </thead><tbody>${rows}</tbody></table></div>`;
+      </thead><tbody>${rows}</tbody></table>
+      <div class="cs-legend">
+        <span><i style="color:#c0392b">غ</i> مسجّل ولم تُرصد درجته</span>
+        <span><i class="na" style="background:repeating-linear-gradient(135deg,#eceff4 0 6px,#e3e8ef 6px 12px);color:#9aa7ba">·</i> غير مسجّل في المادة</span>
+        <span><i>—</i> لا يوجد مجموع بعد</span>
+      </div></div>`;
   });
   if(!body){showToast('لا توجد شعب أو درجات لعرضها','w');return;}
   openReport(controlShell(body));
