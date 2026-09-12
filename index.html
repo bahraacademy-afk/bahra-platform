@@ -635,7 +635,11 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .grade-sec{background:var(--card2,rgba(255,255,255,.02));border:1px solid var(--border);
   border-radius:18px;padding:18px 18px 14px;margin-bottom:26px}
 .grade-sec .gtable{border-radius:14px}
-.grade-sec .btn-row{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+/* تذييل القسم: كان زر الحفظ داخل بطاقة الجدول نفسها — فيتزحلق معها
+   أفقياً على الجوال، وتبدو حافتاه داخل حدّ البطاقة ببكسل فيُقرأ كغير محاذٍ.
+   أخرجناه ليصير تذييلاً للقسم بعرضه الكامل ومحاذياً للجدول تماماً. */
+.grade-sec .sec-foot{display:flex;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+.grade-sec .sec-foot .btn{flex:1 1 auto;justify-content:center;min-height:46px!important;font-size:14.5px}
 @media(max-width:560px){ .grade-sec{padding:14px 12px 12px;border-radius:14px;margin-bottom:18px} }
 /* ترويسة قسم: العنوان وزرّه متجاوران — كان space-between يرمي الزر
    إلى الطرف المقابل فتفصلهما ألف بكسل على شاشة عريضة */
@@ -6278,8 +6282,9 @@ const tPgs={
             </tr>`;
           }).join('')}</tbody>
         </table>
-        <div class="btn-row"><button class="btn btn-g" onclick="${rub.length?`saveDetailGrades('${jsq(code)}','${jsq(course)}')`:`saveGrades('${jsq(course)}')`}">💾 حفظ درجات ${course}</button></div>
-      </div>`;
+        </div>
+        <div class="sec-foot"><button class="btn btn-g" onclick="${rub.length?`saveDetailGrades('${jsq(code)}','${jsq(course)}')`:`saveGrades('${jsq(course)}')`}">💾 حفظ درجات ${course}</button></div>
+      `;
     }).join(''):'<div class="empty"><div class="empty-icon">📝</div>لا توجد مقررات حالية لرصد الدرجات</div>'}`;
   },
   alerts:()=>{
