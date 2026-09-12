@@ -209,7 +209,8 @@ body.light-mode .more-menu button{background:rgba(26,58,107,.05);border-color:rg
 .bg-orb2{position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(26,122,191,.06) 0%,transparent 70%);bottom:-100px;left:-80px;border-radius:50%;animation:float 12s ease-in-out infinite reverse}
 
 /* ===== LOGIN ===== */
-#loginPage{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+#loginPage{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;min-height:100dvh;padding:24px;overflow-y:auto;overscroll-behavior:contain}
 .login-wrap{width:100%;max-width:460px}
 /* ===== 🎓 شخصية تسجيل الدخول ===== */
 .mascot{width:190px;margin:0 auto -14px;position:relative;z-index:2;pointer-events:none;
@@ -334,8 +335,42 @@ body.light-mode .m-shadow{fill:rgba(26,58,107,.14)}
   .m-body,.m-shadow,.m-tassel,.m-tassel-b,.m-lid,.m-spark path,.m-think circle,.m-zzz text,.m-cap{animation:none!important}
   .m-pupil,.m-shine,.m-hand,.m-arm,.m-fing,.m-bubble{transition:none!important}
 }
-@media(max-height:700px){.mascot{width:140px;margin-bottom:-10px}}
 @media(max-width:420px){.mascot{width:160px}}
+/* ⭐ لوحة المفاتيح في الجوال تقصّ الشاشة — نصغّر الترويسة تدريجياً
+   حتى يبقى زر الدخول في متناول الإصبع دائماً */
+@media(max-height:800px){
+  #loginPage{justify-content:flex-start;padding-top:16px}
+  .login-logo{margin-bottom:12px}
+  .login-logo img{width:64px;height:64px}
+  .login-logo h1{font-size:17px;margin-top:7px}
+  .login-logo p{display:none}
+  .mascot{width:118px;margin-bottom:-8px}
+}
+@media(max-height:680px){
+  #loginPage{padding-top:10px}
+  .login-logo{margin-bottom:8px}
+  .login-logo img{width:46px;height:46px;animation:none}
+  .login-logo h1{font-size:14px;margin-top:5px}
+  .mascot{display:none}            /* الشخصية تتنحّى لصالح الوصول للزر */
+  .glass{padding:14px 15px 12px}
+  .role-tabs{margin-bottom:10px}
+  .rtab{padding:8px 4px;font-size:11.5px}
+  .rtab span{font-size:15px!important;margin-bottom:2px!important}
+  .fgroup{margin-bottom:10px}
+  .fgroup label{margin-bottom:4px;font-size:11.5px}
+  .fgroup input{padding:10px 12px}
+  .remember-row{margin:-2px 0 10px;font-size:11.5px}
+  .lbtn{padding:12px;font-size:14px}
+}
+@media(max-height:560px){
+  .login-logo{display:none}        /* الشعار زينة — النموذج هو المهم */
+  #loginPage{padding-top:8px}
+}
+/* زر الثيم كان يغطي تبويب «إداري» حين تُخفى الترويسة — ننقله أسفل الشاشة */
+@media(max-height:680px){
+  #loginTopBtns{top:auto!important;bottom:10px!important;left:10px!important}
+  #loginTopBtns button{width:36px!important;height:36px!important;font-size:15px!important}
+}
 /* زر إظهار الرمز */
 .pw-wrap{position:relative}
 .pw-wrap input{padding-inline-start:46px!important}
@@ -345,6 +380,8 @@ body.light-mode .m-shadow{fill:rgba(26,58,107,.14)}
 .pw-eye:hover{opacity:1;background:rgba(255,255,255,.07)}
 .pw-eye.on{opacity:1}
 .login-logo{text-align:center;margin-bottom:28px;animation:fadeUp .8s ease both}
+.remember-row{display:flex;align-items:center;gap:8px;margin:-4px 0 14px;font-size:12.5px;color:var(--muted);cursor:pointer;user-select:none}
+.remember-row input{width:17px;height:17px;accent-color:var(--blue);cursor:pointer;flex-shrink:0}
 .login-logo img{width:100px;height:100px;object-fit:cover;border-radius:50%;border:3px solid rgba(255,255,255,.15);filter:drop-shadow(0 0 25px rgba(230,57,70,.5));animation:float 4s ease-in-out infinite,glow 3s ease-in-out infinite}
 .login-logo h1{font-size:22px;font-weight:900;margin-top:12px;background:linear-gradient(135deg,#fff 0%,#aac8e8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .login-logo h1 span{background:linear-gradient(135deg,var(--red),#ff6b7a);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
@@ -511,7 +548,12 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .sch-item:active{cursor:grabbing}
 .sch-course{font-size:12px;font-weight:700;color:var(--text);line-height:1.3}
 .sch-trainer{font-size:10px;color:var(--muted);margin-top:2px}
-.sch-room{margin-top:5px;width:100%;font-size:10px;padding:3px 4px;border-radius:6px;border:1px solid rgba(244,162,97,.3);background:rgba(244,162,97,.08);color:#f4a261;cursor:pointer}
+.sch-room{margin-top:5px;width:100%;font-size:10px;padding:3px 4px;border-radius:6px;border:1px solid rgba(244,162,97,.3);background:rgba(244,162,97,.08);color:#f4a261;cursor:pointer;min-height:30px}
+@media(max-width:820px){
+  /* خلايا الجدول تضيق على الجوال فتصير القائمة شريطاً لا يُلمس —
+     نمنحها حداً أدنى ونسمح للجدول بالتمرير الأفقي داخل إطاره */
+  .sch-room{min-height:36px;font-size:11px;padding:5px 4px}
+}
 .sch-item-v{padding:6px 4px}
 .sch-item-v .sch-course{font-size:12px;font-weight:700;color:var(--text);line-height:1.3}
 .sch-item-v .sch-trainer{font-size:10px;color:var(--muted);margin-top:3px}
@@ -565,7 +607,14 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
 /* ===== SEARCH ===== */
-.search-row{display:flex;gap:10px;margin-bottom:14px}
+.search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.search-row>*{min-width:0}
+@media(max-width:560px){
+  /* كانت القوائم تنضغط وتخرج خارج الشاشة بدل أن تنزل سطراً جديداً */
+  .search-row{gap:8px}
+  .search-row>input{flex:1 1 100%}
+  .search-row>select{flex:1 1 calc(50% - 4px);min-width:0}
+}
 .search-row input,.search-row select{padding:10px 14px;background:rgba(7,17,31,.6);border:1px solid var(--border);border-radius:10px;font-family:'Tajawal',sans-serif;font-size:13px;color:var(--text);outline:none;transition:border-color .2s}
 .search-row input{flex:1}
 .search-row input:focus,.search-row select:focus{border-color:rgba(100,160,220,.4)}
@@ -604,6 +653,13 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 /* ===== SCHEDULE ===== */
 .sch-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:10px;display:flex;align-items:center;gap:14px;backdrop-filter:blur(10px);transition:all .2s}
 .sch-item:hover{border-color:rgba(100,160,220,.25);transform:translateX(-2px)}
+/* ⚠️ الاسم .sch-item معرَّف مرتين لمكوّنين مختلفين، والقاعدة أعلاه (display:flex)
+   كانت تضغط قائمة القاعة داخل خلية الجدول إلى 25px فيتعذّر لمسها.
+   نخصّص خلايا الجدول حتى تأخذ كل قائمة عرض الخلية كاملاً. */
+.sch-cell .sch-item{display:block;padding:6px 8px;margin-bottom:0;border-radius:8px;
+  background:rgba(26,122,191,.14);border:1px solid rgba(26,122,191,.3);backdrop-filter:none}
+.sch-cell .sch-item:hover{transform:none}
+.sch-cell .sch-room{width:100%;box-sizing:border-box}
 .sch-time{background:rgba(26,122,191,.12);border:1px solid rgba(26,122,191,.25);color:#6ab8f7;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center;min-width:75px}
 .sch-day{font-size:10px;color:var(--muted);margin-top:2px}
 
@@ -758,7 +814,11 @@ body.light-mode .fab-item.active .fi-ico{color:#fff}
   #assistWidget{bottom:calc(76px + env(safe-area-inset-bottom))!important}
   /* أهداف لمس مريحة */
   #mcontent button,#mcontent select,#mcontent input:not([type=checkbox]):not([type=radio]),#mcontent .btn{min-height:40px}
-  #mcontent input[type=checkbox],#mcontent input[type=radio]{width:19px;height:19px;accent-color:#1a7abf}
+  /* 19px كان أصغر من أن تصيبه الإصبع بدقة — الحد المريح للمس ~24px */
+  #mcontent input[type=checkbox],#mcontent input[type=radio]{width:24px;height:24px;accent-color:#1a7abf}
+  /* واللمس يقع على المربّع نفسه لا على النص فقط، فنوسّع منطقة اللمس حوله */
+  #mcontent label:has(> input[type=checkbox]),#mcontent label:has(> input[type=radio]){
+    min-height:40px;display:inline-flex;align-items:center;gap:8px}
   .lp-chip{padding:8px 11px!important}
   .sidebar{display:none!important}
   .dash-charts{grid-template-columns:1fr!important}
@@ -1342,7 +1402,7 @@ body.light-mode .ai-tag{color:#6b3fa0;background:linear-gradient(135deg,rgba(155
 
 <!-- ===== LOGIN ===== -->
 <div id="loginPage">
-  <div style="position:fixed;top:16px;left:16px;z-index:200;display:flex;gap:10px">
+  <div id="loginTopBtns" style="position:fixed;top:16px;left:16px;z-index:200;display:flex;gap:10px">
     <button id="themeBtnLogin" onclick="toggleTheme()" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#e8f0f8;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(10px);transition:all .3s" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform=''">🌙</button>
   </div>
   <div class="login-wrap">
@@ -1422,20 +1482,27 @@ body.light-mode .ai-tag{color:#6b3fa0;background:linear-gradient(135deg,rgba(155
         <button class="rtab" onclick="setRole('t',this)"><span style="font-size:18px;display:block;margin-bottom:4px">👨‍🏫</span>مدرب</button>
         <button class="rtab" onclick="setRole('a',this)"><span style="font-size:18px;display:block;margin-bottom:4px">⚙️</span>إداري</button>
       </div>
+      <!-- ⭐ نموذج حقيقي: يفعّل زر «اذهب» في لوحة مفاتيح الجوال،
+           ويسمح للمتصفح بحفظ البيانات وتعبئتها تلقائياً لاحقاً -->
+      <form id="loginForm" onsubmit="event.preventDefault();doLogin();return false;" autocomplete="on">
       <div class="fgroup">
-        <label id="idLbl">الرقم الأكاديمي</label>
-        <input type="text" id="inpId" placeholder="أدخل رقمك الأكاديمي" inputmode="text" autocomplete="off">
+        <label id="idLbl" for="inpId">الرقم الأكاديمي</label>
+        <input type="text" id="inpId" name="username" placeholder="أدخل رقمك الأكاديمي"
+               inputmode="numeric" pattern="[0-9]*" autocomplete="username" enterkeyhint="next">
       </div>
       <div class="fgroup">
-        <label id="phLbl">الرقم السري</label>
+        <label id="phLbl" for="inpPh">الرقم السري</label>
         <div class="pw-wrap">
-          <input type="password" id="inpPh" placeholder="أدخل الرمز السري" inputmode="text" autocomplete="off">
+          <input type="password" id="inpPh" name="password" placeholder="أدخل الرمز السري"
+                 inputmode="numeric" autocomplete="current-password" enterkeyhint="go">
           <button type="button" class="pw-eye" id="pwEye" onclick="togglePw()" aria-label="إظهار الرمز" title="إظهار / إخفاء الرمز">👁️</button>
         </div>
       </div>
-      <button class="lbtn bs" id="lbtn" onclick="doLogin()">دخول المنصة</button>
+      <label class="remember-row"><input type="checkbox" id="rememberMe" checked><span>تذكّر رقمي على هذا الجهاز</span></label>
+      <button class="lbtn bs" id="lbtn" type="submit">دخول المنصة</button>
+      </form>
       <div class="err-box" id="errBox">بيانات الدخول غير صحيحة</div>
-      <div class="loading" id="ldg"><div class="sp"></div><div style="color:var(--muted);font-size:12px;margin-top:8px">جاري التحقق...</div></div>
+      <div class="loading" id="ldg"><div class="sp"></div><div style="color:var(--muted);font-size:12px;margin-top:8px" id="ldgTxt">جاري التحقق...</div></div>
     </div>
   </div>
 </div>
@@ -2589,11 +2656,12 @@ function jsonpAi(params,ms){
     document.head.appendChild(sc);
   });
 }
-function jsonpTo(url,params){
+function jsonpTo(url,params,ms){
   return new Promise((resolve,reject)=>{
     const cb='cb_'+Date.now()+'_'+Math.floor(Math.random()*1000);
-    // مهلة 10 ثوانٍ — الخادم يرد فوراً عند النجاح، فهذي تنطبق فقط عند تعذّر الوصول
-    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},10000);
+    // الافتراضي 10 ثوانٍ · الدخول يمررها أطول لأن أول طلب يوقظ خادم Apps Script
+    // (إقلاع بارد) وقد يتأخر كثيراً على شبكة الجوال
+    const timer=setTimeout(()=>{delete window[cb];document.getElementById('jsonp_'+cb)?.remove();reject(new Error('timeout'));},ms||10000);
     window[cb]=(d)=>{clearTimeout(timer);delete window[cb];document.getElementById('jsonp_'+cb)?.remove();resolve(d);};
     const qs=Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v==null?'':v)).join('&');
     const sc=document.createElement('script');
@@ -2701,36 +2769,53 @@ function setRole(r,btn){
   if(r==='s'){lb.textContent='الرقم الأكاديمي';inp.placeholder='أدخل رقمك الأكاديمي';lb2.className='lbtn bs'}
   else if(r==='t'){lb.textContent='الرقم الوظيفي';inp.placeholder='أدخل رقمك الوظيفي';lb2.className='lbtn bt'}
   else{lb.textContent='اسم المستخدم';inp.placeholder='أدخل اسم المستخدم';lb2.className='lbtn ba'}
+  // الرقم الأكاديمي/الوظيفي أرقام → لوحة مفاتيح رقمية · اسم المستخدم حروف
+  if(r==='a'){ inp.setAttribute('inputmode','text'); inp.removeAttribute('pattern'); }
+  else { inp.setAttribute('inputmode','numeric'); inp.setAttribute('pattern','[0-9]*'); }
   // ⭐ نظّف حالة التحميل عند اختيار الدور (احتياط إضافي)
   lb2.disabled=false;
   const _ldg=document.getElementById('ldg'); if(_ldg)_ldg.style.display='none';
 }
 
 // ===== LOGIN =====
+let LOGIN_BUSY=false;
 async function doLogin(){
+  if(LOGIN_BUSY)return;                 // 🔒 يمنع الضغط المزدوج وإرسالين متزامنين
   const sid=document.getElementById('inpId').value.trim();
   const sph=norm(document.getElementById('inpPh').value.trim());
   if(!sid||!sph){showErr('يرجى إدخال البيانات');return}
   document.getElementById('errBox').style.display='none';
+  LOGIN_BUSY=true;
   document.getElementById('lbtn').disabled=true;
   document.getElementById('ldg').style.display='block';
+  const _lt=document.getElementById('ldgTxt'); if(_lt)_lt.textContent='جاري التحقق...';
   if(typeof mascotReact==='function')mascotReact('think',true);   // 🤔 يفكّر أثناء التحقق
   if(typeof mascotSay==='function')mascotSay('لحظة أتأكد من بياناتك…',4000);
-  let d=null, netErr=null;
+  let d=null, netErr=null, _slow=false;
   try{
     // ⚡ الدخول السريع: JSONP هو الطريقة الأساسية (يرد فوراً ويعمل على كل الأجهزة بما فيها الجوال).
     // POST/fetch احتياطي فقط إن تعذّر JSONP (نادر).
     const _lp={action:'login',role:role,id:sid,pw:sph};
+    // طمأنة المستخدم بدل شاشة صامتة — أول طلب يوقظ الخادم وقد يطول
+    const _tick=[[4000,'جاري الاتصال بالخادم...'],[9000,'الخادم يستيقظ — لحظة...'],[16000,'الشبكة بطيئة، ما زلنا نحاول...']]
+      .map(([t,m])=>setTimeout(()=>{const e=document.getElementById('ldgTxt');if(e)e.textContent=m;},t));
     try{
-      d=await jsonpTo(AUTH_URL,_lp);
-    }catch(_){
-      try{ d=await postJSONRead(AUTH_URL,_lp); }
-      catch(__){ d=await fetchGet(AUTH_URL,_lp); }
-    }
+      try{
+        d=await jsonpTo(AUTH_URL,_lp,28000);        // ⏱️ 28 ثانية بدل 10
+      }catch(_){
+        // ⭐ نحتفظ بسبب فشل المحاولة الأولى — المسارات الاحتياطية تفشل برسالة عامة
+        //    فتضيع معلومة «الخادم تأخّر» وهي أهم ما يحتاج المستخدم يعرفه
+        if(_ && /timeout/i.test(_.message||'')) _slow=true;
+        try{ d=await postJSONRead(AUTH_URL,_lp); }
+        catch(__){ d=await fetchGet(AUTH_URL,_lp); }
+      }
+    } finally { _tick.forEach(clearTimeout); }
   }catch(e){ netErr=e&&e.message||'network'; }
   try{
     if(netErr){
-      showErr('تعذّر الاتصال بالخادم — تحقّق من الشبكة (خصوصاً على Safari/iPhone: عطّل "منع التتبّع بين المواقع" من إعدادات Safari)');
+      showErr((_slow||/timeout/i.test(netErr))
+        ? 'الخادم تأخّر في الرد. اضغط «دخول المنصة» مرة ثانية — غالباً تنجح المحاولة التالية.'
+        : 'تعذّر الاتصال بالخادم — تحقّق من الشبكة (على iPhone: عطّل «منع التتبّع بين المواقع» من إعدادات Safari)');
       throw new Error('net');
     }
     if(!d||!d.ok){
@@ -2752,6 +2837,7 @@ async function doLogin(){
         setTimeout(()=>showToast('⚠️ ما عندك إيميل مسجّل — يُنصح بإضافته للأمان','w'),800);
       }else{
         pendingUser={user:JSON.parse(JSON.stringify(user)),role};
+        LOGIN_BUSY=false;
         document.getElementById('lbtn').disabled=false;
         document.getElementById('ldg').style.display='none';
         await startOTPFlow();
@@ -2759,6 +2845,7 @@ async function doLogin(){
     }
     return;
   }catch(e){/* تم عرض الخطأ أعلاه */}
+  LOGIN_BUSY=false;
   if(typeof mascotReact==='function')mascotReact('oops');          // 😖 يوقف التفكير ويهتز
   document.getElementById('lbtn').disabled=false;
   document.getElementById('ldg').style.display='none';
@@ -2782,10 +2869,17 @@ function finishLogin(){
     try{ _hold=window.matchMedia('(prefers-reduced-motion:reduce)').matches?0:900; }catch(_){ _hold=900; }
   }
   currentUser=user; // ⭐ ضروري: بعض الصفحات (كالحضور) تعتمد على currentUser — نضمن تعبئته عند كل دخول
+  // 💾 تذكّر الرقم والدور ليكون الدخول القادم أسرع (الرمز السري لا يُحفظ هنا أبداً)
+  try{
+    const rm=document.getElementById('rememberMe');
+    if(!rm||rm.checked){ localStorage.setItem('bla_last_id',String(user.id||'')); localStorage.setItem('bla_last_role',role); }
+    else { localStorage.removeItem('bla_last_id'); localStorage.removeItem('bla_last_role'); }
+  }catch(e){}
   localStorage.setItem('bla_user', JSON.stringify(user));
   localStorage.setItem('bla_role', role);
   if(SESSION.token) localStorage.setItem('bla_token', SESSION.token);
   // ⭐ نظّف حالة تحميل نموذج الدخول حتى تكون الشاشة جاهزة عند الخروج لاحقاً
+  LOGIN_BUSY=false;                    // 🔓 وإلا بقي مقفولاً بعد الخروج فمنع الدخول مجدداً
   const _lb=document.getElementById('lbtn'); if(_lb)_lb.disabled=false;
   const _ldg=document.getElementById('ldg'); if(_ldg)_ldg.style.display='none';
   const _go=()=>{
@@ -5432,9 +5526,15 @@ window.attlogFilter=attlogFilter;
 /* ============ تحضير الدروس الإلكتروني (مدرب: تعبئة/إرسال · أدمن: استعراض) ============ */
 const LP_CSS=`
 .lp-chips{display:flex;flex-wrap:wrap;gap:6px}
-.lp-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--border);border-radius:9px;padding:6px 10px;font-size:12px;cursor:pointer;transition:.15s;user-select:none}
+.lp-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--border);border-radius:9px;padding:6px 10px;font-size:12px;cursor:pointer;transition:.15s;user-select:none;min-height:38px}
+.lp-chip input{width:20px;height:20px;accent-color:var(--blue);flex-shrink:0;cursor:pointer}
+@media(max-width:820px){
+  /* الإصبع تحتاج هدفاً أكبر من مربّع 19px */
+  .lp-chip{min-height:44px;padding:8px 12px;font-size:12.5px}
+  .lp-chip input{width:22px;height:22px}
+}
 .lp-chip:hover{border-color:rgba(100,160,220,.4)}
-.lp-chip input{accent-color:#1a7abf;width:15px;height:15px}
+.lp-chip input{accent-color:#1a7abf}   /* الحجم محدَّد أعلاه — كان هذا يعيده لـ15px فيصعب لمسه */
 .lp-in{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--border);background:var(--card2,rgba(255,255,255,.04));color:var(--text);font-family:inherit;font-size:14px}
 .lp-lbl{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:var(--muted)}
 .lp-gt{font-size:12px;font-weight:800;color:#6ab8f7;margin-bottom:6px}`;
@@ -8896,8 +8996,40 @@ async function restoreSession(){
   }
 }
 
+/* ⚡ دخول سريع: نستعيد الدور والرقم المحفوظين فيبقى الرمز السري وحده،
+   ونُبقي الحقل المُركَّز ظاهراً فوق لوحة مفاتيح الجوال. */
+function initQuickLogin(){
+  try{
+    const lastRole=localStorage.getItem('bla_last_role');
+    const lastId=localStorage.getItem('bla_last_id');
+    if(lastRole&&['s','t','a'].includes(lastRole)){
+      const idx={s:0,t:1,a:2}[lastRole];
+      const tabs=document.querySelectorAll('.role-tabs .rtab');
+      if(tabs[idx])setRole(lastRole,tabs[idx]);
+    }
+    const inp=document.getElementById('inpId');
+    if(lastId&&inp){
+      inp.value=lastId;
+      const ph=document.getElementById('inpPh');
+      if(ph)setTimeout(()=>{try{ph.focus();}catch(e){}},450);   // ننتقل للرمز مباشرة
+    }
+  }catch(e){}
+  // الحقل المُركَّز يبقى مرئياً فوق لوحة المفاتيح
+  ['inpId','inpPh'].forEach(id=>{
+    const el=document.getElementById(id); if(!el)return;
+    el.addEventListener('focus',()=>{
+      setTimeout(()=>{ try{ el.scrollIntoView({block:'center',behavior:'smooth'}); }catch(e){} },320);
+    });
+  });
+  // زر «التالي» في لوحة المفاتيح ينقلك من الرقم للرمز
+  const idEl=document.getElementById('inpId');
+  if(idEl)idEl.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); const ph=document.getElementById('inpPh'); if(ph)ph.focus(); }
+  });
+}
 document.addEventListener('DOMContentLoaded',()=>{
   setSplashLogo();
+  initQuickLogin();
   restoreSession();
 });
 
@@ -10866,7 +10998,9 @@ document.addEventListener('click', function(e){
 });
 
 document.addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&document.getElementById('loginPage').style.display!=='none')doLogin();
+  // النموذج نفسه يتكفّل بمفتاح Enter الآن (onsubmit) — إبقاء هذا كان يستدعي الدخول مرتين
+  if(e.key==='Enter'&&document.getElementById('loginPage').style.display!=='none'
+     && !e.target.closest('#loginForm')) doLogin();
 });
 </script>
 
