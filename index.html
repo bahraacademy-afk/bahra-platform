@@ -590,7 +590,6 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .gtable table{width:100%;border-collapse:collapse;font-size:13px}
 /* الجدول لا يتمدد أبعد من عرض محتواه الطبيعي: جدول بثلاثة أعمدة
    كان ينفرد بـ1140px فتتباعد الأعمدة وتترك ثلثاً ميتاً في المنتصف */
-.gtable{width:max-content;min-width:min(100%,680px);max-width:100%}  /* تحتضن الجدول بلا أن تبدو مبتورة */
 .gtable td:first-child{overflow-wrap:anywhere}
 .gtable th{padding:11px 14px;color:var(--muted);font-weight:500;text-align:right;border-bottom:1px solid var(--border);background:rgba(7,17,31,.4);font-size:11px;text-transform:uppercase;letter-spacing:.3px}
 .gtable td{padding:11px 14px;text-align:right;border-bottom:1px solid rgba(100,160,220,.05);transition:background .15s}
@@ -631,6 +630,21 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .btn-out:hover{border-color:var(--red);color:var(--red)}
 .btn-sm{padding:6px 14px;font-size:12px}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+/* ترويسة قسم: العنوان وزرّه متجاوران — كان space-between يرمي الزر
+   إلى الطرف المقابل فتفصلهما ألف بكسل على شاشة عريضة */
+@media(min-width:861px){
+  /* نفس العلّة مكتوبة بأنماط سطرية في صفحات عدة: نُبقي الأزرار بجانب عناوينها */
+  #mcontent div[style*="space-between"]:has(> .btn),
+  #mcontent div[style*="space-between"]:has(> div > .btn){justify-content:flex-start!important;gap:16px}
+  /* لافتة الصفحة: إن كان فيها زر إجراء نُقرّبه من العنوان — أما الشارة/الحالة فتبقى في الطرف */
+  .banner:has(> .btn),.banner:has(> div > .btn){justify-content:flex-start;gap:22px}
+}
+.sec-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.sec-head .sec-title{font-size:14px;font-weight:700;min-width:0}
+@media(max-width:560px){
+  .sec-head{gap:10px}
+  .sec-head .btn{flex:1 1 100%;justify-content:center;min-height:42px}
+}
 
 /* ===== SEARCH ===== */
 .search-row{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
@@ -6231,8 +6245,8 @@ const tPgs={
         ? rub.map(r=>`<th>${esc(r.cat)}<br><small>/${r.max}</small></th>`).join('')+'<th>المجموع<br><small>/100</small></th>'
         : '<th>تقييم المدرب<br><small>/100</small></th>';
       return `<div style="margin-bottom:24px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-          <div style="font-size:14px;font-weight:700;color:#6ab8f7">📚 ${course}${rub.length?` <span style="font-size:11px;color:var(--muted)">(${rub.length} بنود · مجموع ${rubTotal}/100)</span>`:''}</div>
+        <div class="sec-head">
+          <div class="sec-title" style="color:#6ab8f7">📚 ${course}${rub.length?` <span style="font-size:11px;color:var(--muted)">(${rub.length} بنود · مجموع ${rubTotal}/100)</span>`:''}</div>
           <button class="btn btn-out btn-sm" onclick='openRubricSetup("${jsq(code)}","${jsq(course)}")'>⚙️ إعداد بنود الدرجات</button>
         </div>
         ${rub.length&&rubTotal!==100?`<div class="alert aw" style="margin-bottom:8px"><span class="aicon">⚠️</span>مجموع البنود ${rubTotal} (يُفضّل أن يساوي 100)</div>`:''}
