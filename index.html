@@ -1706,10 +1706,12 @@ body.has-modal .mob-nav{transform:translateY(110%);pointer-events:none}
                inputmode="numeric" pattern="[0-9]*" autocomplete="username" enterkeyhint="next">
       </div>
       <div class="fgroup">
-        <label id="phLbl" for="inpPh">الرقم السري</label>
+        <label id="phLbl" for="inpPh">الرمز السري</label>
         <div class="pw-wrap">
+          <!-- لوحة مفاتيح نصّية لا رقمية: الرمز قد يكون حروفاً وأرقاماً ورموزاً -->
           <input type="password" id="inpPh" name="password" placeholder="أدخل الرمز السري"
-                 inputmode="numeric" autocomplete="current-password" enterkeyhint="go">
+                 inputmode="text" autocomplete="current-password" enterkeyhint="go"
+                 autocapitalize="off" autocorrect="off" spellcheck="false">
           <button type="button" class="pw-eye" id="pwEye" onclick="togglePw()" aria-label="إظهار الرمز" title="إظهار / إخفاء الرمز"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="pe-eye" d="M2.2 12S5.9 5.8 12 5.8 21.8 12 21.8 12 18.1 18.2 12 18.2 2.2 12 2.2 12Z"/><circle class="pe-eye" cx="12" cy="12" r="3.2"/><path class="pe-slash" d="M4 20 20 4"/></svg></button>
         </div>
       </div>
@@ -1783,7 +1785,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzYUC6gwkWS-vO_bqAMl_T5DNYtsuFQSub-rawMgAA7cByHMzJbgMWgZxDO-iTahA/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwHbWXvzYgY7hr6NvE2M2N7FHpULns5yv1UmVrYumjBGAARGZBTRlDaWHfO0eErubs1/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -3137,6 +3139,7 @@ function finishLogin(){
   const _go=()=>{
     showApp();
     initIdleGuard();
+    loadReqFlow();                       // 🔀 مسار الطلبات المضبوط من الإعدادات
     // إلزام تغيير الرمز الافتراضي (رقم الجوال) أول دخول
     if(user && user.mustChange){ setTimeout(()=>openChangePassword(true), 400); }
   };
@@ -3503,7 +3506,7 @@ async function loadAdmin(){
     const r=td[i];
     if(n0(r[1])&&n0(r[5]))trainersDB.push({id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5])});
   }
-  // قاعدة الإداريين: A=الرقم B=الاسم C=المسمى D=الجوال E=البريد F=الرقم السري G=الصلاحية
+  // قاعدة الإداريين: A=الرقم B=الاسم C=المسمى D=الجوال E=البريد F=الرمز السري G=الصلاحية
   adminsDB=[];
   for(let i=1;i<ad.length;i++){
     const r=ad[i];
@@ -7436,7 +7439,7 @@ function accountFormFields(type,data){
   // admin — مشرف تخصص (لكل تخصص مشرفه يوافق على طلباته)، أو مدير الأكاديمية (المشرف العام) الذي يشرف على الكل ويعتمد نهائياً
   const specOpts=[...new Set(students.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
   const selStyle="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px";
-  return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('title','المسمى الوظيفي',data.title)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرقم السري *',data.pw)+
+  return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('title','المسمى الوظيفي',data.title)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري *',data.pw)+
     `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الصلاحية</label><select id="acc_level" style="${selStyle}"><option value="مشرف"${data.level==='مشرف'?' selected':''}>مشرف تخصص</option><option value="مدير"${(data.level||'').includes('مدير')?' selected':''}>مدير الأكاديمية (مشرف عام)</option></select></div>`+
     (function(){
       const cur=specListOf(data.spec);
@@ -7475,7 +7478,7 @@ async function saveAccount(type,mode){
   else if(type==='trainer'){rec.spec=g('spec');rec.pw=g('pw');}
   else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');rec.spec=[...document.querySelectorAll('.acc_spec_chk:checked')].map(c=>c.value).join('، ');}
   if(!rec.id||!rec.name){showToast('الرقم والاسم مطلوبان','w');return;}
-  if(type==='admin'&&!rec.pw){showToast('الرقم السري مطلوب للإداري','w');return;}
+  if(type==='admin'&&!rec.pw){showToast('الرمز السري مطلوب للإداري','w');return;}
   const idChanged=mode==='edit'&&String(rec.oldId)!==String(rec.id);
   showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
   try{
@@ -8797,6 +8800,13 @@ const aPgs={
       </div>
     </div>
 
+    <div class="stitle" style="margin-top:26px">🔀 مسار الطلبات</div>
+    <div class="ccard cc-y">
+      <div class="cc-name">مَن يوافق ومَن يرفض</div>
+      <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">رتّب مراحل اعتماد كل نوع طلب (عذر غياب · إداري · ورقة تعريف · طلب عام): مَن يعتمد أولاً ثم مَن بعده، وهل يقدر يرفض أو يُرجع للتعديل أو يصعّد للمدير — وتقدر تختار إدارياً بعينه بدل «مشرف التخصص»، أو توقف نوع طلب كلياً.</div>
+      <button class="btn" style="background:#a05c0d;color:#fff;font-weight:700" onclick="openReqFlow()">🔀 افتح محرّر المسار</button>
+    </div>
+
     <div class="stitle" style="margin-top:26px">📧 الإيميلات</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="ccard cc-b">
@@ -9058,6 +9068,141 @@ async function sendMailTest(){
     else showToast('لم تُرسل: '+((r&&r.msg)||'خطأ غير معروف'),'e');
   }catch(e){ showToast('تعذّر الاتصال — حاول مرة أخرى','e'); }
 }
+/* ===== 🔀 محرّر مسار الطلبات — مَن يوافق ومَن يرفض، بلا كود ===== */
+let RQF=null, RQF_ADMINS=[];
+async function openReqFlow(){
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='reqFlowModal';
+  ov.innerHTML=`<div class="modal" style="max-width:760px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title"><span>🔀 مسار الطلبات</span>
+      <button class="modal-close" onclick="document.getElementById('reqFlowModal').remove()">✕</button></div>
+    <div id="reqFlowBody" style="padding:4px 2px;color:var(--muted)">⏳ جاري تحميل المسار...</div></div>`;
+  document.body.appendChild(ov);
+  let d=null;
+  try{ d=await jsonpTo(SCRIPT_URL,{action:'getReqFlow',token:SESSION.token},20000); }catch(e){}
+  const body=document.getElementById('reqFlowBody'); if(!body)return;
+  if(!d||!d.ok||!d.flow){
+    body.innerHTML=`<div class="alert ad"><span class="aicon">⚠️</span>تعذّر قراءة المسار. انشر نسخة جديدة من Apps Script (Deploy ‹ Manage deployments ‹ ✏️ ‹ New version) ثم أعد المحاولة.</div>`;
+    return;
+  }
+  RQF=JSON.parse(JSON.stringify(d.flow));
+  RQF_ADMINS=d.admins||[];
+  body.innerHTML=reqFlowHTML();
+}
+function rqWhoOptions(sel){
+  const base=[['trn','👨‍🏫 مدرب المادة'],['sup','🛡️ مشرف التخصص'],['dir','🎖️ مدير الأكاديمية'],['tgt','✉️ المسؤول المحدد في الطلب']];
+  const people=RQF_ADMINS.map(a=>['a:'+a.id, '👤 '+a.name+(a.title?' — '+a.title:'')]);
+  return base.concat(people).map(([v,l])=>`<option value="${esc(v)}" ${sel===v?'selected':''}>${esc(l)}</option>`).join('');
+}
+function reqFlowHTML(){
+  const cats=Object.keys(RQF.cats);
+  const card=(k)=>{
+    const c=RQF.cats[k];
+    const rows=c.stages.map((st,i)=>`
+      <div class="rf-stage" data-cat="${esc(k)}" data-i="${i}">
+        <div class="rf-num">${i+1}</div>
+        <select class="rf-who" onchange="rqSet('${esc(k)}',${i},'who',this.value)">${rqWhoOptions(st.who)}</select>
+        <label class="rf-chk" title="يقدر يرفض الطلب نهائياً">
+          <input type="checkbox" ${st.reject!==false?'checked':''} onchange="rqSet('${esc(k)}',${i},'reject',this.checked)"><span>يرفض</span></label>
+        <label class="rf-chk" title="يقدر يرجعه لصاحبه للتعديل">
+          <input type="checkbox" ${st.ret!==false?'checked':''} onchange="rqSet('${esc(k)}',${i},'ret',this.checked)"><span>يُرجع</span></label>
+        <label class="rf-chk" title="يقدر يصعّده لمدير الأكاديمية">
+          <input type="checkbox" ${st.escalate?'checked':''} onchange="rqSet('${esc(k)}',${i},'escalate',this.checked)"><span>يصعّد</span></label>
+        <div class="rf-ops">
+          <button class="btn btn-sm btn-out" title="أعلى" ${i===0?'disabled':''} onclick="rqMove('${esc(k)}',${i},-1)">↑</button>
+          <button class="btn btn-sm btn-out" title="أسفل" ${i===c.stages.length-1?'disabled':''} onclick="rqMove('${esc(k)}',${i},1)">↓</button>
+          <button class="btn btn-sm btn-out rf-del" title="احذف المرحلة" onclick="rqDel('${esc(k)}',${i})">🗑️</button>
+        </div>
+      </div>`).join('');
+    return `<div class="rf-card">
+      <div class="rf-head">
+        <input class="rf-icon" value="${esc(c.icon)}" maxlength="4" onchange="rqSetCat('${esc(k)}','icon',this.value)">
+        <input class="rf-lbl" value="${esc(c.label)}" maxlength="40" onchange="rqSetCat('${esc(k)}','label',this.value)">
+        <label class="rf-chk rf-on"><input type="checkbox" ${c.on!==false?'checked':''}
+          onchange="rqSetCat('${esc(k)}','on',this.checked)"><span>مفعّل</span></label>
+      </div>
+      <div class="rf-hint">${c.on===false?'⛔ موقوف — لا يقدر أحد يقدّم هذا النوع':'يمرّ الطلب على هذه المراحل بالترتيب. تمرّ للمرحلة التالية فقط بعد اعتماد اللي قبلها.'}</div>
+      <div class="rf-list">${rows||'<div class="rf-empty">بلا مراحل — الطلب يُقدَّم ولا يُعتمد أبداً</div>'}</div>
+      ${c.stages.length<5?`<button class="btn btn-out btn-sm" onclick="rqAdd('${esc(k)}')">➕ أضف مرحلة</button>`
+        :'<div class="rf-hint" style="margin:0">بلغت الحد الأقصى: ٥ مراحل</div>'}
+    </div>`;
+  };
+  return `
+  <style>
+    .rf-card{border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:14px;background:var(--card2-soft)}
+    .rf-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+    .rf-icon{width:52px;text-align:center;font-size:17px;padding:7px;border:1px solid var(--border);
+      border-radius:9px;background:var(--card2);color:var(--text)}
+    .rf-lbl{flex:1;min-width:120px;font-weight:800;font-size:14px;padding:8px 12px;border:1px solid var(--border);
+      border-radius:9px;background:var(--card2);color:var(--text);font-family:'Tajawal',sans-serif}
+    .rf-hint{font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.7}
+    .rf-stage{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:9px;margin-bottom:8px;
+      border:1px solid var(--border);border-radius:11px;background:var(--card2)}
+    .rf-num{width:26px;height:26px;flex:0 0 26px;border-radius:50%;background:rgba(106,184,247,.15);
+      color:#6ab8f7;font-weight:800;font-size:12.5px;display:flex;align-items:center;justify-content:center}
+    .rf-who{flex:1 1 190px;min-width:0;padding:8px 10px;border:1px solid var(--border);border-radius:9px;
+      background:var(--card2);color:var(--text);font-family:'Tajawal',sans-serif;font-size:13px}
+    .rf-chk{display:inline-flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;margin:0;
+      padding:5px 9px;border:1px solid var(--border);border-radius:18px;white-space:nowrap}
+    .rf-chk input{width:16px;height:16px;margin:0;accent-color:#1a7abf}
+    .rf-on{font-size:13px;font-weight:700}
+    .rf-ops{display:flex;gap:5px;margin-inline-start:auto}
+    .rf-ops .btn{min-width:34px;padding:4px 8px}
+    .rf-del:hover{color:var(--red);border-color:var(--red)}
+    .rf-empty{font-size:12px;color:var(--muted);padding:10px;text-align:center;border:1px dashed var(--border);border-radius:10px}
+    @media(max-width:560px){ .rf-ops{margin-inline-start:0;width:100%;justify-content:flex-end} .rf-who{flex:1 1 100%} }
+  </style>
+  <div class="alert ab" style="margin-bottom:14px"><span class="aicon">💡</span>
+    رتّب مَن يعتمد كل نوع طلب. «يرفض» و«يُرجع» و«يصعّد» تحدّد الأزرار التي تظهر لصاحب المرحلة —
+    والخادم يفحصها أيضاً، فلا يقدر أحد يتجاوزها من المتصفح.</div>
+  ${cats.map(card).join('')}
+  <div class="rf-card">
+    <label class="rf-chk rf-on" style="border:none;padding:0">
+      <input type="checkbox" ${RQF.dirOverride!==false?'checked':''} onchange="RQF.dirOverride=this.checked">
+      <span>🎖️ مدير الأكاديمية يقدر يتصرّف في أي مرحلة</span></label>
+    <div class="rf-hint" style="margin:8px 0 0">أطفئه لو بغيت المدير يلتزم بمراحله فقط.
+      اتركه مفعّلاً حتى لا تتعطّل الطلبات لو غاب صاحب المرحلة.</div>
+  </div>
+  <div class="btn-eq">
+    <button class="btn btn-g" onclick="saveReqFlow()">💾 حفظ المسار</button>
+    <button class="btn btn-out" onclick="rqReset()">↺ رجّع الافتراضي</button>
+    <button class="btn btn-out" onclick="document.getElementById('reqFlowModal').remove()">إلغاء</button>
+  </div>`;
+}
+function rqRedraw(){ const b=document.getElementById('reqFlowBody'); if(b)b.innerHTML=reqFlowHTML(); }
+function rqSet(cat,i,k,v){ const st=RQF.cats[cat].stages[i]; if(!st)return; st[k]=v; if(k==='who')rqRedraw(); }
+function rqSetCat(cat,k,v){ RQF.cats[cat][k]=v; if(k==='on')rqRedraw(); }
+function rqMove(cat,i,d){
+  const a=RQF.cats[cat].stages, j=i+d;
+  if(j<0||j>=a.length)return;
+  [a[i],a[j]]=[a[j],a[i]]; rqRedraw();
+}
+function rqDel(cat,i){ RQF.cats[cat].stages.splice(i,1); rqRedraw(); }
+function rqAdd(cat){
+  const a=RQF.cats[cat].stages;
+  if(a.length>=5)return;
+  a.push({who:'sup',reject:true,ret:true,escalate:false}); rqRedraw();
+}
+function rqReset(){
+  if(!confirm('ترجّع كل الأنواع لمسارها الافتراضي؟ (لن يُحفظ حتى تضغط «حفظ المسار»)'))return;
+  RQF=JSON.parse(JSON.stringify(REQ_FLOW_DEFAULT)); rqRedraw();
+}
+async function saveReqFlow(){
+  const empty=Object.keys(RQF.cats).filter(k=>RQF.cats[k].on!==false&&!RQF.cats[k].stages.length);
+  if(empty.length&&!confirm('هذه الأنواع بلا مراحل فلن تُعتمد أبداً:\n• '+empty.map(k=>RQF.cats[k].label).join('\n• ')+'\n\nمتابعة؟'))return;
+  showToast('جاري الحفظ...','i');
+  try{
+    let r=null;
+    try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'saveReqFlow',flow:RQF}); }
+    catch(_){ r=await jsonpCall({action:'saveReqFlow',flow:JSON.stringify(RQF)}); }
+    if(r&&r.status==='ok'&&r.flow){
+      REQ_FLOW=r.flow; REQ_FLOW._admins=RQF_ADMINS;
+      showToast('✅ حُفظ مسار الطلبات','s');
+      const m=document.getElementById('reqFlowModal'); if(m)m.remove();
+    } else showToast('تعذّر الحفظ — انشر نسخة جديدة من Apps Script','e');
+  }catch(e){ showToast('تعذّر الاتصال — حاول مرة أخرى','e'); }
+}
+window.openReqFlow=openReqFlow;window.saveReqFlow=saveReqFlow;window.rqSet=rqSet;window.rqSetCat=rqSetCat;
+window.rqMove=rqMove;window.rqDel=rqDel;window.rqAdd=rqAdd;window.rqReset=rqReset;
 window.openMailSettings=openMailSettings;window.saveMailSettings=saveMailSettings;window.sendMailTest=sendMailTest;
 window.showEmailCoverage=showEmailCoverage;window.showEmailLog=showEmailLog;window.toggleReqEmails=toggleReqEmails;
 
@@ -11018,13 +11163,67 @@ function renderExcuseDates(){
    - طلب عام  : المُرسِل يحدد الشخص → له الاعتماد/الرفض/الإرجاع أو التصعيد للمدير
    كل مرحلة: اعتماد · رفض نهائي · إرجاع لصاحب الطلب للتعديل
    ============================================================ */
-const REQ_CATS={
-  'عذر':  {label:'عذر غياب',   icon:'📄', chain:['trn','sup','dir']},
-  'إداري':{label:'طلب إداري',  icon:'🏛️', chain:['sup','dir']},
-  'تعريف':{label:'ورقة تعريف', icon:'📇', chain:['sup','dir']},
-  'عام':  {label:'طلب عام',    icon:'✉️', chain:['tgt']}
-};
-const STAGE_LBL={trn:'المدرب',sup:'مشرف التخصص',gen:'مشرف التخصص',dir:'مدير الأكاديمية',tgt:'المسؤول المحدد'};
+/* 🔀 مسار الطلبات يأتي من إعدادات الإداري (getReqFlow) — وهذه نسخة
+   احتياطية مطابقة للافتراضي تعمل قبل وصوله أو إذا تعذّرت قراءته. */
+const REQ_FLOW_DEFAULT={dirOverride:true,cats:{
+  'عذر':  {label:'عذر غياب',  icon:'📄',on:true,stages:[
+            {who:'trn',slot:'trn',reject:true,ret:true},
+            {who:'sup',slot:'sup',reject:true,ret:true},
+            {who:'dir',slot:'dir',reject:true,ret:true}]},
+  'إداري':{label:'طلب إداري', icon:'🏛️',on:true,stages:[
+            {who:'sup',slot:'sup',reject:true,ret:true},
+            {who:'dir',slot:'dir',reject:true,ret:true}]},
+  'تعريف':{label:'ورقة تعريف',icon:'📇',on:true,stages:[
+            {who:'sup',slot:'sup',reject:true,ret:true},
+            {who:'dir',slot:'dir',reject:true,ret:true}]},
+  'عام':  {label:'طلب عام',   icon:'✉️',on:true,stages:[
+            {who:'tgt',slot:'tgt',reject:true,ret:true,escalate:true}]}
+}};
+let REQ_FLOW=JSON.parse(JSON.stringify(REQ_FLOW_DEFAULT));
+const REQ_WHO_LBL={trn:'مدرب المادة',sup:'مشرف التخصص',dir:'مدير الأكاديمية',tgt:'المسؤول المحدد في الطلب'};
+// REQ_CATS يبقى كما هو في الاستعمال لكنه يُشتق من المسار الحيّ
+const REQ_CATS=new Proxy({},{
+  get(_,k){ const c=REQ_FLOW.cats[k]; if(!c)return undefined;
+    return {label:c.label,icon:c.icon,on:c.on!==false,chain:c.stages.map(x=>x.slot)}; },
+  has(_,k){ return !!REQ_FLOW.cats[k]; },
+  ownKeys(){ return Object.keys(REQ_FLOW.cats); },
+  getOwnPropertyDescriptor(){ return {enumerable:true,configurable:true}; }
+});
+function reqStageOf(cat,slot){
+  const c=REQ_FLOW.cats[cat]; if(!c)return null;
+  return c.stages.find(x=>x.slot===slot)||null;
+}
+function reqWhoLabel(who,short){
+  if(!who)return 'المراجعة';
+  if(REQ_WHO_LBL[who])return short&&who==='tgt'?'المسؤول المحدد':REQ_WHO_LBL[who];
+  if(String(who).startsWith('a:')){
+    const id=String(who).slice(2);
+    const a=(typeof adminsDB!=='undefined'?adminsDB:[]).find(x=>String(x.id)===id);
+    return a?a.name:('الإداري '+id);
+  }
+  return 'المراجعة';
+}
+// تسمية المرحلة تتبع «مَن» المضبوط لها في هذا النوع
+function stageLabelFor(r,slot){
+  const st=reqStageOf(reqCat(r),slot);
+  if(st&&st.label)return st.label;
+  return st?reqWhoLabel(st.who,true):(STAGE_LBL[slot]||'المراجعة');
+}
+const STAGE_LBL={trn:'مدرب المادة',sup:'مشرف التخصص',gen:'مشرف التخصص',dir:'مدير الأكاديمية',tgt:'المسؤول المحدد'};
+// يجلب المسار المحفوظ؛ عند أي تعذّر يبقى الافتراضي فلا تتعطّل الطلبات
+async function loadReqFlow(){
+  try{
+    const d=await jsonpTo(SCRIPT_URL,{action:'getReqFlow',token:SESSION.token},15000);
+    if(d&&d.ok&&d.flow&&d.flow.cats){
+      REQ_FLOW=d.flow;
+      if(d.admins)REQ_FLOW._admins=d.admins;
+      // أعد رسم صفحة الطلبات إن كانت مفتوحة الآن — المراحل تغيّرت
+      try{ const nav=document.querySelector('.sitem.active,.mni.active');
+           if(nav&&/requests|services/.test(nav.id||nav.getAttribute('data-nav')||''))reloadRequestsPage(); }catch(_){}
+    }
+  }catch(e){}
+}
+window.loadReqFlow=loadReqFlow;
 function reqCat(r){
   if(r.cat&&REQ_CATS[r.cat])return r.cat;
   if(r.type==='عذر غياب')return 'عذر';
@@ -11033,8 +11232,10 @@ function reqCat(r){
   return 'إداري';
 }
 function reqChain(r){
-  const ch=REQ_CATS[reqCat(r)].chain.slice();
-  if(reqCat(r)==='عام'&&r.dirStatus&&r.dirStatus!=='—'&&r.dirStatus!=='')ch.push('dir');
+  const c=REQ_FLOW.cats[reqCat(r)];
+  const ch=c?c.stages.map(x=>x.slot):['sup','dir'];
+  // التصعيد اليدوي يضيف مرحلة المدير لطلب عام — إن لم تكن أصلاً في المسار
+  if(reqCat(r)==='عام'&&r.dirStatus&&r.dirStatus!=='—'&&r.dirStatus!==''&&ch.indexOf('dir')<0)ch.push('dir');
   return ch;
 }
 function reqChainLast(r){const ch=reqChain(r);return ch[ch.length-1];}
@@ -11111,10 +11312,16 @@ function reqTargetMatches(r,u){
 }
 function canActStage(st,r){
   const u=user;if(!u)return false;
-  if(st==='trn')return u.role==='t'&&trainerOwnsReqCourse(r);
-  if(st==='sup'||st==='gen')return u.role==='a'&&(isDirector(u)||specCovers(u.spec,r.reqSpec)); // مشرف التخصص المطابق (والمدير احتياطاً/إشرافاً)
-  if(st==='dir')return isDirector(u);
-  if(st==='tgt')return reqTargetMatches(r,u);
+  const cat=reqCat(r), C=REQ_FLOW.cats[cat];
+  if(C&&C.on===false)return false;                       // نوع طلب موقوف من الإعدادات
+  if(REQ_FLOW.dirOverride!==false&&isDirector(u))return true;
+  const stage=reqStageOf(cat,st);
+  const who=stage?stage.who:(st==='gen'?'sup':st);        // مرحلة تصعيد مضافة يدوياً
+  if(who==='trn')return u.role==='t'&&trainerOwnsReqCourse(r);
+  if(who==='sup')return u.role==='a'&&!isDirector(u)&&specCovers(u.spec,r.reqSpec);
+  if(who==='dir')return isDirector(u);
+  if(who==='tgt')return reqTargetMatches(r,u);
+  if(String(who).startsWith('a:'))return u.role==='a'&&String(u.id)===String(who).slice(2);
   return false;
 }
 function reqStatusPill(r){
@@ -11123,7 +11330,7 @@ function reqStatusPill(r){
   if(f==='مرفوض')return '<span class="pill pr">مرفوض</span>';
   if(f==='بانتظار التعديل')return '<span class="pill py">بانتظار تعديل صاحب الطلب</span>';
   const st=reqActiveStage(r);
-  return '<span class="pill pb">بانتظار '+(STAGE_LBL[st]||'المراجعة')+'</span>';
+  return '<span class="pill pb">بانتظار '+(st?stageLabelFor(r,st):'المراجعة')+'</span>';
 }
 function reqTimeline(r){
   const ch=reqChain(r),act=reqActiveStage(r);
@@ -11131,7 +11338,7 @@ function reqTimeline(r){
     const v=stageStatus(r,s),on=act===s;
     const col=v==='معتمد'?'var(--green)':v==='مرفوض'?'var(--red)':v==='معاد'?'var(--gold)':on?'#6ab8f7':'var(--muted)';
     const ic=v==='معتمد'?'✓':v==='مرفوض'?'✕':v==='معاد'?'↩':on?'⏳':'•';
-    return '<span style="font-size:11px;color:'+col+';border:1px solid '+col+';border-radius:12px;padding:2px 9px;'+(on?'font-weight:700;background:rgba(106,184,247,.08);':'')+'">'+ic+' '+STAGE_LBL[s]+'</span>';
+    return '<span style="font-size:11px;color:'+col+';border:1px solid '+col+';border-radius:12px;padding:2px 9px;'+(on?'font-weight:700;background:rgba(106,184,247,.08);':'')+'">'+ic+' '+stageLabelFor(r,s)+'</span>';
   }).join('')+'</div>';
 }
 function staffList(){
@@ -11197,12 +11404,13 @@ function reqCard(r,opts){
   const targetLine=(cat==='عام'&&r.targetName)?`<div style="font-size:12px;margin-top:6px;color:#6ab8f7">✉️ موجَّه إلى: <b>${esc(r.targetName)}</b></div>`:'';
   let actions='';
   if(canAct){
-    const isTgt=active==='tgt', isLast=reqChainLast(r)===active;
+    const isLast=reqChainLast(r)===active;
+    const stg=reqStageOf(cat,active)||{reject:true,ret:true,escalate:active==='tgt'};
     actions=`<div class="btn-row" style="flex-wrap:wrap;gap:8px">
       <button class="btn btn-g btn-sm" onclick="actOnRequest('${r.rid}','معتمد')">✓ اعتماد${(cat==='عذر'&&isLast)?' وخصم الساعات':''}</button>
-      ${isTgt?`<button class="btn btn-b btn-sm" onclick="actOnRequest('${r.rid}','تصعيد')">⬆ تصعيد للمدير</button>`:''}
-      <button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','معاد')">↩ إرجاع للتعديل</button>
-      <button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','مرفوض')">✕ رفض نهائي</button>
+      ${stg.escalate?`<button class="btn btn-b btn-sm" onclick="actOnRequest('${r.rid}','تصعيد')">⬆ تصعيد للمدير</button>`:''}
+      ${stg.ret!==false?`<button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','معاد')">↩ إرجاع للتعديل</button>`:''}
+      ${stg.reject!==false?`<button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','مرفوض')">✕ رفض نهائي</button>`:''}
     </div>`;
   }else if(isOwner&&fin==='بانتظار التعديل'){
     actions=`<div class="btn-row"><button class="btn btn-r btn-sm" onclick="resubmitRequest('${r.rid}')">✏️ تعديل وإعادة إرسال</button></div>`;
@@ -11313,10 +11521,17 @@ async function submitRequest(){
   if(!details){showToast('يرجى كتابة تفاصيل الطلب','w');return}
   const rid='REQ'+Date.now();
   const now=new Date().toLocaleDateString('en-CA');
+  const _C=REQ_FLOW.cats[cat];
+  if(_C&&_C.on===false){showToast('هذا النوع من الطلبات موقوف حالياً من الإدارة','w');return}
   const st={trnStatus:'—',supStatus:'—',genStatus:'—',dirStatus:'—',tgtStatus:'—'};
-  REQ_CATS[cat].chain.forEach(s=>setStageObj(st,s,'معلق'));
-  // تخطّي المراحل التي هي بمستوى المُرسِل أو أدنى (لغير الطلبات العامة)
-  if(cat!=='عام'&&raiser.role==='a'){ st.supStatus='معتمد'; } // المشرف نفسه صاحب الطلب → يبدأ من المدير
+  (_C?_C.stages.map(x=>x.slot):['sup','dir']).forEach(s=>setStageObj(st,s,'معلق'));
+  // تخطّي المراحل التي «مَن» فيها هو المُرسِل نفسه — مشرف يقدّم طلباً لا يعتمده بنفسه
+  if(cat!=='عام'&&raiser.role==='a'&&_C){
+    _C.stages.forEach(x=>{
+      if(x.who==='sup'&&raiser.level!=='director')setStageObj(st,x.slot,'معتمد');
+      if(String(x.who)==='a:'+String(raiser.id))setStageObj(st,x.slot,'معتمد');
+    });
+  }
   const rec={rid,sid:raiser.id,sname:raiser.name,grp:raiser.grp||'',type,details,date:now,
     supStatus:st.supStatus,genStatus:st.genStatus,dirStatus:st.dirStatus,trnStatus:st.trnStatus,tgtStatus:st.tgtStatus,
     finalStatus:'قيد المراجعة',notes:'',exCode,exHours,exDates,fileData,fileName,
@@ -11347,7 +11562,7 @@ async function resubmitRequest(rid){
              dirStatus:r.dirStatus,tgtStatus:r.tgtStatus,finalStatus:r.finalStatus,notes:r.notes};
   r.details=nd;
   ['trn','sup','gen','dir','tgt'].forEach(s=>setStage(r,s,'—'));
-  REQ_CATS[reqCat(r)].chain.forEach(s=>setStage(r,s,'معلق'));
+  reqChain(r).forEach(s=>setStage(r,s,'معلق'));
   r.notes='أعاد صاحب الطلب الإرسال بعد التعديل';
   r.finalStatus=reqFinal(r);
   const payload={rid,trnStatus:r.trnStatus,supStatus:r.supStatus,genStatus:r.genStatus,dirStatus:r.dirStatus,tgtStatus:r.tgtStatus,finalStatus:r.finalStatus,notes:r.notes,details:r.details,by:user.name};
@@ -11371,6 +11586,10 @@ async function actOnRequest(rid,decision){
   if(!r)return;
   const st=reqActiveStage(r);
   if(!st||!canActStage(st,r)){showToast('لا يمكنك اتخاذ إجراء على هذا الطلب الآن','w');return}
+  const _stg=reqStageOf(reqCat(r),st)||{};
+  if(decision==='مرفوض'&&_stg.reject===false){showToast('مسار هذا الطلب لا يسمح بالرفض في هذه المرحلة','w');return}
+  if(decision==='معاد'&&_stg.ret===false){showToast('مسار هذا الطلب لا يسمح بالإرجاع في هذه المرحلة','w');return}
+  if(decision==='تصعيد'&&!_stg.escalate){showToast('التصعيد غير مفعّل لهذه المرحلة','w');return}
   // ⭐ لقطة للحالة قبل التعديل — نرجع لها إذا رفض الخادم (كانت الشاشة تُظهر
   //    الطلب معتمداً ونسبة الغياب منقوصة رغم رسالة الخطأ)
   const _snap={trnStatus:r.trnStatus,supStatus:r.supStatus,genStatus:r.genStatus,dirStatus:r.dirStatus,
@@ -11380,14 +11599,14 @@ async function actOnRequest(rid,decision){
   if(decision==='مرفوض')reason=(prompt('سبب الرفض (اختياري):')||'').trim();
   else if(decision==='معاد')reason=(prompt('وش المطلوب تعديله؟ (يظهر لصاحب الطلب):')||'').trim();
   if(decision==='تصعيد'){
-    if(st!=='tgt'){showToast('التصعيد متاح للطلبات العامة فقط','w');return}
-    setStage(r,'tgt','معتمد'); r.dirStatus='معلق';
+    setStage(r,st,'معتمد'); r.dirStatus='معلق';
     r.notes='صعّده '+user.name+' لمدير الأكاديمية';
   }else{
     setStage(r,st,decision);
-    if(decision==='مرفوض')r.notes='رفضه '+STAGE_LBL[st]+' ('+user.name+')'+(reason?' — '+reason:'');
-    else if(decision==='معاد')r.notes='أرجعه '+STAGE_LBL[st]+' ('+user.name+') للتعديل'+(reason?' — '+reason:'');
-    else r.notes='اعتمده '+STAGE_LBL[st]+' ('+user.name+')';
+    const _sl=stageLabelFor(r,st);
+    if(decision==='مرفوض')r.notes='رفضه '+_sl+' ('+user.name+')'+(reason?' — '+reason:'');
+    else if(decision==='معاد')r.notes='أرجعه '+_sl+' ('+user.name+') للتعديل'+(reason?' — '+reason:'');
+    else r.notes='اعتمده '+_sl+' ('+user.name+')';
   }
   r.finalStatus=reqFinal(r);
   // ===== خصم ساعات العذر عند الاعتماد النهائي فقط =====
@@ -11624,8 +11843,8 @@ const TRANSLATIONS = {
   ar: {
     'الرقم الأكاديمي':'الرقم الأكاديمي',
     'رقم الجوال':'رقم الجوال',
-    'الرقم السري':'الرقم السري',
-    'أدخل الرقم السري':'أدخل الرقم السري',
+    'الرمز السري':'الرمز السري',
+    'أدخل الرمز السري':'أدخل الرمز السري',
     'أدخل رقمك الأكاديمي':'أدخل رقمك الأكاديمي',
     'أدخل رقمك الوظيفي':'أدخل رقمك الوظيفي',
     'أدخل اسم المستخدم':'أدخل اسم المستخدم',
@@ -11753,8 +11972,8 @@ const TRANSLATIONS = {
   en: {
     'الرقم الأكاديمي':'Academic ID',
     'رقم الجوال':'Mobile Number',
-    'الرقم السري':'Password',
-    'أدخل الرقم السري':'Enter your password',
+    'الرمز السري':'Password',
+    'أدخل الرمز السري':'Enter your password',
     'أدخل رقمك الأكاديمي':'Enter your academic ID',
     'أدخل رقمك الوظيفي':'Enter your employee ID',
     'أدخل اسم المستخدم':'Enter your username',
@@ -11984,7 +12203,7 @@ Object.assign(TRANSLATIONS.en, {
   'تقنية الألكترونيات الصناعية والتحكم':'Industrial Electronics & Control Technology',
   'حساب جديد':'New Account','إضافة حساب':'Add Account','إضافة متدرب':'Add Trainee','إضافة مدرب':'Add Trainer','إضافة إداري':'Add Admin',
   'الإداريون':'Admins','مدير':'Director','مشرف':'Supervisor',
-  'تسجيل الدخول':'Login','تذكرني':'Remember me','نسيت الرقم السري؟':'Forgot password?',
+  'تسجيل الدخول':'Login','تذكرني':'Remember me','نسيت الرمز السري؟':'Forgot password?',
   'مرحباً بك في':'Welcome to','معهد المعرفة والإبداع العالي للتدريب':'Training Institute for Higher Knowledge and Creativity',
   'أكاديمية بحرة للتعلم':'Bahra Learning Academy','منصة بحرة التعليمية':'Bahra Learning Platform',
   'جاري التحميل...':'Loading...','جاري الحفظ...':'Saving...','تم الحفظ':'Saved','تم بنجاح':'Done successfully',
@@ -11993,7 +12212,7 @@ Object.assign(TRANSLATIONS.en, {
   'اعتماد':'Approve','رفض':'Reject','السبب':'Reason','التاريخ':'Date','النوع':'Type',
   'حضور':'Present','غائب':'Absent','متأخر':'Late','بعذر':'Excused',
   'رصد':'Record','درجة':'Grade','الدرجة':'Grade','الدرجات':'Grades','النهائي':'Final','النصفي':'Midterm','أعمال السنة':'Coursework',
-  'الملف الشخصي':'Profile','تغيير الرقم السري':'Change Password','اللغة':'Language','المظهر':'Theme','فاتح':'Light','داكن':'Dark'
+  'الملف الشخصي':'Profile','تغيير الرمز السري':'Change Password','اللغة':'Language','المظهر':'Theme','فاتح':'Light','داكن':'Dark'
 });
 EN_PATTERNS.push(
   [/^الشعبة\s+(.+)$/,'Section $1'],
