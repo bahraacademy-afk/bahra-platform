@@ -1785,7 +1785,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwHbWXvzYgY7hr6NvE2M2N7FHpULns5yv1UmVrYumjBGAARGZBTRlDaWHfO0eErubs1/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxVEhLCy4dnPmDJbsGkd81dGQiNP2NOo87HCfa3K3M6Y_XnSnCWE3VetLz2CrM3JrTL/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2612,9 +2612,13 @@ function assistStudentCard(s){
 
 // حالة الذكاء الاصطناعي (تُفحص مرة بعد الدخول)
 let AI_ON=false, AI_BUSY=false;
+let AI_FROM_BOOT=false;
 async function assistCheckAI(){
-  try{ const d=await jsonpAi({action:'aiStatus'},12000); AI_ON=!!(d&&d.enabled); }
-  catch(e){ AI_ON=false; }
+  // ⚡ حالة الذكاء تصل مع حمولة الإقلاع — لا داعي لرحلة شبكة إضافية عند الدخول
+  if(!AI_FROM_BOOT){
+    try{ const d=await jsonpAi({action:'aiStatus'},12000); AI_ON=!!(d&&d.enabled); }
+    catch(e){ AI_ON=false; }
+  }
   const h=document.getElementById('assistSub');
   if(h)h.textContent=AI_ON?'مساعدك الشخصي — يحلّل بياناتك ✨':'مساعدك الشخصي داخل المنصة';
 }
@@ -2832,7 +2836,43 @@ function num(v){
   return isNaN(n)?0:n;
 }
 
+/* ⚡ حمولة الإقلاع: الخادم يرسل كل تبويبات الدور مع ردّ الدخول نفسه،
+   فتُخدَم أول قراءة لكل تبويب من الذاكرة بلا أي رحلة شبكة.
+   تُستهلك مرة واحدة لكل تبويب، فأي تحديث لاحق يذهب للخادم كالعادة. */
+let BOOT_SHEETS=null, BOOT_AT=0;
+const BOOT_TTL=90*1000;                     // حمولة الإقلاع صالحة دقيقة ونصف فقط
+let REQ_FLOW_FROM_BOOT=false;
+function setBootPayload(bp){
+  if(!bp||!bp.sheets){ BOOT_SHEETS=null; return false; }
+  BOOT_SHEETS=bp.sheets; BOOT_AT=Date.now();
+  if(bp.flow&&bp.flow.cats)REQ_FLOW=bp.flow;
+  REQ_FLOW_FROM_BOOT=true;   // وصلت الحمولة → لا نداء إضافي للمسار
+  if(typeof bp.ai!=='undefined'){ AI_ON=!!bp.ai; AI_FROM_BOOT=true; }
+  if(bp.staff&&bp.staff.length)applyStaffDir(bp.staff);
+  return true;
+}
+function bootTake(tab){
+  if(!BOOT_SHEETS)return null;
+  if(Date.now()-BOOT_AT>BOOT_TTL){ BOOT_SHEETS=null; return null; }
+  if(!Object.prototype.hasOwnProperty.call(BOOT_SHEETS,tab))return null;
+  const v=BOOT_SHEETS[tab];
+  delete BOOT_SHEETS[tab];                  // تُستهلك مرة واحدة
+  if(!Object.keys(BOOT_SHEETS).length)BOOT_SHEETS=null;
+  return v||[];
+}
+/* نداء إقلاع واحد ثم تحميل الدور من الذاكرة — يُستعمل عند استرجاع الجلسة
+   والتحديث بالخلفية، فيصير التحديث رحلة واحدة بدل خمس عشرة. */
+async function bootThenLoad(){
+  try{
+    const d=await jsonpTo(AUTH_URL,{action:'boot',token:SESSION.token},25000);
+    if(d&&d.ok)setBootPayload(d);
+  }catch(e){}
+  return (role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
+}
 async function fetchSheet(range){
+  const tab=String(range||'').split('!')[0].trim();
+  const pre=bootTake(tab);
+  if(pre)return pre;
   const d=await callServer(AUTH_URL,{action:'getSheet',range:range,token:SESSION.token});
   if(d&&d.ok===false){ if(d.error==='invalid_token') throw new Error('session'); return []; }
   return (d&&d.values)||[];
@@ -3049,7 +3089,7 @@ async function doLogin(){
   try{
     // ⚡ الدخول السريع: JSONP هو الطريقة الأساسية (يرد فوراً ويعمل على كل الأجهزة بما فيها الجوال).
     // POST/fetch احتياطي فقط إن تعذّر JSONP (نادر).
-    const _lp={action:'login',role:role,id:sid,pw:sph};
+    const _lp={action:'login',role:role,id:sid,pw:sph,boot:'1'};   // ⚡ التحقّق والبيانات في نداء واحد
     // طمأنة المستخدم بدل شاشة صامتة — أول طلب يوقظ الخادم وقد يطول
     const _tick=[[4000,'جاري الاتصال بالخادم...'],[9000,'الخادم يستيقظ — لحظة...'],[16000,'الشبكة بطيئة، ما زلنا نحاول...']]
       .map(([t,m])=>setTimeout(()=>{const e=document.getElementById('ldgTxt');if(e)e.textContent=m;},t));
@@ -3081,6 +3121,7 @@ async function doLogin(){
     SESSION.token=d.token;
     localStorage.setItem('bla_token',d.token);
     user=Object.assign({role:role},d.user);
+    setBootPayload(d.boot);                  // ⚡ كل القراءات التالية من الذاكرة
     if(!OTP_ENABLED||isDeviceTrusted(user.id)){
       await loadUserData();
       finishLogin();
@@ -3116,12 +3157,10 @@ async function loadUserData(){
 function finishLogin(){
   // 🎉 احتفال موسّع: قفز + رفع اليدين + رمي القبعة + لمعات + ترحيب باسمه
   const _first=String((user&&user.name)||'').split(' ')[0]||'';
-  let _hold=0;
-  if(typeof mascotReact==='function'){
-    mascotReact('celebrate');
-    if(typeof mascotSay==='function')mascotSay('يا هلا '+_first+'! 🎉',2200);
-    try{ _hold=window.matchMedia('(prefers-reduced-motion:reduce)').matches?0:900; }catch(_){ _hold=900; }
-  }
+  // ⚡ كان التطبيق ينتظر 900ms حتى تنتهي حركة الاحتفال. صار يظهر فوراً
+  //    والترحيب يصل كإشعار — لا شيء يقف بين الضغطة والشاشة.
+  if(typeof mascotReact==='function')mascotReact('celebrate');
+  setTimeout(()=>{ if(typeof showToast==='function')showToast('يا هلا '+_first+'! 🎉','s'); },260);
   currentUser=user; // ⭐ ضروري: بعض الصفحات (كالحضور) تعتمد على currentUser — نضمن تعبئته عند كل دخول
   // 💾 تذكّر الرقم والدور ليكون الدخول القادم أسرع (الرمز السري لا يُحفظ هنا أبداً)
   try{
@@ -3136,14 +3175,11 @@ function finishLogin(){
   LOGIN_BUSY=false;                    // 🔓 وإلا بقي مقفولاً بعد الخروج فمنع الدخول مجدداً
   const _lb=document.getElementById('lbtn'); if(_lb)_lb.disabled=false;
   const _ldg=document.getElementById('ldg'); if(_ldg)_ldg.style.display='none';
-  const _go=()=>{
-    showApp();
-    initIdleGuard();
-    loadReqFlow();                       // 🔀 مسار الطلبات المضبوط من الإعدادات
-    // إلزام تغيير الرمز الافتراضي (رقم الجوال) أول دخول
-    if(user && user.mustChange){ setTimeout(()=>openChangePassword(true), 400); }
-  };
-  if(_hold) setTimeout(_go,_hold); else _go();
+  showApp();
+  initIdleGuard();
+  if(!REQ_FLOW_FROM_BOOT) loadReqFlow();   // 🔀 لم تصل مع حمولة الإقلاع → اجلبها
+  // إلزام تغيير الرمز الافتراضي (رقم الجوال) أول دخول
+  if(user && user.mustChange){ setTimeout(()=>openChangePassword(true), 400); }
 }
 // ===== تغيير كلمة المرور (إلزامي أول دخول · واختياري من الملف الشخصي) =====
 function openChangePassword(forced){
@@ -3595,13 +3631,15 @@ async function loadStaffList(){
   return staffCache;
 }
 // تحميل دليل الطاقم (اسم + صفة + تخصص فقط) للطالب/المدرب لاستخدامه في «طلب عام»
+function applyStaffDir(staff){
+  if(!staff||!staff.length)return;
+  trainersDB=staff.filter(s=>s.type==='trainer').map(s=>({id:n0(s.id),name:n0(s.name),spec:n0(s.spec)}));
+  adminsDB=staff.filter(s=>s.type==='admin').map(s=>({id:n0(s.id),name:n0(s.name),title:n0(s.title),level:n0(s.level),spec:n0(s.spec)}));
+}
 async function loadStaffDir(){
   if((typeof adminsDB!=='undefined'&&adminsDB.length)||(typeof trainersDB!=='undefined'&&trainersDB.length))return;
   const d=await jsonpTo(AUTH_URL,{action:'staffList',token:SESSION.token}).catch(()=>null);
-  if(d&&d.staff){
-    trainersDB=d.staff.filter(s=>s.type==='trainer').map(s=>({id:n0(s.id),name:n0(s.name),spec:n0(s.spec)}));
-    adminsDB=d.staff.filter(s=>s.type==='admin').map(s=>({id:n0(s.id),name:n0(s.name),title:n0(s.title),level:n0(s.level),spec:n0(s.spec)}));
-  }
+  if(d&&d.staff)applyStaffDir(d.staff);
 }
 // هل يوجد تكليف نشط يمنحني هذه المادة؟ (للمكلَّف — واجهة فقط، والخادم يفرضه فعلياً)
 function myActiveDelegationFor(code,grp){
@@ -8770,7 +8808,7 @@ const aPgs={
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
     <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
-    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button></div>
+    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
     <div class="alert ab" style="margin-top:8px;font-size:12.5px"><span class="aicon">💡</span>«إصلاح التبويبات» يوسّع أعمدة التبويبات الضيقة في Google Sheets · «فحص المفاتيح» يعرض السجلات التي مفتاحها لا يطابق الرقم الأكاديمي الحالي (يحدث بعد تحديث الأرقام) ويصلحها بضغطة.</div>
 
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
@@ -9201,6 +9239,31 @@ async function saveReqFlow(){
     } else showToast('تعذّر الحفظ — انشر نسخة جديدة من Apps Script','e');
   }catch(e){ showToast('تعذّر الاتصال — حاول مرة أخرى','e'); }
 }
+async function trimGrid(){
+  if(!confirm('تحذف الصفوف والأعمدة الفارغة الزائدة من كل التبويبات (مع إبقاء ٢٠٠ صف احتياطياً).\n\nتُسرّع فتح الملف في كل عملية. بياناتك لا تُمسّ. متابعة؟'))return;
+  showToast('جاري التقليم — قد يأخذ دقيقة...','i');
+  try{
+    let r=null;
+    try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'trimGrid'}); }
+    catch(_){ r=await jsonpCall({action:'trimGrid'}); }
+    if(r&&r.status==='ok'&&r.report){
+      const t=r.report.tabs||[];
+      if(!t.length){ showToast('✅ ما فيه فراغ زائد — الملف مقلّم أصلاً','s'); return; }
+      const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='trimModal';
+      ov.innerHTML=`<div class="modal" style="max-width:520px;max-height:85vh;overflow-y:auto">
+        <div class="modal-title"><span>✂️ نتيجة التقليم</span>
+          <button class="modal-close" onclick="document.getElementById('trimModal').remove()">✕</button></div>
+        <div class="alert as" style="margin-bottom:12px"><span class="aicon">⚡</span>
+          حُرّرت <b>${(r.report.cellsFreed||0).toLocaleString('en')}</b> خلية فارغة من <b>${t.length}</b> تبويب — فتح الملف صار أسرع في كل عملية.</div>
+        <div class="gtable"><table><thead><tr><th>التبويب</th><th>صفوف</th><th>أعمدة</th></tr></thead><tbody>
+        ${t.map(x=>`<tr><td>${esc(x.tab)}</td><td>${x.rowsRemoved||0}</td><td>${x.colsRemoved||0}</td></tr>`).join('')}
+        </tbody></table></div></div>`;
+      document.body.appendChild(ov);
+      showToast('✅ تم التقليم','s');
+    } else showToast('تعذّر التقليم — انشر نسخة جديدة من Apps Script','e');
+  }catch(e){ showToast('تعذّر الاتصال — حاول مرة أخرى','e'); }
+}
+window.trimGrid=trimGrid;
 window.openReqFlow=openReqFlow;window.saveReqFlow=saveReqFlow;window.rqSet=rqSet;window.rqSetCat=rqSetCat;
 window.rqMove=rqMove;window.rqDel=rqDel;window.rqAdd=rqAdd;window.rqReset=rqReset;
 window.openMailSettings=openMailSettings;window.saveMailSettings=saveMailSettings;window.sendMailTest=sendMailTest;
@@ -9685,7 +9748,7 @@ async function restoreSession(){
     if(loadDataSnapshot()){
       showApp(); hideSplash(); initIdleGuard();
       // تحديث صامت بالخلفية
-      const refresh=(role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
+      const refresh=bootThenLoad();
       refresh.then(()=>{
         // إعادة رسم اللوحة الحالية بالبيانات الجديدة (بدون قفزة مزعجة)
         try{ if(role==='s') buildStudentApp(); else if(role==='t') buildTrainerApp(); else buildAdminApp(); }catch(e){}
@@ -9694,7 +9757,7 @@ async function restoreSession(){
     }
     // بدون كاش: تحميل عادي بشاشة "جاري جلب بياناتك..."
     const st=document.getElementById('splashStatus');if(st)st.textContent='جاري جلب بياناتك...';
-    const loadPromise=(role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
+    const loadPromise=bootThenLoad();
     let _tt=null;
     const timeout=new Promise((_,rej)=>{_tt=setTimeout(()=>rej(new Error('timeout')),25000);});
     try{ await Promise.race([loadPromise,timeout]); } finally { if(_tt)clearTimeout(_tt); }
