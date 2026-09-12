@@ -639,7 +639,7 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .att-status{font-size:11px;color:var(--muted);margin-top:6px;text-align:center;min-height:16px}
 
 /* ===== MODAL ===== */
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;animation:fadeIn .3s ease}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:10050;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;animation:fadeIn .3s ease}
 .modal{background:#0d1d30;border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:480px;animation:modalIn .4s cubic-bezier(.16,1,.3,1);max-height:88vh;overflow-y:auto;overscroll-behavior:contain}
 .modal.mlist{max-height:85vh;display:flex;flex-direction:column;overflow:hidden}
 .modal-title{font-size:17px;font-weight:700;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
@@ -1412,6 +1412,10 @@ body.light-mode .ai-tag{color:#6b3fa0;background:linear-gradient(135deg,rgba(155
 /* الفقاعة كانت تغطي آخر البطاقات — تتوارى عند النزول وترجع عند الصعود */
 #assistWidget{transition:transform .28s cubic-bezier(.2,.9,.3,1),opacity .28s}
 #assistWidget.tucked{transform:translateY(96px) scale(.85);opacity:0;pointer-events:none}
+/* أي نافذة مفتوحة تُخفي الفقاعة والشريط السفلي — الحوار يملك الشاشة وحده */
+body.has-modal #assistWidget{display:none!important}
+body.has-modal .mob-nav{transform:translateY(110%);pointer-events:none}
+.mob-nav{transition:transform .28s cubic-bezier(.2,.9,.3,1)}
 #assistWidget.tucked .assist-panel{display:none}
 </style>
 </head>
@@ -1891,6 +1895,18 @@ function initAssistAutoHide(){
   };
   window.addEventListener('scroll',onScroll,{passive:true});
   document.addEventListener('scroll',onScroll,{passive:true,capture:true});
+}
+/* النوافذ تُنشأ من عشرات الأماكن بطرق مختلفة — نراقب الجسم بدل تعديل كل نداء */
+function initModalWatch(){
+  if(window._mw)return; window._mw=1;
+  const sync=()=>{
+    const open=!!document.querySelector('.modal-overlay');
+    document.body.classList.toggle('has-modal',open);
+  };
+  new MutationObserver(sync).observe(document.body,{childList:true,subtree:false});
+  // بعض النوافذ تُضاف داخل حاويات أعمق
+  new MutationObserver(sync).observe(document.documentElement,{childList:true,subtree:true});
+  sync();
 }
 function assistMountFaces(){
   if(typeof mascotClone!=='function')return;
@@ -3614,6 +3630,7 @@ function showApp(){
   if(typeof assistMountFaces==='function')assistMountFaces();   // 🎓 نفس الشخصية تصير وجه المساعد
   if(typeof assistCheckAI==='function')assistCheckAI();         // 🤖 هل الذكاء مفعّل على الخادم؟
   if(typeof initAssistAutoHide==='function')initAssistAutoHide();
+  if(typeof initModalWatch==='function')initModalWatch();
   const init=user.name.split(' ').slice(0,2).map(w=>w[0]||'').join('');
   document.getElementById('topAv').textContent=init;
   document.getElementById('topAv').className='av av-'+user.role;
