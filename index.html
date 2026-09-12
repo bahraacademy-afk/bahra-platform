@@ -416,7 +416,20 @@ body.light-mode .m-shadow{fill:rgba(26,58,107,.14)}
 .tb-brand{display:flex;align-items:center;gap:10px}
 .tb-brand img{width:46px;height:46px;object-fit:cover;border-radius:50%;border:2px solid rgba(255,255,255,.15);filter:drop-shadow(0 2px 10px rgba(0,0,0,.4));transition:transform .3s}
 .tb-brand img:hover{transform:rotate(10deg) scale(1.1)}
-.tb-right{display:flex;align-items:center;gap:10px;min-width:0;flex-shrink:1}
+.tb-right{display:flex;align-items:center;gap:8px;min-width:0;flex-shrink:1}
+/* الشريط العلوي كان صفاً من أيقونات متجاورة بلا تجميع فيبدو مزدحماً:
+   نجمع أزرار الأدوات في كتلة واحدة، ونفصلها عن هوية المستخدم بفاصل خفيف */
+@media(min-width:861px){
+  /* الأزرار الأيقونية فقط — لا زر «خروج» النصّي */
+  .tb-right>#themeBtn,.tb-right>.notif-btn{width:38px;height:38px;border-radius:11px;display:inline-flex;
+    align-items:center;justify-content:center;font-size:15px;position:relative;
+    background:rgba(255,255,255,.05);border:1px solid var(--border);transition:background .18s,border-color .18s}
+  .tb-right>#themeBtn:hover,.tb-right>.notif-btn:hover{background:rgba(100,160,220,.14);border-color:rgba(100,160,220,.3)}
+  .tb-right>.out-btn{flex-shrink:0;white-space:nowrap}
+  .tb-right>#topAv{margin-inline-start:6px;position:relative}
+  .tb-right>#topAv::before{content:'';position:absolute;inset-inline-end:-9px;top:50%;transform:translateY(-50%);
+    width:1px;height:22px;background:var(--border)}
+}
 .tb-brand{flex-shrink:0}
 .av{cursor:pointer;transition:transform .18s,box-shadow .18s}
 .av:active{transform:scale(.92)}
@@ -453,7 +466,11 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .sitem.aa{border-right-color:var(--gold)}
 .sicon{font-size:17px;width:22px;text-align:center}
 .ssep{height:1px;background:var(--border);margin:8px 16px}
-.mcontent{flex:1;padding:24px;overflow-y:auto;min-height:0}
+.mcontent{flex:1;padding:24px;overflow-y:auto;min-height:0;min-width:0}
+/* سطر القياس المريح: المحتوى يتوسّط بعرض محدود بدل أن يتمدد بلا نهاية
+   على الشاشات العريضة فتتباعد الأعمدة وتترك فراغات ميتة */
+.mcontent > *{max-width:1180px;margin-inline:auto}
+@media(min-width:1600px){ .mcontent{padding:28px 32px} .mcontent > *{max-width:1320px} }
 
 /* ===== CARDS ===== */
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:24px}
@@ -571,6 +588,10 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 /* ===== TABLE ===== */
 .gtable{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;backdrop-filter:blur(10px)}
 .gtable table{width:100%;border-collapse:collapse;font-size:13px}
+/* الجدول لا يتمدد أبعد من عرض محتواه الطبيعي: جدول بثلاثة أعمدة
+   كان ينفرد بـ1140px فتتباعد الأعمدة وتترك ثلثاً ميتاً في المنتصف */
+.gtable{width:max-content;min-width:min(100%,680px);max-width:100%}  /* تحتضن الجدول بلا أن تبدو مبتورة */
+.gtable td:first-child{overflow-wrap:anywhere}
 .gtable th{padding:11px 14px;color:var(--muted);font-weight:500;text-align:right;border-bottom:1px solid var(--border);background:rgba(7,17,31,.4);font-size:11px;text-transform:uppercase;letter-spacing:.3px}
 .gtable td{padding:11px 14px;text-align:right;border-bottom:1px solid rgba(100,160,220,.05);transition:background .15s}
 .gtable tr:last-child td{border-bottom:none}
