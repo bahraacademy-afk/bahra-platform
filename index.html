@@ -838,6 +838,14 @@ body.light-mode .fab-item.active .fi-ico{color:#fff}
   .mni:active{transform:scale(.94)}
   .more-menu{bottom:calc(74px + env(safe-area-inset-bottom))}
   #assistWidget{bottom:calc(76px + env(safe-area-inset-bottom))!important}
+  /* 📱 iOS يكبّر الصفحة تلقائياً عند لمس أي حقل خطه أصغر من 16px —
+     وهذا ما يعطي إحساس أن التطبيق «غير مضبوط». نوحّد كل الحقول على 16px. */
+  #mcontent input:not([type=checkbox]):not([type=radio]),
+  #mcontent select,#mcontent textarea,
+  .modal input:not([type=checkbox]):not([type=radio]),
+  .modal select,.modal textarea,
+  #loginPage input{font-size:16px!important}
+  /* الجدول الدراسي ينزلق أفقياً أصلاً، فلا مانع من توحيده على 16px كذلك */
   /* أهداف لمس مريحة */
   #mcontent button,#mcontent select,#mcontent input:not([type=checkbox]):not([type=radio]),#mcontent .btn{min-height:40px}
   /* 19px كان أصغر من أن تصيبه الإصبع بدقة — الحد المريح للمس ~24px */
@@ -5476,17 +5484,17 @@ function atlDateBox(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{
 function atlDateText(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return String(date||'');const AR=['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];const yy=m[3].length===2?('20'+m[3]):m[3];return `${m[1]} ${AR[parseInt(m[2])]||''} ${yy}`;}
 // تاريخ باسم اليوم (لعرض «أي يوم» داخل مجموعة المادة)
 function atlDayFull(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);const base=atlDateText(date);if(!m)return base;const yy=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);const dt=new Date(yy,parseInt(m[2])-1,parseInt(m[1]));const wd=isNaN(dt.getTime())?'':dt.toLocaleDateString('ar-EG',{weekday:'long'});return (wd?wd+' · ':'')+base;}
-function atlBuildSessions(editable){
+function atlBuildSessions(scopeAll){
   const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
   const gk_=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
   // ⭐ نطاق المدرب: فقط مواده هو بالاسم (+الشعبة) فقط. لا نطابق بالرمز إطلاقاً لأن الرمز
   //    قد يكون فارغاً أو مكرَّراً بين مواد مختلفة فيُظهر للمدرب مادة ليست له (مثل الإنجليزي).
-  const mineCG=editable?null:new Set(students.map(s=>cnk_(s.course)+'|'+gk_(s.grp)));
+  const mineCG=scopeAll?null:new Set(students.map(s=>cnk_(s.course)+'|'+gk_(s.grp)));
   const sessions=new Map();
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!atlDig(r[0]))continue;
     const cname=r[2]||'', codeR=r[3]||'', grpR=gk_(r[4]);
-    if(!editable){if(!mineCG.has(cnk_(cname)+'|'+grpR))continue;}
+    if(!scopeAll){if(!mineCG.has(cnk_(cname)+'|'+grpR))continue;}
     const date=atlFmtDate(r[5]), grp=String(r[4]||'').trim(), term=String(r[7]||'').trim(), status=String(r[6]||'').trim();
     const key=date+'|'+cnk_(cname)+'|'+grp+'|'+term.replace(/\s+/g,'');
     if(!sessions.has(key))sessions.set(key,{date,course:cname,code:codeR,grp,term,students:[]});
@@ -5535,11 +5543,16 @@ function atlCss(){return `<style>
 .atl-mat .atl-card{background:rgba(255,255,255,.02)}
 .pill.pb{background:rgba(26,122,191,.18);color:#6ab8f7}
 </style>`;}
-function renderAttLog(editable){
-  const list=atlBuildSessions(editable);
-  window._attSessions=list; window._attEditable=editable; window._attFilter={q:'',course:'all'};
-  const title=editable?'إدارة سجل الغياب اليومي':'سجل الغياب اليومي';
-  const subtitle=editable?'استعرض وعدّل واحذف جلسات التحضير لكل المدربين':'كل جلسات التحضير التي سجّلتها — لموادك والمواد المكلَّف بها';
+/* scopeAll: هل يرى جلسات كل المعهد (إداري) أم مواده فقط (مدرب)
+   canEdit : هل يقدر يعدّل ويحذف — الاثنان كانا متغيّراً واحداً،
+             فكان تمكين التعديل للمدرب يفتح له سجلات المعهد كله. */
+function renderAttLog(scopeAll,canEdit){
+  if(canEdit===undefined)canEdit=scopeAll;
+  const list=atlBuildSessions(scopeAll);
+  window._attSessions=list; window._attEditable=canEdit; window._attScopeAll=scopeAll; window._attFilter={q:'',course:'all'};
+  const editable=canEdit;
+  const title=scopeAll?'إدارة سجل الغياب اليومي':'سجل الغياب اليومي';
+  const subtitle=scopeAll?'استعرض وعدّل واحذف جلسات التحضير لكل المدربين':'كل جلسات التحضير التي سجّلتها — لموادك والمواد المكلَّف بها';
   const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">🗂️ ${title}</div><div class="bsub">${subtitle}</div></div>${editable?'<span class="pill pb">وضع الإدارة</span>':'<span class="pill pg">عرض</span>'}</div>`;
   if(!list.length)
     return atlCss()+`<div class="atl-wrap">${banner}<div class="empty"><div class="empty-icon">📭</div>ما فيه تحضيرات مسجّلة بعد<br><span style="font-size:12px">تظهر هنا فور تسجيل أي حضور</span></div></div>`;
@@ -5654,6 +5667,17 @@ const LP_CSS=`
 .lp-chip:hover{border-color:rgba(100,160,220,.4)}
 .lp-chip input{accent-color:#1a7abf}   /* الحجم محدَّد أعلاه — كان هذا يعيده لـ15px فيصعب لمسه */
 .lp-in{width:100%;padding:11px 13px;border-radius:10px;border:1px solid var(--border);background:var(--card2,rgba(255,255,255,.04));color:var(--text);font-family:inherit;font-size:14px}
+/* صف التاريخ/الحصة/الشعبة — كان أربعة حقول في سطر واحد فينضغط حقلان إلى 50px */
+.lp-srow{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:center}
+.lp-srow .lp-in{min-width:0}
+.lp-srow>.btn{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+@media(max-width:700px){
+  /* على الجوال: التاريخ سطر كامل، ثم الحصة والشعبة جنب بعض مع زر الحذف */
+  .lp-srow{grid-template-columns:1fr 1fr auto;gap:8px;
+    padding:10px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.02)}
+  .lp-srow .lp-sdate{grid-column:1 / -1}
+  .lp-srow .lp-in{font-size:15px;padding:12px 12px}   /* 16px تمنع تكبير iOS التلقائي */
+}
 .lp-lbl{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:var(--muted)}
 .lp-gt{font-size:12px;font-weight:800;color:#6ab8f7;margin-bottom:6px}`;
 function lpChk(cls,items,selected){
@@ -5663,7 +5687,7 @@ function lpChk(cls,items,selected){
 function lpFld(lbl,inner){return `<div style="margin-bottom:12px"><label class="lp-lbl">${lbl}</label>${inner}</div>`;}
 // صف تاريخ/حصة/فصل في نموذج التحضير (متعدد التواريخ)
 function lpSessionRowHtml(date,period,cls){
-  return `<div class="lp-srow" style="display:grid;grid-template-columns:1.3fr 1fr 1fr auto;gap:8px;margin-bottom:8px">
+  return `<div class="lp-srow">
     <input type="date" class="lp-in lp-sdate" value="${esc(date||'')}" style="color-scheme:light dark">
     <input class="lp-in lp-speriod" placeholder="الحصة" value="${esc(period||'')}">
     <input class="lp-in lp-scls" placeholder="الفصل/الشعبة" value="${esc(cls||'')}">
@@ -5718,7 +5742,7 @@ function lessonFormPage(){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
       ${lpFld('المادة',`<select id="lp_material" class="lp-in">${myCourses.map(c=>`<option>${esc(c)}</option>`).join('')||'<option></option>'}</select>`)}
       ${lpFld('الفرع/التخصص',`<input id="lp_branch" class="lp-in" placeholder="اختياري">`)}
-      ${lpFld('الصف/الشعبة',`<select id="lp_grade" class="lp-in"><option value=""></option>${myGrps.map(g=>`<option>${esc(g)}</option>`).join('')}</select>`)}
+      ${lpFld('الصف/الشعبة',`<select id="lp_grade" class="lp-in"><option value="">— اختر الشعبة —</option>${myGrps.map(g=>`<option>${esc(g)}</option>`).join('')}</select>`)}
     </div>
     ${lpFld('التواريخ والحصص <span style="font-weight:400;color:var(--muted)">(تقدر تضيف أكثر من تاريخ)</span>',
       `<div id="lp_sessions">${lpSessionRowHtml(dv,'','')}</div>
@@ -5954,7 +5978,7 @@ const tPgs={
   lesson:()=>lessonFormPage(),
   library:()=>buildLibrary(null, true),
   // ===== سجل التحضير (المدرب) — عرض فقط =====
-  attlog:()=>renderAttLog(false),
+  attlog:()=>renderAttLog(false,true),   // مواده فقط — ويقدر يعدّل ويحذف فيها
   requests:()=>{
     const inbox=requests.filter(r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);}).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     const mine=requests.filter(r=>String(r.sid)===String(user.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
@@ -7754,7 +7778,7 @@ async function admAttReload(){
   // إعادة بناء الجلسات وتحديث القائمة فقط (نحافظ على الفلتر والبحث)
   const host=document.getElementById('attlogBody');
   if(host && typeof atlBuildSessions==='function'){
-    window._attSessions=atlBuildSessions(true);
+    window._attSessions=atlBuildSessions(window._attScopeAll===true);   // نحافظ على نطاق الدور بعد التعديل
     host.innerHTML=attlogCards();
   }else{
     showAPage('attlog',document.getElementById('sn-attlog'));
@@ -7796,7 +7820,7 @@ const aPgs={
   lessons:()=>adminLessonsPage(),
   library:()=>buildLibrary(null, true),
   // ===== سجل التحضير (أدمن) — عرض + تعديل + حذف =====
-  attlog:()=>renderAttLog(true),
+  attlog:()=>renderAttLog(true,true),    // كل المعهد + تعديل
   manage_courses:()=>{
     const tab=window._mcTab||'plan';
     const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${id}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
