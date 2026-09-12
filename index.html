@@ -584,7 +584,12 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .ival{font-size:14px;font-weight:500}
 
 /* ===== ALERT ===== */
-.alert{border-radius:12px;padding:13px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;font-size:13px;animation:fadeUp .4s ease}
+/* ⚠️ كان display:flex — فيصير كل <b> وكل مقطع نصّي «عنصر مرن» مستقلاً،
+   وعلى الجوال تنضغط هذه المقاطع في أعمدة رأسية ويصير النص غير مقروء.
+   الصواب أن الرسالة نص متدفّق والأيقونة مثبّتة بجانبه. */
+.alert{border-radius:12px;padding:13px 16px 13px 16px;padding-inline-start:46px;margin-bottom:10px;
+  display:block;position:relative;font-size:13px;line-height:1.85;animation:fadeUp .4s ease;overflow-wrap:anywhere}
+.alert>.aicon{position:absolute;inset-inline-start:16px;top:12px;font-size:15px;line-height:1.6}
 .aw{background:rgba(244,162,97,.1);border:1px solid rgba(244,162,97,.25);color:#f4c78a}
 .ad{background:rgba(230,57,70,.1);border:1px solid rgba(230,57,70,.25);color:#ff8a92}
 .as{background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.25);color:#2ecc71}
@@ -709,6 +714,27 @@ body.light-mode select option{background:#ffffff;color:#1a2a4a}
 .file-item .fi-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .file-item .fi-del{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:16px;transition:color .2s}
 .file-item .fi-del:hover{color:var(--red)}
+/* 📎 عناصر المرفقات الجديدة */
+.file-item .fi-ic{flex-shrink:0;font-size:17px}
+.file-item .fi-name{color:var(--text);text-decoration:none;min-width:0}
+.file-item .fi-name:hover{color:#6ab8f7;text-decoration:underline}
+.file-item .fi-size{font-size:11px;color:var(--muted);flex-shrink:0;white-space:nowrap}
+.file-item .fi-dl{text-decoration:none;font-size:15px;flex-shrink:0;opacity:.85;padding:4px}
+.file-item .fi-dl:hover{opacity:1}
+.file-item .fi-del{min-width:34px;min-height:34px;border-radius:8px}
+.fi-empty{font-size:12.5px;color:var(--muted);padding:10px 2px;text-align:center}
+.uz-spin{display:inline-block;width:15px;height:15px;border:2px solid rgba(100,160,220,.25);
+  border-top-color:#6ab8f7;border-radius:50%;animation:spin .7s linear infinite;vertical-align:-2px;margin-inline-end:6px}
+@media(max-width:560px){
+  /* سطر أول: الأيقونة والاسم معاً · سطر ثانٍ: الحجم والإجراءات */
+  .file-item{flex-wrap:wrap;padding:11px 12px;gap:6px 8px}
+  .file-item .fi-ic{order:1}
+  .file-item .fi-name{order:2;flex:1 1 0;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.6}
+  .file-item .fi-size{order:3;flex:1 1 auto;margin-top:2px}
+  .file-item .fi-dl{order:4;margin-inline-start:auto}
+  .file-item .fi-del{order:5}
+  .upload-zone{padding:22px 14px;font-size:12.5px}
+}
 
 /* ===== MOBILE NAV — شريط سفلي ثابت (الجوال) ===== */
 .mob-nav{display:none}
@@ -820,6 +846,15 @@ body.light-mode .fab-item.active .fi-ico{color:#fff}
   #mcontent label:has(> input[type=checkbox]),#mcontent label:has(> input[type=radio]){
     min-height:40px;display:inline-flex;align-items:center;gap:8px}
   .lp-chip{padding:8px 11px!important}
+  /* صفوف «عنوان + أزرار» مكتوبة بأنماط سطرية في عشرات الصفحات:
+     على الجوال تتزاحم وتظهر مبعثرة — نجعلها تتراصّ عمودياً وأزرارها بعرض مريح */
+  #mcontent [style*="space-between"]:has(> .stitle):has(.btn){
+    flex-direction:column!important;align-items:stretch!important;gap:10px}
+  #mcontent [style*="space-between"]:has(> .stitle):has(.btn) > div:last-child{
+    width:100%;display:flex;flex-wrap:wrap;gap:8px}
+  #mcontent [style*="space-between"]:has(> .stitle):has(.btn) > div:last-child > .btn{
+    flex:1 1 calc(50% - 4px);min-height:44px;display:inline-flex;align-items:center;justify-content:center;text-align:center}
+  #mcontent [style*="space-between"]:has(> .stitle):has(.btn) > div:last-child > .btn:only-child{flex:1 1 100%}
   .sidebar{display:none!important}
   .dash-charts{grid-template-columns:1fr!important}
   .enr-grid{grid-template-columns:1fr!important}
@@ -1221,6 +1256,18 @@ body.light-mode .topbar{background:linear-gradient(180deg,rgba(255,255,255,.7),r
 .gtable tbody tr:nth-child(even) td{background:rgba(100,160,220,.028)}
 .gtable tbody tr:hover td{background:rgba(100,160,220,.075)}
 .sch-wrap,.gtable{overflow-x:auto;-webkit-overflow-scrolling:touch}
+/* على الجوال: min-width:520px وحده لا يكفي — ٦ أعمدة داخله تعطي ٨٦px للعمود
+   فينكسر الاسم العربي إلى ٦ أسطر بعرض حرف. نجعل كل عمود بعرض محتواه
+   ونترك الجدول ينزلق أفقياً — لا يضيع أي بيان. */
+@media(max-width:820px){
+  .gtable table{min-width:max-content}
+  .gtable th,.gtable td{white-space:nowrap;padding:11px 12px}
+  .gtable td.wrap-cell{white-space:normal;min-width:150px}
+  /* تلميح بصري أن الجدول ينزلق */
+  .gtable{position:relative;scroll-snap-type:x proximity}
+  .gtable::after{content:'';position:sticky;left:0;top:0;float:left;width:22px;height:100%;
+    pointer-events:none;background:linear-gradient(to right,var(--card,rgba(10,20,35,.9)),transparent)}
+}
 
 /* --- الإشعارات (توست): عمق أنعم --- */
 .toast{box-shadow:0 14px 46px rgba(0,0,0,.42);border-radius:14px}
@@ -1362,6 +1409,10 @@ body.light-mode .ai-tag{color:#6b3fa0;background:linear-gradient(135deg,rgba(155
 .assist-input input{flex:1;min-width:0;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:inherit;font-size:14px;padding:10px 14px;outline:none}
 .assist-send{width:44px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;font-size:15px;cursor:pointer;flex-shrink:0}
 @media(max-width:560px){#assistWidget{inset-inline-start:14px;bottom:78px}}
+/* الفقاعة كانت تغطي آخر البطاقات — تتوارى عند النزول وترجع عند الصعود */
+#assistWidget{transition:transform .28s cubic-bezier(.2,.9,.3,1),opacity .28s}
+#assistWidget.tucked{transform:translateY(96px) scale(.85);opacity:0;pointer-events:none}
+#assistWidget.tucked .assist-panel{display:none}
 </style>
 </head>
 <body>
@@ -1568,7 +1619,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycby6py9vzV49kpvE7rRKmkHuedUR35x6hF2bzCkbiZoC9MmHjd4rF-5O0jawS4QEbvQi/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzB6lfBnc6Xx_mOkW7vCKJTGoav9pYYvyed7bUqIZXCeuJmug40uLqFoj2im0f05qJ3/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -1580,6 +1631,7 @@ const ADMIN=[]; // التحقق صار في الخادم
 
 let role='s', user=null, currentUser=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[], graduates=[];
 let news=[]; // 📰 الأخبار والإعلانات
+let attachments=[]; // 📎 مرفقات المقررات (محمّلة من التبويب لا من ذاكرة المتصفح)
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
 let schedule={}, schedConfig={periodsPerDay:5, periodHours:2, startHour:8, daysCount:5, breakStart:12, breakHours:1};
 let rubrics={}, gradeDetails=[]; // بنود الدرجات لكل مادة + الدرجات التفصيلية
@@ -1816,6 +1868,30 @@ function nwAddLink(){
 // ================= 🤖 المساعد الذكي (يجاوب من بيانات المنصة) =================
 function assistNorm(s){return String(s||'').replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').replace(/ؤ/g,'و').replace(/ئ/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,' ').trim().toLowerCase();}
 // 🎓 تركيب وجه الشخصية في زر المساعد ورأس المحادثة (نسخة من شخصية شاشة الدخول)
+/* إخفاء الفقاعة أثناء النزول حتى لا تحجب المحتوى، وإظهارها عند الصعود أو التوقف */
+function initAssistAutoHide(){
+  const w=document.getElementById('assistWidget'); if(!w||w._ah)return; w._ah=1;
+  let last=0,idle=null;
+  const onScroll=(e)=>{
+    const p=document.getElementById('assistPanel');
+    if(p&&p.classList.contains('open')){ w.classList.remove('tucked'); return; }
+    // المحتوى قد ينزلق داخل حاوية لا في النافذة — نقرأ الموضع من مصدر الحدث،
+    // ونتجاهل الأحداث القادمة من عناصر لا تنزلق فعلاً (وإلا ألغت إخفاءها بقيمة صفر)
+    const t=e&&e.target;
+    const real=t&&t!==document&&t!==window&&typeof t.scrollTop==='number'
+               &&t.scrollHeight>t.clientHeight+4;
+    if(t&&t!==document&&t!==window&&typeof t.scrollTop==='number'&&!real)return;
+    const y=Math.max(0, real ? t.scrollTop
+      : (window.scrollY||document.documentElement.scrollTop||document.body.scrollTop||0));
+    if(y>140&&y>last+6) w.classList.add('tucked');
+    else if(y<last-6||y<80) w.classList.remove('tucked');
+    last=y;
+    clearTimeout(idle);
+    idle=setTimeout(()=>w.classList.remove('tucked'),900);   // ترجع بعد ما يتوقف
+  };
+  window.addEventListener('scroll',onScroll,{passive:true});
+  document.addEventListener('scroll',onScroll,{passive:true,capture:true});
+}
 function assistMountFaces(){
   if(typeof mascotClone!=='function')return;
   [['fabFace',''],['assistAva','']].forEach(function(pair){
@@ -3166,7 +3242,7 @@ function showErr(m){
 // ===== LOAD DATA =====
 async function loadStudent(){
   // ⭐ «تحضير الدروس» غير مسموح لدور الطالب على الخادم — كان يُطلب في كل دخول ويعود forbidden
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadStaffDir(), loadNews()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadStaffDir(), loadNews(), loadAttachments()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[])
@@ -3189,7 +3265,7 @@ async function loadStudent(){
 }
 
 async function loadTrainer(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps(), loadStaffDir(), loadNews()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps(), loadStaffDir(), loadNews(), loadAttachments()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[]),
@@ -3223,7 +3299,8 @@ async function loadAdmin(){
     fetchSheet('قاعدة بيانات المقررات!A:J').catch(()=>[]),
     fetchSheet('قاعدة بيانات المدربين!A:F').catch(()=>[]),
     fetchSheet('قاعدة بيانات الاداريين!A:H').catch(()=>[]),   // ⭐ H = التخصص (كان A:G فيقرأ r[7] فارغاً دائماً)
-    loadNews()
+    loadNews(),
+    loadAttachments()
   ]);
   students=[];
   for(let i=1;i<sr.length;i++){
@@ -3274,6 +3351,15 @@ function activeTrainerNames(){
 // تحميل طلبات الخدمات من تبويب "طلبات الخدمات"
 // الأعمدة: A=معرف B=الرقم C=الاسم D=الشعبة E=النوع F=التفاصيل G=التاريخ H=المشرف العام I=المدير J=الحالة النهائية
 //          K=ملاحظات L=المدرب M=تواريخ N=المشرف العام O=التصنيف P=دور المُرسِل Q=تخصص الطلب R=اسم المستهدف S=دور المستهدف T=قرار المستهدف
+async function loadAttachments(){
+  const rows=await fetchSheet('مرفقات المقررات!A:J').catch(()=>[]);
+  attachments=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; if(!n0(r[0]))continue;
+    attachments.push({id:n0(r[0]),code:n0(r[1]),course:n0(r[2]),name:n0(r[3]),url:n0(r[4]),
+      mime:n0(r[5]),size:n0(r[6]),by:n0(r[7]),uid:n0(r[8]),date:n0(r[9])});
+  }
+}
 async function loadRequests(){
   const rq=await fetchSheet('طلبات الخدمات!A:T').catch(()=>[]);
   requests=[];
@@ -3527,6 +3613,7 @@ function showApp(){
   document.getElementById('appShell').style.display='block';
   if(typeof assistMountFaces==='function')assistMountFaces();   // 🎓 نفس الشخصية تصير وجه المساعد
   if(typeof assistCheckAI==='function')assistCheckAI();         // 🤖 هل الذكاء مفعّل على الخادم؟
+  if(typeof initAssistAutoHide==='function')initAssistAutoHide();
   const init=user.name.split(' ').slice(0,2).map(w=>w[0]||'').join('');
   document.getElementById('topAv').textContent=init;
   document.getElementById('topAv').className='av av-'+user.role;
@@ -5127,9 +5214,8 @@ const sPgs={
     ${courses.map(c=>`
     <div class="ccard cc-b">
       <div class="cc-top"><div><div class="cc-name">${esc(c.course)}</div><div class="cc-meta">${esc(c.trainer||'—')}</div></div><span class="pill pb">${esc(c.code)}</span></div>
-      <div id="files-${c.key}" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-        ${(files[c.key]||[]).map(f=>`<div class="file-item" style="width:auto"><span>📄</span><span class="fi-name">${esc(f.name)}</span><a href="${f.url}" target="_blank" class="btn btn-b btn-sm" style="text-decoration:none">تنزيل</a></div>`).join('')}
-        ${!(files[c.key]||[]).length?'<div style="font-size:12px;color:var(--muted)">لا توجد مرفقات بعد</div>':''}
+      <div class="file-list" id="fl-${domId(c.course)}" style="margin-top:8px">
+        ${(()=>{const L=attListFor(c.course);return L.length?L.map(a=>attItemHTML(a,false,c.course)).join(''):'<div class="fi-empty">ما رفع المدرب مواد لهذا المقرر بعد</div>';})()}
       </div>
     </div>`).join('')||'<div class="empty"><div class="empty-icon">📎</div>لا توجد مقررات</div>'}`,
     record:()=>{
@@ -5526,6 +5612,21 @@ window.attlogFilter=attlogFilter;
 /* ============ تحضير الدروس الإلكتروني (مدرب: تعبئة/إرسال · أدمن: استعراض) ============ */
 const LP_CSS=`
 .lp-chips{display:flex;flex-wrap:wrap;gap:6px}
+/* بطاقة التحضير: الأزرار كانت flex-shrink:0 فتخنق العنوان في عمود بعرض 48px */
+.lp-card{margin-bottom:10px}
+.lp-card-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.lp-card-info{min-width:0;flex:1 1 auto}
+.lp-card-info .cc-name{overflow-wrap:anywhere;line-height:1.6}
+.lp-sent{opacity:.7;font-size:11px}
+.lp-card-acts{display:flex;gap:6px;flex-shrink:0}
+.lp-del{background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)}
+@media(max-width:700px){
+  /* على الجوال: النص فوق والأزرار تحته بعرض كامل */
+  .lp-card-row{flex-direction:column;gap:12px}
+  .lp-card-acts{width:100%;flex-wrap:wrap}
+  .lp-card-acts .btn{flex:1 1 auto;min-height:42px;justify-content:center}
+  .lp-card-acts .lp-del{flex:0 0 54px}
+}
 .lp-chip{display:inline-flex;align-items:center;gap:6px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--border);border-radius:9px;padding:6px 10px;font-size:12px;cursor:pointer;transition:.15s;user-select:none;min-height:38px}
 .lp-chip input{width:20px;height:20px;accent-color:var(--blue);flex-shrink:0;cursor:pointer}
 @media(max-width:820px){
@@ -5566,16 +5667,26 @@ function lpSessions(lp){
 }
 function lpFmtDate(v){const s=String(v||'').trim();const m=s.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?`${m[3]}/${m[2]}/${m[1]}`:s;}
 window.lpAddSession=lpAddSession;
+// تنسيق وقت الإرسال بشكل مقروء بدل نص التاريخ الخام من JS
+function lpSentAt(v){
+  const raw=String(v||'').trim(); if(!raw)return '';
+  const d=new Date(raw);
+  if(isNaN(d.getTime()))return raw.length>28?raw.slice(0,28)+'…':raw;
+  const D=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'][d.getDay()];
+  const two=n=>String(n).padStart(2,'0');
+  let h=d.getHours(); const am=h<12?'ص':'م'; h=h%12||12;
+  return `${D} ${two(d.getDate())}/${two(d.getMonth()+1)}/${d.getFullYear()} · ${h}:${two(d.getMinutes())} ${am}`;
+}
 function lessonCard(lp,showTrainer,canDelete){
-  return `<div class="ccard" style="margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
-      <div style="min-width:0"><div class="cc-name">📚 ${esc(lp.material||'—')}${lp.topic?` — ${esc(lp.topic)}`:''}</div>
+  return `<div class="ccard lp-card">
+    <div class="lp-card-row">
+      <div class="lp-card-info"><div class="cc-name">📚 ${esc(lp.material||'—')}${lp.topic?` — ${esc(lp.topic)}`:''}</div>
         ${(()=>{const ss=lpSessions(lp);const first=ss[0]?lpFmtDate(ss[0].date):'—';const more=ss.length>1?` (+${ss.length-1} تاريخ)`:'';return `<div class="cc-meta">${showTrainer?`👨‍🏫 ${esc(lp.tname||'')} · `:''}${lp.grade?`شعبة ${esc(lp.grade)} · `:''}📅 ${esc(first)}${more}</div>`;})()}
-        <div class="cc-meta" style="opacity:.7">أُرسل: ${esc(lp.sentAt||'')}</div></div>
-      <div style="display:flex;gap:6px;flex-shrink:0">
+        ${lp.sentAt?`<div class="cc-meta lp-sent">أُرسل: ${esc(lpSentAt(lp.sentAt))}</div>`:''}</div>
+      <div class="lp-card-acts">
         <button class="btn btn-sm btn-b" onclick="viewLessonPrep('${esc(lp.id)}')">👁️ عرض/طباعة</button>
         ${canDelete?`<button class="btn btn-sm btn-out" onclick="editLessonPrep('${esc(lp.id)}')">✏️ تعديل</button>`:''}
-        ${canDelete?`<button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:#ff8a92;border:1px solid rgba(230,57,70,.3)" onclick="delLessonPrep('${esc(lp.id)}')">🗑️</button>`:''}
+        ${canDelete?`<button class="btn btn-sm lp-del" onclick="delLessonPrep('${esc(lp.id)}')">🗑️</button>`:''}
       </div>
     </div></div>`;
 }
@@ -6124,12 +6235,12 @@ const tPgs={
     ${[...new Set(students.map(s=>s.course))].map(course=>`
     <div class="ccard cc-b" style="margin-bottom:14px">
       <div class="cc-name" style="margin-bottom:12px">📚 ${course}</div>
-      <div class="upload-zone" onclick="triggerUpload('${jsq(course)}')" ondragover="this.classList.add('drag');event.preventDefault()" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'${jsq(course)}')">
+      <div class="upload-zone" id="uz-${domId(course)}" onclick="triggerUpload('${jsq(course)}')" ondragover="this.classList.add('drag');event.preventDefault()" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event,'${jsq(course)}')">
         📂 اضغط أو اسحب الملفات هنا للرفع
       </div>
       <input type="file" id="fu-${domId(course)}" style="display:none" multiple onchange="handleFiles(event,'${jsq(course)}')">
       <div class="file-list" id="fl-${domId(course)}">
-        ${(files[course]||[]).map(f=>`<div class="file-item"><span>📄</span><span class="fi-name">${esc(f.name)}</span><button class="fi-del" onclick="delFile('${jsq(course)}','${jsq(f.name)}')">✕</button></div>`).join('')}
+        ${(()=>{const L=attListFor(course);return L.length?L.map(a=>attItemHTML(a,true,course)).join(''):'<div class="fi-empty">ما فيه ملفات مرفوعة لهذا المقرر بعد</div>';})()}
       </div>
     </div>`).join('')||'<div class="empty">لا توجد مقررات</div>'}`
 };
@@ -6512,39 +6623,103 @@ function triggerUpload(course){
   document.getElementById('fu-'+domId(course))?.click();
 }
 
-function handleFiles(event,course){
-  const fls=Array.from(event.target.files);
-  if(!files[course])files[course]=[];
-  fls.forEach(f=>{
-    if(!files[course].find(x=>x.name===f.name)){
-      files[course].push({name:f.name,url:URL.createObjectURL(f),size:f.size});
-    }
-  });
-  refreshFileList(course);
-  // update student attachments
-  courses.forEach(c=>{if(c.course===course&&!files[c.key])files[c.key]=files[course]});
-  showToast(`تم رفع ${fls.length} ملف بنجاح`,'s');
+/* ============================================================
+ *  📎 المرفقات — رفع حقيقي إلى Drive وتخزين في تبويب «مرفقات المقررات»
+ *  (كانت تُنشئ رابطاً مؤقتاً في ذاكرة المتصفح فقط، فتختفي عند التحديث
+ *   ولا يراها المتدرب إطلاقاً رغم ظهور رسالة «تم الرفع بنجاح»)
+ * ============================================================ */
+const ATT_MAX_MB=18;
+function fileIcon(n){
+  const e=String(n||'').split('.').pop().toLowerCase();
+  if(['pdf'].includes(e))return '📕';
+  if(['doc','docx'].includes(e))return '📘';
+  if(['xls','xlsx','csv'].includes(e))return '📗';
+  if(['ppt','pptx'].includes(e))return '📙';
+  if(['png','jpg','jpeg','gif','webp','bmp','svg'].includes(e))return '🖼️';
+  if(['mp4','mov','avi','mkv','webm'].includes(e))return '🎬';
+  if(['mp3','wav','m4a','ogg'].includes(e))return '🎵';
+  if(['zip','rar','7z'].includes(e))return '🗜️';
+  return '📄';
 }
-
-function handleDrop(event,course){
+function fmtSize(b){
+  const n=parseFloat(b)||0;
+  if(n<1024)return n+' بايت';
+  if(n<1048576)return (n/1024).toFixed(0)+' ك.ب';
+  return (n/1048576).toFixed(1)+' م.ب';
+}
+function attKey(course){ return normCode(course); }
+function attListFor(course){
+  const k=attKey(course);
+  return (attachments||[]).filter(a=>attKey(a.course)===k||(a.code&&normCode(a.code)===normCode(course)));
+}
+async function handleFiles(event,course){
+  const fls=Array.from(event.target.files||[]);
+  event.target.value='';                       // حتى يقبل نفس الملف لو أُعيد اختياره
+  await uploadAttachments(fls,course);
+}
+async function handleDrop(event,course){
   event.preventDefault();
   event.currentTarget.classList.remove('drag');
-  const fls=Array.from(event.dataTransfer.files);
-  if(!files[course])files[course]=[];
-  fls.forEach(f=>files[course].push({name:f.name,url:URL.createObjectURL(f)}));
-  refreshFileList(course);
-  showToast(`تم رفع ${fls.length} ملف`,'s');
+  await uploadAttachments(Array.from(event.dataTransfer.files||[]),course);
 }
-
-function delFile(course,name){
-  if(files[course])files[course]=files[course].filter(f=>f.name!==name);
+async function uploadAttachments(fls,course){
+  if(!fls.length)return;
+  const rec=(students||[]).find(x=>x.course===course)||(allCourses||[]).find(x=>x.course===course);
+  const code=rec?rec.code:'';
+  const zone=document.getElementById('uz-'+domId(course));
+  let done=0,failed=0;
+  for(const f of fls){
+    if(f.size>ATT_MAX_MB*1048576){ showToast(`«${f.name}» أكبر من ${ATT_MAX_MB} م.ب`,'w'); failed++; continue; }
+    if(zone)zone.innerHTML=`<span class="uz-spin"></span> جاري رفع «${esc(f.name)}» (${done+1}/${fls.length})…`;
+    try{
+      const b64=await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=()=>res(String(r.result).split(',')[1]);
+        r.onerror=()=>rej(new Error('read'));
+        r.readAsDataURL(f);
+      });
+      const up=await withRetry(()=>postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'uploadFile',
+        fileData:b64,fileName:f.name,mime:f.type||'application/octet-stream'}),2);
+      if(!up||up.status!=='ok'||!up.url)throw new Error((up&&up.msg)||'تعذّر الرفع');
+      const sv=await withRetry(()=>postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'saveAttachment',
+        code:code,course:course,name:f.name,url:up.url,mime:f.type||'',size:f.size}),2);
+      if(!sv||sv.status!=='ok')throw new Error((sv&&sv.msg)||'تعذّر الحفظ');
+      attachments.push({id:sv.id,code:code,course:course,name:f.name,url:up.url,
+        mime:f.type||'',size:f.size,by:(user&&user.name)||'',uid:(user&&user.id)||'',date:''});
+      done++;
+    }catch(e){ failed++; showToast(`تعذّر رفع «${f.name}» — ${e.message||''}`,'e'); }
+  }
+  if(zone)zone.innerHTML='📂 اضغط أو اسحب الملفات هنا للرفع';
   refreshFileList(course);
+  if(done)showToast(done===1?'تم رفع الملف ✅':`تم رفع ${done} ملفات ✅`,'s');
+  if(!done&&failed)showToast('ما تم رفع أي ملف','e');
 }
-
+async function delFile(course,id,name){
+  if(!confirm(`حذف «${name}»؟`))return;
+  try{
+    const r=await withRetry(()=>postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'deleteAttachment',id:id}),2);
+    if(!r||r.status!=='ok')throw new Error((r&&r.msg)==='forbidden'?'ما عندك صلاحية حذف هذا الملف':'تعذّر الحذف');
+    attachments=(attachments||[]).filter(a=>a.id!==id);
+    refreshFileList(course);
+    showToast('تم الحذف','s');
+  }catch(e){ showToast(e.message||'تعذّر الحذف','e'); }
+}
+function attItemHTML(a,canDel,course){
+  return `<div class="file-item">
+    <span class="fi-ic">${fileIcon(a.name)}</span>
+    <a class="fi-name" href="${escUrl(a.url)}" target="_blank" rel="noopener" title="${escAttr(a.name)}">${esc(a.name)}</a>
+    <span class="fi-size">${a.size?fmtSize(a.size):''}</span>
+    <a class="fi-dl" href="${escUrl(a.url)}" target="_blank" rel="noopener" title="فتح/تنزيل">⬇️</a>
+    ${canDel?`<button class="fi-del" onclick="delFile('${jsq(course)}','${jsq(a.id)}','${jsq(a.name)}')" title="حذف">✕</button>`:''}
+  </div>`;
+}
 function refreshFileList(course){
   const fl=document.getElementById('fl-'+domId(course));
   if(!fl)return;
-  fl.innerHTML=(files[course]||[]).map(f=>`<div class="file-item"><span>📄</span><span class="fi-name">${esc(f.name)}</span><button class="fi-del" onclick="delFile('${jsq(course)}','${jsq(f.name)}')">✕</button></div>`).join('');
+  const list=attListFor(course);
+  const canDel=(role==='a'||role==='t');
+  fl.innerHTML=list.length?list.map(a=>attItemHTML(a,canDel,course)).join('')
+    :'<div class="fi-empty">ما فيه ملفات مرفوعة لهذا المقرر بعد</div>';
 }
 
 // ===== ADMIN APP =====
