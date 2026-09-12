@@ -630,6 +630,13 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
 .btn-out:hover{border-color:var(--red);color:var(--red)}
 .btn-sm{padding:6px 14px;font-size:12px}
 .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+/* كل مقرر كتلة مستقلة: زر حفظ مقرر كان يلتصق بعنوان المقرر التالي
+   فتُقرأ المجموعتان كوحدة واحدة ويضيع الترابط بين العنوان وجدوله */
+.grade-sec{background:var(--card2,rgba(255,255,255,.02));border:1px solid var(--border);
+  border-radius:18px;padding:18px 18px 14px;margin-bottom:26px}
+.grade-sec .gtable{border-radius:14px}
+.grade-sec .btn-row{margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+@media(max-width:560px){ .grade-sec{padding:14px 12px 12px;border-radius:14px;margin-bottom:18px} }
 /* ترويسة قسم: العنوان وزرّه متجاوران — كان space-between يرمي الزر
    إلى الطرف المقابل فتفصلهما ألف بكسل على شاشة عريضة */
 @media(min-width:861px){
@@ -6244,7 +6251,7 @@ const tPgs={
       const gradeHead=rub.length
         ? rub.map(r=>`<th>${esc(r.cat)}<br><small>/${r.max}</small></th>`).join('')+'<th>المجموع<br><small>/100</small></th>'
         : '<th>تقييم المدرب<br><small>/100</small></th>';
-      return `<div style="margin-bottom:24px">
+      return `<div class="grade-sec">
         <div class="sec-head">
           <div class="sec-title" style="color:#6ab8f7">📚 ${course}${rub.length?` <span style="font-size:11px;color:var(--muted)">(${rub.length} بنود · مجموع ${rubTotal}/100)</span>`:''}</div>
           <button class="btn btn-out btn-sm" onclick='openRubricSetup("${jsq(code)}","${jsq(course)}")'>⚙️ إعداد بنود الدرجات</button>
