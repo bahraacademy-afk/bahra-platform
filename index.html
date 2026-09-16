@@ -1785,7 +1785,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxVEhLCy4dnPmDJbsGkd81dGQiNP2NOo87HCfa3K3M6Y_XnSnCWE3VetLz2CrM3JrTL/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzRawCq6wU58H60z3f9TOw7IAMv0oSm8eQ1llhuIgWOPn_eUDWMASfhjCVXWfH4LBNb/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2795,6 +2795,8 @@ async function saveNewsForm(){
   item.attachments=serializeAttach(window._nwAttach||[]); // المرفقات والروابط
   showToast('جاري الحفظ...','i');
   try{
+    // 🔁 خبر جديد يأخذ معرّفه من العميل — فإعادة المحاولة لا تنشره مرتين
+    if(!item.id&&!item.newId)item.newId='NW-'+Date.now()+'-'+Math.floor(Math.random()*1000);
     const res=await jsonpCall({action:'saveNews',data:JSON.stringify(item)});
     if(res&&res.status==='ok'){
       showToast(item.id?'✅ تم حفظ التعديلات':'✅ تم نشر الخبر','s');
@@ -3794,6 +3796,8 @@ async function submitDelegation(){
   const rec={code:c.code,grp:c.grp,term:c.term,toId:toId,toName:toName,byId:user.id,byName:user.name,scope:scope.join(' · '),expiry:expiry};
   showToast('جاري إرسال التكليف...','i');
   try{
+    // 🔁 معرّف يولّده العميل مرة واحدة — فإعادة المحاولة لا تنشئ تكليفاً ثانياً
+    if(!rec.id)rec.id='DL-'+Date.now()+'-'+Math.floor(Math.random()*1000);
     const res=await jsonpCall({action:'addDelegation',data:JSON.stringify([rec])});
     if(res&&res.status==='ok'){
       showToast('✅ تم إرسال طلب التكليف للاعتماد','s');
@@ -4003,7 +4007,9 @@ async function loadAbsenceBase(){
       const sid=onlyDigits(r[0]);
       if(!sid)continue;
       const status=String(r[6]||'').trim();
-      if(status==='حاضر')continue; // ⭐ الحضور لا يُحسب في نسبة الغياب
+      // ⭐ الحاضر والمعذور لا يُحسبان. «معذور» تُكتب عند اعتماد عذر الغياب،
+      //    فتنزل النسبة عند الجميع لأن الجميع يحسب من هنا.
+      if(status==='حاضر'||status==='معذور')continue;
       const days=(status==='متأخر')?0.5:1; // غائب=1 · متأخر=0.5
       // ⭐ نفهرس الغياب دائماً باسم المادة (+الشعبة+الترم) — هذا تعريف «المادة» الذي لا يلتبس.
       //    الرمز قد يكون فارغاً أو مكرَّراً بين مواد مختلفة، فالاعتماد عليه يخلط غياب مادة بأخرى.
@@ -6030,6 +6036,8 @@ async function submitLessonPrep(){
   if(!obj.material||!obj.topic){showToast('أدخل المادة وموضوع الدرس على الأقل','w');return;}
   showToast('جاري الإرسال...','i');
   try{
+    // 🔁 معرّف من العميل — إعادة المحاولة بعد تأخّر الرد لا ترفع التحضير مرتين
+    if(!obj.id&&!obj.newId)obj.newId='LP-'+Date.now()+'-'+Math.floor(Math.random()*1000);
     const res=await jsonpCall({action:'saveLessonPrep',data:JSON.stringify(obj)});
     if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الإرسال: '+attErrMsg(res.msg,res.hint),'e');return;}
     showToast('✅ تم إرسال التحضير للإدارة','s');
@@ -7981,14 +7989,22 @@ window.closeTVMode=closeTVMode;
 window.buildTVContent=buildTVContent;
 console.log('%c✅ شاشة العرض جاهزة - النسخة الجديدة v51','color:#2ecc71;font-size:14px;font-weight:bold');
 
+/* يعيد حساب نسبة الغياب في كل القوائم من خريطة «قاعدة الغياب» الحالية.
+   مصدر واحد لكل الأدوار — لا نسخة محفوظة ولا حساب موازٍ. */
+function recomputeAbsPct(){
+  try{
+    if(typeof allCourses!=='undefined')allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
+    if(typeof courses!=='undefined'&&Array.isArray(courses))courses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
+    // ⭐ للإداري، students = سجل المتدربين (بلا sid/code/course) فتصفيرها يفسد القوائم
+    if(user&&user.role!=='a'&&typeof students!=='undefined')students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
+  }catch(e){}
+}
+window.recomputeAbsPct=recomputeAbsPct;
+
 // ===== أدوات تعديل/حذف سجل التحضير (للأدمن) =====
 async function admAttReload(){
   await loadAbsenceBase();
-  try{
-    if(typeof allCourses!=='undefined')allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
-    // ⭐ للإداري، students = سجل المتدربين (بلا sid/code/course) فكان السطر القديم يصفّر نسبة الغياب للجميع
-    if(user.role!=='a'&&typeof students!=='undefined')students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
-  }catch(e){}
+  recomputeAbsPct();
   // إعادة بناء الجلسات وتحديث القائمة فقط (نحافظ على الفلتر والبحث)
   const host=document.getElementById('attlogBody');
   if(host && typeof atlBuildSessions==='function'){
@@ -8808,7 +8824,7 @@ const aPgs={
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
     <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
-    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
+    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
     <div class="alert ab" style="margin-top:8px;font-size:12.5px"><span class="aicon">💡</span>«إصلاح التبويبات» يوسّع أعمدة التبويبات الضيقة في Google Sheets · «فحص المفاتيح» يعرض السجلات التي مفتاحها لا يطابق الرقم الأكاديمي الحالي (يحدث بعد تحديث الأرقام) ويصلحها بضغطة.</div>
 
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
@@ -9243,11 +9259,23 @@ async function trimGrid(){
   if(!confirm('تحذف الصفوف والأعمدة الفارغة الزائدة من كل التبويبات (مع إبقاء ٢٠٠ صف احتياطياً).\n\nتُسرّع فتح الملف في كل عملية. بياناتك لا تُمسّ. متابعة؟'))return;
   showToast('جاري التقليم — قد يأخذ دقيقة...','i');
   try{
-    let r=null;
-    try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'trimGrid'}); }
-    catch(_){ r=await jsonpCall({action:'trimGrid'}); }
+    // الخادم يحذف على دفعات حتى لا يتجاوز مهلة Apps Script — نكمل حتى ينتهي
+    let r=null, tabs=[], freed=0, pass=0;
+    do{
+      pass++;
+      try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'trimGrid'}); }
+      catch(_){ r=await jsonpCall({action:'trimGrid'}); }
+      if(!r||r.status!=='ok'||!r.report)break;
+      freed+=r.report.cellsFreed||0;
+      (r.report.tabs||[]).forEach(x=>{
+        const ex=tabs.find(y=>y.tab===x.tab);
+        if(ex){ex.rowsRemoved+=x.rowsRemoved||0;ex.colsRemoved+=x.colsRemoved||0;}
+        else tabs.push(Object.assign({},x));
+      });
+      if(r.report.more)showToast(`جاري التقليم... (${freed.toLocaleString('en')} خلية حتى الآن)`,'i');
+    }while(r&&r.report&&r.report.more&&pass<25);
     if(r&&r.status==='ok'&&r.report){
-      const t=r.report.tabs||[];
+      const t=tabs; r.report.cellsFreed=freed;
       if(!t.length){ showToast('✅ ما فيه فراغ زائد — الملف مقلّم أصلاً','s'); return; }
       const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='trimModal';
       ov.innerHTML=`<div class="modal" style="max-width:520px;max-height:85vh;overflow-y:auto">
@@ -9263,6 +9291,94 @@ async function trimGrid(){
     } else showToast('تعذّر التقليم — انشر نسخة جديدة من Apps Script','e');
   }catch(e){ showToast('تعذّر الاتصال — حاول مرة أخرى','e'); }
 }
+async function syncAbsence(){
+  if(!confirm('يعيد حساب نسبة الغياب لكل السجلات من «قاعدة الغياب» — وهي المصدر الوحيد الذي تحسب منه كل الشاشات.\n\nيصحّح أي نسبة قديمة مخزّنة في الشيت لا تطابق التحضير الفعلي. متابعة؟'))return;
+  showToast('جاري المزامنة...','i');
+  try{
+    let r=null;
+    try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'syncAbsence'}); }
+    catch(_){ r=await jsonpCall({action:'syncAbsence'}); }
+    if(r&&r.status==='ok'&&r.report){
+      await loadAbsenceBase(); recomputeAbsPct();
+      const rep=r.report, list=rep.rows||[];
+      if(!rep.changed){ showToast('✅ كل النسب مطابقة أصلاً — ما فيه شيء لتصحيحه','s'); return; }
+      const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='syncAbsModal';
+      ov.innerHTML=`<div class="modal" style="max-width:640px;max-height:86vh;overflow-y:auto">
+        <div class="modal-title"><span>📉 مزامنة نسب الغياب</span>
+          <button class="modal-close" onclick="document.getElementById('syncAbsModal').remove()">✕</button></div>
+        <div class="alert as" style="margin-bottom:12px"><span class="aicon">✅</span>
+          صُحِّحت <b>${rep.changed}</b> نسبة من أصل <b>${rep.scanned}</b> سجلاً. الشيت والتطبيق صارا متطابقين.</div>
+        <div class="gtable"><table><thead><tr><th>المتدرب</th><th>المادة</th><th>شعبة</th><th>كانت</th><th>صارت</th></tr></thead><tbody>
+        ${list.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.course)}</td><td>${esc(String(x.grp))}</td>
+          <td style="color:var(--muted)">${esc(String(x.from))}%</td><td style="font-weight:700">${x.to}%</td></tr>`).join('')}
+        </tbody></table></div>
+        ${rep.changed>list.length?`<div style="font-size:12px;color:var(--muted);margin-top:8px">... و${rep.changed-list.length} سجلاً آخر</div>`:''}
+      </div>`;
+      document.body.appendChild(ov);
+      showToast('✅ تمت المزامنة','s');
+    } else showToast('تعذّرت المزامنة — انشر نسخة جديدة من Apps Script','e');
+  }catch(e){ showToast('تعذّر الاتصال — حاول مرة أخرى','e'); }
+}
+async function dedupeRequests(){
+  showToast('جاري الفحص...','i');
+  const call=async(dry)=>{
+    try{ return await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'dedupeRequests',dryRun:dry?'1':''}); }
+    catch(_){ return await jsonpCall({action:'dedupeRequests',dryRun:dry?'1':''}); }
+  };
+  try{
+    const prev=await call(true);
+    if(!prev||prev.status!=='ok'||!prev.report){ showToast('تعذّر الفحص — انشر نسخة جديدة من Apps Script','e'); return; }
+    const n=prev.report.removed||0;
+    if(!n){ showToast('✅ ما فيه طلبات مكرّرة','s'); return; }
+    const g=prev.report.groups||[];
+    if(!confirm(`لقينا ${n} طلباً مكرّراً:\n\n`+g.slice(0,8).map(x=>`• ${x.name} — ${x.type} (${x.why})`).join('\n')
+      +(g.length>8?`\n… و${n-8} غيرها`:'')+`\n\nنحذف النسخ الزائدة ونُبقي الأصل بتاريخه وقراراته. متابعة؟`))return;
+    showToast('جاري الحذف...','i');
+    const r=await call(false);
+    if(r&&r.status==='ok'){
+      showToast(`✅ حُذف ${r.report.removed} طلباً مكرّراً`,'s');
+      try{ await loadRequests(); reloadRequestsPage(); }catch(e){}
+    } else showToast('تعذّر الحذف — حاول مرة أخرى','e');
+  }catch(e){ showToast('تعذّر الاتصال — حاول مرة أخرى','e'); }
+}
+async function perfProbe(){
+  showToast('جاري القياس على الخادم...','i');
+  const t0=performance.now();
+  let d=null;
+  try{ d=await jsonpTo(SCRIPT_URL,{action:'perfProbe',token:SESSION.token},60000); }catch(e){}
+  const rtt=Math.round(performance.now()-t0);
+  if(!d||!d.ok){ showToast('تعذّر القياس — انشر نسخة جديدة من Apps Script','e'); return; }
+  const steps=d.steps||[], worst=steps.slice().sort((a,b)=>b.ms-a.ms)[0]||{};
+  const bar=(ms)=>{const w=Math.min(100,Math.round(ms/Math.max(1,worst.ms)*100));
+    const col=ms>2000?'var(--red)':ms>800?'var(--gold)':'var(--green)';
+    return `<div style="height:6px;border-radius:3px;background:${col};width:${w}%;min-width:2px"></div>`;};
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='perfModal';
+  ov.innerHTML=`<div class="modal" style="max-width:620px;max-height:88vh;overflow-y:auto">
+    <div class="modal-title"><span>🩺 سرعة الخادم</span>
+      <button class="modal-close" onclick="document.getElementById('perfModal').remove()">✕</button></div>
+    <div class="alert ${d.totalMs>8000?'ad':d.totalMs>3000?'aw':'as'}" style="margin-bottom:12px">
+      <span class="aicon">${d.totalMs>8000?'🐢':d.totalMs>3000?'⏳':'⚡'}</span>
+      عمل الخادم <b>${d.totalMs}ms</b> · الرحلة كاملة من جهازك <b>${rtt}ms</b>
+      ${rtt-d.totalMs>3000?` — الفرق <b>${rtt-d.totalMs}ms</b> شبكة وإقلاع بارد لا حساباً`:''}</div>
+    <div class="gtable"><table><thead><tr><th>الخطوة</th><th style="width:90px">الزمن</th><th style="width:110px"></th></tr></thead><tbody>
+      ${steps.map(x=>`<tr><td>${esc(x.step)}${x.err?` <span style="color:var(--red);font-size:11px">${esc(x.err)}</span>`:''}</td>
+        <td style="font-weight:700;color:${x.ms>2000?'var(--red)':x.ms>800?'var(--gold)':'var(--text)'}">${x.ms}ms</td>
+        <td>${bar(x.ms)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div style="margin-top:14px;font-size:13px">
+      <b>حجم الشبكة:</b> ${(d.totalCells||0).toLocaleString('en')} خلية · منها
+      <b style="color:${d.emptyCells>300000?'var(--red)':'var(--text)'}">${(d.emptyCells||0).toLocaleString('en')}</b> فارغة
+      ${d.emptyCells>100000?' — اضغط «✂️ تقليم الفراغ» فهي تُبطئ فتح الملف في كل عملية':''}
+    </div>
+    ${(d.bloated||[]).length?`<div class="gtable" style="margin-top:10px"><table><thead><tr><th>تبويب منتفخ</th><th>الشبكة</th><th>المستعمل</th><th>فراغ</th></tr></thead><tbody>
+      ${d.bloated.map(x=>`<tr><td>${esc(x.tab)}</td><td>${esc(x.grid)}</td><td>${esc(x.used)}</td><td style="color:var(--red);font-weight:700">${x.waste.toLocaleString('en')}</td></tr>`).join('')}
+    </tbody></table></div>`:''}
+  </div>`;
+  document.body.appendChild(ov);
+}
+window.perfProbe=perfProbe;
+window.dedupeRequests=dedupeRequests;
+window.syncAbsence=syncAbsence;
 window.trimGrid=trimGrid;
 window.openReqFlow=openReqFlow;window.saveReqFlow=saveReqFlow;window.rqSet=rqSet;window.rqSetCat=rqSetCat;
 window.rqMove=rqMove;window.rqDel=rqDel;window.rqAdd=rqAdd;window.rqReset=rqReset;
@@ -9545,7 +9661,10 @@ async function refreshSystemHealth(){
       const bits=[];
       if(g.badKeys)bits.push(`<div class="alert aw"><span class="aicon">🔑</span><b>${g.badKeys}</b> سجل مفتاحه لا يطابق الرقم الأكاديمي${g.dupKeys?` · <b>${g.dupKeys}</b> مفتاح مكرر`:''} — اضغط «🔑 فحص المفاتيح» بالأعلى</div>`);
       if(na.length)bits.push(`<div class="alert ad"><span class="aicon">👤</span><b>${na.length}</b> متدرب له سجلات مقررات بلا حساب دخول: ${na.slice(0,5).map(x=>esc(x.name||'')+' ('+esc(x.id)+')').join('، ')}${na.length>5?' وغيرهم':''} — أضِفهم في «الحسابات»</div>`);
-      if(!bits.length)bits.push(`<div class="alert as"><span class="aicon">🧩</span>سلامة البيانات: المفاتيح مطابقة ولا يوجد متدرب بلا حساب</div>`);
+      if(g.absMismatch)bits.push(`<div class="alert aw"><span class="aicon">📉</span><b>${g.absMismatch}</b> سجل نسبة غيابه المخزّنة في الشيت تخالف المحسوب من «قاعدة الغياب» — اضغط «📉 مزامنة نسب الغياب» بالأعلى</div>`);
+      const ns=(g.noSchedule||[]);
+      if(ns.length)bits.push(`<div class="alert aw"><span class="aicon">📅</span><b>${ns.length}</b> مادة حالية غير مجدولة، فنسبة الغياب فيها تُحسب على تقدير يوم واحد بالأسبوع بدل حصصها الفعلية: ${ns.slice(0,4).map(x=>esc(x)).join('، ')}${ns.length>4?' وغيرها':''} — أضِفها في «الجدول» لتضبط النسبة</div>`);
+      if(!bits.length)bits.push(`<div class="alert as"><span class="aicon">🧩</span>سلامة البيانات: المفاتيح مطابقة · كل متدرب له حساب · نسب الغياب مطابقة للتحضير</div>`);
       return bits.join('');})()}
     <div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:12px">${rowsHtml.replace('border-top:1px solid var(--border)','')}</div>`;
 }
@@ -11545,7 +11664,9 @@ function reloadRequestsPage(){
   else showAPage('requests',null);
 }
 
+let REQ_BUSY=false;
 async function submitRequest(){
+  if(REQ_BUSY){showToast('جاري إرسال طلبك — لحظة','i');return}   // 🔒 يمنع الضغط المزدوج
   const typeSel=document.getElementById('rq-type');
   if(!typeSel)return;
   const type=typeSel.value;
@@ -11600,20 +11721,26 @@ async function submitRequest(){
     finalStatus:'قيد المراجعة',notes:'',exCode,exHours,exDates,fileData,fileName,
     cat,reqRole:raiser.role,reqSpec,targetName,targetRole,targetId};
   rec.finalStatus=reqFinal(rec);
+  REQ_BUSY=true;
+  const _sbtn=[...document.querySelectorAll('#mcontent .btn')].find(b=>/إرسال الطلب/.test(b.textContent||''));
+  if(_sbtn){_sbtn.disabled=true;_sbtn.textContent='⏳ جاري الإرسال...';}
+  const _freeBtn=()=>{ REQ_BUSY=false; if(_sbtn){_sbtn.disabled=false;_sbtn.textContent='📨 إرسال الطلب';} };
   showToast('جاري إرسال الطلب...','i');
   try{
     // ⭐ POST يقرأ الرد — كان يُظهر «تم الإرسال» ويضيف الطلب محلياً حتى لو رفضه الخادم
     let rr=null;
     try{ rr=await withRetry(()=>postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'addRequest',records:[rec]}),2); }
     catch(_){ const lite=Object.assign({},rec); delete lite.fileData; rr=await jsonpCall({action:'addRequest',data:JSON.stringify([lite])}); }
-    if(!rr||(rr.status&&rr.status!=='ok')){ showToast('❌ تعذّر إرسال الطلب: '+attErrMsg(rr&&rr.msg,rr&&rr.hint),'e'); return; }
-    showToast('✅ تم إرسال طلبك بنجاح','s');
+    if(!rr||(rr.status&&rr.status!=='ok')){ _freeBtn(); showToast('❌ تعذّر إرسال الطلب: '+attErrMsg(rr&&rr.msg,rr&&rr.hint),'e'); return; }
+    // الخادم يخبرنا إن كانت النسخة مكرّرة (إعادة محاولة لعملية نجحت) — لا نضيفها مرتين محلياً
+    showToast(rr.duplicate?'✅ طلبك مُسجَّل (كان أُرسل فعلاً)':'✅ تم إرسال طلبك بنجاح','s');
     delete rec.fileData;
-    requests.unshift(rec);
+    if(!requests.some(x=>String(x.rid)===String(rec.rid))) requests.unshift(rec);
     if(document.getElementById('rq-details'))document.getElementById('rq-details').value='';
     excuseDates=[];
+    _freeBtn();
     reloadRequestsPage();
-  }catch(e){showToast('تعذر الإرسال — جرب مرة أخرى','e');}
+  }catch(e){ _freeBtn(); showToast('تعذر الإرسال — جرب مرة أخرى','e'); }
 }
 // صاحب الطلب يعدّل ويعيد إرسال طلب مُرجَع
 async function resubmitRequest(rid){
@@ -11657,7 +11784,6 @@ async function actOnRequest(rid,decision){
   //    الطلب معتمداً ونسبة الغياب منقوصة رغم رسالة الخطأ)
   const _snap={trnStatus:r.trnStatus,supStatus:r.supStatus,genStatus:r.genStatus,dirStatus:r.dirStatus,
                tgtStatus:r.tgtStatus,finalStatus:r.finalStatus,notes:r.notes};
-  let _absSnap=null;
   let reason='';
   if(decision==='مرفوض')reason=(prompt('سبب الرفض (اختياري):')||'').trim();
   else if(decision==='معاد')reason=(prompt('وش المطلوب تعديله؟ (يظهر لصاحب الطلب):')||'').trim();
@@ -11673,23 +11799,11 @@ async function actOnRequest(rid,decision){
   }
   r.finalStatus=reqFinal(r);
   // ===== خصم ساعات العذر عند الاعتماد النهائي فقط =====
-  let excuseInfo=null;
-  if(reqCat(r)==='عذر'&&decision==='معتمد'&&r.finalStatus==='معتمد'){
-    let code=r.exCode||'', hrs=parseFloat(r.exHours)||0;
-    if(!hrs){const m=(r.details||'').match(/ساعات:\s*([\d.]+)/);if(m)hrs=parseFloat(m[1])||0;}
-    if(!code){
-      const m=(r.details||'').match(/المادة:\s*([^|]+)/);
-      if(m){const cn=m[1].trim();const cc=allCourses.find(x=>x.sid===r.sid&&x.course===cn);if(cc)code=normCode(cc.code);}
-    }
-    const rowC=allCourses.find(x=>x.sid===r.sid&&normCode(x.code)===normCode(code));
-    if(rowC&&hrs>0){
-      const excusedPct=absHoursToPct(hrs,code);
-      const newAbs=Math.max(0,Math.round((rowC.abs-excusedPct)*10)/10);
-      _absSnap={row:rowC,prev:rowC.abs};
-      rowC.abs=newAbs;
-      excuseInfo={key:rowC.key,sid:r.sid,code:rowC.code,grp:rowC.grp,absence:newAbs};
-    }
-  }
+  // ⚠️ كان يكتب نسبة مخفَّضة في العمود I من «سجل المقررات» — وكل الشاشات
+  //    تتجاهله وتحسب من «قاعدة الغياب». فتنزل النسبة لحظياً عند المعتمِد ثم
+  //    ترجع عند أول تحديث، ولا تنزل عند المتدرب أصلاً. الآن نعلّم صفوف
+  //    الغياب نفسها «معذور» في الخادم، فتنزل عند الجميع وتبقى.
+  const needExcuse=(reqCat(r)==='عذر'&&decision==='معتمد'&&r.finalStatus==='معتمد');
   const payload={rid,trnStatus:r.trnStatus,supStatus:r.supStatus,genStatus:r.genStatus,dirStatus:r.dirStatus,tgtStatus:r.tgtStatus,finalStatus:r.finalStatus,notes:r.notes,by:user.name};
   showToast('جاري الحفظ...','i');
   try{
@@ -11697,7 +11811,7 @@ async function actOnRequest(rid,decision){
     let ur=null;
     try{ ur=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'updateRequest',records:[payload]}); }
     catch(_){ ur=await jsonpCall({action:'updateRequest',data:JSON.stringify([payload])}); }
-    const _undo=()=>{ Object.assign(r,_snap); if(_absSnap)_absSnap.row.abs=_absSnap.prev; };
+    const _undo=()=>{ Object.assign(r,_snap); };
     if(!ur||(ur.status&&ur.status!=='ok')){
       _undo();
       showToast('❌ تعذّر الحفظ: '+((ur&&(ur.hint||ur.msg))||'راجع صلاحيتك على هذا الطلب'),'e');
@@ -11708,12 +11822,19 @@ async function actOnRequest(rid,decision){
       showToast('⚠️ لم يُعثر على الطلب في الشيت — حدّث الصفحة','w');
       reloadRequestsPage(); return;
     }
-    if(excuseInfo){
-      // الطلب اعتُمد فعلاً — فشل خصم الساعات وحده لا يعني فشل الاعتماد
-      let okAbs=true;
-      try{ await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'saveAttendance',records:[excuseInfo]}); }
-      catch(_){ try{ await jsonpCall({action:'saveAttendance',data:JSON.stringify([excuseInfo])}); }catch(__){ okAbs=false; } }
-      showToast(okAbs?'✅ تم الاعتماد وخصم ساعات الغياب':'✅ تم الاعتماد — لكن تعذّر خصم ساعات الغياب، أعد المحاولة',okAbs?'s':'w');
+    if(needExcuse){
+      // الطلب اعتُمد فعلاً — فشل الخصم وحده لا يعني فشل الاعتماد
+      let ex=null;
+      try{ ex=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'excuseAbsence',rid:r.rid}); }
+      catch(_){ try{ ex=await jsonpCall({action:'excuseAbsence',rid:r.rid}); }catch(__){ ex=null; } }
+      if(ex&&ex.status==='ok'){
+        await loadAbsenceBase();                       // 🔄 أعد بناء خريطة الغياب
+        recomputeAbsPct();                             // ثم النسب في كل القوائم
+        const miss=(ex.missing||[]).length;
+        showToast(`✅ اعتُمد وخُصم ${ex.excused} يوم غياب${miss?` · ${miss} تاريخ ما لقينا له تسجيل غياب`:''}`,miss?'w':'s');
+      }else{
+        showToast('✅ تم الاعتماد — لكن تعذّر خصم الغياب: '+((ex&&(ex.hint||ex.msg))||'أعد المحاولة'),'w');
+      }
     }else{
       showToast(decision==='مرفوض'?'تم الرفض':decision==='معاد'?'تم الإرجاع للتعديل':decision==='تصعيد'?'✅ تم التصعيد للمدير':'✅ تم الاعتماد','s');
     }
