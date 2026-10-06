@@ -1785,7 +1785,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzfirKU-1Q0bNWjpJU98ITHRyEEYDXMuYDa-YMZqMgFWU_zIgpehzEEIJ7f4SFJspKC/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxiWqmcQq7DgJQ6p9TDqr_b3iiOEwwrPp2rNUz6StPHpOwxfwSIQ4Eoz9U36qK7zuDn/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2797,7 +2797,7 @@ async function saveNewsForm(){
   try{
     // 🔁 خبر جديد يأخذ معرّفه من العميل — فإعادة المحاولة لا تنشره مرتين
     if(!item.id&&!item.newId)item.newId='NW-'+Date.now()+'-'+Math.floor(Math.random()*1000);
-    const res=await jsonpCall({action:'saveNews',data:JSON.stringify(item)});
+    const res=await callWrite('saveNews',item);
     if(res&&res.status==='ok'){
       showToast(item.id?'✅ تم حفظ التعديلات':'✅ تم نشر الخبر','s');
       document.getElementById('newsFormModal')?.remove();
@@ -2916,6 +2916,29 @@ function loadDataSnapshot(){
   }catch(e){ return false; }
 }
 function clearDataSnapshot(){ try{ localStorage.removeItem(CACHE_KEY); }catch(e){} }
+
+/* ===== كتابة آمنة: POST أولاً، وJSONP احتياطاً للحمولات القصيرة فقط =====
+   ⚠️ JSONP يرسل البيانات داخل الرابط، والنص العربي يتضخّم ٦ أضعاف بعد
+   الترميز (حرف واحد = 9 بايت). تحضير درس مكتوب بجدّية يتجاوز حدّ الرابط
+   (~8000 حرف) فيفشل الطلب ويظهر «تعذّر الحفظ» — بينما POST بلا حدّ. */
+const JSONP_MAX_DATA = 5500;
+async function callWrite(action, payload, opts){
+  opts = opts || {};
+  const body = Object.assign({token:SESSION.token, action:action}, payload);
+  let lastErr = null;
+  try{
+    const r = await withRetry(()=>postJSONRead(SCRIPT_URL, body), opts.tries || 2);
+    if (r) return r;                       // ردّ حقيقي من الخادم (نجاح أو خطأ)
+  }catch(e){ lastErr = e; }
+  // الاحتياطي: الرابط محدود الطول، فلا نستعمله إلا إذا كانت الحمولة قصيرة
+  const data = JSON.stringify(payload && payload.records ? payload.records : payload);
+  if (encodeURIComponent(data).length > JSONP_MAX_DATA)
+    return {status:'error', msg:'تعذّر الاتصال بالخادم',
+            hint:'البيانات أطول من أن تُرسل بالطريقة الاحتياطية — تحقّق من الشبكة وأعد المحاولة'};
+  try{ return await jsonpCall({action:action, data:data}); }
+  catch(e2){ return {status:'error', msg:'تعذّر الاتصال بالخادم', hint:(lastErr&&lastErr.message)||'تحقّق من الشبكة'}; }
+}
+window.callWrite=callWrite;
 
 // ===== JSONP عام (للطلبات التي تحتاج رد من Apps Script) — مع إعادة محاولة =====
 function jsonpCall(params){ return withRetry(()=>jsonpCallOnce(params),2); }
@@ -6072,7 +6095,7 @@ async function submitLessonPrep(){
   try{
     // 🔁 معرّف من العميل — إعادة المحاولة بعد تأخّر الرد لا ترفع التحضير مرتين
     if(!obj.id&&!obj.newId)obj.newId='LP-'+Date.now()+'-'+Math.floor(Math.random()*1000);
-    const res=await jsonpCall({action:'saveLessonPrep',data:JSON.stringify(obj)});
+    const res=await callWrite('saveLessonPrep',obj);
     if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الإرسال: '+attErrMsg(res.msg,res.hint),'e');return;}
     showToast('✅ تم إرسال التحضير للإدارة','s');
     await loadLessonPreps();
@@ -6150,7 +6173,7 @@ async function saveLessonEdit(){
   if(!obj.material||!obj.topic){showToast('أدخل المادة وموضوع الدرس على الأقل','w');return;}
   showToast('جاري حفظ التعديلات...','i');
   try{
-    const res=await jsonpCall({action:'saveLessonPrep',data:JSON.stringify(obj)});
+    const res=await callWrite('saveLessonPrep',obj);
     if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الحفظ: '+attErrMsg(res.msg,res.hint),'e');return;}
     showToast('✅ تم حفظ التعديلات','s');
     box.remove();
@@ -6625,7 +6648,7 @@ async function saveSession(course,code,sessionHrs){
   try{
     if(records.length){
       // إرسال عبر JSONP عشان نقرأ الرد ونعرف كم سجل تحدّث فعلياً
-      const res=await jsonpCall({action:'saveAttendance',data:JSON.stringify(records)});
+      const res=await callWrite('saveAttendance',{records});
       // فحص حالة الرد أولاً: لو رفض الخادم نعرض السبب الحقيقي بدل نجاح وهمي
       if(res && res.status && res.status!=='ok'){
         showToast('❌ الخادم رفض الحفظ: '+attErrMsg(res.msg,res.hint),'e');
@@ -6692,7 +6715,7 @@ async function saveSessionV2(course,code,grp,dateStr){
     // 1) الأساسي: تسجيل الغياب اليومي في "قاعدة الغياب" (المصدر الوحيد للنسبة)
     //    نحفظه أولاً ونتحقق من نجاحه — لأنه هو الذي يظهر في النظام فعلياً
     if(dailyLog.length){
-      const resD=await jsonpCall({action:'saveDailyAbsence',data:JSON.stringify(dailyLog)});
+      const resD=await callWrite('saveDailyAbsence',{records:dailyLog});
       if(resD && resD.status && resD.status!=='ok'){
         showToast('❌ الخادم رفض حفظ الغياب: '+attErrMsg(resD.msg,resD.hint),'e');
         return;
@@ -6702,7 +6725,7 @@ async function saveSessionV2(course,code,grp,dateStr){
     let upd=null, colWarn='';
     if(records.length){
       try{
-        const res=await jsonpCall({action:'saveAttendance',data:JSON.stringify(records)});
+        const res=await callWrite('saveAttendance',{records});
         if(res && res.status && res.status!=='ok'){
           colWarn=' (لكن عمود «نسبة الغياب» بسجل المقررات لم يُحدَّث: '+attErrMsg(res.msg,res.hint)+')';
         }else{
@@ -6842,7 +6865,7 @@ async function saveRubricSetup(){
   if(total!==100){showToast('مجموع البنود يجب أن يساوي 100 (حالياً '+total+')','w');return;}
   showToast('جاري حفظ البنود...','i');
   try{
-    const r=await jsonpCall({action:'saveRubric',data:JSON.stringify({code,items})});
+    const r=await callWrite('saveRubric',{code,items});
     if(r&&r.status!=='ok'&&r.ok!==true){showToast('تعذّر الحفظ'+(r.hint?' — '+r.hint:''),'e');return;}
     document.getElementById('rubModal').remove();
     showToast('✅ تم حفظ بنود الدرجات','s');
@@ -7648,73 +7671,162 @@ function _nk(v){
   t=t.replace(/[\s.\/\\_\-]+/g,'');
   return t;
 }
-function _updNumPairs(){
-  // خريطة القائمة الجديدة حسب مفتاح الاسم
-  const nm={}; NEW_TRAINEE_NUMS.forEach(o=>{nm[_nk(o.n)]={num:o.num,name:o.n};});
-  const od=x=>String(x||'').replace(/[^0-9]/g,'');
+/* ============================================================
+ *  🔢 تحديث الأرقام التدريبية — الأرقام الجديدة تأتي منك
+ *  ⚠️ كانت الأداة تقرأ من قائمة مكتوبة داخل الملف (لقطة قديمة من
+ *  ٢٠٢٦/٢٠٢٧). بعد ما أدخلت الأرقام الجديدة بنفسك صارت القائمة
+ *  تحمل القديم، فتقترح إرجاع الجديد إلى القديم — عكس المطلوب.
+ *  الآن تلصق الأرقام الجديدة وتُعاين قبل التطبيق، بلا تعديل كود.
+ * ============================================================ */
+const od_=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
+
+/* يقرأ ما تلصقه: كل سطر «مُعرِّف ⇥ الرقم الجديد».
+   المعرّف إمّا اسم المتدرب أو رقمه الحالي — نكتشفه تلقائياً. */
+function parseNumPaste(txt){
+  const out=[], bad=[];
+  String(txt||'').split(/\r?\n/).forEach((line,i)=>{
+    const raw=line.trim(); if(!raw)return;
+    // الفاصل: جدولة أو فاصلة أو فاصلة منقوطة أو مسافتان فأكثر
+    const parts=raw.split(/\t|[,،;]|\s{2,}/).map(x=>x.trim()).filter(Boolean);
+    let key='', num='';
+    if(parts.length>=2){ key=parts[0]; num=od_(parts[parts.length-1]); }
+    else{
+      // سطر بمسافة واحدة: آخر كلمة رقم → الباقي هو المعرّف
+      const m=raw.match(/^(.*\S)\s+(\d[\d\s-]*)$/);
+      if(m){ key=m[1].trim(); num=od_(m[2]); }
+    }
+    if(!key||!num){ bad.push({line:i+1,text:raw.slice(0,40)}); return; }
+    out.push({key, num, byId:/^\d+$/.test(od_(key))&&od_(key).length>=4&&!/[^\d\s-]/.test(key)});
+  });
+  return {rows:out, bad};
+}
+
+/* يطابق ما لصقته بالمتدربين الحاليين ويبني جدول المعاينة */
+function buildNumPairs(pasted){
   const seen=new Set();
-  const cur=students.filter(s=>{const id=od(s.id);if(!id||seen.has(id))return false;seen.add(id);return true;});
+  const cur=students.filter(s=>{const id=od_(s.id); if(!id||seen.has(id))return false; seen.add(id); return true;});
+  const byId={}, byName={};
+  (pasted||[]).forEach(r=>{ if(r.byId) byId[od_(r.key)]=r.num; else byName[_nk(r.key)]=r.num; });
+  // الأرقام المستعملة حالياً — لكشف التصادم
+  const used={}; cur.forEach(s=>{ used[od_(s.id)]=s.name; });
   const pairs=[];
   cur.forEach(s=>{
-    const hit=nm[_nk(s.name)];
-    const oldId=od(s.id);
-    if(hit){
-      const changed=od(hit.num)!==oldId;
-      pairs.push({name:s.name,oldId,newId:hit.num,matched:true,changed,newName:hit.name});
-    }else{
-      pairs.push({name:s.name,oldId,newId:'',matched:false,changed:false});
-    }
+    const oldId=od_(s.id);
+    const hit = byId[oldId] || byName[_nk(s.name)] || '';
+    if(!hit){ pairs.push({name:s.name, oldId, newId:'', matched:false, changed:false, warn:''}); return; }
+    const newId=od_(hit);
+    const changed=newId!==oldId;
+    let warn='';
+    if(newId.length<4) warn='رقم قصير — تأكد منه';
+    else if(changed && used[newId] && used[newId]!==s.name) warn='هذا الرقم لمتدرب آخر: '+used[newId];
+    pairs.push({name:s.name, oldId, newId, matched:true, changed, warn});
   });
-  return pairs;
+  // أرقام لصقتها ولم تطابق أحداً
+  const noMatch=[];
+  (pasted||[]).forEach(r=>{
+    const hitId=r.byId && used[od_(r.key)];
+    const hitNm=!r.byId && cur.some(s=>_nk(s.name)===_nk(r.key));
+    if(!hitId && !hitNm) noMatch.push(r.key);
+  });
+  return {pairs, noMatch};
 }
+
 function openUpdateNumbers(){
-  const pairs=_updNumPairs();
-  window._updNumPairs=pairs;
-  const changed=pairs.filter(p=>p.matched&&p.changed);
-  const same=pairs.filter(p=>p.matched&&!p.changed);
-  const unmatched=pairs.filter(p=>!p.matched);
-  const row=(p,idx)=>`<tr>
-    <td style="text-align:center">${p.matched&&p.changed?`<input type="checkbox" class="updnum-cb" data-idx="${idx}" checked style="width:16px;height:16px;accent-color:#1a7abf">`:'—'}</td>
-    <td style="font-weight:600">${esc(p.name)}</td>
-    <td style="text-align:center;color:var(--muted)">${esc(p.oldId)}</td>
-    <td style="text-align:center">${p.matched?`<b style="color:${p.changed?'#2ecc71':'var(--muted)'}">${esc(p.newId)}</b>`:'<span style="color:#e74c3c">لا يوجد في القائمة</span>'}</td>
-    <td style="text-align:center;font-size:11px">${!p.matched?'<span class="pill pr">بدون تطابق</span>':p.changed?'<span class="pill pg">تغيير</span>':'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">بلا تغيير</span>'}</td>
-  </tr>`;
+  document.getElementById('updNumModal')?.remove();
   const overlay=document.createElement('div');
   overlay.className='modal-overlay'; overlay.id='updNumModal';
-  overlay.innerHTML=`<div class="modal mlist" style="max-width:820px">
+  overlay.innerHTML=`<div class="modal mlist" style="max-width:860px">
     <div class="modal-title">🔢 تحديث الأرقام التدريبية
       <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="alert aw" style="margin-bottom:10px"><span class="aicon">⚠️</span>خذ نسخة احتياطية من الشيت قبل التطبيق (ملف ← إنشاء نسخة). التغيير يشمل: الأرقام والدرجات والغياب والطلبات.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <span class="pill pg">${changed.length} تغيير</span>
-      <span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">${same.length} بلا تغيير</span>
-      ${unmatched.length?`<span class="pill pr">${unmatched.length} بدون تطابق</span>`:''}
+    <div class="alert ab" style="margin-bottom:10px"><span class="aicon">📋</span>
+      الصق الأرقام الجديدة — سطر لكل متدرب: <b>الاسم</b> ثم الرقم الجديد، أو <b>الرقم الحالي</b> ثم الرقم الجديد.
+      الفاصل بينهما جدولة أو فاصلة (تقدر تنسخ عمودين من الإكسل مباشرة).</div>
+    <textarea id="updNumPaste" placeholder="سعيد صالح سعيد الزهراني&#9;5964335
+محمد عبد الله جروان المطيري&#9;5964137
+‎— أو —
+3246737&#9;5964335" style="width:100%;min-height:120px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--card2);color:var(--text);font-family:'Tajawal',sans-serif;font-size:13.5px;box-sizing:border-box;direction:rtl"></textarea>
+    <div class="ctl-row" style="margin:10px 0 0">
+      <button class="btn btn-b" onclick="previewUpdateNumbers()">👁️ عاين التغييرات</button>
+      <button class="btn btn-out" onclick="loadSavedNumList()" title="لقطة قديمة محفوظة داخل البرنامج">📦 القائمة المحفوظة (${NEW_TRAINEE_NUMS.length} اسم · قديمة)</button>
     </div>
-    <div class="modal-body" style="max-height:56vh">
-      <div class="gtable"><table style="font-size:12px">
-        <thead><tr><th style="width:40px">تحديث</th><th>الاسم</th><th>الرقم الحالي</th><th>الرقم الجديد</th><th>الحالة</th></tr></thead>
-        <tbody>${pairs.map((p,i)=>row(p,i)).join('')}</tbody>
-      </table></div>
-      ${unmatched.length?`<div style="font-size:12px;color:var(--muted);margin-top:8px">💡 «بدون تطابق»: أسماء ما لقيت لها رقم في القائمة الجديدة (اختلاف كتابة الاسم) — عدّلها يدوياً من زر ✏️.</div>`:''}
-    </div>
+    <div id="updNumResult"></div>
     <div class="btn-row" style="margin-top:12px;justify-content:flex-end">
       <button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
-      <button class="btn btn-b" onclick="applyUpdateNumbers()">✅ تطبيق التحديث (${changed.length})</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
+  setTimeout(()=>document.getElementById('updNumPaste')?.focus(),80);
 }
+
+function loadSavedNumList(){
+  if(!confirm('القائمة المحفوظة لقطة قديمة من ٢٠٢٦/٢٠٢٧ — إن كنت أدخلت أرقاماً أحدث منها ستقترح إرجاعها للقديم.\n\nتحميلها في صندوق اللصق لتراجعها؟'))return;
+  const t=document.getElementById('updNumPaste');
+  if(t){ t.value=NEW_TRAINEE_NUMS.map(o=>o.n+'\t'+o.num).join('\n'); previewUpdateNumbers(); }
+}
+
+function previewUpdateNumbers(){
+  const txt=(document.getElementById('updNumPaste')||{}).value||'';
+  const host=document.getElementById('updNumResult'); if(!host)return;
+  if(!txt.trim()){ host.innerHTML='<div class="alert aw" style="margin-top:10px"><span class="aicon">✍️</span>الصق الأرقام الجديدة أولاً</div>'; return; }
+  const {rows,bad}=parseNumPaste(txt);
+  const {pairs,noMatch}=buildNumPairs(rows);
+  window._updNumPairs=pairs;
+  const changed=pairs.filter(p=>p.matched&&p.changed&&!p.warn);
+  const warned=pairs.filter(p=>p.matched&&p.changed&&p.warn);
+  const same=pairs.filter(p=>p.matched&&!p.changed);
+  const shown=pairs.filter(p=>p.matched);
+  const row=(p)=>{
+    const i=pairs.indexOf(p);
+    return `<tr>
+    <td style="text-align:center">${p.changed?`<input type="checkbox" class="updnum-cb" data-idx="${i}" ${p.warn?'':'checked'} style="width:18px;height:18px;accent-color:#1a7abf">`:'—'}</td>
+    <td style="font-weight:600">${esc(p.name)}</td>
+    <td style="text-align:center;color:var(--muted)">${esc(p.oldId)}</td>
+    <td style="text-align:center"><input class="updnum-new" data-idx="${i}" value="${esc(p.newId)}" inputmode="numeric"
+        style="width:110px;text-align:center;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:${p.changed?'#2ecc71':'var(--muted)'};font-weight:700"></td>
+    <td style="text-align:center;font-size:11px">${p.warn?`<span class="pill pr" title="${esc(p.warn)}">⚠️ ${esc(p.warn)}</span>`
+      :p.changed?'<span class="pill pg">تغيير</span>':'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">بلا تغيير</span>'}</td>
+  </tr>`;};
+  host.innerHTML=`
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px">
+      <span class="pill pg">${changed.length} تغيير</span>
+      ${warned.length?`<span class="pill pr">${warned.length} تحذير</span>`:''}
+      <span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">${same.length} بلا تغيير</span>
+      ${noMatch.length?`<span class="pill pr">${noMatch.length} لصقتها ولم تطابق</span>`:''}
+      ${bad.length?`<span class="pill pr">${bad.length} سطر غير مفهوم</span>`:''}
+    </div>
+    ${warned.length?`<div class="alert ad"><span class="aicon">⚠️</span>صفوف فيها تحذير غير محدّدة افتراضياً — راجعها قبل أن تحدّدها بنفسك.</div>`:''}
+    ${noMatch.length?`<div class="alert aw"><span class="aicon">🔍</span>ما لقينا هؤلاء بين المتدربين: ${noMatch.slice(0,5).map(x=>esc(x)).join('، ')}${noMatch.length>5?` و${noMatch.length-5} غيرهم`:''} — تأكد من كتابة الاسم أو استعمل الرقم الحالي بدله.</div>`:''}
+    ${bad.length?`<div class="alert aw"><span class="aicon">📝</span>أسطر ما فهمناها: ${bad.slice(0,3).map(b=>'سطر '+b.line).join('، ')} — لازم كل سطر يحتوي معرّفاً ثم رقماً.</div>`:''}
+    ${shown.length?`<div class="modal-body" style="max-height:44vh"><div class="gtable"><table style="font-size:12px">
+      <thead><tr><th style="width:44px">تحديث</th><th>الاسم</th><th>الرقم الحالي</th><th>الرقم الجديد</th><th>الحالة</th></tr></thead>
+      <tbody>${shown.map(row).join('')}</tbody></table></div></div>
+      <div class="alert aw" style="margin-top:10px"><span class="aicon">⚠️</span>خذ نسخة احتياطية من الشيت قبل التطبيق (ملف ← إنشاء نسخة). التغيير يشمل الأرقام والدرجات والغياب والطلبات.</div>
+      <div class="btn-row" style="margin-top:10px"><button class="btn btn-b" onclick="applyUpdateNumbers()">✅ تطبيق التحديث</button></div>`
+     :'<div class="alert aw"><span class="aicon">🤷</span>ما فيه صف مطابق — راجع ما لصقته</div>'}`;
+}
+
 async function applyUpdateNumbers(){
   const pairs=window._updNumPairs||[];
+  // نقرأ الرقم الجديد من الحقل نفسه — تقدر تعدّله قبل التطبيق
+  document.querySelectorAll('.updnum-new').forEach(inp=>{
+    const p=pairs[+inp.dataset.idx]; if(p)p.newId=od_(inp.value);
+  });
   const recs=[...document.querySelectorAll('.updnum-cb:checked')].map(cb=>pairs[+cb.dataset.idx]).filter(Boolean)
-    .filter(p=>p.oldId&&p.newId&&p.oldId!==String(p.newId).replace(/[^0-9]/g,''))
+    .filter(p=>p.oldId&&p.newId&&p.oldId!==p.newId)
     .map(p=>({oldId:p.oldId,newId:p.newId}));
   if(!recs.length){showToast('ما فيه أرقام محددة للتحديث','w');return;}
-  if(!confirm(`سيتم تحديث ${recs.length} رقم تدريبي في كل التبويبات (درجات/غياب/طلبات). هل أخذت نسخة احتياطية؟`))return;
+  // تصادم داخل الدفعة نفسها
+  const seenNew={};
+  for(const r of recs){
+    if(seenNew[r.newId]){showToast('⚠️ الرقم '+r.newId+' مكرّر في الدفعة — صحّحه أولاً','e');return;}
+    seenNew[r.newId]=true;
+  }
+  if(!confirm(`سيتم تحديث ${recs.length} رقم تدريبي في كل التبويبات (درجات/غياب/طلبات).\n\n`
+    +recs.slice(0,6).map(r=>`• ${r.oldId} ← ${r.newId}`).join('\n')+(recs.length>6?`\n… و${recs.length-6} غيرها`:'')
+    +`\n\nهل أخذت نسخة احتياطية؟`))return;
   showToast('جاري تحديث الأرقام...','i');
   try{
-    const res=await jsonpCall({action:'updateTraineeNumbers',data:JSON.stringify(recs)});
+    const res=await callWrite('updateTraineeNumbers',{records:recs});
     if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر التحديث: '+attErrMsg(res.msg,res.hint),'e');return;}
     const r=(res&&res.result)||{};
     showToast(`✅ تم تحديث ${recs.length} رقم — مركزي ${r.central||0} · سجل ${r.records||0} · غياب ${r.absence||0}`,'s');
@@ -7723,6 +7835,7 @@ async function applyUpdateNumbers(){
     showAPage('accounts',document.getElementById('sn-accounts'));
   }catch(e){showToast('تعذّر التحديث — جرب مرة أخرى','e');}
 }
+window.previewUpdateNumbers=previewUpdateNumbers;window.loadSavedNumList=loadSavedNumList;
 window.openUpdateNumbers=openUpdateNumbers;window.applyUpdateNumbers=applyUpdateNumbers;
 
 /* ============ تخريج دفعة + كشف التخرّج + قائمة الخريجين ============ */
@@ -8054,7 +8167,7 @@ async function admAttSet(si,sti,newStatus){
   showToast('جاري التعديل...','i');
   try{
     const rec={sid:st.sid,name:st.name,course:s.course,code:st.code||s.code||'',grp:s.grp,date:s.date,status:newStatus,term:s.term||''};
-    const res=await jsonpCall({action:'saveDailyAbsence',data:JSON.stringify([rec])});
+    const res=await callWrite('saveDailyAbsence',{records:[rec]});
     if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر التعديل: '+attErrMsg(res.msg,res.hint),'e');return;}
     showToast('✅ تم تعديل الحالة','s'); await admAttReload();
   }catch(e){showToast('تعذّر التعديل — جرب مرة أخرى','e');}
