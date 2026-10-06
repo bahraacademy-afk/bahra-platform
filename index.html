@@ -7534,10 +7534,15 @@ async function enrollBatch(){
 window.toggleGrpStudents=toggleGrpStudents;window.updateEnrCounts=updateEnrCounts;window.enrollBatch=enrollBatch;
 
 // ===== إدارة الحسابات (إضافة/تعديل/حذف) =====
-function accountFormFields(type,data){
+function accountFormFields(type,data,mode){
   data=data||{};
   const f=(id,lbl,val,ph)=>`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">${lbl}</label><input id="acc_${id}" value="${escAttr(val||'')}" placeholder="${ph||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"></div>`;
-  if(type==='student')return f('id','الرقم الأكاديمي *',data.id)+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
+  if(type==='student'){
+    const idHint=mode==='edit'
+      ?`<div id="acc_id_hint" style="font-size:11px;color:var(--muted);margin:-8px 0 12px;line-height:1.6">🔗 تغييره هنا يتعدّل في كل مكان تلقائياً — سجل المقررات والدرجات · قاعدة الغياب · طلبات الخدمات</div>`
+      :'';
+    return f('id','الرقم الأكاديمي *',data.id)+idHint+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
+  }
   if(type==='trainer')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
   // admin — مشرف تخصص (لكل تخصص مشرفه يوافق على طلباته)، أو مدير الأكاديمية (المشرف العام) الذي يشرف على الكل ويعتمد نهائياً
   const specOpts=[...new Set(students.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
@@ -7564,7 +7569,7 @@ function accountModal(type,mode,data){
   overlay.className='modal-overlay';overlay.id='accModal';
   overlay.innerHTML=`<div class="modal" style="max-width:480px;max-height:88vh;overflow-y:auto">
     <div class="modal-title"><span>${title}</span><button class="modal-close" onclick="document.getElementById('accModal').remove()">✕</button></div>
-    <div style="padding:8px 0"><input type="hidden" id="acc_oldid" value="${esc((data&&data.id)||'')}">${accountFormFields(type,data)}</div>
+    <div style="padding:8px 0"><input type="hidden" id="acc_oldid" value="${esc((data&&data.id)||'')}">${accountFormFields(type,data,mode)}</div>
     <div style="display:flex;gap:10px;margin-top:12px">
       <button class="btn btn-out" style="flex:1" onclick="document.getElementById('accModal').remove()">إلغاء</button>
       <button class="btn btn-b" style="flex:1" onclick="saveAccount('${type}','${mode}')">${mode==='edit'?'حفظ التعديل':'إضافة'}</button>
@@ -7582,19 +7587,48 @@ async function saveAccount(type,mode){
   else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');rec.spec=[...document.querySelectorAll('.acc_spec_chk:checked')].map(c=>c.value).join('، ');}
   if(!rec.id||!rec.name){showToast('الرقم والاسم مطلوبان','w');return;}
   if(type==='admin'&&!rec.pw){showToast('الرمز السري مطلوب للإداري','w');return;}
-  const idChanged=mode==='edit'&&String(rec.oldId)!==String(rec.id);
+  const dg=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
+  const idChanged=mode==='edit'&&dg(rec.oldId)!==dg(rec.id)&&!!dg(rec.oldId);
+  // ⭐ تغيير الرقم الأكاديمي للمتدرب = يتعدّل في كل مكان (مركزي · سجل المقررات · الغياب · الطلبات · الدرجات التفصيلية)
+  let cascade=null;
+  if(type==='student'&&idChanged){
+    const oldId=dg(rec.oldId), newId=dg(rec.id);
+    if(!newId){showToast('الرقم الأكاديمي لازم يكون أرقاماً','w');return;}
+    if(newId.length<4&&!confirm(`الرقم «${newId}» قصير — متأكد إنه صحيح؟`))return;
+    const owner=(students||[]).find(s=>dg(s.id)===newId&&dg(s.id)!==oldId);
+    if(owner){showToast('❌ الرقم '+newId+' مسجّل على '+String(owner.name||'').split(' ').slice(0,2).join(' ')+' — اختر رقماً غيره','e');return;}
+    if(!confirm(`سيتغيّر الرقم الأكاديمي لـ${rec.name}:\n\n   ${oldId}  ←  ${newId}\n\n`
+      +`ويُحدَّث معه في: القاعدة المركزية · سجل المقررات والدرجات · قاعدة الغياب · طلبات الخدمات · الدرجات التفصيلية.\n\n`
+      +`هل أخذت نسخة احتياطية؟`))return;
+    showToast('جاري تحديث الرقم في كل التبويبات...','i');
+    try{
+      const rc=await callWrite('updateTraineeNumbers',{records:[{oldId,newId}]});
+      if(!rc||(rc.status&&rc.status!=='ok')){showToast('❌ تعذّر تحديث الرقم: '+attErrMsg(rc&&rc.msg,rc&&rc.hint)+' — ما تغيّر شيء','e');return;}
+      cascade=(rc&&rc.result)||{};
+    }catch(e){showToast('❌ تعذّر تحديث الرقم — ما تغيّر شيء، جرّب مرة أخرى','e');return;}
+    // صار الرقم الجديد هو مفتاح الصف في المركزي — فبقية الحقول تُحفظ عليه بنفس الصيغة المكتوبة في التبويبات
+    rec.id=newId; rec.oldId=newId;
+  }
   showToast(mode==='edit'?'جاري حفظ التعديل...':'جاري الإضافة...','i');
   try{
     const action=mode==='edit'?'updateUser':'addUser';
-    const res=await jsonpCall({action,data:JSON.stringify([rec])});
+    const res=await callWrite(action,{records:[rec]});
     // تحقّق من النتيجة الحقيقية
-    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الحفظ: '+attErrMsg(res.msg,res.hint),'e');return;}
-    if(mode==='edit'&&res&&res.updated===0){showToast('⚠️ لم يُعثر على السجل — تأكد من الرقم الأصلي','w');return;}
+    if(res&&res.status&&res.status!=='ok'){
+      showToast('❌ تعذّر الحفظ: '+attErrMsg(res.msg,res.hint)+(cascade?' — الرقم تغيّر فعلاً، أعد حفظ باقي البيانات':''),'e');
+      if(cascade)loadAdmin().catch(()=>{});
+      return;
+    }
+    if(mode==='edit'&&res&&res.updated===0){
+      showToast('⚠️ لم يُعثر على السجل — تأكد من الرقم الأصلي','w');
+      if(cascade)loadAdmin().catch(()=>{});
+      return;
+    }
     document.getElementById('accModal')?.remove();
-    showToast(mode==='edit'?'✅ تم حفظ التعديل':'✅ تمت الإضافة','s');
-    if(type==='student'&&idChanged)setTimeout(()=>showToast('ℹ️ غيّرت الرقم الأكاديمي — لمزامنته مع المقررات والدرجات استخدم «تحديث الأرقام التدريبية»','i'),1200);
+    if(cascade)showToast(`✅ تم حفظ التعديل · 🔗 الرقم تحدّث في كل مكان — مركزي ${cascade.central||0} · سجل ${cascade.records||0} · غياب ${cascade.absence||0} · طلبات ${cascade.requests||0}`,'s');
+    else showToast(mode==='edit'?'✅ تم حفظ التعديل':'✅ تمت الإضافة','s');
     loadAdmin().then(()=>showAPage('accounts',document.getElementById('sn-accounts'))).catch(()=>{});
-  }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى','e');}
+  }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى'+(cascade?' (لكن الرقم تحدّث)':''),'e');}
 }
 async function deleteAccount(type,id,name){
   const tLbl=type==='student'?'المتدرب':type==='trainer'?'المدرب':'الإداري';
@@ -7731,98 +7765,173 @@ function buildNumPairs(pasted){
   return {pairs, noMatch};
 }
 
+function updNumStudents(){
+  const seen=new Set();
+  return students.filter(s=>{const id=od_(s.id); if(!id||seen.has(id))return false; seen.add(id); return true;})
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+}
 function openUpdateNumbers(){
   document.getElementById('updNumModal')?.remove();
+  // كل متدرب صف قابل للتعديل — رقمه الجديد يبدأ مساوياً لرقمه الحالي
+  window._updNum = updNumStudents().map(s=>({name:s.name, grp:s.grp||'', oldId:od_(s.id), newId:od_(s.id)}));
   const overlay=document.createElement('div');
   overlay.className='modal-overlay'; overlay.id='updNumModal';
-  overlay.innerHTML=`<div class="modal mlist" style="max-width:860px">
+  overlay.innerHTML=`<div class="modal mlist" style="max-width:900px">
     <div class="modal-title">🔢 تحديث الأرقام التدريبية
       <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="alert ab" style="margin-bottom:10px"><span class="aicon">📋</span>
-      الصق الأرقام الجديدة — سطر لكل متدرب: <b>الاسم</b> ثم الرقم الجديد، أو <b>الرقم الحالي</b> ثم الرقم الجديد.
-      الفاصل بينهما جدولة أو فاصلة (تقدر تنسخ عمودين من الإكسل مباشرة).</div>
-    <textarea id="updNumPaste" placeholder="سعيد صالح سعيد الزهراني&#9;5964335
-محمد عبد الله جروان المطيري&#9;5964137
-‎— أو —
-3246737&#9;5964335" style="width:100%;min-height:120px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--card2);color:var(--text);font-family:'Tajawal',sans-serif;font-size:13.5px;box-sizing:border-box;direction:rtl"></textarea>
-    <div class="ctl-row" style="margin:10px 0 0">
-      <button class="btn btn-b" onclick="previewUpdateNumbers()">👁️ عاين التغييرات</button>
-      <button class="btn btn-out" onclick="loadSavedNumList()" title="لقطة قديمة محفوظة داخل البرنامج">📦 القائمة المحفوظة (${NEW_TRAINEE_NUMS.length} اسم · قديمة)</button>
+    <div class="alert ab" style="margin-bottom:10px"><span class="aicon">✏️</span>
+      عدّل رقم أي متدرب مباشرة في الجدول — كل المتدربين معروضون.
+      وإن كانت عندك قائمة جاهزة، الصقها في «لصق جماعي» لتعبئة الأرقام دفعة واحدة.</div>
+    <div class="ctl-row" style="margin-bottom:8px">
+      <input id="updNumSearch" placeholder="🔍 ابحث باسم المتدرب أو رقمه..." oninput="renderUpdNumRows()" style="flex:1 1 220px">
+      <button class="btn btn-out" onclick="toggleNumPaste()">📋 لصق جماعي</button>
+      <button class="btn btn-out" onclick="resetUpdNums()">↺ تراجع عن التعديلات</button>
     </div>
-    <div id="updNumResult"></div>
-    <div class="btn-row" style="margin-top:12px;justify-content:flex-end">
+    <div id="updNumPasteBox" hidden>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">سطر لكل متدرب: <b>الاسم</b> ثم الرقم الجديد، أو <b>الرقم الحالي</b> ثم الرقم الجديد — الفاصل جدولة أو فاصلة (انسخ عمودين من الإكسل مباشرة).</div>
+      <textarea id="updNumPaste" placeholder="سعيد صالح سعيد الزهراني&#9;7001234&#10;5964137&#9;7005678" style="width:100%;min-height:96px;padding:11px 13px;border:1px solid var(--border);border-radius:10px;background:var(--card2);color:var(--text);font-family:'Tajawal',sans-serif;font-size:13.5px;box-sizing:border-box;direction:rtl"></textarea>
+      <div class="ctl-row" style="margin:8px 0 10px">
+        <button class="btn btn-b" onclick="applyNumPaste()">⬇️ عبّئ الأرقام من اللصق</button>
+        <button class="btn btn-out" onclick="loadSavedNumList()" title="لقطة قديمة محفوظة داخل البرنامج">📦 القائمة المحفوظة (${NEW_TRAINEE_NUMS.length} اسم · قديمة)</button>
+      </div>
+    </div>
+    <div id="updNumHead"></div>
+    <div class="modal-body" style="max-height:48vh"><div class="gtable"><table style="font-size:12.5px">
+      <thead><tr><th style="width:44px">تحديث</th><th>الاسم</th><th style="width:110px">الرقم الحالي</th><th style="width:130px">الرقم الجديد</th><th style="width:150px">الحالة</th></tr></thead>
+      <tbody id="updNumBody"></tbody></table></div></div>
+    <div class="alert aw" style="margin-top:10px"><span class="aicon">⚠️</span>خذ نسخة احتياطية من الشيت قبل التطبيق (ملف ← إنشاء نسخة). التغيير يشمل الأرقام والدرجات والغياب والطلبات.</div>
+    <div class="btn-row" style="margin-top:10px;justify-content:flex-end">
       <button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
+      <button class="btn btn-b" onclick="applyUpdateNumbers()">✅ تطبيق التحديث</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
-  setTimeout(()=>document.getElementById('updNumPaste')?.focus(),80);
+  renderUpdNumRows();
 }
-
+function toggleNumPaste(){
+  const b=document.getElementById('updNumPasteBox'); if(!b)return;
+  b.hidden=!b.hidden;
+  if(!b.hidden)setTimeout(()=>document.getElementById('updNumPaste')?.focus(),60);
+}
+function resetUpdNums(){
+  (window._updNum||[]).forEach(r=>{ r.newId=r.oldId; });
+  renderUpdNumRows();
+}
+/* حالة الصف: تغيير · بلا تغيير · تحذير (رقم قصير أو يخص متدرباً آخر) */
+function updNumState(r, rows){
+  if(!r.newId) return {kind:'warn', msg:'الرقم فارغ'};
+  if(r.newId===r.oldId) return {kind:'same', msg:''};
+  if(r.newId.length<4) return {kind:'warn', msg:'رقم قصير — تأكد منه'};
+  const owner=rows.find(x=>x!==r && x.oldId===r.newId);
+  if(owner) return {kind:'warn', msg:'رقم '+owner.name.split(' ').slice(0,2).join(' ')};
+  const dup=rows.find(x=>x!==r && x.newId===r.newId && x.newId!==x.oldId);
+  if(dup) return {kind:'warn', msg:'مكرّر مع '+dup.name.split(' ').slice(0,2).join(' ')};
+  return {kind:'change', msg:''};
+}
+function renderUpdNumRows(){
+  const rows=window._updNum||[];
+  const q=String((document.getElementById('updNumSearch')||{}).value||'').trim();
+  const body=document.getElementById('updNumBody'); if(!body)return;
+  const shown=q?rows.filter(r=>r.name.includes(q)||r.oldId.includes(q)||r.newId.includes(q)):rows;
+  body.innerHTML=shown.map(r=>{
+    const i=rows.indexOf(r), st=updNumState(r,rows);
+    const col=st.kind==='change'?'#2ecc71':st.kind==='warn'?'#e74c3c':'var(--muted)';
+    const badge=st.kind==='change'?'<span class="pill pg">تغيير</span>'
+      :st.kind==='warn'?`<span class="pill pr">⚠️ ${esc(st.msg)}</span>`
+      :'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">بلا تغيير</span>';
+    return `<tr>
+      <td style="text-align:center">${st.kind==='change'
+        ? `<input type="checkbox" class="updnum-cb" data-idx="${i}" checked style="width:18px;height:18px;accent-color:#1a7abf">`
+        : st.kind==='warn' ? `<input type="checkbox" class="updnum-cb" data-idx="${i}" style="width:18px;height:18px;accent-color:#e74c3c">` : '—'}</td>
+      <td style="font-weight:600">${esc(r.name)}${r.grp?` <span style="color:var(--muted);font-size:11px">· شعبة ${esc(String(r.grp))}</span>`:''}</td>
+      <td style="text-align:center;color:var(--muted)">${esc(r.oldId)}</td>
+      <td style="text-align:center"><input class="updnum-new" data-idx="${i}" value="${esc(r.newId)}" inputmode="numeric"
+          oninput="updNumEdit(${i},this.value)"
+          style="width:112px;text-align:center;padding:7px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:${col};font-weight:700"></td>
+      <td style="text-align:center;font-size:11px">${badge}</td></tr>`;
+  }).join('')||'<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:14px">ما فيه نتائج</td></tr>';
+  const head=document.getElementById('updNumHead');
+  if(head){
+    const ch=rows.filter(r=>updNumState(r,rows).kind==='change').length;
+    const wr=rows.filter(r=>updNumState(r,rows).kind==='warn').length;
+    head.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+      <span class="pill pg">${ch} تغيير</span>
+      ${wr?`<span class="pill pr">${wr} تحذير</span>`:''}
+      <span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">${rows.length-ch-wr} بلا تغيير</span>
+      ${q?`<span class="pill pb">معروض ${shown.length} من ${rows.length}</span>`:''}
+    </div>${wr?'<div class="alert ad" style="margin-bottom:8px"><span class="aicon">⚠️</span>صفوف فيها تحذير غير محدّدة — راجعها قبل أن تحدّدها بنفسك.</div>':''}`;
+  }
+}
+function updNumEdit(i,val){
+  const rows=window._updNum||[]; if(!rows[i])return;
+  rows[i].newId=od_(val);
+  // نحدّث الحالة والعدّادات بلا إعادة رسم (حتى لا يقفز مؤشر الكتابة)
+  const st=updNumState(rows[i],rows);
+  const inp=document.querySelector(`.updnum-new[data-idx="${i}"]`);
+  if(inp){ inp.style.color=st.kind==='change'?'#2ecc71':st.kind==='warn'?'#e74c3c':'var(--muted)';
+    const tr=inp.closest('tr');
+    if(tr){
+      const cell=tr.querySelectorAll('td')[4];
+      cell.innerHTML=st.kind==='change'?'<span class="pill pg">تغيير</span>'
+        :st.kind==='warn'?`<span class="pill pr">⚠️ ${esc(st.msg)}</span>`
+        :'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">بلا تغيير</span>';
+      const box=tr.querySelectorAll('td')[0];
+      const was=box.querySelector('.updnum-cb');
+      if(st.kind==='same'){ box.innerHTML='—'; }
+      else if(!was){ box.innerHTML=`<input type="checkbox" class="updnum-cb" data-idx="${i}" ${st.kind==='change'?'checked':''} style="width:18px;height:18px;accent-color:${st.kind==='warn'?'#e74c3c':'#1a7abf'}">`; }
+      else { was.style.accentColor=st.kind==='warn'?'#e74c3c':'#1a7abf'; if(st.kind==='change')was.checked=true; }
+    }
+  }
+  const rowsAll=rows, ch=rowsAll.filter(r=>updNumState(r,rowsAll).kind==='change').length;
+  const wr=rowsAll.filter(r=>updNumState(r,rowsAll).kind==='warn').length;
+  const head=document.getElementById('updNumHead');
+  if(head){ const p=head.querySelectorAll('.pill');
+    if(p[0])p[0].textContent=ch+' تغيير';
+    if(p.length>1&&/تحذير|بلا تغيير/.test(p[1].textContent))p[1].textContent=wr?(wr+' تحذير'):((rowsAll.length-ch)+' بلا تغيير'); }
+}
+/* اللصق يعبّئ الحقول في الجدول بدل أن يستبدله */
+function applyNumPaste(){
+  const txt=(document.getElementById('updNumPaste')||{}).value||'';
+  if(!txt.trim()){ showToast('الصق الأرقام أولاً','w'); return; }
+  const {rows:pasted,bad}=parseNumPaste(txt);
+  const rows=window._updNum||[];
+  const byId={}, byName={};
+  pasted.forEach(r=>{ if(r.byId) byId[od_(r.key)]=r.num; else byName[_nk(r.key)]=r.num; });
+  let filled=0; const noMatch=[];
+  rows.forEach(r=>{
+    const hit=byId[r.oldId]||byName[_nk(r.name)];
+    if(hit){ r.newId=od_(hit); filled++; }
+  });
+  pasted.forEach(r=>{
+    const hit=r.byId ? rows.some(x=>x.oldId===od_(r.key)) : rows.some(x=>_nk(x.name)===_nk(r.key));
+    if(!hit)noMatch.push(r.key);
+  });
+  renderUpdNumRows();
+  let msg=`عُبّئ ${filled} رقماً`;
+  if(noMatch.length)msg+=` · ${noMatch.length} ما طابق`;
+  if(bad.length)msg+=` · ${bad.length} سطر غير مفهوم`;
+  showToast((noMatch.length||bad.length)?('⚠️ '+msg):('✅ '+msg),(noMatch.length||bad.length)?'w':'s');
+  if(noMatch.length)setTimeout(()=>showToast('ما طابق: '+noMatch.slice(0,4).join('، '),'i'),900);
+}
 function loadSavedNumList(){
   if(!confirm('القائمة المحفوظة لقطة قديمة من ٢٠٢٦/٢٠٢٧ — إن كنت أدخلت أرقاماً أحدث منها ستقترح إرجاعها للقديم.\n\nتحميلها في صندوق اللصق لتراجعها؟'))return;
   const t=document.getElementById('updNumPaste');
-  if(t){ t.value=NEW_TRAINEE_NUMS.map(o=>o.n+'\t'+o.num).join('\n'); previewUpdateNumbers(); }
+  if(t){ t.value=NEW_TRAINEE_NUMS.map(o=>o.n+'\t'+o.num).join('\n');
+    const b=document.getElementById('updNumPasteBox'); if(b)b.hidden=false; }
 }
-
-function previewUpdateNumbers(){
-  const txt=(document.getElementById('updNumPaste')||{}).value||'';
-  const host=document.getElementById('updNumResult'); if(!host)return;
-  if(!txt.trim()){ host.innerHTML='<div class="alert aw" style="margin-top:10px"><span class="aicon">✍️</span>الصق الأرقام الجديدة أولاً</div>'; return; }
-  const {rows,bad}=parseNumPaste(txt);
-  const {pairs,noMatch}=buildNumPairs(rows);
-  window._updNumPairs=pairs;
-  const changed=pairs.filter(p=>p.matched&&p.changed&&!p.warn);
-  const warned=pairs.filter(p=>p.matched&&p.changed&&p.warn);
-  const same=pairs.filter(p=>p.matched&&!p.changed);
-  const shown=pairs.filter(p=>p.matched);
-  const row=(p)=>{
-    const i=pairs.indexOf(p);
-    return `<tr>
-    <td style="text-align:center">${p.changed?`<input type="checkbox" class="updnum-cb" data-idx="${i}" ${p.warn?'':'checked'} style="width:18px;height:18px;accent-color:#1a7abf">`:'—'}</td>
-    <td style="font-weight:600">${esc(p.name)}</td>
-    <td style="text-align:center;color:var(--muted)">${esc(p.oldId)}</td>
-    <td style="text-align:center"><input class="updnum-new" data-idx="${i}" value="${esc(p.newId)}" inputmode="numeric"
-        style="width:110px;text-align:center;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:${p.changed?'#2ecc71':'var(--muted)'};font-weight:700"></td>
-    <td style="text-align:center;font-size:11px">${p.warn?`<span class="pill pr" title="${esc(p.warn)}">⚠️ ${esc(p.warn)}</span>`
-      :p.changed?'<span class="pill pg">تغيير</span>':'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">بلا تغيير</span>'}</td>
-  </tr>`;};
-  host.innerHTML=`
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 8px">
-      <span class="pill pg">${changed.length} تغيير</span>
-      ${warned.length?`<span class="pill pr">${warned.length} تحذير</span>`:''}
-      <span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">${same.length} بلا تغيير</span>
-      ${noMatch.length?`<span class="pill pr">${noMatch.length} لصقتها ولم تطابق</span>`:''}
-      ${bad.length?`<span class="pill pr">${bad.length} سطر غير مفهوم</span>`:''}
-    </div>
-    ${warned.length?`<div class="alert ad"><span class="aicon">⚠️</span>صفوف فيها تحذير غير محدّدة افتراضياً — راجعها قبل أن تحدّدها بنفسك.</div>`:''}
-    ${noMatch.length?`<div class="alert aw"><span class="aicon">🔍</span>ما لقينا هؤلاء بين المتدربين: ${noMatch.slice(0,5).map(x=>esc(x)).join('، ')}${noMatch.length>5?` و${noMatch.length-5} غيرهم`:''} — تأكد من كتابة الاسم أو استعمل الرقم الحالي بدله.</div>`:''}
-    ${bad.length?`<div class="alert aw"><span class="aicon">📝</span>أسطر ما فهمناها: ${bad.slice(0,3).map(b=>'سطر '+b.line).join('، ')} — لازم كل سطر يحتوي معرّفاً ثم رقماً.</div>`:''}
-    ${shown.length?`<div class="modal-body" style="max-height:44vh"><div class="gtable"><table style="font-size:12px">
-      <thead><tr><th style="width:44px">تحديث</th><th>الاسم</th><th>الرقم الحالي</th><th>الرقم الجديد</th><th>الحالة</th></tr></thead>
-      <tbody>${shown.map(row).join('')}</tbody></table></div></div>
-      <div class="alert aw" style="margin-top:10px"><span class="aicon">⚠️</span>خذ نسخة احتياطية من الشيت قبل التطبيق (ملف ← إنشاء نسخة). التغيير يشمل الأرقام والدرجات والغياب والطلبات.</div>
-      <div class="btn-row" style="margin-top:10px"><button class="btn btn-b" onclick="applyUpdateNumbers()">✅ تطبيق التحديث</button></div>`
-     :'<div class="alert aw"><span class="aicon">🤷</span>ما فيه صف مطابق — راجع ما لصقته</div>'}`;
-}
-
 async function applyUpdateNumbers(){
-  const pairs=window._updNumPairs||[];
-  // نقرأ الرقم الجديد من الحقل نفسه — تقدر تعدّله قبل التطبيق
-  document.querySelectorAll('.updnum-new').forEach(inp=>{
-    const p=pairs[+inp.dataset.idx]; if(p)p.newId=od_(inp.value);
-  });
-  const recs=[...document.querySelectorAll('.updnum-cb:checked')].map(cb=>pairs[+cb.dataset.idx]).filter(Boolean)
-    .filter(p=>p.oldId&&p.newId&&p.oldId!==p.newId)
-    .map(p=>({oldId:p.oldId,newId:p.newId}));
+  const rows=window._updNum||[];
+  const recs=[...document.querySelectorAll('.updnum-cb:checked')].map(cb=>rows[+cb.dataset.idx]).filter(Boolean)
+    .filter(r=>r.oldId&&r.newId&&r.oldId!==r.newId)
+    .map(r=>({oldId:r.oldId,newId:r.newId}));
   if(!recs.length){showToast('ما فيه أرقام محددة للتحديث','w');return;}
-  // تصادم داخل الدفعة نفسها
   const seenNew={};
   for(const r of recs){
     if(seenNew[r.newId]){showToast('⚠️ الرقم '+r.newId+' مكرّر في الدفعة — صحّحه أولاً','e');return;}
     seenNew[r.newId]=true;
   }
   if(!confirm(`سيتم تحديث ${recs.length} رقم تدريبي في كل التبويبات (درجات/غياب/طلبات).\n\n`
-    +recs.slice(0,6).map(r=>`• ${r.oldId} ← ${r.newId}`).join('\n')+(recs.length>6?`\n… و${recs.length-6} غيرها`:'')
+    +recs.slice(0,8).map(r=>`• ${r.oldId} ← ${r.newId}`).join('\n')+(recs.length>8?`\n… و${recs.length-8} غيرها`:'')
     +`\n\nهل أخذت نسخة احتياطية؟`))return;
   showToast('جاري تحديث الأرقام...','i');
   try{
@@ -7835,7 +7944,9 @@ async function applyUpdateNumbers(){
     showAPage('accounts',document.getElementById('sn-accounts'));
   }catch(e){showToast('تعذّر التحديث — جرب مرة أخرى','e');}
 }
-window.previewUpdateNumbers=previewUpdateNumbers;window.loadSavedNumList=loadSavedNumList;
+window.renderUpdNumRows=renderUpdNumRows;window.updNumEdit=updNumEdit;window.applyNumPaste=applyNumPaste;
+window.toggleNumPaste=toggleNumPaste;window.resetUpdNums=resetUpdNums;
+window.loadSavedNumList=loadSavedNumList;
 window.openUpdateNumbers=openUpdateNumbers;window.applyUpdateNumbers=applyUpdateNumbers;
 
 /* ============ تخريج دفعة + كشف التخرّج + قائمة الخريجين ============ */
