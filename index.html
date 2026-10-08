@@ -8062,16 +8062,23 @@ function relinkScan(){
   // الأرقام التي لها حساب فعلاً (نشط أو خرّيج)
   const known={};
   (students||[]).concat(graduates||[]).forEach(s=>{ const d=dg(s.id); if(d)known[d]=true; });
+  /* ⚠️ «طلبات الخدمات» تحفظ رقم مُقدّم الطلب أياً كان دوره — فرقم المدرب أو
+     الإداري يظهر في نفس العمود. لولا هذا الاستثناء لظهر كل موظّف قدّم طلباً
+     كأنه «متدرب بيانات منفصلة»، وربطه كان يحوّل طلباته إلى متدرب آخر. */
+  const staff={};
+  (trainersDB||[]).concat(adminsDB||[]).forEach(s=>{ const d=dg(s.id); if(d)staff[d]=true; });
   const orph={};
   const add=(id,name,kind)=>{
-    const d=dg(id); if(!d||known[d])return;
+    const d=dg(id); if(!d||known[d]||staff[d])return;
     const o=orph[d]||(orph[d]={id:d,names:{},courses:0,absence:0,requests:0});
     o[kind]++;
     const n=String(name||'').trim(); if(n)o.names[n]=(o.names[n]||0)+1;
   };
   (allCourses||[]).forEach(c=>add(c.sid,c.sname,'courses'));
   (absenceRows||[]).forEach((r,i)=>{ if(i)add(r[0],r[1],'absence'); });   // A=الرقم · B=الاسم
-  (requests||[]).forEach(q=>add(q.sid,q.sname,'requests'));
+  // الطلب وحده ليس دليلاً: الطلبات القديمة قد لا تحمل دور مُقدّمها، فنقبل
+  // الطلب إن كان دوره «متدرب» صراحةً، ولا نبني عليه بطاقة بمفرده (تحت).
+  (requests||[]).forEach(q=>{ if(!q.reqRole||q.reqRole==='s')add(q.sid,q.sname,'requests'); });
   // الاسم الأكثر تكراراً + اقتراح صاحبه من الحسابات
   const list=Object.values(orph).map(o=>{
     const name=Object.keys(o.names).sort((a,b)=>o.names[b]-o.names[a])[0]||'';
@@ -8089,7 +8096,10 @@ function relinkScan(){
     }
     return {...o,name,guess,total:o.courses+o.absence+o.requests};
   });
-  return list.sort((a,b)=>b.total-a.total);
+  /* المواد والغياب وحدها دليل على أن الرقم رقم متدرب. الطلب بلا مواد ولا غياب
+     غالباً موظّف أو شخص خارج القائمة — فلا نعرضه كبطاقة تُربط بضغطة؛ ومن
+     يعرف رقمه القديم يقدر يربطه من «الربط اليدوي». */
+  return list.filter(o=>o.courses||o.absence).sort((a,b)=>b.total-a.total);
 }
 function relinkTargetOptions(sel){
   const dg=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
@@ -8147,6 +8157,11 @@ async function relinkRun(oldId,newId,label){
   if(oldId===newId){showToast('الرقمان واحد — ما فيه شي يُنقل','w');return;}
   const owner=(students||[]).find(s=>dg(s.id)===oldId);
   if(owner){showToast('❌ الرقم '+oldId+' له حساب فعلاً ('+String(owner.name||'').split(' ').slice(0,2).join(' ')+') — استعمل «تحديث الأرقام التدريبية»','e');return;}
+  // رقم موظّف: طلباته تحمل رقمه، وربطه ينقلها لمتدرب — نمنعه
+  const stf=(trainersDB||[]).concat(adminsDB||[]).find(s=>dg(s.id)===oldId);
+  if(stf){showToast('❌ '+oldId+' رقم '+String(stf.name||'').split(' ').slice(0,2).join(' ')+' (من الكادر) — طلباته ليست بيانات متدرب','e');return;}
+  const grad=(graduates||[]).find(s=>dg(s.id)===oldId);
+  if(grad){showToast('❌ الرقم '+oldId+' لخرّيج ('+String(grad.name||'').split(' ').slice(0,2).join(' ')+') — بياناته في الأرشيف وليست منفصلة','e');return;}
   const tgt=(students||[]).find(s=>dg(s.id)===newId);
   if(!tgt){showToast('❌ ما فيه حساب بالرقم '+newId,'e');return;}
   if(!confirm(`ستُنقل البيانات المسجّلة تحت ${oldId}${label?' ('+label+')':''}\nإلى حساب: ${tgt.name} — ${newId}\n\nتشمل: سجل المقررات والدرجات · قاعدة الغياب · طلبات الخدمات · الدرجات التفصيلية.\n\nهل أخذت نسخة احتياطية؟`))return;
