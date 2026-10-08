@@ -8147,6 +8147,9 @@ function openRelinkTrainee(){
       <select id="relinkNew" style="flex:1 1 220px;min-width:0;font-size:13px">${relinkTargetOptions('')}</select>
       <button class="btn btn-b btn-sm" onclick="applyRelinkManual()">🔗 اربط</button>
     </div>
+    <div class="alert ab" style="margin-top:16px;font-size:12.5px"><span class="aicon">🔎</span>
+      متدرب بعينه ما تظهر درجاته؟ <b>«فحص متدرب»</b> يبحث باسمه ورقمه معاً ويقول لك بالضبط: بياناته تحت رقم آخر، أو هو غير مسجّل في المواد أصلاً.
+      <button class="btn btn-out btn-sm" style="margin-top:9px" onclick="document.getElementById('relinkModal').remove();openTraineeProbe()">🔎 افحص متدرباً</button></div>
   </div>`;
   document.body.appendChild(ov);
 }
@@ -8190,6 +8193,121 @@ function applyRelinkManual(){
 }
 window.openRelinkTrainee=openRelinkTrainee;window.applyRelink=applyRelink;
 window.applyRelinkManual=applyRelinkManual;window.relinkScan=relinkScan;
+
+/* ============================================================
+ * 🔎 فحص متدرب — وين بياناته بالضبط؟
+ * ------------------------------------------------------------
+ * «ما تظهر درجاته» له سببان مختلفان تماماً والعلاج مختلف:
+ *   ١) بياناته موجودة تحت رقم آخر  → تُربط برقمه الحالي.
+ *   ٢) ما هو مسجّل في أي مقرر أصلاً → يُسجَّل من «إدارة المقررات».
+ * الفرق لا يُعرف بالنظر للشاشة، فنفحص بالرقم **وبالاسم** معاً:
+ * البحث بالاسم هو الذي يكشف الصفوف المسجّلة تحت رقم قديم.
+ * ============================================================ */
+function traineeProbe(uid){
+  const dg=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
+  const id=dg(uid);
+  const me=(students||[]).concat(graduates||[]).find(s=>dg(s.id)===id);
+  if(!me)return null;
+  const myKey=_nk(me.name);
+  const key3=n=>_nk(String(n||'').split(/\s+/).slice(0,3).join(' '));
+  const sameName=n=>{const k=_nk(n); return k&&(k===myKey||key3(n)===key3(me.name));};
+  // تحت رقمه الحالي
+  const mine={
+    courses:(allCourses||[]).filter(c=>dg(c.sid)===id),
+    absence:(absenceRows||[]).filter((r,i)=>i&&dg(r[0])===id),
+    requests:(requests||[]).filter(q=>dg(q.sid)===id),
+    details:(gradeDetails||[]).filter(d=>dg(String(d.key).split('-').pop())===id)
+  };
+  // صفوف تحمل اسمه تحت أرقام أخرى  ← المفتاح لكشف الرقم القديم
+  const other={};
+  const mark=(sid,kind)=>{
+    const d=dg(sid); if(!d||d===id)return;
+    (other[d]||(other[d]={id:d,courses:0,absence:0,requests:0}))[kind]++;
+  };
+  (allCourses||[]).forEach(c=>{ if(sameName(c.sname))mark(c.sid,'courses'); });
+  (absenceRows||[]).forEach((r,i)=>{ if(i&&sameName(r[1]))mark(r[0],'absence'); });
+  (requests||[]).forEach(q=>{ if((!q.reqRole||q.reqRole==='s')&&sameName(q.sname))mark(q.sid,'requests'); });
+  const others=Object.values(other).map(o=>{
+    const acc=(students||[]).concat(graduates||[]).find(s=>dg(s.id)===o.id);
+    const staff=(trainersDB||[]).concat(adminsDB||[]).find(s=>dg(s.id)===o.id);
+    return {...o, total:o.courses+o.absence+o.requests,
+            holder:acc?acc.name:(staff?staff.name:''), holderKind:acc?'trainee':(staff?'staff':'none'),
+            safe: !acc && !staff ? true : (acc ? sameName(acc.name) : false)};
+  }).sort((a,b)=>b.total-a.total);
+  return {me, id, mine, others,
+          nMine:mine.courses.length+mine.absence.length+mine.requests.length};
+}
+function openTraineeProbe(preId){
+  const dg=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
+  const opts=[...new Map((students||[]).map(s=>[dg(s.id),s])).values()].filter(s=>dg(s.id))
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='probeModal';
+  ov.innerHTML=`<div class="modal" style="max-width:680px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title"><span>🔎 فحص متدرب — وين بياناته؟</span><button class="modal-close" onclick="document.getElementById('probeModal').remove()">✕</button></div>
+    <div class="ctl-row" style="margin:6px 0 14px">
+      <select id="probeSel" onchange="runTraineeProbe()" style="flex:1 1 260px;min-width:0;font-size:13px">
+        <option value="">— اختر المتدرب —</option>
+        ${opts.map(s=>`<option value="${escAttr(dg(s.id))}"${dg(s.id)===dg(preId||'')?' selected':''}>${esc(s.name)} — ${esc(dg(s.id))}${s.grp?' · شعبة '+esc(s.grp):''}</option>`).join('')}
+      </select>
+    </div>
+    <div id="probeOut"><div style="color:var(--muted);font-size:13px;padding:10px">اختر متدرباً لعرض كل ما هو مسجّل باسمه أو برقمه.</div></div>
+  </div>`;
+  document.body.appendChild(ov);
+  if(preId)runTraineeProbe();
+}
+function runTraineeProbe(){
+  const box=document.getElementById('probeOut'); if(!box)return;
+  const id=(document.getElementById('probeSel')||{}).value||'';
+  if(!id){box.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px">اختر متدرباً.</div>';return;}
+  const r=traineeProbe(id);
+  if(!r){box.innerHTML='<div class="alert ad"><span class="aicon">⚠️</span>ما لقينا هذا الحساب.</div>';return;}
+  window._probe=r;
+  const num=(n,l)=>`<div style="flex:1;min-width:92px;text-align:center;padding:10px 6px;background:var(--card2-soft);border:1px solid var(--border);border-radius:10px">
+    <div style="font-size:21px;font-weight:900;color:${n?'var(--acc-g)':'var(--acc-r)'}">${n}</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${l}</div></div>`;
+  const courseNames=[...new Set(r.mine.courses.map(c=>c.course).filter(Boolean))];
+  let html=`<div style="font-weight:800;font-size:15px;margin-bottom:2px">${esc(r.me.name)}</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">${esc(r.id)}${r.me.grp?' · شعبة '+esc(r.me.grp):''}${r.me.spec?' · '+esc(r.me.spec):''}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+      ${num(r.mine.courses.length,'مادة')}${num(r.mine.absence.length,'صف غياب')}
+      ${num(r.mine.details.length,'درجة بند')}${num(r.mine.requests.length,'طلب')}
+    </div>`;
+  if(courseNames.length)html+=`<div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">📚 ${courseNames.map(esc).join(' · ')}</div>`;
+
+  if(r.others.length){
+    html+=`<div class="stitle" style="margin:16px 0 8px">⚠️ صفوف باسمه تحت أرقام أخرى</div>`;
+    r.others.forEach((o,i)=>{
+      const bits=[o.courses?o.courses+' مادة':'',o.absence?o.absence+' صف غياب':'',o.requests?o.requests+' طلب':''].filter(Boolean).join(' · ');
+      html+=`<div class="ccard ${o.safe?'cc-y':'cc-r'}" style="margin-bottom:8px">
+        <div style="font-weight:700;font-size:13.5px">الرقم <span style="color:var(--acc-r)">${esc(o.id)}</span> — ${esc(bits)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">${
+          o.holderKind==='none'?'ما فيه حساب بهذا الرقم — غالباً رقمه القديم'
+          :o.holderKind==='staff'?'الرقم لـ'+esc(o.holder)+' من الكادر — لا تربطه'
+          :'الرقم لحساب آخر: '+esc(o.holder)+(o.safe?' (نفس الاسم — غالباً حساب مكرّر)':' — اسم مختلف، لا تربطه')}</div>
+        ${o.safe?`<button class="btn btn-b btn-sm" style="margin-top:9px" onclick="probeRelink(${i})">🔗 انقل هذه البيانات إلى ${esc(r.id)}</button>`:''}
+      </div>`;
+    });
+  }
+  if(!r.mine.courses.length){
+    html+=r.others.length
+      ? `<div class="alert aw" style="margin-top:14px"><span class="aicon">💡</span><b>الخلاصة:</b> ما هو مسجّل في أي مقرر برقمه الحالي، لكن فيه صفوف باسمه تحت رقم آخر — انقلها من الزر فوق وترجع درجاته وغيابه.</div>`
+      : `<div class="alert ad" style="margin-top:14px"><span class="aicon">📭</span><b>الخلاصة:</b> ما هو مسجّل في أي مقرر — لا برقمه ولا باسمه تحت رقم آخر. يعني درجاته ما ضاعت، هو ببساطة <b>لم يُسجَّل في المواد بعد</b>.
+        <div style="margin-top:7px">سجّله من <b>«إدارة المقررات ← تسجيل المتدربين»</b>، واختر مواد شعبته.</div>
+        <button class="btn btn-b btn-sm" style="margin-top:9px" onclick="document.getElementById('probeModal').remove();showAPage('manage_courses',document.getElementById('sn-manage_courses'))">📖 افتح إدارة المقررات</button></div>`;
+  }else if(!r.others.length){
+    html+=`<div class="alert as" style="margin-top:14px"><span class="aicon">✅</span><b>الخلاصة:</b> كل بياناته مرتبطة برقمه الحالي — ما فيه شي منفصل.
+      ${r.mine.details.length?'':'<div style="margin-top:6px">لكن ما فيه درجات بنود مرصودة بعد — الرصد يتم من صفحة المدرب «الدرجات».</div>'}</div>`;
+  }
+  box.innerHTML=html;
+}
+function probeRelink(i){
+  const r=window._probe; if(!r)return;
+  const o=r.others[i]; if(!o||!o.safe)return;
+  document.getElementById('probeModal')?.remove();
+  relinkRun(o.id,r.id,r.me.name);
+}
+window.openTraineeProbe=openTraineeProbe;window.runTraineeProbe=runTraineeProbe;
+window.probeRelink=probeRelink;window.traineeProbe=traineeProbe;
 
 /* ============ تخريج دفعة + كشف التخرّج + قائمة الخريجين ============ */
 function gradActiveStudents(){
@@ -8735,6 +8853,7 @@ const aPgs={
       <div class="stitle" style="margin:0">${t==='student'?'🎓 المتدربون':t==='trainer'?'👨‍🏫 المدربون':'⚙️ الإداريون'}</div>
       <div class="btn-eq" style="margin:0">
         ${t==='student'?`<button class="btn btn-out" onclick="openUpdateNumbers()">🔢 تحديث الأرقام التدريبية</button>
+        <button class="btn btn-out" onclick="openTraineeProbe()">🔎 فحص متدرب</button>
         ${(function(){const n=(typeof relinkScan==='function')?relinkScan().length:0;
           return n?`<button class="btn btn-r" onclick="openRelinkTrainee()">🔗 بيانات منفصلة (${n})</button>`
                   :`<button class="btn btn-out" onclick="openRelinkTrainee()">🔗 ربط بيانات منفصلة</button>`;})()}
