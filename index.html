@@ -8047,6 +8047,135 @@ window.toggleNumPaste=toggleNumPaste;window.resetUpdNums=resetUpdNums;
 window.loadSavedNumList=loadSavedNumList;
 window.openUpdateNumbers=openUpdateNumbers;window.applyUpdateNumbers=applyUpdateNumbers;
 
+/* ============================================================
+ * 🔗 ربط بيانات متدرب انفصلت عن رقمه
+ * ------------------------------------------------------------
+ * إذا تغيّر الرقم الأكاديمي في القاعدة المركزية وحدها — مثلاً عند تعديل
+ * الحساب بنسخة قديمة من المنصة — تبقى مواده ودرجاته وغيابه وطلباته مسجّلة
+ * تحت الرقم القديم، فتختفي من شاشاته كأنها ضاعت. هي موجودة، لكن منفصلة.
+ * هذه الأداة تكشف كل رقم له بيانات ولا حساب له، وتعرض الاسم المكتوب في تلك
+ * الصفوف، وتقترح صاحبه من الحسابات بمطابقة الاسم، ثم تنقل البيانات لرقمه
+ * الحالي بنفس المسار المجرَّب (updateTraineeNumbers).
+ * ============================================================ */
+function relinkScan(){
+  const dg=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
+  // الأرقام التي لها حساب فعلاً (نشط أو خرّيج)
+  const known={};
+  (students||[]).concat(graduates||[]).forEach(s=>{ const d=dg(s.id); if(d)known[d]=true; });
+  const orph={};
+  const add=(id,name,kind)=>{
+    const d=dg(id); if(!d||known[d])return;
+    const o=orph[d]||(orph[d]={id:d,names:{},courses:0,absence:0,requests:0});
+    o[kind]++;
+    const n=String(name||'').trim(); if(n)o.names[n]=(o.names[n]||0)+1;
+  };
+  (allCourses||[]).forEach(c=>add(c.sid,c.sname,'courses'));
+  (absenceRows||[]).forEach((r,i)=>{ if(i)add(r[0],r[1],'absence'); });   // A=الرقم · B=الاسم
+  (requests||[]).forEach(q=>add(q.sid,q.sname,'requests'));
+  // الاسم الأكثر تكراراً + اقتراح صاحبه من الحسابات
+  const list=Object.values(orph).map(o=>{
+    const name=Object.keys(o.names).sort((a,b)=>o.names[b]-o.names[a])[0]||'';
+    let guess='';
+    if(name){
+      const k=_nk(name);
+      const exact=(students||[]).filter(s=>_nk(s.name)===k);
+      if(exact.length===1)guess=dg(exact[0].id);
+      else if(!exact.length){
+        // مطابقة بأول ثلاث كلمات (الأسماء تُكتب أحياناً بـ«بن» وأحياناً بدونها)
+        const k3=_nk(name.split(/\s+/).slice(0,3).join(' '));
+        const near=(students||[]).filter(s=>_nk(s.name.split(/\s+/).slice(0,3).join(' '))===k3);
+        if(near.length===1)guess=dg(near[0].id);
+      }
+    }
+    return {...o,name,guess,total:o.courses+o.absence+o.requests};
+  });
+  return list.sort((a,b)=>b.total-a.total);
+}
+function relinkTargetOptions(sel){
+  const dg=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
+  const opts=[...new Map((students||[]).map(s=>[dg(s.id),s])).values()]
+    .filter(s=>dg(s.id))
+    .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+  return '<option value="">— اختر صاحب البيانات —</option>'+
+    opts.map(s=>`<option value="${escAttr(dg(s.id))}"${dg(s.id)===dg(sel)?' selected':''}>${esc(s.name)} — ${esc(dg(s.id))}${s.grp?' · شعبة '+esc(s.grp):''}</option>`).join('');
+}
+function openRelinkTrainee(){
+  const list=relinkScan();
+  window._relink=list;
+  const card=(o,i)=>`
+    <div class="ccard ${o.guess?'cc-g':'cc-r'}" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap">
+        <div>
+          <div class="cc-name">${o.name?esc(o.name):'<span style="color:var(--muted)">بلا اسم مسجّل</span>'}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:3px">بياناته مسجّلة تحت الرقم <b style="color:var(--acc-r)">${esc(o.id)}</b> — وما فيه حساب بهذا الرقم</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${o.courses?`<span class="pill pb">${o.courses} مادة</span>`:''}
+          ${o.absence?`<span class="pill py">${o.absence} صف غياب</span>`:''}
+          ${o.requests?`<span class="pill pg">${o.requests} طلب</span>`:''}
+        </div>
+      </div>
+      <div class="ctl-row" style="margin:10px 0 0">
+        <select id="relinkSel${i}" style="flex:1 1 220px;min-width:0;font-size:13px">${relinkTargetOptions(o.guess)}</select>
+        <button class="btn btn-b btn-sm" onclick="applyRelink(${i})">🔗 اربط البيانات</button>
+      </div>
+      ${o.guess?'<div style="font-size:11.5px;color:var(--acc-g);margin-top:6px">✓ اقترحناه بمطابقة الاسم — تأكّد قبل الربط</div>'
+               :'<div style="font-size:11.5px;color:var(--acc-y);margin-top:6px">⚠️ ما قدرنا نطابق الاسم — اختر صاحبه بنفسك</div>'}
+    </div>`;
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='relinkModal';
+  ov.innerHTML=`<div class="modal" style="max-width:720px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title"><span>🔗 ربط بيانات منفصلة عن رقمها</span><button class="modal-close" onclick="document.getElementById('relinkModal').remove()">✕</button></div>
+    <div class="alert ab" style="margin:6px 0 14px;font-size:12.5px"><span class="aicon">ℹ️</span>
+      لو تغيّر الرقم الأكاديمي في قاعدة الحسابات وحدها، تبقى المواد والدرجات والغياب والطلبات تحت الرقم القديم فتختفي من شاشات المتدرب. هنا تظهر كل البيانات التي بلا حساب — تربطها بصاحبها فترجع كاملة.
+      <div style="margin-top:7px">⚠️ وقد يكون السبب أن المتدرب <b>بلا حساب أصلاً</b> — عندها أضِفه من «الحسابات» بنفس رقمه، ولا تربطه بأحد.</div></div>
+    ${list.length?list.map(card).join(''):
+      '<div class="alert as" style="margin:0"><span class="aicon">✅</span>ما فيه بيانات منفصلة — كل المواد والغياب والطلبات مرتبطة بحسابات موجودة.</div>'}
+    <div class="stitle" style="margin:22px 0 8px">✍️ ربط يدوي</div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">تعرف الرقم القديم بنفسك؟ اكتبه هنا واختر صاحبه — يفيدك لو كانت البيانات ما ظهرت فوق.</div>
+    <div class="ctl-row" style="margin-bottom:0">
+      <input id="relinkOld" placeholder="الرقم القديم" inputmode="numeric" style="flex:1 1 130px;min-width:0;font-size:14px">
+      <select id="relinkNew" style="flex:1 1 220px;min-width:0;font-size:13px">${relinkTargetOptions('')}</select>
+      <button class="btn btn-b btn-sm" onclick="applyRelinkManual()">🔗 اربط</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+async function relinkRun(oldId,newId,label){
+  const dg=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
+  oldId=dg(oldId); newId=dg(newId);
+  if(!oldId||!newId){showToast('حدّد الرقم القديم وصاحب البيانات','w');return;}
+  if(oldId===newId){showToast('الرقمان واحد — ما فيه شي يُنقل','w');return;}
+  const owner=(students||[]).find(s=>dg(s.id)===oldId);
+  if(owner){showToast('❌ الرقم '+oldId+' له حساب فعلاً ('+String(owner.name||'').split(' ').slice(0,2).join(' ')+') — استعمل «تحديث الأرقام التدريبية»','e');return;}
+  const tgt=(students||[]).find(s=>dg(s.id)===newId);
+  if(!tgt){showToast('❌ ما فيه حساب بالرقم '+newId,'e');return;}
+  if(!confirm(`ستُنقل البيانات المسجّلة تحت ${oldId}${label?' ('+label+')':''}\nإلى حساب: ${tgt.name} — ${newId}\n\nتشمل: سجل المقررات والدرجات · قاعدة الغياب · طلبات الخدمات · الدرجات التفصيلية.\n\nهل أخذت نسخة احتياطية؟`))return;
+  showToast('جاري ربط البيانات...','i');
+  try{
+    const res=await callWrite('updateTraineeNumbers',{records:[{oldId:oldId,newId:newId}]});
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الربط: '+attErrMsg(res.msg,res.hint),'e');return;}
+    const r=(res&&res.result)||{};
+    const moved=(r.records||0)+(r.absence||0)+(r.requests||0)+(r.details||0);
+    if(!moved){showToast('⚠️ ما انتقل شي — غالباً البيانات المعروضة قديمة. حدّث الصفحة وأعد المحاولة','w');return;}
+    showToast(`✅ رجعت بيانات ${String(tgt.name||'').split(' ').slice(0,2).join(' ')} — سجل ${r.records||0} · غياب ${r.absence||0} · طلبات ${r.requests||0}`,'s');
+    document.getElementById('relinkModal')?.remove();
+    await loadAdmin();
+    showAPage('accounts',document.getElementById('sn-accounts'));
+  }catch(e){showToast('تعذّر الربط — جرب مرة أخرى','e');}
+}
+function applyRelink(i){
+  const o=(window._relink||[])[i]; if(!o)return;
+  const sel=document.getElementById('relinkSel'+i);
+  relinkRun(o.id,(sel&&sel.value)||'',o.name);
+}
+function applyRelinkManual(){
+  const o=(document.getElementById('relinkOld')||{}).value||'';
+  const n=(document.getElementById('relinkNew')||{}).value||'';
+  relinkRun(o,n,'');
+}
+window.openRelinkTrainee=openRelinkTrainee;window.applyRelink=applyRelink;
+window.applyRelinkManual=applyRelinkManual;window.relinkScan=relinkScan;
+
 /* ============ تخريج دفعة + كشف التخرّج + قائمة الخريجين ============ */
 function gradActiveStudents(){
   return [...new Map(students.map(s=>[s.id,s])).values()];
@@ -8591,6 +8720,9 @@ const aPgs={
       <div class="stitle" style="margin:0">${t==='student'?'🎓 المتدربون':t==='trainer'?'👨‍🏫 المدربون':'⚙️ الإداريون'}</div>
       <div class="btn-eq" style="margin:0">
         ${t==='student'?`<button class="btn btn-out" onclick="openUpdateNumbers()">🔢 تحديث الأرقام التدريبية</button>
+        ${(function(){const n=(typeof relinkScan==='function')?relinkScan().length:0;
+          return n?`<button class="btn btn-r" onclick="openRelinkTrainee()">🔗 بيانات منفصلة (${n})</button>`
+                  :`<button class="btn btn-out" onclick="openRelinkTrainee()">🔗 ربط بيانات منفصلة</button>`;})()}
         <button class="btn btn-out" onclick="openGraduatesList()">🎓 الخريجون (${graduates.length})</button>
         <button class="btn btn-g" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>`:''}
         <button class="btn btn-b" onclick='addAccount("${t}")'>➕ إضافة ${tLbl}</button>
@@ -9180,7 +9312,7 @@ const aPgs={
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
     <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
-    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المعتمدة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
+    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المعتمدة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="openRelinkTrainee()">🔗 ربط بيانات منفصلة</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
     <div class="alert ab" style="margin-top:8px;font-size:12.5px"><span class="aicon">💡</span>«إصلاح التبويبات» يوسّع أعمدة التبويبات الضيقة في Google Sheets · «فحص المفاتيح» يعرض السجلات التي مفتاحها لا يطابق الرقم الأكاديمي الحالي (يحدث بعد تحديث الأرقام) ويصلحها بضغطة.</div>
 
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
@@ -10051,7 +10183,9 @@ async function refreshSystemHealth(){
     ${(()=>{const g=d.integrity||{};const na=(g.noAccount||[]);
       const bits=[];
       if(g.badKeys)bits.push(`<div class="alert aw"><span class="aicon">🔑</span><b>${g.badKeys}</b> سجل مفتاحه لا يطابق الرقم الأكاديمي${g.dupKeys?` · <b>${g.dupKeys}</b> مفتاح مكرر`:''} — اضغط «🔑 فحص المفاتيح» بالأعلى</div>`);
-      if(na.length)bits.push(`<div class="alert ad"><span class="aicon">👤</span><b>${na.length}</b> متدرب له سجلات مقررات بلا حساب دخول: ${na.slice(0,5).map(x=>esc(x.name||'')+' ('+esc(x.id)+')').join('، ')}${na.length>5?' وغيرهم':''} — أضِفهم في «الحسابات»</div>`);
+      if(na.length)bits.push(`<div class="alert ad"><span class="aicon">👤</span><b>${na.length}</b> متدرب له سجلات مقررات بلا حساب دخول: ${na.slice(0,5).map(x=>esc(x.name||'')+' ('+esc(x.id)+')').join('، ')}${na.length>5?' وغيرهم':''}
+        <div style="font-size:12.5px;margin-top:7px;line-height:1.7">إمّا أن حسابه غير مضاف أصلاً — فأضِفه من «الحسابات» — أو أن رقمه الأكاديمي تغيّر وبقيت بياناته تحت القديم، فتُربط بضغطة.</div>
+        <button class="btn btn-r btn-sm" style="margin-top:8px" onclick="openRelinkTrainee()">🔗 افحص واربط البيانات المنفصلة</button></div>`);
       if(g.absMismatch)bits.push(`<div class="alert aw"><span class="aicon">📉</span><b>${g.absMismatch}</b> سجل نسبة غيابه المخزّنة في الشيت تخالف المحسوب من «قاعدة الغياب» — اضغط «📉 مزامنة نسب الغياب» بالأعلى</div>`);
       const ns=(g.noSchedule||[]);
       if(ns.length)bits.push(`<div class="alert aw"><span class="aicon">📅</span><b>${ns.length}</b> مادة حالية غير مجدولة، فنسبة الغياب فيها تُحسب على تقدير يوم واحد بالأسبوع بدل حصصها الفعلية: ${ns.slice(0,4).map(x=>esc(x)).join('، ')}${ns.length>4?' وغيرها':''} — أضِفها في «الجدول» لتضبط النسبة</div>`);
