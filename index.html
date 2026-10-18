@@ -6818,7 +6818,9 @@ const tPgs={
             ${past?`فيه <b>${past}</b> متدرب في هذه المادة لكن حالتهم «سابق» — المواد السابقة لا تُحضَّر.`
                  :`المادة مسندة لك في الجدول، لكن ما وصلك أي متدرب مسجّل فيها.`}
             ${similar.length?`<div style="margin-top:6px">⚠️ عندك مادة باسم قريب: <b>${similar.slice(0,2).map(esc).join('، ')}</b> — تأكّد أن الاسم مكتوب بنفس الصيغة في «الجدول» و«سجل المقررات».</div>`:''}
-            ${(!past&&!similar.length)?`<div style="margin-top:6px">تأكّد من: تسجيل المتدربين في المادة من «إدارة المقررات»، وأن اسمك مسند لهذه الشعبة في «الجدول».</div>`:''}
+            ${(!past&&!similar.length)?`<div style="margin-top:6px">السبب أحد اثنين: <b>الشعبة التي أُسندت لك في الجدول ما فيها متدربون مسجّلون</b> في هذه المادة، أو هم مسجّلون باسم مدرّب آخر.</div>
+            ${role==='a'?`<button class="btn btn-out btn-sm" style="margin-top:9px" onclick="openCourseProbe('${jsq(course)}')">🔍 افحص المادة — وين متدربوها</button>`
+                        :`<div style="margin-top:6px">أرسل للإدارة: «${esc(course)}» مُسندة لي في الجدول بلا متدربين — تُفحص من «إدارة المقررات ← 🔍 فحص مادة».</div>`}`:''}
           </div></div>`;
       }
       const grp=ssDedup[0]?.grp||'';
@@ -8602,6 +8604,111 @@ function probeRelink(i){
 window.openTraineeProbe=openTraineeProbe;window.runTraineeProbe=runTraineeProbe;
 window.probeRelink=probeRelink;window.traineeProbe=traineeProbe;
 
+/* ============================================================
+ * 🔍 فحص مادة — وين متدربوها ومَن يدرّسها
+ * ------------------------------------------------------------
+ * «ما فيه متدربون للتحضير» له ثلاثة أسباب مختلفة تماماً وعلاجها مختلف:
+ *   ① الجدول يُسند شعبة لمدرّب، وتلك الشعبة ما فيها تسجيل أصلاً.
+ *   ② فيها تسجيل لكن باسم مدرّب آخر في سجل المقررات.
+ *   ③ فيها تسجيل ولا أحد مُسند لها في الجدول.
+ * هذه الشاشة تعرض الثلاثة صفاً صفاً فيعرف الإداري ماذا يصلح بالضبط.
+ * ============================================================ */
+function courseProbe(courseName){
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const gkey=g=>String(g==null?'':g).replace(/[^0-9]/g,'')||nrm(g);
+  const rows=(allCourses||[]).filter(c=>sameCourse(c.course,courseName));
+  const byGrp={};
+  rows.forEach(c=>{
+    const g=gkey(c.grp)||'—';
+    const o=byGrp[g]||(byGrp[g]={grp:c.grp||'—',ids:new Set(),trainers:{},active:0,past:0});
+    o.ids.add(String(c.sid));
+    const t=nrm(c.trainer)||'(بلا مدرّب)';
+    o.trainers[t]=(o.trainers[t]||0)+1;
+    if(isActive(c.status))o.active++; else o.past++;
+  });
+  // مَن هو مُسند لهذه المادة في «الجدول»، ولأي شعبة وأي أيام
+  const sched={};
+  for(const g in (schedule||{})){
+    for(const sl in (schedule[g]||{})){
+      const v=schedule[g][sl]; if(!v||!sameCourse(v.course,courseName))continue;
+      const k=gkey(g)||'—';
+      const o=sched[k]||(sched[k]={grp:g,trainers:{}});
+      const t=nrm(v.trainer)||'(بلا مدرّب)';
+      const day=String(sl).split('|')[0]||'';
+      (o.trainers[t]||(o.trainers[t]=new Set())).add(day);
+    }
+  }
+  const keys=[...new Set([...Object.keys(byGrp),...Object.keys(sched)])]
+    .sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  return keys.map(k=>{
+    const e=byGrp[k], s=sched[k];
+    const recTrainers=e?Object.keys(e.trainers):[];
+    const schTrainers=s?Object.keys(s.trainers):[];
+    let state,fix;
+    if(!e||!e.ids.size){ state='لا تسجيل'; fix='سجّل المتدربين في هذه المادة والشعبة من «تسجيل جماعي»'; }
+    else if(!schTrainers.length){ state='بلا مدرّب في الجدول'; fix='أسند المادة لمدرّب في «الجدول» ليظهر له التحضير'; }
+    else if(!e.active){ state='كلهم سابق'; fix='المواد السابقة لا تُحضَّر — لا شيء يُصلح'; }
+    else if(recTrainers.some(t=>schTrainers.includes(t))){ state='مطابق'; fix=''; }
+    else { state='مختلف'; fix='الجدول يُسندها لـ«'+schTrainers.join('، ')+'» وسجل المقررات باسم «'+recTrainers.join('، ')+'» — يصل التحضير للمُجدوَل بعد نشر الخادم الجديد'; }
+    return {grp:(e&&e.grp)||(s&&s.grp)||k, n:e?e.ids.size:0, active:e?e.active:0, past:e?e.past:0,
+            recTrainers, schTrainers, days:s?Object.fromEntries(Object.entries(s.trainers).map(([t,d])=>[t,[...d]])):{},
+            state, fix};
+  });
+}
+function openCourseProbe(preCourse){
+  const names=[...new Set((allCourses||[]).map(c=>c.course).filter(Boolean))]
+    .sort((a,b)=>String(a).localeCompare(String(b),'ar'));
+  const fromSched=new Set();
+  for(const g in (schedule||{}))for(const sl in (schedule[g]||{})){const v=schedule[g][sl];if(v&&v.course)fromSched.add(v.course);}
+  const all=[...new Set([...names,...fromSched])].sort((a,b)=>String(a).localeCompare(String(b),'ar'));
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='crsProbeModal';
+  ov.innerHTML=`<div class="modal" style="max-width:760px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title"><span>🔍 فحص مادة — وين متدربوها ومَن يدرّسها</span><button class="modal-close" onclick="document.getElementById('crsProbeModal').remove()">✕</button></div>
+    <div class="alert ab" style="margin:6px 0 14px;font-size:12.5px"><span class="aicon">ℹ️</span>
+      «ما فيه متدربون للتحضير» يصير لثلاثة أسباب: الشعبة بلا تسجيل · أو مسجّلة باسم مدرّب آخر · أو ما أحد مُسند لها في الجدول. هنا تشوف كل شعبة وسببها.</div>
+    <div class="ctl-row" style="margin-bottom:0">
+      <select id="crsProbeSel" onchange="runCourseProbe()" style="flex:1 1 260px;min-width:0;font-size:13px">
+        <option value="">— اختر المادة —</option>
+        ${all.map(c=>`<option value="${escAttr(c)}"${c===preCourse?' selected':''}>${esc(c)}</option>`).join('')}
+      </select>
+    </div>
+    <div id="crsProbeOut" style="margin-top:14px"><div style="color:var(--muted);font-size:13px;padding:10px">اختر مادة.</div></div>
+  </div>`;
+  document.body.appendChild(ov);
+  if(preCourse)runCourseProbe();
+}
+function runCourseProbe(){
+  const box=document.getElementById('crsProbeOut'); if(!box)return;
+  const cn=(document.getElementById('crsProbeSel')||{}).value||'';
+  if(!cn){box.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px">اختر مادة.</div>';return;}
+  const rows=courseProbe(cn);
+  if(!rows.length){box.innerHTML='<div class="alert aw"><span class="aicon">📭</span>ما فيه تسجيل ولا جدول لهذه المادة إطلاقاً.</div>';return;}
+  const pill=st=>st==='مطابق'?'<span class="pill pg">مطابق</span>'
+    :st==='كلهم سابق'?'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">كلهم سابق</span>'
+    :`<span class="pill pr">${esc(st)}</span>`;
+  box.innerHTML=rows.map(r=>`
+    <div class="ccard ${r.state==='مطابق'?'cc-g':r.state==='كلهم سابق'?'cc-b':'cc-r'}" style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-weight:700;font-size:13.5px">الشعبة ${esc(r.grp)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${r.n?`<span class="pill pb">${r.n} متدرب</span>`:''}
+          ${r.past?`<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)">${r.past} سابق</span>`:''}
+          ${pill(r.state)}
+        </div>
+      </div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.9">
+        <div>📋 في سجل المقررات: <b style="color:var(--text)">${r.recTrainers.length?r.recTrainers.map(esc).join('، '):'—'}</b></div>
+        <div>📅 في الجدول: <b style="color:var(--text)">${r.schTrainers.length?r.schTrainers.map(t=>esc(t)+(r.days[t]&&r.days[t].length?` (${r.days[t].map(esc).join('، ')})`:'')).join(' · '):'—'}</b></div>
+        ${r.fix?`<div style="margin-top:5px;color:var(--acc-y)">🔧 ${esc(r.fix)}</div>`:''}
+      </div>
+    </div>`).join('')
+    +`<div class="btn-eq" style="margin-top:14px">
+       <button class="btn btn-b" onclick="document.getElementById('crsProbeModal').remove();window._mcTab='enroll';showAPage('manage_courses',document.getElementById('sn-manage_courses'))">🔗 تسجيل جماعي</button>
+       <button class="btn btn-out" onclick="document.getElementById('crsProbeModal').remove();showAPage('schedule',document.getElementById('sn-schedule'))">📅 افتح الجدول</button>
+     </div>`;
+}
+window.openCourseProbe=openCourseProbe;window.runCourseProbe=runCourseProbe;window.courseProbe=courseProbe;
+
 /* ============ تخريج دفعة + كشف التخرّج + قائمة الخريجين ============ */
 function gradActiveStudents(){
   return [...new Map(students.map(s=>[s.id,s])).values()];
@@ -9098,9 +9205,12 @@ const aPgs={
     }
     return `
     <div class="banner"><div><div class="btitle">📖 إدارة المقررات</div><div class="bsub">الخطة الدراسية وتسجيل المتدربين — يدعم تخصصات متعددة</div></div></div>
-    <div style="display:flex;gap:10px;margin-bottom:20px">
+    <div style="display:flex;gap:10px;margin-bottom:12px">
       ${tabBtn('plan','الخطة الدراسية','📖')}
       ${tabBtn('enroll','تسجيل جماعي','🔗')}
+    </div>
+    <div class="ctl-row" style="margin-bottom:20px">
+      <button class="btn btn-out" onclick="openCourseProbe()">🔍 فحص مادة — وين متدربوها ومَن يدرّسها</button>
     </div>
     ${body}`;
   },
@@ -9149,7 +9259,7 @@ const aPgs={
         <button class="btn btn-out" onclick="openTraineeProbe()">🔎 فحص متدرب</button>
         ${(function(){const n=(typeof relinkScan==='function')?relinkScan().length:0;
           return n?`<button class="btn btn-r" onclick="openRelinkTrainee()">🔗 بيانات منفصلة (${n})</button>`
-                  :`<button class="btn btn-out" onclick="openRelinkTrainee()">🔗 ربط بيانات منفصلة</button>`;})()}
+                  :`<button class="btn btn-out" onclick="openRelinkTrainee()">🔗 ربط بيانات منفصلة</button><button class="btn btn-out" onclick="openCourseProbe()">🔍 فحص مادة</button>`;})()}
         <button class="btn btn-out" onclick="openGraduatesList()">🎓 الخريجون (${graduates.length})</button>
         <button class="btn btn-g" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>`:''}
         <button class="btn btn-b" onclick='addAccount("${t}")'>➕ إضافة ${tLbl}</button>
