@@ -7941,6 +7941,13 @@ async function enrollBatch(){
   const half=term.includes('صيفي')?'':(document.getElementById('enr_half')?.value||'');
   if(!sids.length){showToast('اختر متدرباً واحداً على الأقل','w');return;}
   if(!crs.length){showToast('اختر مقرراً واحداً على الأقل','w');return;}
+  /* 🔐 بلا مدرّب يصير السجل بلا صاحب: ما يظهر لأحد في التحضير ولا يقدر أحد
+     يرصد درجاته — وهي نفس الورطة التي تُشخَّص لاحقاً بـ«فحص مادة». نمنعها هنا. */
+  if(!String(trainer).trim()){
+    showToast('⚠️ اختر المدرب أولاً — السجل بلا مدرّب ما يظهر لأحد في التحضير ولا يُرصد','w');
+    document.getElementById('enr_trainer')?.focus();
+    return;
+  }
   // 🔎 نبني السجلات أولاً ثم نعرض التفصيل في التأكيد — لا تخطٍّ صامت
   const records=[];let lockedSkip=0;
   const skip={current:0,passed:0}, redo={failed:0,ungraded:0};
@@ -8780,13 +8787,25 @@ function runCourseProbe(){
         <div>📋 في سجل المقررات: <b style="color:var(--text)">${r.recTrainers.length?r.recTrainers.map(esc).join('، '):'—'}</b></div>
         <div>📅 في الجدول: <b style="color:var(--text)">${r.schTrainers.length?r.schTrainers.map(t=>esc(t)+(r.days[t]&&r.days[t].length?` (${r.days[t].map(esc).join('، ')})`:'')).join(' · '):'—'}</b></div>
         ${r.fix?`<div style="margin-top:5px;color:var(--acc-y)">🔧 ${esc(r.fix)}</div>`:''}
+        ${r.grp&&r.grp!=='—'?`<div style="margin-top:8px"><button class="btn btn-out btn-sm" onclick="enrollFromProbe('${jsq(cn)}','${jsq(r.grp)}')">🔗 سجّل الشعبة ${esc(r.grp)} في ${esc(cn)}</button></div>`:''}
       </div>
     </div>`).join('')
     +`<div class="btn-eq" style="margin-top:14px">
-       <button class="btn btn-b" onclick="document.getElementById('crsProbeModal').remove();window._mcTab='enroll';showAPage('manage_courses',document.getElementById('sn-manage_courses'))">🔗 تسجيل جماعي</button>
+       <button class="btn btn-b" onclick="enrollFromProbe('${jsq(cn)}','${jsq((rows[0]||{}).grp||'')}')">🔗 تسجيل جماعي</button>
        <button class="btn btn-out" onclick="document.getElementById('crsProbeModal').remove();showAPage('schedule',document.getElementById('sn-schedule'))">📅 افتح الجدول</button>
      </div>`;
 }
+/* 🔗 الانتقال من «فحص مادة» للتسجيل الجماعي — كان يفتح الصفحة فاضية على أول
+   شعبة، فيضيع عن المستخدم أي مادة وأي شعبة كان يفحص. الآن نحمل الاثنين
+   ونحدّد المادة وكل متدربي الشعبة جاهزين للتسجيل. */
+function enrollFromProbe(course,grp){
+  document.getElementById('crsProbeModal')?.remove();
+  window._mcTab='enroll';
+  if(grp&&grp!=='—')window._enrGrp=String(grp);
+  window._enrPre={course:String(course||'')};
+  showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+}
+window.enrollFromProbe=enrollFromProbe;
 window.openCourseProbe=openCourseProbe;window.runCourseProbe=runCourseProbe;window.courseProbe=courseProbe;
 
 /* ============ تخريج دفعة + كشف التخرّج + قائمة الخريجين ============ */
@@ -9204,16 +9223,27 @@ const aPgs={
       // منتهية = اجتازها الكل · حالية = فيها سجل حالي · باقية = ما تسجّلت أو فيها راسب يعيدها
       const grpRecords=allCourses.filter(c=>c.grp===selGrp);
       const gStudentIds=gStudents.map(s=>s.id);
-      const courseStatus=code=>{
+      /* ⚠️ كانت الحاجة تُحسب بسرد الحالات التي «تحتاج» (none/failed) — فأي حالة
+         جديدة تسقط بصمت في «منتهية»، و«منتهية» تُرسَم بلا مربّع اختيار فتصير
+         المادة غير قابلة للتسجيل أصلاً. وهذا ما حصل مع «مشروع»: تسعة سجلات
+         سابقة بلا درجة مرصودة (ungraded) ظهرت «✓ منتهية» فما انسجّل شي.
+         قلبنا القاعدة: «منتهية» فقط لمن اجتازها الكل — وكل ما عداه يحتاجها.
+         والأولوية للحاجة: شعبة فيها سجل حالي وفيها مَن لم يُسجَّل تبقى قابلة
+         للتسجيل (enrollBatch يتخطّى المسجّل حالياً وحده). */
+      const courseInfo=code=>{
         const recs=grpRecords.filter(c=>normCode(c.code)===normCode(code));
-        if(!recs.length)return 'remaining'; // ما تسجّلت
-        if(recs.some(c=>isActive(c.status)))return 'current'; // حالية
-        // كل السجلات سابقة — نتحقق: هل يوجد طالب في الشعبة يحتاجها (راسب أو ما أخذها)؟
-        const anyNeeds=gStudentIds.some(sid=>{const st=studentCourseState(sid,code);return st==='none'||st==='failed';});
-        return anyNeeds?'remaining':'done'; // راسب فيها أحد → ترجع باقية · اجتازها الكل → منتهية
+        const needs=gStudentIds.filter(sid=>{
+          const st=studentCourseState(sid,code);
+          return st!=='passed'&&st!=='current';          // اجتازها أو فيها حالياً = لا يحتاجها
+        });
+        let st;
+        if(needs.length)                      st='remaining';
+        else if(recs.some(c=>isActive(c.status))) st='current';
+        else                                  st=recs.length?'done':'remaining';
+        return {st, need:needs.length};
       };
       // تصنيف المقررات
-      const catCourses=(catalog||[]).map(c=>({...c,st:courseStatus(c.code)}));
+      const catCourses=(catalog||[]).map(c=>({...c,...courseInfo(c.code)}));
       const done=catCourses.filter(c=>c.st==='done');
       const current=catCourses.filter(c=>c.st==='current');
       const remaining=catCourses.filter(c=>c.st==='remaining');
@@ -9221,7 +9251,7 @@ const aPgs={
       const grpTabs=grps.map(g=>`<button onclick="window._enrGrp='${g}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="padding:8px 18px;border:none;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;background:${selGrp===g?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${selGrp===g?'#fff':'var(--text)'}">🏫 الشعبة ${g}</button>`).join('');
       // صندوق مقرر (حسب الحالة)
       const crsBox=(c,selectable)=>{
-        const badge=c.st==='done'?'<span style="font-size:10px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">✓ منتهية</span>':c.st==='current'?'<span style="font-size:10px;background:#6ab8f7;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">▶ حالية</span>':'<span style="font-size:10px;background:var(--muted);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">باقية</span>';
+        const badge=c.st==='done'?'<span style="font-size:10px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">✓ منتهية</span>':c.st==='current'?'<span style="font-size:10px;background:#6ab8f7;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">▶ حالية</span>':`<span style="font-size:10px;background:var(--muted);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">باقية${c.need?` · ${c.need} يحتاجها`:''}</span>`;
         return `<label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;cursor:${selectable?'pointer':'default'};padding:8px;border:1px solid var(--border);border-radius:8px;${!selectable?'opacity:.6':''}">
           <span style="display:flex;align-items:center;gap:8px">${selectable?`<input type="checkbox" class="enr-course-cb" value="${esc(c.code)}|${esc(c.name)}" style="cursor:pointer">`:''}<span><b>${esc(c.code)}</b> · ${esc(c.name)}</span></span>
           ${badge}
@@ -9282,6 +9312,30 @@ const aPgs={
         </div>
         <button class="btn btn-b" style="width:100%;font-size:15px;padding:14px" onclick="enrollBatch()">🔗 تسجيل المحددين دفعة واحدة</button>
       </div>`;
+      // 🔗 قادم من «فحص مادة»: نحدّد المادة وكل متدربي الشعبة بدل ما يفتحها فاضية
+      if(window._enrPre){
+        const pre=window._enrPre; window._enrPre=null;
+        const hit=catCourses.find(c=>sameCourse(c.name,pre.course));
+        setTimeout(()=>{
+          let picked=false;
+          document.querySelectorAll('.enr-course-cb').forEach(cb=>{
+            if(sameCourse(String(cb.value).split('|')[1],pre.course)){cb.checked=true;picked=true;}
+          });
+          if(picked){
+            document.querySelectorAll('.enr-student-cb').forEach(cb=>{cb.checked=true;});
+            const ga=document.getElementById('grpAll'); if(ga)ga.checked=true;
+          }
+          updateEnrCounts();
+          if(!picked){
+            // ما ظهرت في «الباقية» — نقول السبب بدل ما يبحث عنها
+            const why=!hit?'غير موجودة في الخطة الدراسية — أضفها من «الخطة الدراسية» أولاً'
+              :hit.st==='current'?'كل متدربي الشعبة '+selGrp+' مسجّلون فيها حالياً'
+              :hit.st==='done'?'اجتازها كل متدربي الشعبة '+selGrp
+              :'ما فيه متدربون في الشعبة '+selGrp;
+            showToast('ℹ️ «'+pre.course+'» ما هي متاحة للتسجيل: '+why,'w');
+          }
+        },80);
+      }
     }
     return `
     <div class="banner"><div><div class="btitle">📖 إدارة المقررات</div><div class="bsub">الخطة الدراسية وتسجيل المتدربين — يدعم تخصصات متعددة</div></div></div>
