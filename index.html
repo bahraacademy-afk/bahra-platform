@@ -1937,7 +1937,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzEQKmYOKg-xHK292XR9kDD2OzcO0AA44g04RxU7hlObh8YU3wICRg5Wb7THkoV1kNq/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby5V0DCgKPecnvGjSR70fB5aKPlzrSWnBszOrEa1Nv_jZTqoqSkJtAcjAaCVx03mmkM/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -4278,6 +4278,53 @@ function guardOwnerWrite(rows,course){
   return false;
 }
 window.courseOwnersOf=courseOwnersOf;window.courseParticipation=courseParticipation;window.meName=meName;window.guardOwnerWrite=guardOwnerWrite;
+
+/* ============================================================
+ * 📅 التحضير من «الجدول» وحده — وبحدود الشعبة
+ * ------------------------------------------------------------
+ * مصدران لا مصدر واحد: «الجدول» يقول مَن يحضّر أي شعبة، و«سجل المقررات»
+ * يقول مَن يرصد درجاتها. فصاحب المادة لا يحضّر شعبة ليس في جدولها، والمُجدوَل
+ * لا يحضّر إلا شعبته. وشعبة ما أحد مُسند لها في الجدول لا تُحضَّر — لكنها
+ * تُعرض لصاحبها ببطاقة تقول السبب، لا تختفي بصمت.
+ * ============================================================ */
+function grpKey(g){ const d=String(g==null?'':g).replace(/[^0-9]/g,''); return d||String(g==null?'':g).replace(/\s+/g,' ').trim(); }
+// الشُعب المُسندة لهذه المادة في «الجدول» (لأي مدرّب كان)
+function scheduledGroupsOf(courseName){
+  const out=new Set();
+  for(const g in (schedule||{}))
+    for(const sl in (schedule[g]||{})){
+      const v=schedule[g][sl];
+      if(v&&sameCourse(v.course,courseName))out.add(grpKey(g));
+    }
+  return out;
+}
+// شُعبي في هذه المادة حسب «الجدول» (ما أُسند لي أنا)
+function myScheduledGroupsOf(courseName){
+  const me=meName(), out=new Set();
+  for(const g in (schedule||{}))
+    for(const sl in (schedule[g]||{})){
+      const v=schedule[g][sl];
+      if(v&&sameCourse(v.course,courseName)&&nrmName(v.trainer)===me)out.add(grpKey(g));
+    }
+  return out;
+}
+/* شُعب فيها متدربون مسجّلون باسمي في «سجل المقررات» وما أحد مُسند لها في
+   «الجدول» — فلا تحضير لها حتى تُسند. نرجّعها لنقول ذلك صراحة. */
+function myUnscheduledGroups(){
+  const me=meName(), out=new Map();                 // "مادة|شعبة" → {course, code, grp}
+  (students||[]).forEach(s=>{
+    if(!isActive(s.status))return;
+    if(nrmName(s.trainer)!==me)return;              // صفوفي أنا
+    if(isCoopTraining(s.code))return;               // التدريب التعاوني لا يُحضَّر
+    const gk=grpKey(s.grp); if(!gk)return;
+    if(scheduledGroupsOf(s.course).has(gk))return;  // مُسندة لأحد → ليست حالتنا
+    const k=nrmName(s.course)+'|'+gk;
+    if(!out.has(k))out.set(k,{course:s.course,code:s.code||'',grp:s.grp});
+  });
+  return [...out.values()];
+}
+window.grpKey=grpKey;window.scheduledGroupsOf=scheduledGroupsOf;
+window.myScheduledGroupsOf=myScheduledGroupsOf;window.myUnscheduledGroups=myUnscheduledGroups;
 
 function todayCoursesForTrainer(trainerName,dayName){
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -6807,36 +6854,53 @@ const tPgs={
     //    يضمن ظهور المواد المشتركة بين عدة مدربين والمواد غير المجدولة.
     const myName=(currentUser&&(currentUser.name||currentUser.sname))||'';
     const nrmC=c=>String(c||'').replace(/\s+/g,' ').trim();
-    // المواد المجدولة لهذا المدرب بأي يوم (لمعرفة أيها مجدول أصلاً)
-    const myScheduled=new Set();
-    for(const g in schedule){for(const sl in (schedule[g]||{})){const c=schedule[g][sl];if(c&&nrmC(c.trainer)===nrmC(myName))myScheduled.add(nrmC(c.course));}}
-    const _cmap=new Map(); // nrmC(course) → {course, code}
-    // 1) مواد اليوم من الجدول فقط (مراعاة الأيام) — مع استبعاد التدريب التعاوني
-    todayCoursesForTrainer(myName,todayName).forEach(tc=>{ const k=nrmC(tc.course); if(isCoopTraining(tc.code))return; if(!_cmap.has(k))_cmap.set(k,{course:tc.course,code:tc.code||''}); });
-    // 2) مواده غير المجدولة إطلاقاً (المشتركة/غير المجدولة) — بلا تدريب تعاوني.
-    //    myTaughtCourses يجمع صفوفه + ما هو مُجدوَل له، فالمادة المتقاسَمة بين
-    //    عدة مدربين تظهر لكلٍّ منهم لا لصاحب الصفوف وحده.
-    myTaughtCourses().forEach(s=>{
-      const k=nrmC(s.course); if(!k)return;
-      if(isCoopTraining(s.code))return;      // ⛔ التدريب التعاوني ميداني — لا يُحضَّر
-      if(myScheduled.has(k))return;          // مجدولة → تظهر في أيامها فقط (عبر المصدر 1)
-      if(!_cmap.has(k))_cmap.set(k,{course:s.course,code:s.code||''});
+    /* 📅 المصدر الوحيد للتحضير هو «الجدول»: مواد اليوم المُسندة لي، وكل مادة
+       بشُعبها المُسندة لي وحدها. صاحب المادة لا يحضّر شعبة ليست في جدوله،
+       والمُجدوَل لا يحضّر إلا شعبته. (الدرجات شيء آخر — لصاحب المادة.) */
+    const _cmap=new Map(); // nrmC(course) → {course, code, grps:Set}
+    todayCoursesForTrainer(myName,todayName).forEach(tc=>{
+      if(isCoopTraining(tc.code))return;     // ⛔ التدريب التعاوني ميداني — لا يُحضَّر
+      const k=nrmC(tc.course); if(!k)return;
+      const o=_cmap.get(k)||{course:tc.course,code:tc.code||'',grps:new Set(),anyGrp:false};
+      // صف جدول بلا رقم شعبة = كل الشُعب (نفس تسامح الخادم في trainerInSchedule_)
+      (tc.grps||new Set()).forEach(g=>{const gk=grpKey(g); if(gk)o.grps.add(gk); else o.anyGrp=true;});
+      _cmap.set(k,o);
     });
     const todayCourses=[..._cmap.values()];
+    /* 🚧 شُعبي في سجل المقررات التي ما أحد مُسند لها في الجدول: لا تُحضَّر —
+       نقولها صراحة بدل أن تختفي، لأن إخفاءها بلا سبب هو ما أتعبه سابقاً. */
+    const _orphan=myUnscheduledGroups();
+    const orphanCard=_orphan.length?`<div class="ccard cc-y" style="margin-bottom:18px">
+      <div style="font-size:13.5px;font-weight:700;color:var(--acc-y)">🚧 ${_orphan.length} شعبة عندك بلا تحضير — ما أحد مُسند لها في «الجدول»</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.9">
+        ${_orphan.slice(0,6).map(o=>`<div>• <b style="color:var(--text)">${esc(o.course)}</b> — الشعبة ${esc(String(o.grp).replace(/\.0$/,''))}</div>`).join('')}
+        ${_orphan.length>6?`<div>• و${_orphan.length-6} غيرها…</div>`:''}
+        <div style="margin-top:6px">التحضير يتبع «الجدول»: أسند المادة لمدرّب في الجدول ليظهر له تحضيرها.</div>
+      </div>
+      <div style="margin-top:9px">${role==='a'
+        ? `<button class="btn btn-out btn-sm" onclick="showAPage('schedule',document.getElementById('sn-schedule'))">📅 افتح الجدول</button>`
+        : `<span style="font-size:12px;color:var(--muted)">أرسل للإدارة لتُسندها لك في الجدول.</span>`}</div>
+    </div>`:'';
     if(!todayCourses.length){
-      return header+`<div class="alert ab"><span class="aicon">📅</span>تظهر مواد اليوم حسب جدولك + أي مادة تدرّسها غير مجدولة (عدا التدريب التعاوني)</div>
+      return header+orphanCard+`<div class="alert ab"><span class="aicon">📅</span>التحضير يتبع «الجدول» — تظهر لك مواد اليوم المُسندة لك وشُعبها فقط</div>
       <div class="empty"><div class="empty-icon">📭</div>ما عندك مواد للتحضير اليوم (${dayLabel})</div>`;
     }
-    return header+`
+    return header+orphanCard+`
     <div class="alert ab"><span class="aicon">✅</span>مواد اليوم للتحضير — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
     ${todayCourses.map(tc=>{
       const course=tc.course, code=tc.code||'';
+      const myGrps=tc.grps||new Set();       // شُعبي في هذه المادة حسب الجدول
       /* ⚠️ اسم المادة هنا يأتي من «الجدول»، وأسماء المتدربين من «سجل المقررات».
          كانت المقارنة حرفية (===) — فمسافة زائدة أو اختلاف في كتابة الاسم بين
          التبويبين يجعل المادة تظهر في القائمة ولا يُطابقها متدرب واحد، فتطلع
          الصفحة فاضية بلا سبب. نطابق بنفس التوحيد الذي بنينا به القائمة. */
-      const ssAll=uniqStudents(students.filter(s=>nrmC(s.course)===nrmC(course)));
+      /* 🎯 شُعبي وحدها: الجدول يحدد المادة والشعبة معاً. شعبة بلا رقم في الجدول
+         (خانة الشعبة فارغة) تبقى على القديم: كل شُعب المادة. */
+      const _byGrp=s=>tc.anyGrp||!myGrps.size||myGrps.has(grpKey(s.grp))||!grpKey(s.grp);
+      const ssCourse=uniqStudents(students.filter(s=>nrmC(s.course)===nrmC(course)));
+      const ssAll=ssCourse.filter(_byGrp);
       const ssDedup=ssAll.filter(s=>isActive(s.status));
+      const _otherGrps=ssCourse.filter(s=>isActive(s.status)&&!_byGrp(s)).length;
       if(!ssDedup.length){
         // 🔎 بدل صفحة فاضية بلا تفسير: نقول له أين الخلل بالضبط
         const past=ssAll.length-ssDedup.length;
@@ -6847,7 +6911,8 @@ const tPgs={
         return `<div class="ccard cc-y" style="margin-bottom:18px">
           <div style="font-size:14px;font-weight:700;color:var(--acc-y)">📚 ${esc(course)} — ما فيه متدربون للتحضير</div>
           <div style="font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.85">
-            ${past?`فيه <b>${past}</b> متدرب في هذه المادة لكن حالتهم «سابق» — المواد السابقة لا تُحضَّر.`
+            ${_otherGrps?`الجدول يُسندك لـ<b>الشعبة ${esc([...myGrps].join('، '))}</b> من هذه المادة، وفيها <b>صفر</b> متدرب — بينما <b>${_otherGrps}</b> متدرب مسجّلون في شُعب أخرى يحضّرها غيرك.`
+             :past?`فيه <b>${past}</b> متدرب في هذه المادة لكن حالتهم «سابق» — المواد السابقة لا تُحضَّر.`
                  :`المادة مسندة لك في الجدول، لكن ما وصلك أي متدرب مسجّل فيها.`}
             ${similar.length?`<div style="margin-top:6px">⚠️ عندك مادة باسم قريب: <b>${similar.slice(0,2).map(esc).join('، ')}</b> — تأكّد أن الاسم مكتوب بنفس الصيغة في «الجدول» و«سجل المقررات».</div>`:''}
             ${(!past&&!similar.length)?`<div style="margin-top:6px">السبب أحد اثنين: <b>الشعبة التي أُسندت لك في الجدول ما فيها متدربون مسجّلون</b> في هذه المادة، أو هم مسجّلون باسم مدرّب آخر.</div>
@@ -6864,7 +6929,7 @@ const tPgs={
       const dpw=courseDaysPerWeek(course,grp);
       return `<div style="margin-bottom:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
-          <div style="font-size:14px;font-weight:700;color:var(--acc-b)">📚 ${esc(course)} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب)</span>${_shared?`<span class="pill py" style="font-size:10.5px;margin-inline-start:7px" title="أنت مُشارِك في تحضيرها حسب الجدول · صاحب المادة في سجل المقررات: ${escAttr(_owners.join('، '))} — الدرجات عنده">🤝 مُشارِك في التحضير · صاحبها ${esc(_owners[0])}</span>`:''}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--acc-b)">📚 ${esc(course)} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب${myGrps.size?` · شعبة ${esc([...myGrps].join('، '))}`:''})</span>${_shared?`<span class="pill py" style="font-size:10.5px;margin-inline-start:7px" title="التحضير لك حسب الجدول · صاحب المادة في سجل المقررات: ${escAttr(_owners.join('، '))} — الدرجات عنده">🤝 مُشارِك في التحضير · صاحبها ${esc(_owners[0])}</span>`:''}</div>
           ${ssDedup.some(s=>attMarks[amKey(course,s.sid)])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[amKey(course,s.sid)]).length} علامة معلقة</span>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:`ℹ️ المادة غير مجدولة بالكامل — ستُحسب بيوم/أسبوع (${WEEKS_PER_HALF} يوم) · المحروم عند ${Math.ceil(WEEKS_PER_HALF*0.25)} أيام`}</div>
