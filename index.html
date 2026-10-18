@@ -1669,6 +1669,67 @@ body[data-thm] .mob-nav .mni.active{color:var(--thm-acc)}
 .thm-login{text-align:center;font-size:12.5px;font-weight:700;color:var(--thm-acc);margin:-16px 0 14px;letter-spacing:.2px}
 @media(max-width:520px){.thm-ribbon{padding:10px 13px}.thm-ribbon .thm-txt{font-size:13px}}
 </style>
+
+<style id="mobile-fit">
+/* ============================================================
+   📱 ملاءمة الجوال
+   ------------------------------------------------------------
+   كل قاعدة هنا جاءت من قياس على مقاس الآيفون (٣٩٠×٨٤٤) لا من تقدير:
+   أهداف لمس أصغر من ٤٤px · حقول معلومات تأكل الشاشة · نصوص ٨–١٠px
+   · أزرار ينكسر نصّها · نافذة تُزاح لأن عنصراً خرج منها.
+   ============================================================ */
+
+/* ① شبكة اللمس: ٤٤px هو الحد الذي توصي به آبل وجوجل معاً */
+@media(hover:none),(max-width:860px){
+  .modal-close{width:40px;height:40px;min-width:40px;display:inline-flex;align-items:center;
+    justify-content:center;border-radius:11px;font-size:17px;flex-shrink:0}
+  .modal-close:active{background:var(--card2-soft)}
+  .btn-sm{min-height:40px!important}
+  /* مربّعات الاختيار كانت ١٣–٢٤px — أصغر من أن تُصاب بالإبهام */
+  input[type=checkbox],input[type=radio]{width:21px;height:21px;flex-shrink:0}
+  /* وتسميتها تصير هي الهدف: ضغطة في أي مكان من السطر تكفي */
+  label:has(> input[type=checkbox]),label:has(> input[type=radio]){min-height:40px;padding:4px 0}
+}
+
+/* ② النافذة تملأ الشاشة على الجوال بدل هوامش تضيّقها */
+@media(max-width:520px){
+  .modal-overlay{padding:10px;align-items:flex-start}
+  .modal{padding:18px 16px;max-width:none;max-height:calc(100dvh - 20px);border-radius:18px}
+  .modal-title{font-size:16px;margin-bottom:13px;padding-bottom:11px;gap:10px}
+  /* 🛡️ شبكة أمان: لو بقي عنصر شقيقاً للبطاقة بالخطأ، لا يزاحمها ويزيحها
+     خارج الشاشة — يصطفّ تحتها بعرضها. */
+  .modal-overlay{flex-wrap:wrap}
+  .modal-overlay>*:not(.modal){flex:1 0 100%;max-width:100%}
+}
+
+/* ③ حقول المعلومات: أربع بطاقات طويلة تأكل شاشة كاملة لعرض أربعة أرقام.
+   على الجوال تصير سطراً واحداً: التسمية يمين والقيمة يسار. */
+@media(max-width:560px){
+  .igrid{grid-template-columns:1fr;gap:8px;margin-bottom:16px}
+  .iitem{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-radius:11px}
+  .iitem .ilbl{margin-bottom:0;text-transform:none;letter-spacing:0;font-size:12px;flex-shrink:0}
+  .iitem .ival{font-size:14.5px;font-weight:700;text-align:left;min-width:0;overflow-wrap:anywhere}
+}
+
+/* ④ أزرار متجاورة داخل النوافذ: تحت ٤٠٠px تتكدّس بدل أن ينكسر نصّها */
+@media(max-width:400px){
+  .modal .btn-eq{grid-auto-flow:row;grid-auto-columns:auto}
+  .modal .btn-row{flex-direction:column;align-items:stretch}
+  .modal .btn-row>.btn{width:100%}
+}
+
+/* ⑤ أصغر خط مقروء على الجوال ١١px — كان ينزل إلى ٨px في الجدول والشارات.
+   نرفع الأرضية داخل المنصة فقط (شاشات الطباعة تبقى بأحجامها). */
+@media(max-width:860px){
+  .sch-time,.sch-pal-meta,.sch-pal-count,.sch-break-col{font-size:11px!important}
+  .sch-wrap,.sch-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  #appShell [style*="font-size:8px"],
+  #appShell [style*="font-size:9px"],
+  #appShell [style*="font-size:10px"]{font-size:11px!important}
+  #appShell small{font-size:11px}
+  #appShell .pill{font-size:11px}
+}
+</style>
 </head>
 <body>
 
@@ -1876,7 +1937,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwUAnJzif-xzTcwVdhcjJGfiTluUPSijzxrSrjeqLZ19FCWRLFXZGr06PQ09rp907pV/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxl16udHXX0Fm_HjA2aeaZbuFidakSCfSBUQG2VuQVgmau1GWVwhyRvw8VnYkZyHUET/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -4145,6 +4206,47 @@ function pctToAbsDays(pct,course,grp){
   return Math.round(pct/100*total*2)/2; // تقريب لأقرب نص يوم
 }
 // ما هي مواد اليوم (حسب الجدول) لمدرب معيّن — تُرجع المواد التي لها حصة اليوم
+/* ============================================================
+ * 👨‍🏫 المواد التي يدرّسها المدرب — مصدران لا مصدر واحد
+ * ------------------------------------------------------------
+ * «سجل المقررات» يحمل مدرّباً واحداً لكل صف متدرب. فإن تقاسم ثلاثة
+ * مدربين مادة واحدة (مثل «مشروع»)، ظهرت لصاحب الصفوف وحده واختفت عن
+ * الاثنين الآخرين — فلا تحضير ولا رصد، مع أنهم يدرّسونها فعلاً.
+ * و«الجدول» يحمل مدرّب كل شعبة، والخادم يصرّح للمُجدوَل أصلاً. فنجمع
+ * المصدرين: صفوفه + ما هو مُجدوَل لتدريسه.
+ * ============================================================ */
+function myTaughtCourses(){
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const me=nrm((currentUser&&(currentUser.name||currentUser.sname))||(user&&user.name)||'');
+  const map=new Map();                       // nrm(المادة) → {course, code, viaSchedule}
+  (students||[]).filter(s=>isActive(s.status)).forEach(s=>{
+    const k=nrm(s.course); if(!k)return;
+    if(!map.has(k))map.set(k,{course:s.course,code:s.code||'',viaSchedule:false});
+  });
+  for(const g in (schedule||{})){
+    for(const sl in (schedule[g]||{})){
+      const c=schedule[g][sl]; if(!c||nrm(c.trainer)!==me)continue;
+      const k=nrm(c.course); if(!k)continue;
+      if(!map.has(k))map.set(k,{course:c.course,code:c.code||'',viaSchedule:true});
+    }
+  }
+  return [...map.values()];
+}
+/* الشُعب التي يدرّسها — من صفوفه ومن الجدول معاً */
+function myTaughtGroups(){
+  const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
+  const me=nrm((currentUser&&(currentUser.name||currentUser.sname))||(user&&user.name)||'');
+  const set=new Set();
+  (students||[]).filter(s=>isActive(s.status)).forEach(s=>{ if(s.grp)set.add(String(s.grp)); });
+  for(const g in (schedule||{})){
+    for(const sl in (schedule[g]||{})){
+      const c=schedule[g][sl]; if(c&&nrm(c.trainer)===me&&g)set.add(String(g));
+    }
+  }
+  return [...set].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+}
+window.myTaughtCourses=myTaughtCourses;window.myTaughtGroups=myTaughtGroups;
+
 function todayCoursesForTrainer(trainerName,dayName){
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   const found=new Map(); // course → {course, grps:Set}
@@ -5093,9 +5195,38 @@ function gradeToGPA(g){
 function completedCourses(list){return (list||[]).filter(c=>!isActive(c.status));}
 function hasCompleted(list){return completedCourses(list).length>0;}
 // متوسط الدرجات من المكتملة فقط (رقم، 0 لو ما فيه مكتمل)
-function avgPct(list){const d=completedCourses(list);if(!d.length)return 0;return Math.round(d.reduce((a,c)=>a+c.pct,0)/d.length);}
+/* ⚠️ كان يحسب من «المواد المكتملة» فقط. والمعهد في منتصف الترم تكون كل
+   مواده «حالي» — فلا مكتمل أصلاً، فيرجع صفراً، فتظهر «متوسط الدرجات ٠٪»
+   في كل الشاشات بينما الدرجات مرصودة فعلاً. صار يحسب من كل مادة رُصدت
+   درجتها، حالية كانت أو سابقة. (المعدّل التراكمي gpaFrom يبقى على
+   المكتملة وحدها — هذا هو العرف الأكاديمي الصحيح.) */
+function avgPct(list){ return avgScoredNum(list); }
+/* ============================================================
+ * 📊 تعريف واحد لـ«المتوسط»
+ * ------------------------------------------------------------
+ * كان المتوسط يُحسب بطريقتين مختلفتين في المنصة:
+ *   • avgPct → المواد المكتملة فقط، فيتجاهل الترم الحالي كله.
+ *   • متوسط خام في ٢٠ موضعاً → يقسم على كل الصفوف، فمادة لم تُرصد
+ *     درجتها بعد تدخل في الحساب كأنها صفر وتسحب المتوسط لأسفل.
+ * لذلك ظهر مدرّب متوسطه ٣٨٪ ومواده المعروضة ٨٢٪ و٨٦٪ و٤١٪.
+ * القاعدة الآن: يُحسب المتوسط من المواد التي **رُصدت** درجتها فقط —
+ * حالية كانت أو سابقة — وما لم يُرصد لا يُحسب صفراً بل يُستثنى،
+ * وإن لم يُرصد شيء تُعرض «—» لا «٠٪».
+ * ============================================================ */
+const isScored=c=>(parseFloat(c&&c.pct)||0)>0;
+function scoredOf(list){return (list||[]).filter(isScored);}
+function scoredCount(list){return scoredOf(list).length;}
+function avgScored(list){
+  const d=scoredOf(list);
+  if(!d.length)return null;                       // لا شيء مرصود — ليس صفراً
+  return Math.round(d.reduce((a,c)=>a+(parseFloat(c.pct)||0),0)/d.length);
+}
+function avgScoredNum(list){const v=avgScored(list);return v===null?0:v;}   // للأشرطة والترتيب
+function avgScoredTxt(list){const v=avgScored(list);return v===null?'—':v+'%';}
+window.isScored=isScored;window.avgScored=avgScored;window.avgScoredTxt=avgScoredTxt;
+window.avgScoredNum=avgScoredNum;window.scoredCount=scoredCount;
 // متوسط الدرجات للعرض (يظهر — لو ما فيه مواد مكتملة)
-function avgPctDisplay(list){const d=completedCourses(list);return d.length?Math.round(d.reduce((a,c)=>a+c.pct,0)/d.length)+'%':'—';}
+function avgPctDisplay(list){ return avgScoredTxt(list); }   // «—» حين لا شيء مرصود، لا «٠٪»
 
 function gpaFrom(list){
   const done=completedCourses(list); // المواد المكتملة فقط
@@ -6213,8 +6344,8 @@ function lessonCard(lp,showTrainer,canDelete){
     </div></div>`;
 }
 function lessonFormPage(){
-  const myCourses=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.course).filter(Boolean))];
-  const myGrps=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.grp).filter(Boolean))].sort();
+  const myCourses=myTaughtCourses().map(x=>x.course);
+  const myGrps=myTaughtGroups();
   const t=new Date(),pad=n=>String(n).padStart(2,'0');
   const dv=t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());
   const mine=lessonPreps;
@@ -6550,7 +6681,7 @@ const tPgs={
   },
   home:()=>{
     const crs=[...new Set(students.map(s=>s.course))];
-    const avg=students.length?Math.round(students.reduce((a,s)=>a+s.pct,0)/students.length):0;
+    const avg=avgScoredNum(students);
     const warns=students.filter(hasIssue).length;
     // تحديد حالة المقرر: حالي إذا فيه ولو متدرب واحد حالته "حالي"
     const courseStatus=course=>{
@@ -6561,7 +6692,7 @@ const tPgs={
     const pastCrs=crs.filter(c=>courseStatus(c)!=='حالي');
     const courseCard=(course,faded)=>{
       const ss=uniqStudents(students.filter(s=>s.course===course));
-      const a=Math.round(ss.reduce((x,s)=>x+s.pct,0)/ss.length);
+      const a=avgScoredNum(ss);
       const grpCount=new Set(ss.map(s=>s.grp)).size;
       return `<div class="ccard ${faded?'cc-b':'cc-g'}" onclick="showTrainerCourseDetail('${jsq(course)}')" style="cursor:pointer${faded?';opacity:.6':''}">
         <div class="cc-top"><div><div class="cc-name">${course}</div><div class="cc-meta">${ss.length} متدرب · ${grpCount>1?grpCount+' شعب · ':''}${ss[0]?.code||''}</div></div><span class="pill ${pillClass(a)}">${a}%</span></div>
@@ -6650,8 +6781,10 @@ const tPgs={
     const _cmap=new Map(); // nrmC(course) → {course, code}
     // 1) مواد اليوم من الجدول فقط (مراعاة الأيام) — مع استبعاد التدريب التعاوني
     todayCoursesForTrainer(myName,todayName).forEach(tc=>{ const k=nrmC(tc.course); if(isCoopTraining(tc.code))return; if(!_cmap.has(k))_cmap.set(k,{course:tc.course,code:tc.code||''}); });
-    // 2) مواد المدرب من سجل المقررات التي ليست مجدولة إطلاقاً (المشتركة/غير المجدولة) — بلا تدريب تعاوني
-    uniqStudents(students.filter(s=>isActive(s.status))).forEach(s=>{
+    // 2) مواده غير المجدولة إطلاقاً (المشتركة/غير المجدولة) — بلا تدريب تعاوني.
+    //    myTaughtCourses يجمع صفوفه + ما هو مُجدوَل له، فالمادة المتقاسَمة بين
+    //    عدة مدربين تظهر لكلٍّ منهم لا لصاحب الصفوف وحده.
+    myTaughtCourses().forEach(s=>{
       const k=nrmC(s.course); if(!k)return;
       if(isCoopTraining(s.code))return;      // ⛔ التدريب التعاوني ميداني — لا يُحضَّر
       if(myScheduled.has(k))return;          // مجدولة → تظهر في أيامها فقط (عبر المصدر 1)
@@ -7453,7 +7586,7 @@ function courseModal(mode,data){
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصصات (يمكن أكثر من تخصص)</label>
         <div id="crsSpecChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
         <input id="crs_specInput" placeholder="اكتب تخصص واضغط Enter لإضافته" onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();crsAddSpec(this.value);this.value='';}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
-        ${suggestions.length?`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${suggestions.map(sp=>`<button type="button" onclick="crsAddSpec('${jsq(sp)}')" style="background:rgba(106,184,247,.12);color:var(--acc-b);border:1px solid rgba(106,184,247,.3);border-radius:14px;padding:4px 12px;font-size:11px;cursor:pointer">+ ${sp}</button>`).join('')}</div>`:''}
+        ${suggestions.length?`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${suggestions.map(sp=>`<button type="button" onclick="crsAddSpec('${jsq(sp)}')" style="background:rgba(106,184,247,.12);color:var(--acc-b);border:1px solid rgba(106,184,247,.3);border-radius:16px;padding:9px 14px;font-size:12.5px;min-height:38px;cursor:pointer">+ ${sp}</button>`).join('')}</div>`:''}
         <div style="font-size:11px;color:var(--muted);margin-top:6px">💡 اتركها فارغة = المقرر يصلح لكل التخصصات</div>
       </div>
       <div style="margin-bottom:12px">
@@ -9260,7 +9393,7 @@ const aPgs={
       <thead><tr><th>المقرر</th><th>الرمز</th><th>المدرب</th><th>الشعب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>متوسط الغياب</th><th>محرومون</th></tr></thead>
       <tbody>${courses.map(c=>{
         const n=c.students.length;
-        const avg=Math.round(c.students.reduce((a,s)=>a+s.pct,0)/n);
+        const avg=avgScoredNum(c.students);
         const avgAbs=Math.round(c.students.reduce((a,s)=>a+(s.abs||0),0)/n);
         const banned=c.students.filter(s=>(s.abs||0)>=25).length;
         const grpsLbl=[...c.grps].sort().join('، ');
@@ -9501,9 +9634,9 @@ const aPgs={
     const old=allTrainers.filter(t=>!isCurrentTrainer(t));
     const rowFor=(t,faded)=>{
       const tc=allCourses.filter(c=>c.trainer===t);
-      const ta=avgPct(tc);
+      const ta=avgScored(tc), tn=scoredCount(tc);
       const tw=tc.filter(hasIssue).length;
-      return `<tr onclick="showTrainerDetail('${jsq(t)}')" style="cursor:pointer${faded?';opacity:.6':''}"><td>${esc(t)}${faded?' <span style="font-size:10px;color:var(--muted)">(سابق)</span>':''}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td><span class="pill ${pillClass(ta)}">${ta}%</span></td><td>${tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>'}</td></tr>`;
+      return `<tr onclick="showTrainerDetail('${jsq(t)}')" style="cursor:pointer${faded?';opacity:.6':''}"><td>${esc(t)}${faded?' <span style="font-size:10px;color:var(--muted)">(سابق)</span>':''}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td>${ta===null?'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)" title="ما رُصدت أي درجة بعد">—</span>':`<span class="pill ${pillClass(ta)}" title="محسوب من ${tn} مادة مرصودة من ${tc.length}">${ta}%</span>`}</td><td>${tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>'}</td></tr>`;
     };
     return `<div class="stitle">تقارير الأداء الأكاديمي</div>
     <div class="alert ab"><span class="aicon">👆</span>اضغط على أي بطاقة أو صف لعرض التفاصيل الكاملة</div>
@@ -10822,7 +10955,7 @@ function showRepDetail(kind){
     let html='<div style="font-size:13px;color:var(--muted);margin-bottom:12px">متوسط الدرجات لكل شعبة:</div>';
     grps.forEach(g=>{
       const gc=allCourses.filter(c=>students.filter(s=>s.grp===g).map(s=>s.id).includes(c.sid));
-      const a=gc.length?Math.round(gc.reduce((x,c)=>x+c.pct,0)/gc.length):0;
+      const a=avgScoredNum(gc);
       html+=detailRow('الشعبة '+g,a+'%',a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)');
     });
     showDetail('متوسط الأداء العام','📊',html);
@@ -10839,7 +10972,7 @@ function showRepDetail(kind){
     let html='<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المدربون الفعّالون (لهم حسابات دخول):</div>';
     trainers.forEach(t=>{
       const tc=allCourses.filter(c=>c.trainer===t);
-      const a=tc.length?Math.round(tc.reduce((x,c)=>x+c.pct,0)/tc.length):0;
+      const a=avgScoredNum(tc);
       html+=`<div onclick="document.getElementById('detailModal').remove();showTrainerDetail('${jsq(t)}')" style="cursor:pointer">${detailRow(t,a+'% · '+[...new Set(tc.map(c=>c.sid))].length+' متدرب',a>=70?'var(--green)':'var(--gold)')}</div>`;
     });
     if(!trainers.length)html+='<div class="alert ab"><span class="aicon">ℹ️</span>لا يوجد مدربون لهم حسابات دخول بعد</div>';
@@ -10882,7 +11015,7 @@ function showOverallStat(kind){
   } else if(kind==='courses'){
     const cs=[...new Set(allCourses.map(c=>c.course))];
     let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">المقررات (${cs.length}):</div>`;
-    cs.forEach(co=>{const cc=allCourses.filter(c=>c.course===co);const a=Math.round(cc.reduce((x,c)=>x+c.pct,0)/cc.length);html+=detailRow(esc(co)+' ('+[...new Set(cc.map(c=>c.sid))].length+' متدرب)',a+'%',a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)');});
+    cs.forEach(co=>{const cc=allCourses.filter(c=>c.course===co);const a=avgScoredNum(cc);html+=detailRow(esc(co)+' ('+[...new Set(cc.map(c=>c.sid))].length+' متدرب)',a+'%',a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)');});
     showDetail('المقررات','📚',html);
   } else if(kind==='trainers'){ showRepDetail('trainers'); }
   else if(kind==='sections'){
@@ -10953,7 +11086,7 @@ function showNotifStat(kind){
 // تفاصيل أداء مدرب
 function showTrainerDetail(t){
   const tc=allCourses.filter(c=>c.trainer===t);
-  const a=tc.length?Math.round(tc.reduce((x,c)=>x+c.pct,0)/tc.length):0;
+  const a=avgScoredNum(tc);
   const courses=[...new Set(tc.map(c=>c.course))];
   window._trName=t; window._trCourses=courses; // للتنقّل في التفاصيل
   const studCount=[...new Set(tc.map(c=>c.sid))].length;
@@ -10967,7 +11100,7 @@ function showTrainerDetail(t){
   <div style="font-size:13px;color:var(--muted);margin-bottom:8px">المقررات (اضغط لعرض متدربي المقرر):</div>`;
   courses.forEach((co,i)=>{
     const cc=tc.filter(c=>c.course===co);
-    const ca=Math.round(cc.reduce((x,c)=>x+c.pct,0)/cc.length);
+    const ca=avgScoredNum(cc);
     html+=`<div onclick="showTrainerCourseStudents(${i})" style="cursor:pointer">${detailRow(esc(co)+' ('+cc.length+' متدرب)',ca+'%',ca>=70?'var(--green)':ca>=60?'var(--gold)':'var(--red)')}</div>`;
   });
   showDetail('المدرب: '+t,'👨‍🏫',html);
@@ -10981,14 +11114,14 @@ function showTrainerSub(kind){
   const back=`<div onclick="backToTrainer()" style="cursor:pointer;color:var(--acc-b);font-size:13px;margin-bottom:12px">← رجوع لبطاقة المدرب</div>`;
   if(kind==='students'){
     const ids=[...new Set(tc.map(c=>c.sid))];
-    const rows=ids.map(id=>{const sc=tc.filter(c=>c.sid===id);return {sc,a:Math.round(sc.reduce((x,c)=>x+c.pct,0)/sc.length)};}).sort((x,y)=>y.a-x.a);
+    const rows=ids.map(id=>{const sc=tc.filter(c=>c.sid===id);return {sc,a:avgScoredNum(sc)};}).sort((x,y)=>y.a-x.a);
     let html=back+`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">متدربو ${esc(t)} (${ids.length}):</div>`;
     rows.forEach(o=>{const nm=o.sc[0].sname||o.sc[0].name||o.sc[0].sid;html+=detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(o.sc[0].grp||'—'),o.sc.length+' مقرر · '+o.a+'%',o.a>=70?'var(--green)':o.a>=60?'var(--gold)':'var(--red)');});
     showDetail('متدربو '+t,'👥',html);
   } else if(kind==='courses'||kind==='avg'){
     const courses=window._trCourses||[...new Set(tc.map(c=>c.course))];
     let html=back+`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">مقررات ${esc(t)} (${courses.length}) — اضغط لعرض المتدربين:</div>`;
-    courses.forEach((co,i)=>{const cc=tc.filter(c=>c.course===co);const ca=Math.round(cc.reduce((x,c)=>x+c.pct,0)/cc.length);
+    courses.forEach((co,i)=>{const cc=tc.filter(c=>c.course===co);const ca=avgScoredNum(cc);
       html+=`<div onclick="showTrainerCourseStudents(${i})" style="cursor:pointer">${detailRow(esc(co)+' ('+cc.length+' متدرب)',ca+'%',ca>=70?'var(--green)':ca>=60?'var(--gold)':'var(--red)')}</div>`;});
     showDetail((kind==='avg'?'متوسط درجات ':'مقررات ')+t,'📚',html);
   } else if(kind==='alerts'){
@@ -11020,7 +11153,7 @@ function showTrainerCourseDetail(course){
   const prereq=cat?cat.prereq:'';
   // تجميع حسب الشعبة
   const grps=[...new Set(recs.map(s=>s.grp||'—'))].sort();
-  const overallAvg=Math.round(recs.reduce((x,s)=>x+s.pct,0)/recs.length);
+  const overallAvg=avgScoredNum(recs);
   let html=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
     <span style="background:rgba(106,184,247,.12);color:var(--acc-b);border-radius:10px;padding:4px 12px;font-size:12px;font-weight:700">${esc(code)}</span>
     <span style="background:rgba(46,204,113,.12);color:var(--acc-g);border-radius:10px;padding:4px 12px;font-size:12px;font-weight:700">${recs.length} متدرب · ${grps.length} شعبة</span>
@@ -11030,7 +11163,7 @@ function showTrainerCourseDetail(course){
   // كل شعبة على حدة
   grps.forEach(g=>{
     const gs=recs.filter(s=>(s.grp||'—')===g).slice().sort((a,b)=>b.pct-a.pct);
-    const ga=Math.round(gs.reduce((x,s)=>x+s.pct,0)/gs.length);
+    const ga=avgScoredNum(gs);
     const gset=ga>=70?{c:'var(--acc-g)',t:'rgba(46,204,113,.15)'}
              :ga>=60?{c:'var(--acc-y)',t:'rgba(244,199,138,.15)'}
                     :{c:'var(--acc-r)',t:'rgba(231,76,60,.15)'};
@@ -11060,12 +11193,12 @@ function showTrainerStat(kind){
   }else if(kind==='current'){
     const cur=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.course))];
     let html=cur.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:10px">المقررات الحالية:</div>':'<div class="alert ab">لا توجد مقررات حالية</div>';
-    cur.forEach(co=>{const cc=students.filter(s=>s.course===co);const a=Math.round(cc.reduce((x,s)=>x+s.pct,0)/cc.length);html+=detailRow(co,cc.length+' متدرب · '+a+'%',a>=70?'var(--green)':'var(--gold)');});
+    cur.forEach(co=>{const cc=students.filter(s=>s.course===co);const a=avgScoredNum(cc);html+=detailRow(co,cc.length+' متدرب · '+a+'%',a>=70?'var(--green)':'var(--gold)');});
     showDetail('المقررات الحالية','🟢',html);
   }else if(kind==='avg'){
     const crs=[...new Set(students.map(s=>s.course))];
     let html='<div style="font-size:13px;color:var(--muted);margin-bottom:10px">متوسط الدرجات لكل مقرر:</div>';
-    crs.forEach(co=>{const cc=students.filter(s=>s.course===co);const a=Math.round(cc.reduce((x,s)=>x+s.pct,0)/cc.length);html+=detailRow(co,a+'%',a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)');});
+    crs.forEach(co=>{const cc=students.filter(s=>s.course===co);const a=avgScoredNum(cc);html+=detailRow(co,a+'%',a>=70?'var(--green)':a>=60?'var(--gold)':'var(--red)');});
     showDetail('متوسط الدرجات','📊',html);
   }else if(kind==='alerts'){
     const iss=students.filter(hasIssue);
@@ -11111,13 +11244,13 @@ function printAcademicReport(){
   const secRows=grps.map(g=>{
     const gs=students.filter(s=>s.grp===g);
     const gc=allCourses.filter(c=>gs.map(s=>s.id).includes(c.sid));
-    const a=gc.length?Math.round(gc.reduce((x,c)=>x+c.pct,0)/gc.length):0;
+    const a=avgScoredNum(gc);
     const pass=gc.length?Math.round(gc.filter(c=>c.pct>=60).length/gc.length*100):0;
     return `<tr><td>الشعبة ${g}</td><td>${gs.length}</td><td>${a}%</td><td>${pass}%</td><td>${gc.filter(c=>c.abs>=25).length}</td></tr>`;
   }).join('');
   const trRows=trainers.map(t=>{
     const tc=allCourses.filter(c=>c.trainer===t);
-    const a=tc.length?Math.round(tc.reduce((x,c)=>x+c.pct,0)/tc.length):0;
+    const a=avgScoredNum(tc);
     return `<tr><td>${t}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td>${[...new Set(tc.map(c=>c.course))].length}</td><td>${a}%</td><td>${tc.filter(hasIssue).length}</td></tr>`;
   }).join('');
   const html=`<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>تقرير الأداء الأكاديمي</title>
@@ -11904,11 +12037,11 @@ function showStudentDetail(sid){
   overlay.innerHTML=`
     <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto">
       <div class="modal-title">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div class="av av-s" style="width:44px;height:44px;font-size:16px">${esc(st.name.split(' ').slice(0,2).map(w=>w[0]).join(''))}</div>
-          <div>
-            <div style="font-size:16px;font-weight:700">${esc(st.name)}</div>
-            <div style="font-size:12px;color:var(--muted);font-weight:400">الشعبة ${esc(st.grp)} · ${esc(st.spec)}</div>
+        <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
+          <div class="av av-s" style="width:44px;height:44px;font-size:16px;flex-shrink:0">${esc(st.name.split(' ').slice(0,2).map(w=>w[0]).join(''))}</div>
+          <div style="min-width:0">
+            <div style="font-size:15.5px;font-weight:700;line-height:1.45">${esc(st.name)}</div>
+            <div style="font-size:12px;color:var(--muted);font-weight:400;line-height:1.5">الشعبة ${esc(st.grp)} · ${esc(st.spec)}</div>
           </div>
         </div>
         <button class="modal-close" onclick="document.getElementById('studentModal').remove()">✕</button>
@@ -11934,7 +12067,7 @@ function showStudentDetail(sid){
           <a href="${st.cert}" target="_blank" class="btn btn-g btn-sm" style="text-decoration:none;flex:1;text-align:center">🔗 فتح الشهادة</a>
           <button class="btn btn-b btn-sm" onclick="navigator.clipboard.writeText('${jsq(st.cert)}').then(()=>showToast('تم نسخ الرابط','s'))" style="flex:1">📋 نسخ الرابط</button>
         </div>
-        <div style="padding:10px 12px;background:rgba(255,255,255,.04);border-radius:8px;font-size:11px;color:var(--muted);word-break:break-all">${st.cert}</div>
+        <div title="${escAttr(st.cert)}" style="padding:9px 12px;background:var(--card2-soft);border-radius:8px;font-size:11.5px;color:var(--muted);direction:ltr;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.cert)}</div>
         `:''}
       </div>
       
@@ -11953,8 +12086,8 @@ function showStudentDetail(sid){
           </div>
         </div>`;
       }).join(''):'<div class="empty">لا توجد مقررات</div>'}
+      <button class="btn btn-b" style="width:100%;margin-top:16px" onclick="printStudentReport('${jsq(sid)}')">🖨️ اطبع كشف الطالب الكامل</button>
     </div>
-    <div class="btn-row" style="margin-top:16px"><button class="btn btn-b" onclick="printStudentReport('${jsq(sid)}')">🖨️ اطبع كشف الطالب الكامل</button></div>
   `;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{ if(e.target===overlay) overlay.remove(); });
@@ -12965,8 +13098,8 @@ document.addEventListener('click', function(e){
         <button class="modal-close" onclick="document.getElementById('trainersModal').remove()">✕</button></div>
         ${trainerNames.map(t=>{
           const tc=allCourses.filter(c=>c.trainer===t);
-          const ta=avgPct(tc);
-          return `<div class="iitem" style="margin-bottom:8px"><div class="ilbl">${t}</div><div class="ival">${tc.length} مقرر · متوسط ${ta}%</div></div>`;
+          const ta=avgScoredTxt(tc), tn=scoredCount(tc);
+          return `<div class="iitem" style="margin-bottom:8px"><div class="ilbl">${esc(t)}</div><div class="ival">${tc.length} مقرر · متوسط ${ta}${tn&&tn<tc.length?` <span style="font-size:11px;color:var(--muted);font-weight:400">(من ${tn} مرصودة)</span>`:''}</div></div>`;
         }).join('')}
       </div>`;
       document.body.appendChild(overlay);
