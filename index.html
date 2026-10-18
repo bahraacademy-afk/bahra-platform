@@ -6685,7 +6685,7 @@ const tPgs={
     const warns=students.filter(hasIssue).length;
     // تحديد حالة المقرر: حالي إذا فيه ولو متدرب واحد حالته "حالي"
     const courseStatus=course=>{
-      const ss=students.filter(s=>s.course===course);
+      const ss=students.filter(s=>sameCourse(s.course,course));
       return ss.some(s=>isActive(s.status))?'حالي':(ss.some(s=>(String(s.status||'').replace(/\s+/g,'')==='مستقبلي'))?'مستقبلي':'سابق');
     };
     const currentCrs=crs.filter(c=>courseStatus(c)==='حالي');
@@ -6799,9 +6799,28 @@ const tPgs={
     <div class="alert ab"><span class="aicon">✅</span>مواد اليوم للتحضير — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
     ${todayCourses.map(tc=>{
       const course=tc.course, code=tc.code||'';
-      // كل متدربي هذا المدرب في هذه المادة (كل الشُعب) — students يحتوي متدربيه فقط
-      const ssDedup=uniqStudents(students.filter(s=>s.course===course&&isActive(s.status)));
-      if(!ssDedup.length)return '';
+      /* ⚠️ اسم المادة هنا يأتي من «الجدول»، وأسماء المتدربين من «سجل المقررات».
+         كانت المقارنة حرفية (===) — فمسافة زائدة أو اختلاف في كتابة الاسم بين
+         التبويبين يجعل المادة تظهر في القائمة ولا يُطابقها متدرب واحد، فتطلع
+         الصفحة فاضية بلا سبب. نطابق بنفس التوحيد الذي بنينا به القائمة. */
+      const ssAll=uniqStudents(students.filter(s=>nrmC(s.course)===nrmC(course)));
+      const ssDedup=ssAll.filter(s=>isActive(s.status));
+      if(!ssDedup.length){
+        // 🔎 بدل صفحة فاضية بلا تفسير: نقول له أين الخلل بالضبط
+        const past=ssAll.length-ssDedup.length;
+        const near=uniqStudents((students||[]).filter(s=>isActive(s.status)))
+          .map(s=>s.course).filter(Boolean);
+        const similar=[...new Set(near)].filter(c=>nrmC(c)!==nrmC(course)&&
+          (nrmC(c).indexOf(nrmC(course))>-1||nrmC(course).indexOf(nrmC(c))>-1));
+        return `<div class="ccard cc-y" style="margin-bottom:18px">
+          <div style="font-size:14px;font-weight:700;color:var(--acc-y)">📚 ${esc(course)} — ما فيه متدربون للتحضير</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.85">
+            ${past?`فيه <b>${past}</b> متدرب في هذه المادة لكن حالتهم «سابق» — المواد السابقة لا تُحضَّر.`
+                 :`المادة مسندة لك في الجدول، لكن ما وصلك أي متدرب مسجّل فيها.`}
+            ${similar.length?`<div style="margin-top:6px">⚠️ عندك مادة باسم قريب: <b>${similar.slice(0,2).map(esc).join('، ')}</b> — تأكّد أن الاسم مكتوب بنفس الصيغة في «الجدول» و«سجل المقررات».</div>`:''}
+            ${(!past&&!similar.length)?`<div style="margin-top:6px">تأكّد من: تسجيل المتدربين في المادة من «إدارة المقررات»، وأن اسمك مسند لهذه الشعبة في «الجدول».</div>`:''}
+          </div></div>`;
+      }
       const grp=ssDedup[0]?.grp||'';
       const totalDays=courseTotalDays(course,grp);
       const dpw=courseDaysPerWeek(course,grp);
@@ -6837,7 +6856,7 @@ const tPgs={
     <div class="stitle">رصد الدرجات والتقييم</div>
     <div class="alert ab"><span class="aicon">📝</span>رصد درجات <strong style="margin:0 4px">المقررات الحالية</strong> فقط</div>
     ${crs.length?crs.map(course=>{
-      const ss=students.filter(s=>s.course===course&&isActive(s.status));
+      const ss=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
       if(!ss.length)return '';
       const code=ss[0]?.code||'';
       const rub=rubricFor(code);
@@ -6952,8 +6971,12 @@ function setMark(course,sid,mark){
   ['present','late','absent'].forEach(k=>{const b=document.getElementById(idb+'-'+k);if(b)b.classList.remove('on');});
   const b=document.getElementById(idb+'-'+mark);if(b)b.classList.add('on');
 }
+/* اسم المادة قد يأتي من «الجدول» أو من «سجل المقررات»، وقد يختلف بمسافة
+   أو بهمزة. كل ما يصله اسم مادة من الخارج يطابق به لا بـ===. */
+function sameCourse(a,b){ return _nk(a)===_nk(b) || String(a||'').replace(/\s+/g,' ').trim()===String(b||'').replace(/\s+/g,' ').trim(); }
+window.sameCourse=sameCourse;
 function markAll(course,mark){
-  uniqStudents(students.filter(s=>s.course===course&&isActive(s.status))).forEach(s=>setMark(course,s.sid,mark));
+  uniqStudents(students.filter(s=>sameCourse(s.course,course)&&isActive(s.status))).forEach(s=>setMark(course,s.sid,mark));
 }
 // مسح علامات مادة واحدة فقط (لا يمس علامات المواد الأخرى المعلّقة)
 function clearMarks(course){
@@ -6980,7 +7003,7 @@ async function saveSession(course,code,sessionHrs){
     showToast('⚠️ المادة مالها ساعات بالقاعدة — استُخدم تقدير افتراضي','w');
   }
   // كل سجلات الطلاب الحاليين بهذه المادة (تشمل الشعب المتعددة)
-  const allRecs=students.filter(s=>s.course===course&&isActive(s.status));
+  const allRecs=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
   // العلامة لكل طالب موحّد (بمفتاح الرقم الأكاديمي)
   const markByKey={};
   allRecs.forEach(s=>{const mk=attMarks[s.sid];if(mk)markByKey[sidKey(s)]=mk;});
@@ -7039,7 +7062,7 @@ async function saveSessionV2(course,code,grp,dateStr){
     showToast('ℹ️ المادة غير مجدولة — حُسبت بيوم/أسبوع افتراضياً','i');
   }
   // طلاب هذه المادة (الحاليون)
-  const allRecs=students.filter(s=>s.course===course&&isActive(s.status));
+  const allRecs=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
   const markByKey={};
   allRecs.forEach(s=>{const mk=attMarks[amKey(course,s.sid)];if(mk)markByKey[sidKey(s)]=mk;});
   const records=[];   // لتحديث نسبة الغياب في سجل المقررات
@@ -7108,7 +7131,7 @@ async function saveSessionV2(course,code,grp,dateStr){
 }
 
 async function saveAttendance(course){
-  const ss=students.filter(s=>s.course===course);
+  const ss=students.filter(s=>sameCourse(s.course,course));
   const records=[];
   ss.forEach(s=>{
     const d=attendanceData[s.sid];
@@ -7236,7 +7259,7 @@ async function saveRubricSetup(){
 }
 // حفظ الدرجات التفصيلية
 async function saveDetailGrades(code,course){
-  const ss=students.filter(s=>s.course===course&&isActive(s.status));
+  const ss=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
   const rub=rubricFor(code);
   const cid='rb_'+cidOf(code);
   const details=[],totals=[];
@@ -7268,7 +7291,7 @@ async function saveDetailGrades(code,course){
   }catch(e){showToast('تعذّر الاتصال بالخادم — جرّب مرة أخرى','e');}
 }
 async function saveGrades(course){
-  const ss=students.filter(s=>s.course===course&&isActive(s.status));
+  const ss=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
   const records=[]; let deprived=0;
   ss.forEach(s=>{
     const grade=gradesData[s.key];
