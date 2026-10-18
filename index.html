@@ -4247,6 +4247,38 @@ function myTaughtGroups(){
 }
 window.myTaughtCourses=myTaughtCourses;window.myTaughtGroups=myTaughtGroups;
 
+/* ============================================================
+ * 🤝 «مُشارِك في التحضير» لا صاحب مادة
+ * ------------------------------------------------------------
+ * المادة المتقاسَمة (مثل «مشروع»): صاحبها هو مدرّبها في «سجل المقررات» —
+ * الرئيسي — وله الدرجات والبنود. ومَن معه في «الجدول» مُشارِك: يحضّر ولا
+ * يرصد. والقاعدة نفسها مطبَّقة في الخادم (canWriteCourse_)، فالإخفاء هنا
+ * للوضوح لا للحماية: المُشارِك يفهم دوره بدل أن يرصد ثم يُرفض حفظه.
+ * ============================================================ */
+function nrmName(s){ return String(s||'').replace(/\s+/g,' ').trim(); }
+function meName(){ return nrmName((currentUser&&(currentUser.name||currentUser.sname))||(typeof user!=='undefined'&&user&&user.name)||''); }
+// أصحاب المادة كما في «سجل المقررات» (عمود المدرب لصفوف المتدربين)
+function courseOwnersOf(rows){
+  return [...new Set((rows||[]).map(s=>nrmName(s.trainer)).filter(Boolean))];
+}
+/* مُشارِك = الخادم سلّمني صفوف المادة (لأني مُجدوَل عليها) وصاحبها غيري.
+   المادة بلا صاحب مُسجَّل ⇒ لست مُشارِكاً بل مسؤولها (نفس استثناء الخادم). */
+function courseParticipation(rows){
+  const owners=courseOwnersOf(rows);
+  const mine=meName();
+  if(typeof role!=='undefined'&&role!=='t')return {participant:false,owners,owner:''};
+  const participant=!!owners.length&&!owners.includes(mine);
+  return {participant, owners, owner: participant?owners[0]:''};
+}
+/* حرس الرصد: يمنع المُشارِك مبكراً برسالة تقول مَن يرصد، بدل رفضٍ من الخادم بلا سبب */
+function guardOwnerWrite(rows,course){
+  const p=courseParticipation(rows);
+  if(!p.participant)return true;
+  showToast('🤝 أنت مُشارِك في تحضير «'+course+'» — الرصد عند صاحبها '+p.owner,'w');
+  return false;
+}
+window.courseOwnersOf=courseOwnersOf;window.courseParticipation=courseParticipation;window.meName=meName;window.guardOwnerWrite=guardOwnerWrite;
+
 function todayCoursesForTrainer(trainerName,dayName){
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   const found=new Map(); // course → {course, grps:Set}
@@ -6826,14 +6858,13 @@ const tPgs={
       const grp=ssDedup[0]?.grp||'';
       /* 👥 مادة مشتركة: صفوفها باسم مدرّب آخر (صاحب المادة) وأنا مُجدوَل
          عليها في «الجدول». نوضّح ذلك حتى لا يظن أحد أنه يحضّر مادة غيره. */
-      const _owners=[...new Set(ssDedup.map(s=>String(s.trainer||'').replace(/\s+/g,' ').trim()).filter(Boolean))];
-      const _me=String((currentUser&&currentUser.name)||'').replace(/\s+/g,' ').trim();
-      const _shared=_owners.length&&!_owners.includes(_me);
+      const _prt=courseParticipation(ssDedup);
+      const _owners=_prt.owners, _shared=_prt.participant;
       const totalDays=courseTotalDays(course,grp);
       const dpw=courseDaysPerWeek(course,grp);
       return `<div style="margin-bottom:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
-          <div style="font-size:14px;font-weight:700;color:var(--acc-b)">📚 ${esc(course)} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب)</span>${_shared?`<span class="pill py" style="font-size:10.5px;margin-inline-start:7px" title="أنت مُجدوَل عليها في الجدول · صاحب المادة في سجل المقررات: ${escAttr(_owners.join('، '))}">👥 مشتركة · صاحبها ${esc(_owners[0])}</span>`:''}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--acc-b)">📚 ${esc(course)} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب)</span>${_shared?`<span class="pill py" style="font-size:10.5px;margin-inline-start:7px" title="أنت مُشارِك في تحضيرها حسب الجدول · صاحب المادة في سجل المقررات: ${escAttr(_owners.join('، '))} — الدرجات عنده">🤝 مُشارِك في التحضير · صاحبها ${esc(_owners[0])}</span>`:''}</div>
           ${ssDedup.some(s=>attMarks[amKey(course,s.sid)])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[amKey(course,s.sid)]).length} علامة معلقة</span>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:`ℹ️ المادة غير مجدولة بالكامل — ستُحسب بيوم/أسبوع (${WEEKS_PER_HALF} يوم) · المحروم عند ${Math.ceil(WEEKS_PER_HALF*0.25)} أيام`}</div>
@@ -6869,16 +6900,20 @@ const tPgs={
       const rub=rubricFor(code);
       const rubTotal=rub.reduce((a,x)=>a+x.max,0);
       const cid='rb_'+cidOf(code);
+      // 🤝 مُشارِك في التحضير: يرى الدرجات ولا يرصدها — صاحب المادة هو الرئيسي
+      const prt=courseParticipation(ss);
+      const ro=prt.participant;
       // رأس الجدول: عمود لكل بند + المجموع (إن وُجدت بنود)، وإلا عمود واحد
       const gradeHead=rub.length
         ? rub.map(r=>`<th>${esc(r.cat)}<br><small>/${r.max}</small></th>`).join('')+'<th>المجموع<br><small>/100</small></th>'
         : '<th>تقييم المدرب<br><small>/100</small></th>';
       return `<div class="grade-sec">
         <div class="sec-head">
-          <div class="sec-title" style="color:var(--acc-b)">📚 ${course}${rub.length?` <span style="font-size:11px;color:var(--muted)">(${rub.length} بنود · مجموع ${rubTotal}/100)</span>`:''}</div>
-          <button class="btn btn-out btn-sm" onclick='openRubricSetup("${jsq(code)}","${jsq(course)}")'>⚙️ إعداد بنود الدرجات</button>
+          <div class="sec-title" style="color:var(--acc-b)">📚 ${course}${rub.length?` <span style="font-size:11px;color:var(--muted)">(${rub.length} بنود · مجموع ${rubTotal}/100)</span>`:''}${ro?`<span class="pill py" style="font-size:10.5px;margin-inline-start:7px">🤝 مُشارِك في التحضير</span>`:''}</div>
+          ${ro?'':`<button class="btn btn-out btn-sm" onclick='openRubricSetup("${jsq(code)}","${jsq(course)}")'>⚙️ إعداد بنود الدرجات</button>`}
         </div>
-        ${rub.length&&rubTotal!==100?`<div class="alert aw" style="margin-bottom:8px"><span class="aicon">⚠️</span>مجموع البنود ${rubTotal} (يُفضّل أن يساوي 100)</div>`:''}
+        ${ro?`<div class="alert aw ro-note" style="margin-bottom:8px"><span class="aicon">🤝</span><div>أنت <strong>مُشارِك في تحضير</strong> هذه المادة حسب الجدول — تحضّرها وتتابع درجاتها، والرصد عند صاحبها <strong>${esc(prt.owner)}</strong>.<div style="font-size:11.5px;color:var(--muted);margin-top:3px">لو لازم ترصد أنت: الإدارة تسجّل المادة باسمك في «سجل المقررات»، أو تصدر لك تكليفاً بنطاق «درجات».</div></div></div>`:''}
+        ${rub.length&&rubTotal!==100&&!ro?`<div class="alert aw" style="margin-bottom:8px"><span class="aicon">⚠️</span>مجموع البنود ${rubTotal} (يُفضّل أن يساوي 100)</div>`:''}
         <div class="gtable"><table>
           <thead><tr><th>الاسم</th><th>الغياب%</th>${gradeHead}</tr></thead>
           <tbody>${ss.map(s=>{
@@ -6888,10 +6923,10 @@ const tPgs={
             if(rub.length){
               cells=rub.map((r,ri)=>{
                 const val=detailGrade(s.key,code,r.cat);
-                return `<td><input class="grade-input rbin ${cid}" data-key="${esc(sk)}" data-cat="${esc(String(r.cat))}" data-max="${r.max}" type="number" min="0" max="${r.max}" placeholder="/${r.max}" ${dep?'disabled':''} value="${val}" oninput="rbSum('${cid}','${jsq(sk)}')"></td>`;
+                return `<td><input class="grade-input rbin ${cid}" data-key="${esc(sk)}" data-cat="${esc(String(r.cat))}" data-max="${r.max}" type="number" min="0" max="${r.max}" placeholder="/${r.max}" ${dep||ro?'disabled':''}${ro?' title="الرصد عند صاحب المادة"':''} value="${val}" oninput="rbSum('${cid}','${jsq(sk)}')"></td>`;
               }).join('')+`<td><b class="rbtot" id="tot-${cid}-${esc(sk)}" style="color:var(--acc-g)">${dep?'محروم':(rbInitTotal(s.key,code,rub))}</b></td>`;
             }else{
-              cells=`<td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${dep?'disabled title="محروم"':''} value="${gradesData[s.key]||''}" onchange="gradesData['${sk}']=this.value"></td>`;
+              cells=`<td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${dep?'disabled title="محروم"':(ro?'disabled title="الرصد عند صاحب المادة"':'')} value="${ro?(s.pct>0?s.pct:''):(gradesData[s.key]||'')}" onchange="gradesData['${sk}']=this.value"></td>`;
             }
             return `<tr>
               <td>${esc(s.name.split(' ').slice(0,3).join(' '))}</td>
@@ -6901,8 +6936,12 @@ const tPgs={
           }).join('')}</tbody>
         </table>
         </div>
-        <div class="sec-foot"><button class="btn btn-g" onclick="${rub.length?`saveDetailGrades('${jsq(code)}','${jsq(course)}')`:`saveGrades('${jsq(course)}')`}">💾 حفظ درجات ${course}</button></div>
-      `;
+        <div class="sec-foot">${ro
+          ? `<button class="btn btn-out" onclick="showTPage('attendance',document.getElementById('sn-attendance'))">✅ اذهب لتحضير ${esc(course)}</button>`
+          : `<button class="btn btn-g" onclick="${rub.length?`saveDetailGrades('${jsq(code)}','${jsq(course)}')`:`saveGrades('${jsq(course)}')`}">💾 حفظ درجات ${course}</button>`}</div>
+      </div>`;
+      /* ⬆️ كان الوسم مفتوحاً: كل مادة تتعشّش داخل التي قبلها، فتتداخل الحدود
+         وتتدرّج البطاقات كالسلّم (19px ونقص 38px عرضاً لكل مادة). */
     }).join(''):'<div class="empty"><div class="empty-icon">📝</div>لا توجد مقررات حالية لرصد الدرجات</div>'}`;
   },
   alerts:()=>{
@@ -7255,7 +7294,9 @@ async function saveRubricSetup(){
   if(total!==100){showToast('مجموع البنود يجب أن يساوي 100 (حالياً '+total+')','w');return;}
   showToast('جاري حفظ البنود...','i');
   try{
-    const r=await callWrite('saveRubric',{code,items});
+    // 🤝 اسم المادة يلزم الخادم ليعرف صاحبها (المُشارِك في الجدول لا يضع البنود)
+    const course=String((document.getElementById('rubCourse')||{}).value||'');
+    const r=await callWrite('saveRubric',{code,course,items});
     if(r&&r.status!=='ok'&&r.ok!==true){showToast('تعذّر الحفظ'+(r.hint?' — '+r.hint:''),'e');return;}
     document.getElementById('rubModal').remove();
     showToast('✅ تم حفظ بنود الدرجات','s');
@@ -7267,6 +7308,7 @@ async function saveRubricSetup(){
 // حفظ الدرجات التفصيلية
 async function saveDetailGrades(code,course){
   const ss=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
+  if(!guardOwnerWrite(ss,course))return;
   const rub=rubricFor(code);
   const cid='rb_'+cidOf(code);
   const details=[],totals=[];
@@ -7299,6 +7341,7 @@ async function saveDetailGrades(code,course){
 }
 async function saveGrades(course){
   const ss=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
+  if(!guardOwnerWrite(ss,course))return;
   const records=[]; let deprived=0;
   ss.forEach(s=>{
     const grade=gradesData[s.key];
@@ -7766,8 +7809,14 @@ function studentCourseState(sid, code){
   const recs=(allCourses||[]).filter(c=>String(c.sid)===String(sid)&&normCode(c.code)===normCode(code));
   if(!recs.length)return 'none';
   if(recs.some(c=>isActive(c.status)))return 'current'; // مسجّل حالياً
-  if(recs.some(c=>!isFailed(c)))return 'passed'; // اجتاز إحدى المحاولات السابقة
-  return 'failed'; // كل السجلات سابقة وراسب فيها → يعيدها
+  /* ⚠️ كان أي سجل سابق غير «راسب» يُعدّ اجتيازاً. و‎isFailed‎ تشترط درجة > 0،
+     فالمادة السابقة التي لم تُرصد درجتها إطلاقاً كانت تُحسب «اجتازها» ويُتخطّى
+     المتدرب بصمت عند إعادة التسجيل. فصلناها: «بلا درجة مرصودة» حالة مستقلة
+     تُعاد كالراسب، لأن المادة لم تكتمل أصلاً. */
+  const graded=c=>((parseFloat(c.pct)||0)>0)||String(c.letter||'').trim()!=='';
+  if(recs.some(c=>graded(c)&&!isFailed(c)))return 'passed';   // اجتاز محاولة مرصودة
+  if(recs.every(c=>!graded(c)))return 'ungraded';             // سابقة بلا درجة إطلاقاً
+  return 'failed';                                            // رُصدت ورسب → يعيدها
 }
 // تطبيع نص لمطابقة رموز المواد (أرقام + حروف عربي/لاتيني فقط)
 function normTok(s){ return String(s||'').replace(/[^0-9\u0600-\u06FFa-zA-Z]/g,'').toLowerCase(); }
@@ -7892,22 +7941,45 @@ async function enrollBatch(){
   const half=term.includes('صيفي')?'':(document.getElementById('enr_half')?.value||'');
   if(!sids.length){showToast('اختر متدرباً واحداً على الأقل','w');return;}
   if(!crs.length){showToast('اختر مقرراً واحداً على الأقل','w');return;}
-  const total=sids.length*crs.length;
-  if(!confirm(`سيتم تسجيل ${sids.length} متدرب في ${crs.length} مقرر (${total} تسجيل).\nالفصل التدريبي: ${fmtTerm(term)}${half?' · '+half:''}\nهل تريد المتابعة؟`))return;
-  // بناء السجلات (مع تخطي المسجّلين مسبقاً والمواد المقفلة بمتطلب)
-  const records=[];let skipped=0,lockedSkip=0;
+  // 🔎 نبني السجلات أولاً ثم نعرض التفصيل في التأكيد — لا تخطٍّ صامت
+  const records=[];let lockedSkip=0;
+  const skip={current:0,passed:0}, redo={failed:0,ungraded:0};
+  const egs={current:[],passed:[],locked:[]};
   sids.forEach(sid=>{
     const st=students.find(s=>s.id===sid);if(!st)return;
+    const nm=String(st.name||sid).split(' ').slice(0,2).join(' ');
     crs.forEach(cv=>{
       const [code,course]=cv.split('|');
       const cat=(catalog||[]).find(c=>normCode(c.code)===normCode(code));
-      if(cat&&cat.prereq&&!studentPassedPrereq(sid,cat.prereq)){lockedSkip++;return;} // متطلب غير مستوفى
+      if(cat&&cat.prereq&&!studentPassedPrereq(sid,cat.prereq)){lockedSkip++;if(egs.locked.length<3)egs.locked.push(nm);return;}
       const state=studentCourseState(sid,code);
-      if(state==='current'||state==='passed'){skipped++;return;} // مسجّل حالياً أو اجتازها → تخطَّ (الراسب يُعاد)
+      if(state==='current'){skip.current++;if(egs.current.length<3)egs.current.push(nm);return;}
+      if(state==='passed'){skip.passed++;if(egs.passed.length<3)egs.passed.push(nm);return;}
+      if(state==='failed')redo.failed++;
+      if(state==='ungraded')redo.ungraded++;
       records.push({sid,name:st.name,grp:st.grp,code,course,trainer,term,half,status:'حالي'});
     });
   });
-  if(!records.length){showToast(lockedSkip?'⚠️ كل المواد المختارة مقفلة بمتطلب غير مستوفى':'⚠️ كل التسجيلات موجودة مسبقاً','w');return;}
+  const skipped=skip.current+skip.passed;
+  if(records.length){
+    const lines=[`سيتم تسجيل ${records.length} تسجيل (${sids.length} متدرب × ${crs.length} مقرر).`,
+      `الفصل التدريبي: ${fmtTerm(term)}${half?' · '+half:''}`];
+    if(redo.failed)   lines.push(`• ${redo.failed} إعادة لراسب`);
+    if(redo.ungraded) lines.push(`• ${redo.ungraded} مادة سابقة بلا درجة مرصودة — تُعاد لأنها لم تكتمل`);
+    if(skip.current)  lines.push(`• يُتخطّى ${skip.current} مسجّل حالياً`);
+    if(skip.passed)   lines.push(`• يُتخطّى ${skip.passed} اجتازها بدرجة مرصودة`);
+    if(lockedSkip)    lines.push(`• 🔒 ${lockedSkip} مقفلة بمتطلب غير مستوفى`);
+    if(!confirm(lines.join('\n')+'\n\nهل تريد المتابعة؟'))return;
+  }
+  if(!records.length){
+    const why=[];
+    if(skip.current) why.push(`${skip.current} مسجّل حالياً${egs.current.length?' ('+egs.current.join('، ')+(skip.current>egs.current.length?' وغيرهم':'')+')':''}`);
+    if(skip.passed)  why.push(`${skip.passed} اجتازها بدرجة مرصودة${egs.passed.length?' ('+egs.passed.join('، ')+(skip.passed>egs.passed.length?' وغيرهم':'')+')':''}`);
+    if(lockedSkip)   why.push(`🔒 ${lockedSkip} مقفلة بمتطلب غير مستوفى${egs.locked.length?' ('+egs.locked.join('، ')+')':''}`);
+    showToast('⚠️ ما انسجّل شي — '+(why.join(' · ')||'ما فيه ما يُسجَّل'),'w');
+    if(why.length>1||skip.passed)setTimeout(()=>showToast('ℹ️ «اجتازها» تعني أن له سجلاً سابقاً بدرجة. لإعادة تسجيله احذف السجل القديم أو سجّله بفصل مختلف.','i'),1400);
+    return;
+  }
   showToast(`جاري تسجيل ${records.length} تسجيل...`,'i');
   try{
     // ⭐ نرسل على دفعات ونتحقّق من رد كل دفعة — كان يعلن النجاح حتى لو رفض الخادم،
@@ -7925,7 +7997,10 @@ async function enrollBatch(){
       }
       done+=batch.length;
     }
-    showToast(`✅ تم تسجيل ${done} تسجيل`+(skipped?` · تخطّى ${skipped} مسجّل مسبقاً`:'')+(lockedSkip?` · 🔒 ${lockedSkip} مقفلة بمتطلب`:''),'s');
+    showToast(`✅ تم تسجيل ${done} تسجيل`
+      +(redo.ungraded?` · ${redo.ungraded} إعادة لمادة بلا درجة`:'')
+      +(redo.failed?` · ${redo.failed} إعادة لراسب`:'')
+      +(skipped?` · تخطّى ${skipped}`:'')+(lockedSkip?` · 🔒 ${lockedSkip} بمتطلب`:''),'s');
     loadAdmin().then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
   }catch(e){showToast('تعذّر التسجيل — جرب مرة أخرى','e');}
 }
