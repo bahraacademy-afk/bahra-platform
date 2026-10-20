@@ -49,7 +49,14 @@ function domId(v){return String(v==null?'':v).replace(/[^0-9A-Za-z\u0600-\u06FF]
      فصار التباين ١٤:١ — أعلى من معيار AAA (٧:١) بمرتين، وأهدأ للعين. */
   --bg:#101827;--bg2:#16202f;--bg3:#1c2740;
   --red:#e63946;--red2:#c1121f;
-  --blue:#1a7abf;--blue2:#155fa0;
+  /* 🎨 ألوان الهوية — نقطة واحدة تتحكم بكل تدرّجات المنصة.
+     مظهر المستخدم (data-scheme) ومناسبة اليوم (data-thm) يبدّلان هذه الرموز
+     وحدها، فينتقل اللون إلى كل عنصر دفعةً واحدة بلا مطاردة ألوان مكتوبة
+     بالرقم في مئة موضع. */
+  --brand-1:#1a7abf;--brand-2:#0d4a80;        /* التدرّج النشط */
+  --brand-deep-1:#0a2348;--brand-deep-2:#1a3a6b; /* الكحلي العميق: الترويسات */
+  --brand-tint:rgba(26,122,191,.14);          /* لمسة خفيفة للخلفيات */
+  --blue:var(--brand-1);--blue2:#155fa0;
   --gold:#f4a261;--green:#2ecc71;--purple:#9b59b6;
   /* النص الخافت كان #6b8cae = ٥.١:١ فقط، وهو لون كل التسميات وترويسات
      الجداول وعناصر القائمة — أي أكثر نص في المنصة. صار ٧.٧:١. */
@@ -112,7 +119,7 @@ body.light-mode .shero{background:linear-gradient(135deg,rgba(26,122,191,.10),rg
 .shero-hi{font-size:20px;font-weight:800;color:var(--text);line-height:1.3}
 .shero-sub{font-size:12.5px;color:var(--muted);margin-top:3px}
 .shero-av{width:46px;height:46px;border-radius:14px;flex-shrink:0;margin-inline-start:auto;display:flex;align-items:center;
-  justify-content:center;font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1a7abf,#0d4a80);
+  justify-content:center;font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand-1),var(--brand-2));
   box-shadow:0 6px 18px rgba(26,122,191,.35)}
 .sstrip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .sstat{background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:14px;padding:11px 6px;cursor:pointer;
@@ -155,7 +162,7 @@ body.light-mode .acct-sheet{background:#fff}
 .acct-grab{width:40px;height:4px;border-radius:4px;background:var(--border);margin:2px auto 14px}
 .acct-head{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:8px}
 .acct-av{width:48px;height:48px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
-  font-size:17px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1a7abf,#0d4a80)}
+  font-size:17px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand-1),var(--brand-2))}
 .acct-name{font-size:16px;font-weight:800;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .acct-sub{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .acct-list{display:flex;flex-direction:column;gap:2px;margin-bottom:10px}
@@ -903,7 +910,7 @@ body.light-mode select option{background:#ffffff;color:#1a2a4a}
 /* الزر الدائري العائم في اليمين — مرفوع للمنتصف */
 .fab-nav{display:none;position:fixed;top:50%;right:14px;transform:translateY(-50%);z-index:250}
 .fab-btn{width:52px;height:52px;border-radius:50%;border:none;
-  background:linear-gradient(135deg,#1a7abf,#0d4a80);color:#fff;
+  background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;
   font-size:22px;cursor:pointer;
   box-shadow:0 10px 28px rgba(26,122,191,.45),0 2px 6px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.18);
   display:flex;align-items:center;justify-content:center;
@@ -931,7 +938,7 @@ body.light-mode select option{background:#ffffff;color:#1a2a4a}
 .fab-item .fi-ico{width:40px;height:40px;border-radius:50%;background:rgba(10,18,33,.94);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);
   border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;font-size:18px;
   box-shadow:0 8px 24px rgba(0,0,0,.4);transition:all .2s;flex-shrink:0}
-.fab-item.active .fi-ico{background:linear-gradient(135deg,#1a7abf,#0d4a80);color:#fff;border-color:transparent;box-shadow:0 8px 24px rgba(26,122,191,.5)}
+.fab-item.active .fi-ico{background:linear-gradient(135deg,var(--brand-1),var(--brand-2));color:#fff;border-color:transparent;box-shadow:0 8px 24px rgba(26,122,191,.5)}
 .fab-item.active .fi-lbl{color:var(--acc-b);border-color:rgba(106,184,247,.25)}
 .fab-item:active .fi-ico{transform:scale(.88)}
 /* طبقة الخلفية عند الفتح */
@@ -1514,9 +1521,15 @@ a{transition:color .15s,opacity .15s}
 /* 👁️ العنصر النشط: النص أبيض فوق التدرّج. الذهبي الفاتح (#f4a261) كان يعطي
    ٢.١:١ فقط — أي كلمة بيضاء شبه ذائبة فيه، وهو لون قائمة الإداري أي الذي
    تستعمله أنت طول اليوم. عمّقنا بداية كل تدرّج حتى يتجاوز الأبيض ٤.٥:١. */
-.sitem.active{color:#fff !important;border-right:0 !important;background:linear-gradient(135deg,#d6303c,var(--red2)) !important;box-shadow:0 6px 16px rgba(230,57,70,.26)}
-.sitem.active.at{background:linear-gradient(135deg,#17709f,var(--blue2)) !important;box-shadow:0 6px 16px rgba(26,122,191,.28)}
-.sitem.active.aa{background:linear-gradient(135deg,#a85f0c,#8a4d08) !important;box-shadow:0 6px 16px rgba(176,104,13,.30)}
+/* 🎨 العنصر النشط يأخذ لون الهوية — فيتبع مظهر المستخدم ومناسبة اليوم معاً.
+   كان ثلاثة تدرّجات مكتوبة بالرقم لكل دور، فلا مظهر يصل إليه وهو أبرز عنصر
+   في الشاشة. والدور يبقى ظاهراً في الترويسة وبطاقة الحساب. */
+.sitem.active{color:#fff !important;border-right:0 !important;
+  background:linear-gradient(135deg,var(--brand-1),var(--brand-2)) !important;
+  box-shadow:0 6px 16px color-mix(in srgb,var(--brand-1) 30%,transparent)}
+.sitem.active.at,.sitem.active.aa{
+  background:linear-gradient(135deg,var(--brand-1),var(--brand-2)) !important;
+  box-shadow:0 6px 16px color-mix(in srgb,var(--brand-1) 30%,transparent)}
 .sitem .sicon{opacity:.85}
 .sitem.active .sicon{opacity:1}
 
@@ -1626,22 +1639,62 @@ body.has-modal .mob-nav{transform:translateY(110%);pointer-events:none}
    الوضعين قبل اعتماده، فلا ثيم ينزل بالوضوح عن حدّ AA.
    بلا ثيم: data-thm غير موجود أصلاً فلا شيء من هذا يُطبَّق.
    ============================================================ */
+/* ============================================================
+   🎨 مظاهر الألوان — يختارها كل مستخدم لنفسه
+   ------------------------------------------------------------
+   كلٌّ منها يبدّل رموز الهوية وحدها، فتتلوّن المنصة كاملة: الشريط الجانبي
+   والأزرار والأشرطة والبطاقات والتبويبات. و‎--acc-b‎ له نظير أغمق للوضع
+   النهاري حتى يبقى مقروءاً على الأبيض (كلها قيست فوق حدّ AA).
+   ============================================================ */
+body[data-scheme="ocean"]  {--brand-1:#1a7abf;--brand-2:#0d4a80;--brand-deep-1:#0a2348;--brand-deep-2:#1a3a6b;
+  --brand-tint:rgba(26,122,191,.14);--acc-b:#6ab8f7}
+body[data-scheme="emerald"]{--brand-1:#12916a;--brand-2:#0a6147;--brand-deep-1:#06291f;--brand-deep-2:#0d4f3a;
+  --brand-tint:rgba(18,145,106,.14);--acc-b:#55dcae}
+body[data-scheme="violet"] {--brand-1:#6a46c4;--brand-2:#45288f;--brand-deep-1:#20143f;--brand-deep-2:#3a2370;
+  --brand-tint:rgba(106,70,196,.15);--acc-b:#b9a3f7}
+body[data-scheme="sunset"] {--brand-1:#c2622a;--brand-2:#8f411a;--brand-deep-1:#3c1d0c;--brand-deep-2:#70351a;
+  --brand-tint:rgba(194,98,42,.14);--acc-b:#f6b183}
+body[data-scheme="rose"]   {--brand-1:#bc3a63;--brand-2:#8c2345;--brand-deep-1:#3c1020;--brand-deep-2:#6e1c38;
+  --brand-tint:rgba(188,58,99,.14);--acc-b:#f79ab5}
+body[data-scheme="slate"]  {--brand-1:#4d6276;--brand-2:#334354;--brand-deep-1:#1a232e;--brand-deep-2:#2d3c4c;
+  --brand-tint:rgba(77,98,118,.16);--acc-b:#a9c2da}
+body.light-mode[data-scheme="ocean"]  {--acc-b:#135e94}
+body.light-mode[data-scheme="emerald"]{--acc-b:#0a6b50}
+body.light-mode[data-scheme="violet"] {--acc-b:#523096}
+body.light-mode[data-scheme="sunset"] {--acc-b:#8f4216}
+body.light-mode[data-scheme="rose"]   {--acc-b:#9b1f44}
+body.light-mode[data-scheme="slate"]  {--acc-b:#3b4e60}
+
+/* ============================================================
+   🎉 المناسبة — تلقائية، وتعمّ الموقع كله
+   ------------------------------------------------------------
+   المناسبة تُكتب بعد المظاهر عمداً: فهي تتقدّم على اختيار المستخدم طوال
+   أيامها ثم ترجع المنصة لمظهره. وتبدّل رموز الهوية نفسها لا رموزاً خاصة
+   بها — فيصل لونها لكل عنصر دفعة واحدة بدل بضعة عناصر مختارة.
+   ============================================================ */
 body[data-thm]{--thm-ink:#fff}
-body[data-thm="national"]{--thm-1:#0a7a3d;--thm-2:#045c2c;--thm-acc:#5fd392;--thm-soft:rgba(10,122,61,.14)}
-body[data-thm="founding"]{--thm-1:#8a5a16;--thm-2:#63400d;--thm-acc:#e8c07a;--thm-soft:rgba(138,90,22,.15)}
-body[data-thm="newyear"] {--thm-1:#4a3ab5;--thm-2:#2f2585;--thm-acc:#a9a0f2;--thm-soft:rgba(74,58,181,.15)}
-body[data-thm="hijri"]   {--thm-1:#0f766e;--thm-2:#0a564f;--thm-acc:#5ed6c6;--thm-soft:rgba(15,118,110,.15)}
-body[data-thm="ramadan"] {--thm-1:#4c2a85;--thm-2:#331a60;--thm-acc:#c9a6f5;--thm-soft:rgba(76,42,133,.16)}
-body[data-thm="eidFitr"] {--thm-1:#0d7a5f;--thm-2:#095a46;--thm-acc:#58d8b0;--thm-soft:rgba(13,122,95,.15)}
-body[data-thm="eidAdha"] {--thm-1:#9a5b08;--thm-2:#744405;--thm-acc:#f0b964;--thm-soft:rgba(154,91,8,.15)}
+body[data-thm="national"]{--thm-1:#0a7a3d;--thm-2:#045c2c;--thm-acc:#5fd392;--thm-soft:rgba(10,122,61,.14);
+  --brand-1:#0a7a3d;--brand-2:#045c2c;--brand-deep-1:#042a17;--brand-deep-2:#09502b;--brand-tint:rgba(10,122,61,.14);--acc-b:#5fd392}
+body[data-thm="founding"]{--thm-1:#8a5a16;--thm-2:#63400d;--thm-acc:#e8c07a;--thm-soft:rgba(138,90,22,.15);
+  --brand-1:#8a5a16;--brand-2:#63400d;--brand-deep-1:#2e1d06;--brand-deep-2:#5a3a0c;--brand-tint:rgba(138,90,22,.15);--acc-b:#e8c07a}
+body[data-thm="newyear"] {--thm-1:#4a3ab5;--thm-2:#2f2585;--thm-acc:#a9a0f2;--thm-soft:rgba(74,58,181,.15);
+  --brand-1:#4a3ab5;--brand-2:#2f2585;--brand-deep-1:#171145;--brand-deep-2:#2e2478;--brand-tint:rgba(74,58,181,.15);--acc-b:#a9a0f2}
+body[data-thm="hijri"]   {--thm-1:#0f766e;--thm-2:#0a564f;--thm-acc:#5ed6c6;--thm-soft:rgba(15,118,110,.15);
+  --brand-1:#0f766e;--brand-2:#0a564f;--brand-deep-1:#042b27;--brand-deep-2:#0a4e47;--brand-tint:rgba(15,118,110,.15);--acc-b:#5ed6c6}
+body[data-thm="ramadan"] {--thm-1:#4c2a85;--thm-2:#331a60;--thm-acc:#c9a6f5;--thm-soft:rgba(76,42,133,.16);
+  --brand-1:#4c2a85;--brand-2:#331a60;--brand-deep-1:#190d33;--brand-deep-2:#2f1a5c;--brand-tint:rgba(76,42,133,.16);--acc-b:#c9a6f5}
+body[data-thm="eidFitr"] {--thm-1:#0d7a5f;--thm-2:#095a46;--thm-acc:#58d8b0;--thm-soft:rgba(13,122,95,.15);
+  --brand-1:#0d7a5f;--brand-2:#095a46;--brand-deep-1:#032c22;--brand-deep-2:#08503e;--brand-tint:rgba(13,122,95,.15);--acc-b:#58d8b0}
+body[data-thm="eidAdha"] {--thm-1:#9a5b08;--thm-2:#744405;--thm-acc:#f0b964;--thm-soft:rgba(154,91,8,.15);
+  --brand-1:#9a5b08;--brand-2:#744405;--brand-deep-1:#331e03;--brand-deep-2:#633a04;--brand-tint:rgba(154,91,8,.15);--acc-b:#f0b964}
 /* نظائر أغمق للتمييز على الخلفية البيضاء */
-body.light-mode[data-thm="national"]{--thm-acc:#07713a}
-body.light-mode[data-thm="founding"]{--thm-acc:#7a4a12}
-body.light-mode[data-thm="newyear"] {--thm-acc:#413294}
-body.light-mode[data-thm="hijri"]   {--thm-acc:#0b655e}
-body.light-mode[data-thm="ramadan"] {--thm-acc:#4a2a80}
-body.light-mode[data-thm="eidFitr"] {--thm-acc:#0b6b53}
-body.light-mode[data-thm="eidAdha"] {--thm-acc:#804b06}
+body.light-mode[data-thm="national"]{--thm-acc:#07713a;--acc-b:#07713a}
+body.light-mode[data-thm="founding"]{--thm-acc:#7a4a12;--acc-b:#7a4a12}
+body.light-mode[data-thm="newyear"] {--thm-acc:#413294;--acc-b:#413294}
+body.light-mode[data-thm="hijri"]   {--thm-acc:#0b655e;--acc-b:#0b655e}
+body.light-mode[data-thm="ramadan"] {--thm-acc:#4a2a80;--acc-b:#4a2a80}
+body.light-mode[data-thm="eidFitr"] {--thm-acc:#0b6b53;--acc-b:#0b6b53}
+body.light-mode[data-thm="eidAdha"] {--thm-acc:#804b06;--acc-b:#804b06}
 
 /* العنصر النشط وزر الدخول يأخذان لون المناسبة مهما كان الدور */
 body[data-thm] .sitem.active,
@@ -1722,6 +1775,9 @@ body.light-mode[data-thm]::before{
 .thm-card .tc-name{font-size:12.5px;font-weight:800;color:var(--text);line-height:1.4}
 .thm-card .tc-when{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.45}
 .thm-card .tc-live{font-size:9.5px;font-weight:800;color:var(--acc-g)}
+/* سطر المناسبة: معلومة لا خيار — فلا يأخذ شكل البطاقات القابلة للضغط */
+.thm-occ{display:flex;align-items:center;gap:11px;margin-top:13px;padding:11px 13px;border-radius:12px;
+  background:var(--brand-tint);border:1px solid var(--border)}
 @media(max-width:560px){ .thm-pick{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px} }
 .thm-ribbon .thm-x:hover{background:rgba(0,0,0,.38)}
 /* لمسة على شاشة الدخول */
@@ -3465,7 +3521,7 @@ function finishLogin(){
   if(typeof mascotReact==='function')mascotReact('celebrate');
   setTimeout(()=>{ if(typeof showToast==='function')showToast('يا هلا '+_first+'! 🎉','s'); },260);
   currentUser=user; // ⭐ ضروري: بعض الصفحات (كالحضور) تعتمد على currentUser — نضمن تعبئته عند كل دخول
-  loadThemeMe(); applySeasonTheme();   // 🎨 مظهره هو — محفوظ باسم حسابه لا باسم الجهاز
+  loadScheme(); applySeasonTheme();   // 🎨 مظهره هو — محفوظ باسم حسابه لا باسم الجهاز
   // 💾 تذكّر الرقم والدور ليكون الدخول القادم أسرع (الرمز السري لا يُحفظ هنا أبداً)
   try{
     const rm=document.getElementById('rememberMe');
@@ -5285,7 +5341,7 @@ async function printScheduleReport(opts){
   .hdr .t2{font-size:13px;color:#5a6b85;margin-top:2px}
   .hdr .t3{font-size:12px;color:var(--acc-y);font-weight:700;margin-top:3px}
   .hdr .meta{margin-right:auto;text-align:left;font-size:12px;color:#5a6b85}
-  .sec-title{font-size:18px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:10px 16px;border-radius:8px;margin:24px 0 14px;page-break-after:avoid}
+  .sec-title{font-size:18px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2));padding:10px 16px;border-radius:8px;margin:24px 0 14px;page-break-after:avoid}
   .block{margin-bottom:20px}
   table.rt thead{display:table-header-group}
   table.rt tr{page-break-inside:avoid}
@@ -6954,7 +7010,7 @@ const tPgs={
     const view=window._clsView||'current';
     const curCrs=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.course))].length;
     const oldCrs=[...new Set(students.filter(s=>!isActive(s.status)).map(s=>s.course))].length;
-    const tbtn=(id,lbl,n)=>`<button class="tterm ${view===id?'active':''}" onclick="window._clsView='${id}';showTPage('students',document.getElementById('sn-students'))" style="padding:9px 16px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;background:${view===id?'linear-gradient(135deg,#1a7abf,#0d4a80)':'var(--card2,rgba(255,255,255,.04))'};color:${view===id?'#fff':'var(--text)'}">${lbl} (${n})</button>`;
+    const tbtn=(id,lbl,n)=>`<button class="tterm ${view===id?'active':''}" onclick="window._clsView='${id}';showTPage('students',document.getElementById('sn-students'))" style="padding:9px 16px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;background:${view===id?'linear-gradient(135deg,var(--brand-1),var(--brand-2))':'var(--card2,rgba(255,255,255,.04))'};color:${view===id?'#fff':'var(--text)'}">${lbl} (${n})</button>`;
     const tabs=`<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${tbtn('current','🟢 الحالية',curCrs)}${tbtn('archived','🗄️ السابقة (المؤرشفة)',oldCrs)}</div>`;
     const isArch=view==='archived';
     const pool=students.filter(s=>isArch?!isActive(s.status):isActive(s.status));
@@ -9410,7 +9466,7 @@ const aPgs={
   attlog:()=>renderAttLog(true,true),    // كل المعهد + تعديل
   manage_courses:()=>{
     const tab=window._mcTab||'plan';
-    const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${id}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
+    const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${id}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
     let body='';
     if(tab==='plan'){
       // إدارة الخطة الدراسية (المقررات)
@@ -9433,7 +9489,7 @@ const aPgs={
         ${activeTerms.length?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
           <div style="flex:1;min-width:200px">
             <label style="display:block;font-size:11px;color:var(--muted);margin-bottom:4px">اختر النصف المجزأ المنتهي</label>
-            <select id="endTermSel" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">${termOpts}</select>
+            <select id="endTermSel" aria-label="اختر الفصل التدريبي" title="الفصل التدريبي" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">${termOpts}</select>
           </div>
           <button class="btn" style="background:#cf1f2f;color:#fff;font-weight:700" onclick="endTerm()">🏁 إنهاء النصف المجزأ</button>
         </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة</div>'}
@@ -9488,7 +9544,7 @@ const aPgs={
       const current=catCourses.filter(c=>c.st==='current');
       const remaining=catCourses.filter(c=>c.st==='remaining');
       // أزرار اختيار الشعبة
-      const grpTabs=grps.map(g=>`<button onclick="window._enrGrp='${g}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="padding:8px 18px;border:none;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;background:${selGrp===g?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${selGrp===g?'#fff':'var(--text)'}">🏫 الشعبة ${g}</button>`).join('');
+      const grpTabs=grps.map(g=>`<button onclick="window._enrGrp='${g}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="padding:8px 18px;border:none;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;background:${selGrp===g?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${selGrp===g?'#fff':'var(--text)'}">🏫 الشعبة ${g}</button>`).join('');
       // صندوق مقرر (حسب الحالة)
       const crsBox=(c,selectable)=>{
         const badge=c.st==='done'?'<span style="font-size:10px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">✓ منتهية</span>':c.st==='current'?'<span style="font-size:10px;background:#6ab8f7;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">▶ حالية</span>':`<span style="font-size:10px;background:var(--muted);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">باقية${c.need?` · ${c.need} يحتاجها`:''}</span>`;
@@ -9600,7 +9656,7 @@ const aPgs={
   accounts:()=>{
     const t=window._accTab||'student';
     // مصادر البيانات لكل نوع
-    const tabBtn=(id,lbl,icon)=>`<button onclick="window._accTab='${id}';showAPage('accounts',document.getElementById('sn-accounts'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${t===id?'linear-gradient(135deg,#0a2348,#1a3a6b)':'rgba(255,255,255,.05)'};color:${t===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
+    const tabBtn=(id,lbl,icon)=>`<button onclick="window._accTab='${id}';showAPage('accounts',document.getElementById('sn-accounts'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${t===id?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${t===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
     // بناء صفوف الجدول حسب النوع
     let rows='',cols='';
     if(t==='student'){
@@ -9869,11 +9925,11 @@ const aPgs={
     </div>
     <div class="search-row">
       <input type="text" id="stSearch" placeholder="ابحث بالاسم أو الرقم..." oninput="filterSt()">
-      <select id="stSpec" onchange="filterSt()">
+      <select id="stSpec" aria-label="تصفية بالتخصص" title="التخصص" onchange="filterSt()">
         <option value="">كل التخصصات</option>
         ${[...new Set(students.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar')).map(sp=>`<option value="${esc(sp)}">${esc(sp)}</option>`).join('')}
       </select>
-      <select id="stGrp" onchange="filterSt()">
+      <select id="stGrp" aria-label="تصفية بالشعبة" title="الشعبة" onchange="filterSt()">
         <option value="">كل الشعب</option>
         ${[...new Set(students.map(s=>s.grp))].map(g=>`<option value="${g}">الشعبة ${g}</option>`).join('')}
       </select>
@@ -10182,7 +10238,7 @@ const aPgs={
     </div>
     <div class="stitle" style="margin-top:8px">👤 تقرير طالب فردي</div>
     <div class="ctl-row">
-      <select id="rep-student">
+      <select id="rep-student" aria-label="اختر المتدرب للتقرير" title="المتدرب">
         <option value="">— اختر المتدرب —</option>
         ${uniqStudents(students).sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(s=>`<option value="${esc(s.id||s.sid.toString())}">${esc(s.name)} (${s.sid||s.id||''}) · شعبة ${esc(s.grp)}</option>`).join('')}
       </select>
@@ -10192,7 +10248,7 @@ const aPgs={
     <div class="stitle" style="margin-top:24px">⚠️ إنذارات الغياب (10%+)</div>
     <div class="alert aw"><span class="aicon">📩</span>خطاب إنذار رسمي قابل للطباعة، مع خيار إرساله مباشرة لإيميل المتدرب — حسب التدرّج (10% إنذار أول · 20% ثانٍ · 25% حرمان)</div>
     <div class="ctl-row">
-      <select id="warn-student">
+      <select id="warn-student" aria-label="اختر المتدرب للإنذار" title="المتدرب">
         <option value="">— اختر متدرب لديه غياب مرتفع —</option>
         ${studentsHighAbs().map(({s,courses})=>`<option value="${esc(s.id||s.sid.toString())}">${esc(s.name)} · شعبة ${esc(s.grp||'—')} · ${courses.length} مقرر · أعلى ${Math.round(Math.max(...courses.map(c=>parseFloat(c.abs)||0)))}%</option>`).join('')||'<option value="" disabled>لا يوجد طلاب تجاوزوا 10%</option>'}
       </select>
@@ -10251,7 +10307,7 @@ const aPgs={
         <div class="cc-name">🗓️ نهاية كل نصف مجزأ</div>
         <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">حوّل مواد النصف المجزأ إلى «سابق» وأرشف الغياب والتحاضير والطلبات، ليبدأ نصف نظيف.</div>
         ${activeTerms.length?`<div class="ctl-row" style="margin-bottom:0">
-          <select id="endTermSel" style="flex:1 1 140px;min-width:0;font-size:13px">${termOpts}</select>
+          <select id="endTermSel" aria-label="اختر الفصل التدريبي" title="الفصل التدريبي" style="flex:1 1 140px;min-width:0;font-size:13px">${termOpts}</select>
           <button class="btn" style="background:#cf1f2f;color:#fff;font-weight:700" onclick="endTerm()">🏁 إنهاء النصف المجزأ</button>
         </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة</div>'}
       </div>
@@ -11386,7 +11442,7 @@ function initQuickLogin(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   setSplashLogo();
-  loadThemeCfg(); loadThemeMe(); applySeasonTheme();   // 🎉 المناسبة (أو اختياره) من أول لحظة
+  loadThemeCfg(); loadScheme(); applySeasonTheme();   // 🎨 مظهره + مناسبة اليوم من أول لحظة
   initQuickLogin();
   restoreSession();
   // ⚡ أيقظ الخادم مبكراً — إن كانت هناك جلسة محفوظة فـ restoreSession تتكفّل،
@@ -11804,7 +11860,7 @@ function printAcademicReport(){
   .kpis{display:flex;gap:12px;margin-bottom:22px}
   .kpi{flex:1;border:1px solid #c5cfdd;border-radius:10px;padding:14px;text-align:center}
   .kpi .n{font-size:26px;font-weight:800;color:#0a2348}.kpi .l{font-size:11px;color:#5a6b85;margin-top:3px}
-  .sec-title{font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:9px 14px;border-radius:8px;margin:20px 0 12px}
+  .sec-title{font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2));padding:9px 14px;border-radius:8px;margin:20px 0 12px}
   table{width:100%;border-collapse:collapse;margin-bottom:8px}
   th{background:#0a2348;color:#fff;font-size:12px;padding:8px;border:1px solid #0a2348}
   td{border:1px solid #c5cfdd;padding:7px;text-align:center;font-size:12px}
@@ -11846,7 +11902,7 @@ function reportShell(title,subtitle,bodyHtml){
   .kpis{display:flex;gap:12px;margin-bottom:22px;flex-wrap:wrap}
   .kpi{flex:1;min-width:110px;border:1px solid #c5cfdd;border-radius:10px;padding:14px;text-align:center}
   .kpi .n{font-size:24px;font-weight:800;color:#0a2348}.kpi .l{font-size:11px;color:#5a6b85;margin-top:3px}
-  .sec-title{font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:9px 14px;border-radius:8px;margin:20px 0 12px}
+  .sec-title{font-size:16px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2));padding:9px 14px;border-radius:8px;margin:20px 0 12px}
   table{width:100%;border-collapse:collapse;margin-bottom:8px}
   th{background:#0a2348;color:#fff;font-size:12px;padding:8px;border:1px solid #0a2348}
   td{border:1px solid #c5cfdd;padding:7px;text-align:center;font-size:12px}
@@ -12277,7 +12333,7 @@ function controlShell(bodyHtml){
   .hdr{display:flex;align-items:center;gap:14px;border-bottom:3px solid #c9a227;padding-bottom:10px;margin-bottom:12px}
   .hdr img{width:52px;height:52px;border-radius:50%}.hdr .t1{font-size:18px;font-weight:800;color:#0a2348}.hdr .t2{font-size:11px;color:#5a6b85;margin-top:2px}
   .hdr .meta{margin-right:auto;text-align:left;font-size:11px;color:#5a6b85}
-  .cs-title{font-weight:800;color:#fff;background:linear-gradient(135deg,#0a2348,#1a3a6b);padding:7px 12px;border-radius:6px;margin:16px 0 8px}
+  .cs-title{font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2));padding:7px 12px;border-radius:6px;margin:16px 0 8px}
   .cs-block{margin-bottom:22px}
   /* ⭐ كل شعبة في صفحة طباعة مستقلة */
   @media print{
@@ -13116,7 +13172,7 @@ function requestFormHtml(){
   return `<div class="ccard cc-b" style="margin-bottom:20px">
     <div class="cc-name" style="margin-bottom:14px">➕ تقديم طلب جديد</div>
     <div class="mform-group"><label>نوع الطلب</label>
-      <select id="rq-type" onchange="toggleExcuseFields()">${opts}</select>
+      <select id="rq-type" aria-label="نوع الطلب" title="نوع الطلب" onchange="toggleExcuseFields()">${opts}</select>
     </div>
     ${r==='s'?`<div id="excuse-fields" style="display:block">
       <div class="mform-group"><label>المادة (الغياب فيها)</label>
@@ -13360,7 +13416,7 @@ function openAccountSheet(){
     </div>
     <div class="acct-list">
       ${row(isLight?'🌙':'☀️', isLight?'الوضع الداكن':'الوضع الفاتح','toggleTheme()')}
-      ${row('🎨','مظهر المنصة','closeAccountSheet();openThemePick()',THEME_ME?((THEMES[THEME_ME]||{}).emo||'⚪'):'')}
+      ${row('🎨','مظهر المنصة','closeAccountSheet();openThemePick()',(SCHEMES[SCHEME_ME]||{}).emo||'')}
       ${row('🌐','تغيير اللغة','toggleTx()')}
       ${row('🔔','الاشعارات','showNotifs()',nf)}
       ${row('🔐','تغيير الرمز السري','openChangePassword(false)')}
@@ -13451,46 +13507,43 @@ function setThemeCfg(c,persistLocal){
  *   'none' = بلا مظهر مناسبة
  *   مفتاح  = هذا المظهر دائماً
  * ============================================================ */
-const THEME_ME_KEY='bla_theme_me';
-let THEME_ME='';
-function themeMeKey(){ return THEME_ME_KEY+'_'+String((typeof user!=='undefined'&&user&&user.id)||'guest'); }
-function loadThemeMe(){
-  try{ const v=localStorage.getItem(themeMeKey())||''; THEME_ME=(v==='none'||THEMES[v])?v:''; }
-  catch(e){ THEME_ME=''; }
-  return THEME_ME;
+/* ============================================================
+ * 🎨 مظهر الألوان — اختيار كل مستخدم لنفسه
+ * ------------------------------------------------------------
+ * ما يختاره المستخدم هو «ألوان المنصة». أما مناسبات السنة (رمضان، الوطني…)
+ * فتلقائية وثابتة: تعمّ الموقع كله أيامها ثم ترجع المنصة لمظهره. فالاختيار
+ * يُحفظ باسم حسابه على جهازه ولا يمسّ أحداً غيره.
+ * ============================================================ */
+const SCHEMES={
+  ocean:  {name:'المحيط',   emo:'🌊', sub:'الأزرق الأساسي', c:['#1a7abf','#0d4a80']},
+  emerald:{name:'الزمرّد',  emo:'🌿', sub:'أخضر هادئ',      c:['#12916a','#0a6147']},
+  violet: {name:'البنفسج',  emo:'🔮', sub:'بنفسجي عميق',    c:['#6a46c4','#45288f']},
+  sunset: {name:'الغروب',   emo:'🌅', sub:'برتقالي دافئ',   c:['#c2622a','#8f411a']},
+  rose:   {name:'الورد',    emo:'🌸', sub:'وردي راقٍ',      c:['#bc3a63','#8c2345']},
+  slate:  {name:'الرماد',   emo:'🪨', sub:'رمادي محايد',    c:['#4d6276','#334354']}
+};
+const SCHEME_ORDER=['ocean','emerald','violet','sunset','rose','slate'];
+const SCHEME_KEY='bla_scheme';
+let SCHEME_ME='ocean';
+function schemeKeyOf(){ return SCHEME_KEY+'_'+String((typeof user!=='undefined'&&user&&user.id)||'guest'); }
+function loadScheme(){
+  try{ const v=localStorage.getItem(schemeKeyOf())||''; SCHEME_ME=SCHEMES[v]?v:'ocean'; }
+  catch(e){ SCHEME_ME='ocean'; }
+  applyScheme();
+  return SCHEME_ME;
 }
-function setThemeMe(v){
-  THEME_ME=(v==='none'||THEMES[v])?v:'';
-  try{ localStorage.setItem(themeMeKey(),THEME_ME); }catch(e){}
-  applySeasonTheme();
-  if(document.getElementById('thmPickBox'))renderThemePick();
-  return THEME_ME;
+function applyScheme(){ document.body.setAttribute('data-scheme',SCHEMES[SCHEME_ME]?SCHEME_ME:'ocean'); }
+function setScheme(v){
+  SCHEME_ME=SCHEMES[v]?v:'ocean';
+  try{ localStorage.setItem(schemeKeyOf(),SCHEME_ME); }catch(e){}
+  applyScheme();
+  if(document.getElementById('thmPickWrap'))renderThemePick();
+  return SCHEME_ME;
 }
-window.loadThemeMe=loadThemeMe;window.setThemeMe=setThemeMe;
+window.loadScheme=loadScheme;window.setScheme=setScheme;window.applyScheme=applyScheme;
+window.SCHEMES=SCHEMES;window.SCHEME_ORDER=SCHEME_ORDER;
 
-/* معرض الاختيار: بطاقة لكل مظهر بمعاينة لونه ونقشه الحقيقيين */
-function themePickHTML(){
-  const auto=activeThemeAuto();
-  const card=(val,emo,name,when,live)=>`<button type="button" class="thm-card ${THEME_ME===val?'on':''}"
-      onclick="setThemeMe('${val}')" aria-pressed="${THEME_ME===val}">
-      <div class="tc-sw" ${val&&val!=='none'?`data-thmsw="${val}"`:''}
-        style="background:${val&&val!=='none'?'':(val==='none'?'var(--bg3,#1c2740)':'linear-gradient(135deg,var(--acc-b),#1a3a6b)')}">${emo}</div>
-      <div class="tc-body"><div class="tc-name">${esc(name)}${THEME_ME===val?' ✓':''}</div>
-        <div class="tc-when">${esc(when)}</div>${live?'<div class="tc-live">● ظاهر الآن</div>':''}</div>
-    </button>`;
-  let h=card('','🎨','تلقائي','يتبدّل مع المناسبة',THEME_ME===''&&!!auto)
-       +card('none','⚪','بلا مظهر','ألوان المنصة الأساسية',false);
-  THEME_ORDER.forEach(k=>{
-    const t=THEMES[k];
-    h+=card(k,t.emo,t.name,themeNextDate(k),THEME_ME===''&&auto===k);
-  });
-  return `<div class="thm-pick" id="thmPickBox">${h}</div>
-    <div style="font-size:11.5px;color:var(--muted);margin-top:11px;line-height:1.7">
-      اختيارك يخصّك وحدك على هذا الجهاز — ما يغيّر شيئاً عند غيرك.
-      ${THEME_ME?`<button class="btn btn-out btn-sm" style="margin-top:8px" onclick="setThemeMe('')">↺ رجّعه تلقائياً</button>`:''}
-    </div>`;
-}
-// المناسبة التي كانت ستظهر تلقائياً (بلا اختيار شخصي) — للمعاينة
+/* المناسبة التي تظهر تلقائياً اليوم (لا أحد يختارها) */
 function activeThemeAuto(d){
   if(!THEME_CFG.on)return '';
   if(THEME_CFG.force&&THEMES[THEME_CFG.force])return THEME_CFG.force;
@@ -13500,28 +13553,54 @@ function activeThemeAuto(d){
   }
   return '';
 }
+
+/* معرض الألوان: بطاقة لكل مظهر بمعاينة تدرّجه الحقيقي */
+function themePickHTML(){
+  const now=activeThemeAuto();
+  const card=k=>{const t=SCHEMES[k];return `<button type="button" class="thm-card ${SCHEME_ME===k?'on':''}"
+      onclick="setScheme('${k}')" aria-pressed="${SCHEME_ME===k}">
+      <div class="tc-sw" data-sw="${k}">${t.emo}</div>
+      <div class="tc-body"><div class="tc-name">${esc(t.name)}${SCHEME_ME===k?' ✓':''}</div>
+        <div class="tc-when">${esc(t.sub)}</div></div></button>`;};
+  const occ=now?`<div class="thm-occ">
+      <div style="font-size:21px;line-height:1">${(THEMES[now]||{}).emo||'🎉'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;font-size:13px;color:var(--text)">مناسبة ${esc((THEMES[now]||{}).name||'')} — ظاهرة الآن</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px">ألوان المناسبة تعمّ المنصة أيامها ثم يرجع مظهرك تلقائياً.</div>
+      </div></div>`
+    : `<div class="thm-occ"><div style="font-size:19px">📅</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:800;font-size:13px;color:var(--text)">ما فيه مناسبة اليوم</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${esc(nextOccasionText())}</div></div></div>`;
+  return `<div class="thm-pick" id="thmPickBox">${SCHEME_ORDER.map(card).join('')}</div>${occ}`;
+}
+// أقرب مناسبة قادمة — سطر معلومات لا خيار
+function nextOccasionText(){
+  let best=null;
+  THEME_ORDER.forEach(k=>{
+    const t=themeNextDate(k); const m=String(t).match(/بعد\s+(\d+)\s+يوم/);
+    if(m){ const n=+m[1]; if(!best||n<best.n)best={n,k,t}; }
+  });
+  return best?('أقرب مناسبة: '+((THEMES[best.k]||{}).name||'')+' — '+best.t):'تظهر ألوان المناسبة تلقائياً في أيامها';
+}
 function renderThemePick(){
   const b=document.getElementById('thmPickWrap'); if(b)b.innerHTML=themePickHTML();
   paintThemeSwatches();
 }
-/* نلوّن المعاينات بنفس متغيّرات الثيم الحقيقية (العنصر خارج body[data-thm]) */
+/* نلوّن المعاينات بتدرّج كل مظهر (البطاقة خارج body[data-scheme] فلا ترثه) */
 function paintThemeSwatches(){
-  const V={national:['#0a7a3d','#045c2c'],founding:['#8a5a16','#63400d'],newyear:['#4a3ab5','#2f2585'],
-           hijri:['#0f766e','#0a564f'],ramadan:['#4c2a85','#331a60'],eidFitr:['#0d7a5f','#095a46'],
-           eidAdha:['#9a5b08','#744405']};
-  document.querySelectorAll('.tc-sw[data-thmsw]').forEach(el=>{
-    const v=V[el.dataset.thmsw]; if(!v)return;
-    el.style.background='linear-gradient(135deg,'+v[0]+','+v[1]+')';
+  document.querySelectorAll('.tc-sw[data-sw]').forEach(el=>{
+    const t=SCHEMES[el.dataset.sw]; if(!t)return;
+    el.style.background='linear-gradient(135deg,'+t.c[0]+','+t.c[1]+')';
   });
 }
 function openThemePick(){
   const old=document.getElementById('thmPickModal'); if(old)old.remove();
   const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='thmPickModal';
   ov.onclick=e=>{ if(e.target===ov)ov.remove(); };
-  ov.innerHTML=`<div class="modal" style="max-width:640px;max-height:88vh;overflow-y:auto">
+  ov.innerHTML=`<div class="modal" style="max-width:620px;max-height:88vh;overflow-y:auto">
     <div class="modal-title"><span>🎨 مظهر المنصة</span>
       <button class="modal-close" onclick="document.getElementById('thmPickModal').remove()">✕</button></div>
-    <div style="font-size:12.5px;color:var(--muted);margin:4px 0 14px;line-height:1.75">اختر المظهر الذي يريحك — أو اتركه «تلقائي» فيتبدّل مع المناسبات.</div>
+    <div style="font-size:12.5px;color:var(--muted);margin:4px 0 14px;line-height:1.75">اختر ألوان المنصة التي تريحك — اختيارك يخصّك وحدك ولا يغيّر شيئاً عند غيرك.</div>
     <div id="thmPickWrap">${themePickHTML()}</div>
   </div>`;
   document.body.appendChild(ov);
@@ -13529,12 +13608,10 @@ function openThemePick(){
 }
 window.openThemePick=openThemePick;window.themePickHTML=themePickHTML;
 window.renderThemePick=renderThemePick;window.activeThemeAuto=activeThemeAuto;
-window.paintThemeSwatches=paintThemeSwatches;
+window.paintThemeSwatches=paintThemeSwatches;window.nextOccasionText=nextOccasionText;
 
 /* المناسبة الفعّالة الآن: اختيار المستخدم أولاً، ثم التفعيل اليدوي، ثم المناسبة */
 function activeTheme(d){
-  if(THEME_ME==='none') return '';
-  if(THEME_ME && THEMES[THEME_ME]) return THEME_ME;
   if(!THEME_CFG.on) return '';
   if(THEME_CFG.force && THEMES[THEME_CFG.force]) return THEME_CFG.force;
   for(const k of THEME_ORDER){
@@ -13645,7 +13722,7 @@ function grelPanelHTML(){
     <div class="iitem" style="margin-bottom:12px"><div class="ilbl">الحالة الآن</div>
       <div class="ival" style="color:${state.c};font-weight:700">${state.p?`<span class="pill ${state.p}" style="font-size:11px">${esc(state.t)}</span>`:esc(state.t)}</div></div>
     <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 موعد إعلان الدرجات</label>
-    <input type="datetime-local" id="grelAt" value="${escAttr(String(g.at||'').replace(' ','T'))}" onchange="grelPreview()"
+    <input type="datetime-local" id="grelAt" aria-label="موعد إعلان الدرجات" title="موعد إعلان الدرجات" value="${escAttr(String(g.at||'').replace(' ','T'))}" onchange="grelPreview()"
       style="width:100%;max-width:300px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-family:inherit;font-size:14px;color-scheme:light dark;margin-bottom:6px">
     <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">${g.at?`تُعلن: <b style="color:var(--text)">${esc(grelFmt(g.at))}</b>`:'بلا موعد — استعمل «احجب الآن» أو حدّد تاريخاً'}</div>
     ${g.force?`<div class="alert aw" style="margin-bottom:12px"><span class="aicon">✋</span>تجاوز يدوي مفعّل: <b>${g.force==='hide'?'محجوبة الآن':'ظاهرة الآن'}</b> — يتجاهل الموعد حتى تلغيه.
