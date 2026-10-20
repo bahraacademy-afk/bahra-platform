@@ -1664,6 +1664,65 @@ body[data-thm] .mob-nav .mni.active{color:var(--thm-acc)}
    تعتيمها يرفعه بدل أن يخفضه. */
 .thm-ribbon .thm-x{background:rgba(0,0,0,.26);border:none;color:var(--thm-ink);width:28px;height:28px;
   border-radius:9px;cursor:pointer;font-size:15px;line-height:1;flex-shrink:0}
+
+/* ============================================================
+   ✨ نقش المناسبة
+   ------------------------------------------------------------
+   زخرفة من تدرّجات CSS فقط — بلا صور ولا طلبات شبكة. والنقوش كلها
+   بالأسود الشفّاف لا الأبيض: الأبيض يُفتّح التدرّج فينزل نصّه الأبيض
+   تحت حدّ AA (علّة وقعنا فيها سابقاً في زر الإغلاق). الأسود يعتّمه
+   فيرتفع الوضوح بدل أن ينخفض.
+   ============================================================ */
+.thm-ribbon{position:relative;overflow:hidden}
+.thm-ribbon>*{position:relative;z-index:1}
+.thm-ribbon::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.55}
+/* 🇸🇦 الوطني: أشرطة مائلة كالعَلَم */
+body[data-thm="national"] .thm-ribbon::before{
+  background:repeating-linear-gradient(115deg,rgba(0,0,0,.14) 0 10px,transparent 10px 30px)}
+/* 🏛️ التأسيس: شبكة هندسية نجدية */
+body[data-thm="founding"] .thm-ribbon::before{
+  background:repeating-linear-gradient(45deg,rgba(0,0,0,.13) 0 7px,transparent 7px 20px),
+             repeating-linear-gradient(-45deg,rgba(0,0,0,.13) 0 7px,transparent 7px 20px)}
+/* 🎆 رأس السنة: ومضات */
+body[data-thm="newyear"] .thm-ribbon::before{
+  background:radial-gradient(circle at 12% 28%,rgba(0,0,0,.2) 0 2px,transparent 3px),
+             radial-gradient(circle at 34% 72%,rgba(0,0,0,.17) 0 2px,transparent 3px),
+             radial-gradient(circle at 61% 22%,rgba(0,0,0,.2) 0 2px,transparent 3px),
+             radial-gradient(circle at 83% 64%,rgba(0,0,0,.17) 0 2px,transparent 3px)}
+/* 🌙 الهجري ورمضان: أهلّة متكرّرة */
+body[data-thm="hijri"] .thm-ribbon::before,
+body[data-thm="ramadan"] .thm-ribbon::before{
+  background:radial-gradient(circle at 18% 50%,rgba(0,0,0,.19) 0 9px,transparent 10px),
+             radial-gradient(circle at 15% 50%,var(--thm-1) 0 9px,transparent 10px),
+             radial-gradient(circle at 72% 30%,rgba(0,0,0,.15) 0 6px,transparent 7px),
+             radial-gradient(circle at 70% 30%,var(--thm-1) 0 6px,transparent 7px)}
+/* 🎉 العيدان: نثار */
+body[data-thm="eidFitr"] .thm-ribbon::before,
+body[data-thm="eidAdha"] .thm-ribbon::before{
+  background:repeating-linear-gradient(60deg,rgba(0,0,0,.12) 0 4px,transparent 4px 17px),
+             repeating-linear-gradient(-60deg,rgba(0,0,0,.1) 0 4px,transparent 4px 21px)}
+
+/* هالة خافتة من لون المناسبة خلف الصفحة كلها — خلف كل شيء ولا تُلامس نصاً */
+body[data-thm]::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(1100px 420px at 50% -12%,color-mix(in srgb,var(--thm-1) 17%,transparent),transparent 72%)}
+body.light-mode[data-thm]::before{
+  background:radial-gradient(1100px 420px at 50% -12%,color-mix(in srgb,var(--thm-1) 9%,transparent),transparent 72%)}
+
+/* ============================================================
+   🎨 منتقي المظهر — لكل مستخدم اختياره
+   ============================================================ */
+.thm-pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(146px,1fr));gap:10px}
+.thm-card{border:2px solid var(--border);border-radius:14px;overflow:hidden;cursor:pointer;background:var(--card2,rgba(255,255,255,.04));
+  padding:0;text-align:start;font-family:inherit;transition:transform .14s ease,border-color .14s ease}
+.thm-card:hover{transform:translateY(-2px)}
+.thm-card.on{border-color:var(--acc-b);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc-b) 22%,transparent)}
+.thm-card .tc-sw{height:58px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:23px}
+.thm-card .tc-sw::before{content:'';position:absolute;inset:0;opacity:.55}
+.thm-card .tc-body{padding:9px 11px}
+.thm-card .tc-name{font-size:12.5px;font-weight:800;color:var(--text);line-height:1.4}
+.thm-card .tc-when{font-size:10.5px;color:var(--muted);margin-top:2px;line-height:1.45}
+.thm-card .tc-live{font-size:9.5px;font-weight:800;color:var(--acc-g)}
+@media(max-width:560px){ .thm-pick{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px} }
 .thm-ribbon .thm-x:hover{background:rgba(0,0,0,.38)}
 /* لمسة على شاشة الدخول */
 .thm-login{text-align:center;font-size:12.5px;font-weight:700;color:var(--thm-acc);margin:-16px 0 14px;letter-spacing:.2px}
@@ -1884,6 +1943,7 @@ body[data-thm] .mob-nav .mni.active{color:var(--thm-acc)}
     </div>
     <div class="tb-right">
       <button id="themeBtn" class="tb-sm-hide" onclick="toggleTheme()" title="تبديل الوضع">🌙</button>
+      <button id="thmPickBtn" class="tb-sm-hide" onclick="openThemePick()" title="مظهر المنصة">🎨</button>
       <div class="notif-btn tb-sm-hide" onclick="showReviewCases()" title="الحالات التي تحتاج مراجعة">⚠️<span class="notif-badge nb-y" id="reviewBadge" style="display:none"></span></div>
       <div class="notif-btn" onclick="showNotifs()" title="الاشعارات">🔔<span class="notif-badge" id="notifBadge" style="display:none"></span></div>
       <div class="notif-btn tb-sm-hide" id="delegBtn" onclick="showDelegations()" title="التكليفات" style="display:none">🧾<span class="notif-badge nb-y" id="delegBadge" style="display:none"></span></div>
@@ -1937,7 +1997,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycby5V0DCgKPecnvGjSR70fB5aKPlzrSWnBszOrEa1Nv_jZTqoqSkJtAcjAaCVx03mmkM/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbygN0zZB1n4DGpx0Y3R-GNLD3dXVwugzSMlDQXxIRlGtTuCpJArTmGbv0EWAoGxz7DH/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -3003,6 +3063,7 @@ function setBootPayload(bp){
   REQ_FLOW_FROM_BOOT=true;   // وصلت الحمولة → لا نداء إضافي للمسار
   if(typeof bp.ai!=='undefined'){ AI_ON=!!bp.ai; AI_FROM_BOOT=true; }
   if(bp.theme)setThemeCfg(bp.theme);     // 🎉 إعداد المناسبات من الخادم → الجميع يراه
+  if(bp.grel)setGradesRel(bp.grel);      // 🔒 موعد إظهار الدرجات من الخادم
   if(bp.staff&&bp.staff.length)applyStaffDir(bp.staff);
   return true;
 }
@@ -3055,7 +3116,9 @@ function saveDataSnapshot(){
       lessonPreps:(typeof lessonPreps!=='undefined'?lessonPreps:null),
       schedConfig: (typeof schedConfig!=='undefined'?schedConfig:null),
       requests:(typeof requests!=='undefined'?requests:null),
-      delegations:(typeof delegations!=='undefined'?delegations:null)
+      delegations:(typeof delegations!=='undefined'?delegations:null),
+      coTrainers:(typeof coTrainers!=='undefined'?coTrainers:null),
+      depExceptions:(typeof depExceptions!=='undefined'?depExceptions:null)
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(snap));
   }catch(e){/* التخزين ممتلئ أو غير متاح */}
@@ -3075,6 +3138,8 @@ function loadDataSnapshot(){
     if(s.schedConfig && typeof schedConfig!=='undefined')  schedConfig=s.schedConfig;
     if(s.requests && typeof requests!=='undefined')        requests=s.requests;
     if(s.delegations && typeof delegations!=='undefined')  delegations=s.delegations;
+    if(s.coTrainers  && typeof coTrainers !=='undefined')  coTrainers=s.coTrainers;
+    if(s.depExceptions && typeof depExceptions!=='undefined') depExceptions=s.depExceptions;
     return true;
   }catch(e){ return false; }
 }
@@ -3400,6 +3465,7 @@ function finishLogin(){
   if(typeof mascotReact==='function')mascotReact('celebrate');
   setTimeout(()=>{ if(typeof showToast==='function')showToast('يا هلا '+_first+'! 🎉','s'); },260);
   currentUser=user; // ⭐ ضروري: بعض الصفحات (كالحضور) تعتمد على currentUser — نضمن تعبئته عند كل دخول
+  loadThemeMe(); applySeasonTheme();   // 🎨 مظهره هو — محفوظ باسم حسابه لا باسم الجهاز
   // 💾 تذكّر الرقم والدور ليكون الدخول القادم أسرع (الرمز السري لا يُحفظ هنا أبداً)
   try{
     const rm=document.getElementById('rememberMe');
@@ -3719,7 +3785,7 @@ async function loadStudent(){
 }
 
 async function loadTrainer(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps(), loadStaffDir(), loadNews(), loadAttachments()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps(), loadStaffDir(), loadNews(), loadAttachments(), loadCoTrainers(), loadDepExceptions()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:K').catch(()=>[]),
@@ -3787,7 +3853,7 @@ async function loadAdmin(){
     const r=ad[i];
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6]),spec:n0(r[7])});
   }
-  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics(), loadLessonPreps()]);
+  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics(), loadLessonPreps(), loadCoTrainers(), loadDepExceptions()]);
   allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
@@ -3852,6 +3918,100 @@ async function loadDelegations(){
       finalStatus:n0(r[11])||'قيد المراجعة',created:n0(r[12]),expiry:n0(r[13]),log:n0(r[14])});
   }
 }
+/* 🤝 مشاركو التحضير — صاحب المادة واحد ومعه مدربون يحضّرون معه في الوقت نفسه.
+   يُحدَّدون عند التسجيل الجماعي، ويُقرأون هنا ليظهر لهم التحضير. */
+let coTrainers=[];       // [{code, course, grp, name}]
+async function loadCoTrainers(){
+  const rows=await fetchSheet('مشاركو التحضير!A:F').catch(()=>[]);
+  coTrainers=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; const nm=n0(r[3]); if(!nm)continue;
+    coTrainers.push({code:n0(r[0]),course:n0(r[1]),grp:n0(r[2]),name:nm,by:n0(r[4]),at:n0(r[5])});
+  }
+}
+// المدربون المشاركون في تحضير (مادة [+ شعبة])
+function coTrainersOf(courseName,code,grp){
+  const gk=grpKey(grp||'');
+  return coTrainers.filter(c=>{
+    const hit=(code&&c.code&&normCode(c.code)===normCode(code))||sameCourse(c.course,courseName);
+    if(!hit)return false;
+    const cg=grpKey(c.grp); return !cg||!gk||cg===gk;
+  }).map(c=>c.name);
+}
+// هل أنا مشارك في تحضير هذه المادة؟
+function amCoTrainer(courseName,code,grp){
+  return coTrainersOf(courseName,code,grp).some(n=>nrmName(n)===meName());
+}
+window.loadCoTrainers=loadCoTrainers;window.coTrainersOf=coTrainersOf;window.amCoTrainer=amCoTrainer;
+
+/* ============================================================
+ * 🔓 استثناء الحرمان — بصلاحية من الإدارة
+ * ------------------------------------------------------------
+ * المتدرب الذي تجاوز حدّ الغياب تُقفل عنه خانة الدرجة. وقد يكون معه عذر
+ * مقبول، لكن اعتماد العذر يرفع كل أيام غيابه فيصير السجل غير صحيح. فالإدارة
+ * تفتح له خانة التقييم وحدها — والغياب يبقى مسجّلاً كما هو.
+ * ============================================================ */
+let depExceptions=[];    // [{sid, name, code, course, grp, term, reason, by, at}]
+async function loadDepExceptions(){
+  const rows=await fetchSheet('استثناءات الحرمان!A:I').catch(()=>[]);
+  depExceptions=[];
+  for(let i=1;i<rows.length;i++){
+    const r=rows[i]; const sid=String(n0(r[0])||'').replace(/[^0-9]/g,''); if(!sid)continue;
+    depExceptions.push({sid,name:n0(r[1]),code:n0(r[2]),course:n0(r[3]),grp:n0(r[4]),
+      term:n0(r[5]),reason:n0(r[6]),by:n0(r[7]),at:n0(r[8])});
+  }
+}
+// هل فُتحت خانة التقييم لهذا المتدرب في هذه المادة؟
+function isDepExempt(sid,code,course,grp){
+  const S=String(sid||'').replace(/[^0-9]/g,''); if(!S)return false;
+  const gk=grpKey(grp||'');
+  return (depExceptions||[]).some(x=>{
+    if(x.sid!==S)return false;
+    const hit=(code&&x.code&&normCode(x.code)===normCode(code))||sameCourse(x.course,course);
+    if(!hit)return false;
+    const xg=grpKey(x.grp); return !xg||!gk||xg===gk;
+  });
+}
+function depExceptionOf(sid,code,course,grp){
+  const S=String(sid||'').replace(/[^0-9]/g,'');
+  return (depExceptions||[]).find(x=>x.sid===S&&
+    (((code&&x.code&&normCode(x.code)===normCode(code))||sameCourse(x.course,course))))||null;
+}
+/* الحرمان لسجلٍّ بعينه — يحترم الاستثناء. (isDeprived(abs) تبقى للأرقام المجرّدة) */
+function isDeprivedRec(c){
+  if(!c)return false;
+  if(!isDeprived(c.abs))return false;
+  return !isDepExempt(c.sid||c.id,c.code,c.course,c.grp);
+}
+/* منح الاستثناء أو إلغاؤه — إداري فقط (الخادم يتحقق أيضاً) */
+async function depExcept(sid,name,code,course,grp,term,remove){
+  if(role!=='a'){showToast('استثناء الحرمان من الإدارة','w');return;}
+  let reason='';
+  if(!remove){
+    reason=prompt('سبب فتح خانة التقييم لـ «'+name+'» في «'+course+'»؟\n(عذر مقبول، حالة خاصة… — يُحفظ في السجل)','عذر مقبول من الإدارة');
+    if(reason===null)return;                       // ألغى
+    reason=String(reason).trim();
+    if(!reason){showToast('اكتب السبب — يُحفظ في السجل للمراجعة','w');return;}
+  }else{
+    if(!confirm('إلغاء الاستثناء يُرجع «'+name+'» محروماً في «'+course+'» وتُقفل خانة درجته. متابعة؟'))return;
+  }
+  showToast(remove?'جاري الإلغاء...':'جاري فتح خانة التقييم...','i');
+  try{
+    const r=await callWrite('saveDepException',{sid,name,code,course,grp,term,reason,remove:!!remove});
+    if(!r||(r.status&&r.status!=='ok')){
+      showToast('تعذّر الحفظ'+(r&&r.hint?' — '+r.hint:''),'e'); return;
+    }
+    await loadDepExceptions().catch(()=>{});
+    showToast(remove?('↩︎ رجع «'+name+'» محروماً في «'+course+'»')
+                    :('🔓 انفتحت خانة التقييم لـ «'+name+'» في «'+course+'» — الغياب باقٍ '+'كما هو'),'s');
+    document.getElementById('detailModal')?.remove();
+    showRepDetail('deprived');                      // أعِد فتح القائمة محدَّثة
+  }catch(e){ showToast('تعذّر الاتصال بالخادم','e'); }
+}
+window.depExcept=depExcept;
+window.loadDepExceptions=loadDepExceptions;window.isDepExempt=isDepExempt;
+window.isDeprivedRec=isDeprivedRec;window.depExceptionOf=depExceptionOf;
+
 // قائمة الموظفين لاختيار المكلَّف (أصحاب الحسابات فقط: مدربون + إداريون)
 async function loadStaffList(){
   if(staffCache)return staffCache;
@@ -4308,23 +4468,8 @@ function myScheduledGroupsOf(courseName){
     }
   return out;
 }
-/* شُعب فيها متدربون مسجّلون باسمي في «سجل المقررات» وما أحد مُسند لها في
-   «الجدول» — فلا تحضير لها حتى تُسند. نرجّعها لنقول ذلك صراحة. */
-function myUnscheduledGroups(){
-  const me=meName(), out=new Map();                 // "مادة|شعبة" → {course, code, grp}
-  (students||[]).forEach(s=>{
-    if(!isActive(s.status))return;
-    if(nrmName(s.trainer)!==me)return;              // صفوفي أنا
-    if(isCoopTraining(s.code))return;               // التدريب التعاوني لا يُحضَّر
-    const gk=grpKey(s.grp); if(!gk)return;
-    if(scheduledGroupsOf(s.course).has(gk))return;  // مُسندة لأحد → ليست حالتنا
-    const k=nrmName(s.course)+'|'+gk;
-    if(!out.has(k))out.set(k,{course:s.course,code:s.code||'',grp:s.grp});
-  });
-  return [...out.values()];
-}
 window.grpKey=grpKey;window.scheduledGroupsOf=scheduledGroupsOf;
-window.myScheduledGroupsOf=myScheduledGroupsOf;window.myUnscheduledGroups=myUnscheduledGroups;
+window.myScheduledGroupsOf=myScheduledGroupsOf;
 
 function todayCoursesForTrainer(trainerName,dayName){
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -5760,6 +5905,7 @@ const sPgs={
     const past=courses.filter(c=>c.status==='سابق').length;
     return `
     <div class="stitle">مقرراتي (${courses.length})</div>
+    ${grelNoticeHTML()}
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
       ${cur?`<div class="bpill bp-b" style="font-size:12px">🟢 حالية: ${cur}</div>`:''}
       ${past?`<div class="bpill" style="font-size:12px;background:rgba(150,150,150,.15);color:#aaa;border:1px solid rgba(150,150,150,.3)">⚪ سابقة: ${past}</div>`:''}
@@ -5770,6 +5916,8 @@ const sPgs={
     <div id="coursesList">${courses.length?courses.map(c=>courseCardHTML(c)).join(''):'<div class="empty"><div class="empty-icon">📚</div>لا توجد مقررات مسجلة</div>'}</div>`;
   },
   performance:()=>{
+    if(gradesHiddenNow())return `<div class="stitle">أدائي</div>`+grelNoticeHTML()
+      +`<div class="empty"><div class="empty-icon">🔒</div>صفحة الأداء تعتمد على الدرجات — تظهر فور إعلانها</div>`;
     const tot=courses.length,avg=avgPct(courses);
     // ===== تنبيه الرسوب (متطلبات لم تُجتَز) =====
     // ⭐ «راسب» لا تُقال للمتدرب إلا بعد اكتمال رصد بنود المادة —
@@ -6086,6 +6234,9 @@ function studentStatStrip(){
 }
 function courseCardHTML(c){
   const p=Math.round(c.pct);
+  /* 🔒 قبل إعلان الدرجات: «٠٪» تُقرأ أنه رسب بصفر لا أنها لم تُعلن.
+     نضع قفلاً مكان الرقم ونخفي الشريط والتقدير — والغياب يبقى ظاهراً. */
+  const _lock=(typeof gradesHiddenNow==='function')&&gradesHiddenNow();
   const av=absLevel(c.abs);
   const showWarn=av.key!=='ok'&&isActive(c.status);
   const mats=getCourseMaterials(c.code); // المواد العلمية (نظري + عملي)
@@ -6100,15 +6251,15 @@ function courseCardHTML(c){
   if(rub.length){
     const key=c.key||((c.code||'')+'-'+(c.sid||''));
     const rows=rub.map(r=>{const g=detailGrade(key,c.code,r.cat);return g!==''?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0"><span style="color:var(--muted)">${esc(r.cat)}</span><span style="font-weight:700">${g} / ${r.max}</span></div>`:'';}).filter(Boolean).join('');
-    if(rows)detHTML=`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)"><div style="font-size:11px;color:var(--acc-y);font-weight:700;margin-bottom:4px">📊 تفصيل الدرجات</div>${rows}</div>`;
+    if(rows&&!_lock)detHTML=`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)"><div style="font-size:11px;color:var(--acc-y);font-weight:700;margin-bottom:4px">📊 تفصيل الدرجات</div>${rows}</div>`;
   }
-  return `<div class="ccard ${ccClass(p)}">
-    <div class="cc-top"><div><div class="cc-name">${esc(c.course)}</div><div class="cc-meta">${esc(c.code)}${esc(c.trainer?' · '+c.trainer:'')}${esc(c.half&&c.half!=='غير محدد'?' · '+c.half:'')}</div></div><span class="pill ${pillClass(p)}">${p}%</span></div>
-    <div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>
+  return `<div class="ccard ${_lock?'':ccClass(p)}">
+    <div class="cc-top"><div><div class="cc-name">${esc(c.course)}</div><div class="cc-meta">${esc(c.code)}${esc(c.trainer?' · '+c.trainer:'')}${esc(c.half&&c.half!=='غير محدد'?' · '+c.half:'')}</div></div>${_lock?'<span class="pill py" style="font-size:11px">🔒 لم تُعلَن</span>':`<span class="pill ${pillClass(p)}">${p}%</span>`}</div>
+    ${_lock?'':`<div class="prog"><div class="pfill ${fillClass(p)}" style="width:${Math.min(p,100)}%"></div></div>`}
     <div class="cc-footer">
-      <span>${isActive(c.status)?'الدرجة حتى الآن':'الدرجة النهائية'}: <b>${p}%</b></span>
+      <span>${isActive(c.status)?'الدرجة حتى الآن':'الدرجة النهائية'}: <b>${_lock?'🔒 تُعلن لاحقاً':p+'%'}</b></span>
       <span style="color:${av.color}">الغياب: <b>${Math.round(c.abs)}%</b>${showWarn?' · '+esc(av.label):''}</span>
-      ${c.letter?`<span>التقدير: ${esc(c.letter)}</span>`:''}
+      ${(c.letter&&!_lock)?`<span>التقدير: ${esc(c.letter)}</span>`:''}
     </div>
     ${(isActive(c.status)&&!isDeprived(c.abs)&&(parseFloat(c.abs)||0)>=10)?`<div class="cc-left">🛡️ يتبقّى لك <b>${Math.max(0,Math.round((25-(parseFloat(c.abs)||0))*10)/10)}%</b> قبل الحرمان</div>`:''}
     ${detHTML}
@@ -6861,46 +7012,34 @@ const tPgs={
     todayCoursesForTrainer(myName,todayName).forEach(tc=>{
       if(isCoopTraining(tc.code))return;     // ⛔ التدريب التعاوني ميداني — لا يُحضَّر
       const k=nrmC(tc.course); if(!k)return;
-      const o=_cmap.get(k)||{course:tc.course,code:tc.code||'',grps:new Set(),anyGrp:false};
-      // صف جدول بلا رقم شعبة = كل الشُعب (نفس تسامح الخادم في trainerInSchedule_)
-      (tc.grps||new Set()).forEach(g=>{const gk=grpKey(g); if(gk)o.grps.add(gk); else o.anyGrp=true;});
-      _cmap.set(k,o);
+      _cmap.set(k,_cmap.get(k)||{course:tc.course,code:tc.code||''});
+    });
+    /* 🤝 ومواد أُضفتُ مشاركاً في تحضيرها عند التسجيل — تظهر كل يوم، لأنها
+       ليست مرتبطة بحصة في الجدول بل بشراكة على المادة نفسها. */
+    (coTrainers||[]).forEach(c=>{
+      if(nrmName(c.name)!==meName())return;
+      const k=nrmC(c.course); if(!k)return;
+      if(isCoopTraining(c.code))return;
+      if(!_cmap.has(k))_cmap.set(k,{course:c.course,code:c.code||''});
     });
     const todayCourses=[..._cmap.values()];
-    /* 🚧 شُعبي في سجل المقررات التي ما أحد مُسند لها في الجدول: لا تُحضَّر —
-       نقولها صراحة بدل أن تختفي، لأن إخفاءها بلا سبب هو ما أتعبه سابقاً. */
-    const _orphan=myUnscheduledGroups();
-    const orphanCard=_orphan.length?`<div class="ccard cc-y" style="margin-bottom:18px">
-      <div style="font-size:13.5px;font-weight:700;color:var(--acc-y)">🚧 ${_orphan.length} شعبة عندك بلا تحضير — ما أحد مُسند لها في «الجدول»</div>
-      <div style="font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.9">
-        ${_orphan.slice(0,6).map(o=>`<div>• <b style="color:var(--text)">${esc(o.course)}</b> — الشعبة ${esc(String(o.grp).replace(/\.0$/,''))}</div>`).join('')}
-        ${_orphan.length>6?`<div>• و${_orphan.length-6} غيرها…</div>`:''}
-        <div style="margin-top:6px">التحضير يتبع «الجدول»: أسند المادة لمدرّب في الجدول ليظهر له تحضيرها.</div>
-      </div>
-      <div style="margin-top:9px">${role==='a'
-        ? `<button class="btn btn-out btn-sm" onclick="showAPage('schedule',document.getElementById('sn-schedule'))">📅 افتح الجدول</button>`
-        : `<span style="font-size:12px;color:var(--muted)">أرسل للإدارة لتُسندها لك في الجدول.</span>`}</div>
-    </div>`:'';
     if(!todayCourses.length){
-      return header+orphanCard+`<div class="alert ab"><span class="aicon">📅</span>التحضير يتبع «الجدول» — تظهر لك مواد اليوم المُسندة لك وشُعبها فقط</div>
+      return header+`<div class="alert ab"><span class="aicon">📅</span>التحضير يتبع «الجدول» — تظهر لك مواد اليوم المُسندة لك فيه</div>
       <div class="empty"><div class="empty-icon">📭</div>ما عندك مواد للتحضير اليوم (${dayLabel})</div>`;
     }
-    return header+orphanCard+`
+    return header+`
     <div class="alert ab"><span class="aicon">✅</span>مواد اليوم للتحضير — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
     ${todayCourses.map(tc=>{
       const course=tc.course, code=tc.code||'';
-      const myGrps=tc.grps||new Set();       // شُعبي في هذه المادة حسب الجدول
       /* ⚠️ اسم المادة هنا يأتي من «الجدول»، وأسماء المتدربين من «سجل المقررات».
          كانت المقارنة حرفية (===) — فمسافة زائدة أو اختلاف في كتابة الاسم بين
          التبويبين يجعل المادة تظهر في القائمة ولا يُطابقها متدرب واحد، فتطلع
          الصفحة فاضية بلا سبب. نطابق بنفس التوحيد الذي بنينا به القائمة. */
-      /* 🎯 شُعبي وحدها: الجدول يحدد المادة والشعبة معاً. شعبة بلا رقم في الجدول
-         (خانة الشعبة فارغة) تبقى على القديم: كل شُعب المادة. */
-      const _byGrp=s=>tc.anyGrp||!myGrps.size||myGrps.has(grpKey(s.grp))||!grpKey(s.grp);
-      const ssCourse=uniqStudents(students.filter(s=>nrmC(s.course)===nrmC(course)));
-      const ssAll=ssCourse.filter(_byGrp);
+      /* 👥 قائمة المادة كاملة لكل مَن في جدولها — المُشارِك يرى ما يراه صاحبها
+         حرفياً. «الشعبة» في الجدول تحدد الوقت والقاعة لا تقسيم القائمة: مادة
+         كالمشروع يتقاسمها ثلاثة على كل الدفعة. */
+      const ssAll=uniqStudents(students.filter(s=>nrmC(s.course)===nrmC(course)));
       const ssDedup=ssAll.filter(s=>isActive(s.status));
-      const _otherGrps=ssCourse.filter(s=>isActive(s.status)&&!_byGrp(s)).length;
       if(!ssDedup.length){
         // 🔎 بدل صفحة فاضية بلا تفسير: نقول له أين الخلل بالضبط
         const past=ssAll.length-ssDedup.length;
@@ -6911,8 +7050,7 @@ const tPgs={
         return `<div class="ccard cc-y" style="margin-bottom:18px">
           <div style="font-size:14px;font-weight:700;color:var(--acc-y)">📚 ${esc(course)} — ما فيه متدربون للتحضير</div>
           <div style="font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.85">
-            ${_otherGrps?`الجدول يُسندك لـ<b>الشعبة ${esc([...myGrps].join('، '))}</b> من هذه المادة، وفيها <b>صفر</b> متدرب — بينما <b>${_otherGrps}</b> متدرب مسجّلون في شُعب أخرى يحضّرها غيرك.`
-             :past?`فيه <b>${past}</b> متدرب في هذه المادة لكن حالتهم «سابق» — المواد السابقة لا تُحضَّر.`
+            ${past?`فيه <b>${past}</b> متدرب في هذه المادة لكن حالتهم «سابق» — المواد السابقة لا تُحضَّر.`
                  :`المادة مسندة لك في الجدول، لكن ما وصلك أي متدرب مسجّل فيها.`}
             ${similar.length?`<div style="margin-top:6px">⚠️ عندك مادة باسم قريب: <b>${similar.slice(0,2).map(esc).join('، ')}</b> — تأكّد أن الاسم مكتوب بنفس الصيغة في «الجدول» و«سجل المقررات».</div>`:''}
             ${(!past&&!similar.length)?`<div style="margin-top:6px">السبب أحد اثنين: <b>الشعبة التي أُسندت لك في الجدول ما فيها متدربون مسجّلون</b> في هذه المادة، أو هم مسجّلون باسم مدرّب آخر.</div>
@@ -6929,7 +7067,7 @@ const tPgs={
       const dpw=courseDaysPerWeek(course,grp);
       return `<div style="margin-bottom:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
-          <div style="font-size:14px;font-weight:700;color:var(--acc-b)">📚 ${esc(course)} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب${myGrps.size?` · شعبة ${esc([...myGrps].join('، '))}`:''})</span>${_shared?`<span class="pill py" style="font-size:10.5px;margin-inline-start:7px" title="التحضير لك حسب الجدول · صاحب المادة في سجل المقررات: ${escAttr(_owners.join('، '))} — الدرجات عنده">🤝 مُشارِك في التحضير · صاحبها ${esc(_owners[0])}</span>`:''}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--acc-b)">📚 ${esc(course)} <span style="font-size:11px;color:var(--muted);font-weight:400">(${ssDedup.length} متدرب)</span>${_shared?`<span class="pill py" style="font-size:10.5px;margin-inline-start:7px" title="التحضير لك حسب الجدول · صاحب المادة في سجل المقررات: ${escAttr(_owners.join('، '))} — الدرجات عنده">🤝 مُشارِك في التحضير · صاحبها ${esc(_owners[0])}</span>`:''}</div>
           ${ssDedup.some(s=>attMarks[amKey(course,s.sid)])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[amKey(course,s.sid)]).length} علامة معلقة</span>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:`ℹ️ المادة غير مجدولة بالكامل — ستُحسب بيوم/أسبوع (${WEEKS_PER_HALF} يوم) · المحروم عند ${Math.ceil(WEEKS_PER_HALF*0.25)} أيام`}</div>
@@ -6983,7 +7121,8 @@ const tPgs={
           <thead><tr><th>الاسم</th><th>الغياب%</th>${gradeHead}</tr></thead>
           <tbody>${ss.map(s=>{
             const sk=String(s.key);
-            const dep=isDeprived(s.abs);
+            const dep=isDeprivedRec(s);
+            const exm=!dep&&isDeprived(s.abs);   // محروم لكن فُتح له
             let cells;
             if(rub.length){
               cells=rub.map((r,ri)=>{
@@ -6993,9 +7132,11 @@ const tPgs={
             }else{
               cells=`<td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${dep?'disabled title="محروم"':(ro?'disabled title="الرصد عند صاحب المادة"':'')} value="${ro?(s.pct>0?s.pct:''):(gradesData[s.key]||'')}" onchange="gradesData['${sk}']=this.value"></td>`;
             }
+            // 🔓 من فُتح له استثناء: نقوله صراحةً ومع سببه، لا خانة تُفتح بلا تفسير
+            const _ex=exm?depExceptionOf(s.sid,code,course,s.grp):null;
             return `<tr>
-              <td>${esc(s.name.split(' ').slice(0,3).join(' '))}</td>
-              <td style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</td>
+              <td>${esc(s.name.split(' ').slice(0,3).join(' '))}${exm?`<span class="pill py" style="font-size:9.5px;margin-inline-start:5px" title="${escAttr('فُتحت خانة التقييم بقرار الإدارة'+(_ex&&_ex.reason?' — '+_ex.reason:'')+(_ex&&_ex.by?' · '+_ex.by:''))}">🔓 استثناء</span>`:''}</td>
+              <td style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%${dep?' <span style="font-size:10px">⛔</span>':''}</td>
               ${cells}
             </tr>`;
           }).join('')}</tbody>
@@ -7378,7 +7519,7 @@ async function saveDetailGrades(code,course){
   const cid='rb_'+cidOf(code);
   const details=[],totals=[];
   ss.forEach(s=>{
-    if(isDeprived(s.abs))return;
+    if(isDeprivedRec(s))return;
     const sk=String(s.key);
     let sum=0,any=false;
     rub.forEach(r=>{
@@ -7411,7 +7552,7 @@ async function saveGrades(course){
   ss.forEach(s=>{
     const grade=gradesData[s.key];
     if(grade!==undefined&&grade!==''){
-      if(isDeprived(s.abs)){ deprived++; return; } // المحروم يُستبعد من الحفظ
+      if(isDeprivedRec(s)){ deprived++; return; } // المحروم يُستبعد — إلا مَن فُتح له استثناء
       records.push({key:s.key,sid:s.sid,code:s.code,grp:s.grp,grade:parseFloat(grade)||0});
     }
   });
@@ -7430,7 +7571,7 @@ async function saveGrades(course){
       showToast('⚠️ ما تطابق أي طالب في «'+course+'» — تأكد أنك مدرّب المادة وأن الشعبة صحيحة','w');return;
     }
     // تحديث فوري بالذاكرة ليظهر الحفظ مباشرة
-    ss.forEach(s=>{const g=gradesData[s.key];if(g!==undefined&&g!==''&&!isDeprived(s.abs))s.pct=parseFloat(g)||0;});
+    ss.forEach(s=>{const g=gradesData[s.key];if(g!==undefined&&g!==''&&!isDeprivedRec(s))s.pct=parseFloat(g)||0;});
     showToast('✅ تم حفظ درجات '+course+' ('+n+' طالب)'+(deprived?` · ${deprived} محروم مستبعد`:''),'s');
     // مزامنة صامتة بعد ثوانٍ (الكتابة بالشيت قد تتأخر)
     setTimeout(()=>{if(typeof loadTrainer==='function')loadTrainer().catch(()=>{});},2500);
@@ -8069,13 +8210,47 @@ async function enrollBatch(){
       }
       done+=batch.length;
     }
+    /* 🤝 المشاركون في التحضير — بعد نجاح التسجيل، لكل مادة مختارة على حدة.
+       نبلّغ عن فشلها صراحةً: التسجيل نجح لكن الشراكة ما انحفظت، وفرقٌ مهم. */
+    const coNames=[...document.querySelectorAll('.enr-co-cb:checked')].map(c=>c.value);
+    let coOk=0, coFail=[];
+    if(coNames.length){
+      for(const cv of crs){
+        const [code,course]=cv.split('|');
+        try{
+          const rc=await callWrite('saveCoTrainers',{code,course,grp:selGrpOf(),owner:trainer,names:coNames});
+          if(rc&&(rc.status==='ok'||rc.ok===true))coOk++; else coFail.push(course);
+        }catch(_){ coFail.push(course); }
+      }
+    }
     showToast(`✅ تم تسجيل ${done} تسجيل`
       +(redo.ungraded?` · ${redo.ungraded} إعادة لمادة بلا درجة`:'')
       +(redo.failed?` · ${redo.failed} إعادة لراسب`:'')
-      +(skipped?` · تخطّى ${skipped}`:'')+(lockedSkip?` · 🔒 ${lockedSkip} بمتطلب`:''),'s');
-    loadAdmin().then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
+      +(skipped?` · تخطّى ${skipped}`:'')+(lockedSkip?` · 🔒 ${lockedSkip} بمتطلب`:'')
+      +(coOk?` · 🤝 ${coNames.length} مشارك في التحضير`:''),'s');
+    if(coFail.length)setTimeout(()=>showToast('⚠️ التسجيل تمّ، لكن ما انحفظ المشاركون في: '+coFail.join('، ')+' — أعد تحديدهم','w'),1500);
+    Promise.all([loadAdmin(),loadCoTrainers().catch(()=>{})])
+      .then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
   }catch(e){showToast('تعذّر التسجيل — جرب مرة أخرى','e');}
 }
+// الشعبة المختارة حالياً في صفحة التسجيل الجماعي
+function selGrpOf(){ return String(window._enrGrp||''); }
+/* 🤝 مربّعات المدربين المشاركين — نستبعد صاحب المادة منها (هو الرئيسي لا مشارك) */
+function enrCoBoxes(owner){
+  const ow=nrmName(owner);
+  const list=(trainersDB||[]).filter(t=>nrmName(t.name)&&nrmName(t.name)!==ow);
+  if(!list.length)return '<div style="font-size:12px;color:var(--muted)">ما فيه مدربون غير صاحب المادة</div>';
+  return list.map(t=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px">
+    <input type="checkbox" class="enr-co-cb" value="${escAttr(t.name)}" style="cursor:pointer">${esc(t.name)}</label>`).join('');
+}
+// عند تغيير صاحب المادة نعيد بناء القائمة (ونحفظ ما كان محدداً)
+function enrCoList(){
+  const box=document.getElementById('enr_co'); if(!box)return;
+  const was=new Set([...box.querySelectorAll('.enr-co-cb:checked')].map(c=>c.value));
+  box.innerHTML=enrCoBoxes(document.getElementById('enr_trainer')?.value||'');
+  box.querySelectorAll('.enr-co-cb').forEach(c=>{ if(was.has(c.value))c.checked=true; });
+}
+window.enrCoBoxes=enrCoBoxes;window.enrCoList=enrCoList;
 window.toggleGrpStudents=toggleGrpStudents;window.updateEnrCounts=updateEnrCounts;window.enrollBatch=enrollBatch;
 
 // ===== إدارة الحسابات (إضافة/تعديل/حذف) =====
@@ -9335,7 +9510,7 @@ const aPgs={
             <label for="grpAll" style="font-weight:700;color:var(--acc-b);cursor:pointer;font-size:13px">تحديد كل الشعبة (${gStudents.length})</label>
           </div>
           <div style="max-height:320px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">
-            ${gStudents.map(s=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:4px"><input type="checkbox" class="enr-student-cb" value="${esc(s.id.toString())}" style="cursor:pointer">${esc(s.name.split(' ').slice(0,3).join(' '))}</label>`).join('')||'<div style="color:var(--muted)">لا يوجد متدربون بهذه الشعبة</div>'}
+            ${gStudents.map(s=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:4px"><input type="checkbox" class="enr-student-cb" value="${escAttr(String(s.id==null?'':s.id))}" style="cursor:pointer">${esc(String(s.name||'—').split(' ').slice(0,3).join(' '))}</label>`).join('')||'<div style="color:var(--muted)">لا يوجد متدربون بهذه الشعبة</div>'}
           </div>
         </div>
         <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px">
@@ -9352,8 +9527,11 @@ const aPgs={
         </div>
       </div>
       <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;max-width:500px">
-        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">👨‍🏫 المدرب (لكل المواد المختارة)</label>
-        <select id="enr_trainer" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"><option value="">— اختر المدرب —</option>${trOpts}</select>
+        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">👨‍🏫 صاحب المادة — الرئيسي (له التحضير والدرجات)</label>
+        <select id="enr_trainer" onchange="enrCoList()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"><option value="">— اختر المدرب —</option>${trOpts}</select>
+        <!-- 🤝 معه مدربون يحضّرون في الوقت نفسه · والدرجات تبقى لصاحب المادة -->
+        <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">🤝 مدربون مشاركون في التحضير <span style="font-size:11px">(اختياري · يحضّرون معه ولا يرصدون)</span></label>
+        <div id="enr_co" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:5px;max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:9px;margin-bottom:14px">${enrCoBoxes('')}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
           <div>
             <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 الفصل التدريبي</label>
@@ -9381,7 +9559,12 @@ const aPgs={
       if(window._enrPre){
         const pre=window._enrPre; window._enrPre=null;
         const hit=catCourses.find(c=>sameCourse(c.name,pre.course));
-        setTimeout(()=>{
+        /* ⏱️ كان مؤقّتاً ثابتاً يسابق رسم الصفحة: لو تأخّر الرسم انتهى المؤقّت
+           قبل وجود المربّعات، فتُفتح الصفحة بلا تحديد ويظهر «اختر متدرباً».
+           ننتظر ظهورها فعلاً (حتى ثانيتين) بدل التخمين. */
+        const apply=(tries)=>{
+          const boxes=document.querySelectorAll('.enr-course-cb');
+          if(!boxes.length && tries>0){ setTimeout(()=>apply(tries-1),60); return; }
           let picked=false;
           document.querySelectorAll('.enr-course-cb').forEach(cb=>{
             if(sameCourse(String(cb.value).split('|')[1],pre.course)){cb.checked=true;picked=true;}
@@ -9399,7 +9582,8 @@ const aPgs={
               :'ما فيه متدربون في الشعبة '+selGrp;
             showToast('ℹ️ «'+pre.course+'» ما هي متاحة للتسجيل: '+why,'w');
           }
-        },80);
+        };
+        setTimeout(()=>apply(32),40);
       }
     }
     return `
@@ -9890,7 +10074,7 @@ const aPgs={
     const byCourse={};
     active.forEach(c=>{
       const failed=stillFailed(c);
-      const deprived=isDeprived(c.abs);
+      const deprived=isDeprivedRec(c);
       const wItems=failed?[]:weakItemsOf(c);            // بنود أقل من الحد (للمواد الحالية)
       const weak=!failed&&wItems.length>0;
       const highAbs=!deprived&&isHighAbs(c);
@@ -10030,6 +10214,11 @@ const aPgs={
       <div class="rep-header"><div class="rep-title">🎉 ثيمات المناسبات</div></div>
       <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">تتبدّل ألوان المنصة مع المناسبة تلقائياً حسب التاريخ — والمناسبات الهجرية تُحسب بتقويم أم القرى فلا تحتاج تحديثاً كل سنة. ما تحفظه هنا يسري على كل المستخدمين.</div>
       <div id="thmPanel">${themePanelHTML()}</div>
+    </div>
+    <div class="rep-card" style="margin-bottom:14px">
+      <div class="rep-header"><div class="rep-title">🔒 موعد إظهار الدرجات</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">في وقت الاختبارات النهائية تُحجب الدرجات عن المتدربين حتى الموعد الذي تحدّده — ويبقون يرون موادهم وغيابهم وجدولهم. الحجب يتم في الخادم: القيم لا تُرسَل أصلاً، فلا يراها أحد بفتح أدوات المتصفح. والمدربون والإدارة يرونها دائماً.</div>
+      <div id="grelPanel">${grelPanelHTML()}</div>
     </div>
     <div class="rep-card">
       <div class="rep-header"><div class="rep-title">⚙️ إعدادات عامة</div></div>
@@ -11197,7 +11386,7 @@ function initQuickLogin(){
 }
 document.addEventListener('DOMContentLoaded',()=>{
   setSplashLogo();
-  loadThemeCfg(); applySeasonTheme();   // 🎉 المناسبة تظهر من أول لحظة
+  loadThemeCfg(); loadThemeMe(); applySeasonTheme();   // 🎉 المناسبة (أو اختياره) من أول لحظة
   initQuickLogin();
   restoreSession();
   // ⚡ أيقظ الخادم مبكراً — إن كانت هناك جلسة محفوظة فـ restoreSession تتكفّل،
@@ -11311,9 +11500,29 @@ function showRepDetail(kind){
     if(archived.length)html+=`<div style="font-size:12px;color:var(--muted);margin-top:14px">↩︎ ${archived.length} مدرب في السجلات بدون حساب دخول (أرشيف): ${archived.map(esc).join('، ')}</div>`;
     showDetail('المدربون','👨‍🏫',html);
   }else if(kind==='deprived'){
+    /* 🔓 من هنا تفتح الإدارة خانة التقييم لمن تجاوز حدّ الغياب — بلا مساس
+       بسجل غيابه. (اعتماد العذر يرفع كل أيامه، وهذا ما لا نريده هنا.) */
     const dep=allCourses.filter(c=>c.abs>=25);
-    let html=dep.length?'<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المتدربون المحرومون (غياب 25%+):</div>':'<div class="alert as"><span class="aicon">✅</span>لا توجد حالات حرمان</div>';
-    dep.forEach(c=>{const st=students.find(s=>s.id===c.sid);html+=detailRow((st?st.name.split(' ').slice(0,3).join(' '):c.sname)+' · '+c.course,Math.round(c.abs)+'%','var(--red)');});
+    const nm=c=>{const st=students.find(s=>s.id===c.sid);return (st?st.name:(c.sname||c.name||c.sid));};
+    const short=x=>String(x||'').split(' ').slice(0,3).join(' ');
+    let html=dep.length
+      ? '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المتدربون المحرومون (غياب 25%+) — تقدر تفتح خانة التقييم لمن معه عذر مقبول، والغياب يبقى مسجّلاً:</div>'
+      : '<div class="alert as"><span class="aicon">✅</span>لا توجد حالات حرمان</div>';
+    dep.forEach(c=>{
+      const open=isDepExempt(c.sid,c.code,c.course,c.grp);
+      const ex=open?depExceptionOf(c.sid,c.code,c.course,c.grp):null;
+      html+=`<div class="ccard ${open?'cc-g':'cc-r'}" style="margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="min-width:150px">
+            <div style="font-weight:700;font-size:13px">${esc(short(nm(c)))}</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${esc(c.course)}${c.grp?' · شعبة '+esc(String(c.grp).replace(/\.0$/,'')):''} · غياب <b style="color:var(--acc-r)">${Math.round(c.abs)}%</b></div>
+            ${open&&ex?`<div style="font-size:11px;color:var(--acc-g);margin-top:3px">🔓 خانة التقييم مفتوحة${ex.reason?' — '+esc(ex.reason):''}${ex.by?' · '+esc(ex.by):''}</div>`:''}
+          </div>
+          ${open
+            ? `<button class="btn btn-out btn-sm" onclick="depExcept('${jsq(String(c.sid))}','${jsq(String(nm(c)))}','${jsq(c.code||'')}','${jsq(c.course)}','${jsq(String(c.grp||''))}','${jsq(c.half||'')}',true)">↩︎ ألغِ الاستثناء</button>`
+            : `<button class="btn btn-g btn-sm" onclick="depExcept('${jsq(String(c.sid))}','${jsq(String(nm(c)))}','${jsq(c.code||'')}','${jsq(c.course)}','${jsq(String(c.grp||''))}','${jsq(c.half||'')}',false)">🔓 افتح خانة التقييم</button>`}
+        </div></div>`;
+    });
     showDetail('حالات الحرمان','⛔',html);
   }
 }
@@ -11388,7 +11597,7 @@ function notifClassified(){
   const stillFailed=c=>isConfirmedFail(c)&&!allCourses.some(o=>o.sid===c.sid&&normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
   const out={failed:[],deprived:[],weak:[],highAbs:[]};
   allCourses.forEach(c=>{
-    const failed=stillFailed(c), deprived=isDeprived(c.abs);
+    const failed=stillFailed(c), deprived=isDeprivedRec(c);
     const weak=!failed&&weakItemsOf(c).length>0;
     const highAbs=!deprived&&isHighAbs(c);
     if(failed)out.failed.push(c); else if(deprived)out.deprived.push(c); else if(weak)out.weak.push(c);
@@ -13151,6 +13360,7 @@ function openAccountSheet(){
     </div>
     <div class="acct-list">
       ${row(isLight?'🌙':'☀️', isLight?'الوضع الداكن':'الوضع الفاتح','toggleTheme()')}
+      ${row('🎨','مظهر المنصة','closeAccountSheet();openThemePick()',THEME_ME?((THEMES[THEME_ME]||{}).emo||'⚪'):'')}
       ${row('🌐','تغيير اللغة','toggleTx()')}
       ${row('🔔','الاشعارات','showNotifs()',nf)}
       ${row('🔐','تغيير الرمز السري','openChangePassword(false)')}
@@ -13232,8 +13442,99 @@ function setThemeCfg(c,persistLocal){
   applySeasonTheme();
   return THEME_CFG;
 }
-/* المناسبة الفعّالة الآن: التفعيل اليدوي أولاً، ثم أول مناسبة مطابقة وغير مطفأة */
+/* ============================================================
+ * 🎨 المظهر الشخصي — اختيار كل مستخدم على حدة
+ * ------------------------------------------------------------
+ * إعداد الإدارة (THEME_CFG) يحكم ما يراه مَن لم يختر. ومَن اختار مظهراً
+ * يراه هو وحده، محفوظاً باسم حسابه على جهازه. القيم:
+ *   ''     = تلقائي حسب المناسبة (الافتراضي)
+ *   'none' = بلا مظهر مناسبة
+ *   مفتاح  = هذا المظهر دائماً
+ * ============================================================ */
+const THEME_ME_KEY='bla_theme_me';
+let THEME_ME='';
+function themeMeKey(){ return THEME_ME_KEY+'_'+String((typeof user!=='undefined'&&user&&user.id)||'guest'); }
+function loadThemeMe(){
+  try{ const v=localStorage.getItem(themeMeKey())||''; THEME_ME=(v==='none'||THEMES[v])?v:''; }
+  catch(e){ THEME_ME=''; }
+  return THEME_ME;
+}
+function setThemeMe(v){
+  THEME_ME=(v==='none'||THEMES[v])?v:'';
+  try{ localStorage.setItem(themeMeKey(),THEME_ME); }catch(e){}
+  applySeasonTheme();
+  if(document.getElementById('thmPickBox'))renderThemePick();
+  return THEME_ME;
+}
+window.loadThemeMe=loadThemeMe;window.setThemeMe=setThemeMe;
+
+/* معرض الاختيار: بطاقة لكل مظهر بمعاينة لونه ونقشه الحقيقيين */
+function themePickHTML(){
+  const auto=activeThemeAuto();
+  const card=(val,emo,name,when,live)=>`<button type="button" class="thm-card ${THEME_ME===val?'on':''}"
+      onclick="setThemeMe('${val}')" aria-pressed="${THEME_ME===val}">
+      <div class="tc-sw" ${val&&val!=='none'?`data-thmsw="${val}"`:''}
+        style="background:${val&&val!=='none'?'':(val==='none'?'var(--bg3,#1c2740)':'linear-gradient(135deg,var(--acc-b),#1a3a6b)')}">${emo}</div>
+      <div class="tc-body"><div class="tc-name">${esc(name)}${THEME_ME===val?' ✓':''}</div>
+        <div class="tc-when">${esc(when)}</div>${live?'<div class="tc-live">● ظاهر الآن</div>':''}</div>
+    </button>`;
+  let h=card('','🎨','تلقائي','يتبدّل مع المناسبة',THEME_ME===''&&!!auto)
+       +card('none','⚪','بلا مظهر','ألوان المنصة الأساسية',false);
+  THEME_ORDER.forEach(k=>{
+    const t=THEMES[k];
+    h+=card(k,t.emo,t.name,themeNextDate(k),THEME_ME===''&&auto===k);
+  });
+  return `<div class="thm-pick" id="thmPickBox">${h}</div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:11px;line-height:1.7">
+      اختيارك يخصّك وحدك على هذا الجهاز — ما يغيّر شيئاً عند غيرك.
+      ${THEME_ME?`<button class="btn btn-out btn-sm" style="margin-top:8px" onclick="setThemeMe('')">↺ رجّعه تلقائياً</button>`:''}
+    </div>`;
+}
+// المناسبة التي كانت ستظهر تلقائياً (بلا اختيار شخصي) — للمعاينة
+function activeThemeAuto(d){
+  if(!THEME_CFG.on)return '';
+  if(THEME_CFG.force&&THEMES[THEME_CFG.force])return THEME_CFG.force;
+  for(const k of THEME_ORDER){
+    if(THEME_CFG.off&&THEME_CFG.off[k])continue;
+    if(themeMatches(k,d))return k;
+  }
+  return '';
+}
+function renderThemePick(){
+  const b=document.getElementById('thmPickWrap'); if(b)b.innerHTML=themePickHTML();
+  paintThemeSwatches();
+}
+/* نلوّن المعاينات بنفس متغيّرات الثيم الحقيقية (العنصر خارج body[data-thm]) */
+function paintThemeSwatches(){
+  const V={national:['#0a7a3d','#045c2c'],founding:['#8a5a16','#63400d'],newyear:['#4a3ab5','#2f2585'],
+           hijri:['#0f766e','#0a564f'],ramadan:['#4c2a85','#331a60'],eidFitr:['#0d7a5f','#095a46'],
+           eidAdha:['#9a5b08','#744405']};
+  document.querySelectorAll('.tc-sw[data-thmsw]').forEach(el=>{
+    const v=V[el.dataset.thmsw]; if(!v)return;
+    el.style.background='linear-gradient(135deg,'+v[0]+','+v[1]+')';
+  });
+}
+function openThemePick(){
+  const old=document.getElementById('thmPickModal'); if(old)old.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='thmPickModal';
+  ov.onclick=e=>{ if(e.target===ov)ov.remove(); };
+  ov.innerHTML=`<div class="modal" style="max-width:640px;max-height:88vh;overflow-y:auto">
+    <div class="modal-title"><span>🎨 مظهر المنصة</span>
+      <button class="modal-close" onclick="document.getElementById('thmPickModal').remove()">✕</button></div>
+    <div style="font-size:12.5px;color:var(--muted);margin:4px 0 14px;line-height:1.75">اختر المظهر الذي يريحك — أو اتركه «تلقائي» فيتبدّل مع المناسبات.</div>
+    <div id="thmPickWrap">${themePickHTML()}</div>
+  </div>`;
+  document.body.appendChild(ov);
+  paintThemeSwatches();
+}
+window.openThemePick=openThemePick;window.themePickHTML=themePickHTML;
+window.renderThemePick=renderThemePick;window.activeThemeAuto=activeThemeAuto;
+window.paintThemeSwatches=paintThemeSwatches;
+
+/* المناسبة الفعّالة الآن: اختيار المستخدم أولاً، ثم التفعيل اليدوي، ثم المناسبة */
 function activeTheme(d){
+  if(THEME_ME==='none') return '';
+  if(THEME_ME && THEMES[THEME_ME]) return THEME_ME;
   if(!THEME_CFG.on) return '';
   if(THEME_CFG.force && THEMES[THEME_CFG.force]) return THEME_CFG.force;
   for(const k of THEME_ORDER){
@@ -13299,6 +13600,105 @@ function themeNextDate(key){
   }
   return 'لا تتكرّر خلال سنة';
 }
+/* ============================================================
+ * 🔒 موعد إظهار الدرجات — لوحة الإدارة
+ * ------------------------------------------------------------
+ * القيمة {on, at, force} تُحفظ في خصائص السكربت ويعيدها الخادم مع الإقلاع،
+ * فيراها الجميع لا جهاز الإداري وحده. والحجب الفعلي في الخادم: ما يُعرض هنا
+ * شرحٌ للحالة لا هو الحارس.
+ * ============================================================ */
+let GRADES_REL={on:false,at:'',force:''};
+function setGradesRel(c){
+  GRADES_REL={on:!!(c&&c.on), at:String((c&&c.at)||'').slice(0,16),
+              force:(c&&(c.force==='show'||c.force==='hide'))?c.force:''};
+}
+// هل الدرجات محجوبة الآن بحسب الإعداد؟ (نفس منطق الخادم — للعرض فقط)
+function gradesHiddenNow(){
+  const g=GRADES_REL;
+  if(!g.on)return false;
+  if(g.force==='show')return false;
+  if(g.force==='hide')return true;
+  if(!g.at)return false;
+  const p=n=>String(n).padStart(2,'0'), d=new Date();
+  const now=d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes());
+  return now<String(g.at).replace(' ','T');
+}
+function grelFmt(at){
+  if(!at)return '—';
+  const [dd,tt]=String(at).replace(' ','T').split('T');
+  const [y,m,day]=String(dd||'').split('-');
+  if(!y||!m||!day)return at;
+  const DN=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const dt=new Date(+y,+m-1,+day);
+  let [hh,mi]=String(tt||'00:00').split(':').map(Number);
+  const am=hh<12?'ص':'م'; hh=hh%12||12;
+  return `${DN[dt.getDay()]} ${day}/${m}/${y} · ${hh}:${String(mi||0).padStart(2,'0')} ${am}`;
+}
+function grelPanelHTML(){
+  const g=GRADES_REL, hid=gradesHiddenNow();
+  const state=!g.on?{t:'معطّل — الدرجات ظاهرة للمتدربين دائماً',c:'var(--muted)',p:''}
+    :hid?{t:'محجوبة الآن عن المتدربين',c:'var(--acc-r)',p:'pr'}
+        :{t:'ظاهرة للمتدربين الآن',c:'var(--acc-g)',p:'pg'};
+  return `<label style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;cursor:pointer;margin:0 0 12px">
+      <input type="checkbox" id="grelOn" ${g.on?'checked':''} onchange="grelPreview()"> تفعيل حجب الدرجات حتى موعد الإعلان
+    </label>
+    <div class="iitem" style="margin-bottom:12px"><div class="ilbl">الحالة الآن</div>
+      <div class="ival" style="color:${state.c};font-weight:700">${state.p?`<span class="pill ${state.p}" style="font-size:11px">${esc(state.t)}</span>`:esc(state.t)}</div></div>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 موعد إعلان الدرجات</label>
+    <input type="datetime-local" id="grelAt" value="${escAttr(String(g.at||'').replace(' ','T'))}" onchange="grelPreview()"
+      style="width:100%;max-width:300px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-family:inherit;font-size:14px;color-scheme:light dark;margin-bottom:6px">
+    <div style="font-size:11.5px;color:var(--muted);margin-bottom:12px">${g.at?`تُعلن: <b style="color:var(--text)">${esc(grelFmt(g.at))}</b>`:'بلا موعد — استعمل «احجب الآن» أو حدّد تاريخاً'}</div>
+    ${g.force?`<div class="alert aw" style="margin-bottom:12px"><span class="aicon">✋</span>تجاوز يدوي مفعّل: <b>${g.force==='hide'?'محجوبة الآن':'ظاهرة الآن'}</b> — يتجاهل الموعد حتى تلغيه.
+      <button class="btn btn-out btn-sm" style="margin-top:8px" onclick="grelForce('')">↺ ارجع للموعد</button></div>`:''}
+    <div class="btn-eq" style="margin-bottom:10px">
+      <button class="btn btn-out" onclick="grelForce('hide')">🔒 احجب الآن</button>
+      <button class="btn btn-out" onclick="grelForce('show')">👁️ أظهر الآن</button>
+    </div>
+    <div class="btn-eq">
+      <button class="btn btn-g" onclick="saveGradesRel()">💾 احفظ للجميع</button>
+      <button class="btn btn-out" onclick="refreshGrelPanel()">↺ تراجع</button>
+    </div>`;
+}
+function grelPanelRead(){
+  const on=document.getElementById('grelOn'), at=document.getElementById('grelAt');
+  return {on:on?on.checked:false, at:at?String(at.value||'').slice(0,16):'', force:GRADES_REL.force};
+}
+function grelPreview(){ setGradesRel(grelPanelRead()); refreshGrelPanel(); }
+function refreshGrelPanel(){ const b=document.getElementById('grelPanel'); if(b)b.innerHTML=grelPanelHTML(); }
+function grelForce(f){
+  const c=grelPanelRead(); c.force=f||'';
+  if(f&&!c.on)c.on=true;                 // «احجب الآن» بلا تفعيل لا معنى له
+  setGradesRel(c); refreshGrelPanel();
+  showToast(f?('✋ '+(f==='hide'?'حجب':'إظهار')+' يدوي — اضغط «احفظ للجميع» ليسري'):'↺ رجعنا للموعد — احفظ ليسري','i');
+}
+async function saveGradesRel(){
+  const cfg=grelPanelRead();
+  if(cfg.on&&!cfg.at&&!cfg.force){
+    showToast('⚠️ حدّد موعداً للإعلان، أو استعمل «احجب الآن»','w'); return;
+  }
+  setGradesRel(cfg); refreshGrelPanel();
+  showToast('جاري الحفظ...','i');
+  try{
+    const r=await callWrite('setSetting',{key:'GRADES_RELEASE',value:JSON.stringify(cfg)});
+    if(r&&r.status!=='ok'&&r.ok!==true){showToast('تعذّر الحفظ'+(r.hint?' — '+r.hint:''),'e');return;}
+    showToast(gradesHiddenNow()?'🔒 الدرجات محجوبة عن المتدربين الآن':'👁️ الدرجات ظاهرة للمتدربين','s');
+  }catch(e){ showToast('تعذّر الاتصال بالخادم','e'); }
+}
+window.grelPanelHTML=grelPanelHTML;window.grelPreview=grelPreview;window.refreshGrelPanel=refreshGrelPanel;
+window.grelForce=grelForce;window.saveGradesRel=saveGradesRel;window.setGradesRel=setGradesRel;
+/* لافتة للمتدرب تشرح «—» بدل أن يظنّها عطلاً أو صفراً */
+function grelNoticeHTML(){
+  if(typeof role!=='undefined'&&role!=='s')return '';
+  if(!gradesHiddenNow())return '';
+  const g=GRADES_REL;
+  return `<div class="alert aw" style="margin-bottom:14px"><span class="aicon">🔒</span><div>
+    <b>الدرجات لم تُعلَن بعد.</b> ${g.force==='hide'||!g.at?'ستظهر لك فور إعلانها من الإدارة.':`تُعلن: <b>${esc(grelFmt(g.at))}</b>.`}
+    <div style="font-size:11.5px;color:var(--muted);margin-top:3px">موادك وغيابك وجدولك تظهر كالمعتاد.</div>
+  </div></div>`;
+}
+window.grelNoticeHTML=grelNoticeHTML;
+window.gradesHiddenNow=gradesHiddenNow;window.grelFmt=grelFmt;
+
 function themePanelHTML(){
   const c=THEME_CFG, now=activeTheme();
   const row=k=>{
