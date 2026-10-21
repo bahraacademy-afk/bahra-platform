@@ -1630,6 +1630,18 @@ body.has-modal .mob-nav{transform:translateY(110%);pointer-events:none}
 #assistWidget.tucked .assist-panel{display:none}
 </style>
 
+<style id="sched-trainers">
+/* 👥 مدربو الحصّة */
+.sch-tr-btn{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:2px 8px;border-radius:8px;
+  border:1px solid var(--border);background:color-mix(in srgb,var(--brand-1) 14%,transparent);
+  color:var(--text);font-family:inherit;font-size:10.5px;font-weight:700;cursor:pointer;line-height:1.6}
+.sch-tr-btn:hover{background:color-mix(in srgb,var(--brand-1) 26%,transparent)}
+.sch-tr-row{display:flex;align-items:center;gap:9px;padding:9px 11px;border:1px solid var(--border);
+  border-radius:10px;margin-bottom:6px;cursor:pointer;font-size:13px}
+.sch-tr-row:hover{background:color-mix(in srgb,var(--brand-1) 8%,transparent)}
+.sch-tr-row input{width:17px;height:17px;cursor:pointer;flex-shrink:0}
+.sch-trainer{line-height:1.5}
+</style>
 <style id="topbar-kit">
 /* ============================================================
    🎛️ أزرار الترويسة — مقاس وشكل واحد
@@ -2089,7 +2101,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbygN0zZB1n4DGpx0Y3R-GNLD3dXVwugzSMlDQXxIRlGtTuCpJArTmGbv0EWAoGxz7DH/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwZLkS8YdyUPinI0LMixoODht4G8D8b0VTOjLo1YPSV2jW_VDVc7jA0OTmX7CZHlOzR/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2413,7 +2425,7 @@ function assistGo(pg){
     const mc=document.getElementById('mcontent'); if(mc&&mc.scrollIntoView)mc.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){ if(typeof showToast==='function')showToast('تعذّر فتح الصفحة','w'); }
 }
-function assistAct(label,pg){ return `<button class="assist-chip" type="button" onclick="assistGo('${pg}')">${esc(label)}</button>`; }
+function assistAct(label,pg){ return `<button class="assist-chip" type="button" onclick="assistGo('${jsq(pg)}')">${esc(label)}</button>`; }
 function assistActs(){ const a=[].slice.call(arguments).filter(Boolean); return a.length?'<div class="assist-acts">'+a.join('')+'</div>':''; }
 function assistPct(v){ const n=parseFloat(v); return isFinite(n)?Math.round(n):0; }
 function assistBar(p){
@@ -3236,6 +3248,15 @@ function loadDataSnapshot(){
   }catch(e){ return false; }
 }
 function clearDataSnapshot(){ try{ localStorage.removeItem(CACHE_KEY); }catch(e){} }
+/* 🔒 النسخة المحفوظة تحوي كشف المتدربين بأسمائهم وبُردهم ودرجاتهم وأعذارهم.
+   وكانت تبقى في الجهاز متى أُغلق التبويب بلا «خروج» — فيقرؤها من يفتح
+   المتصفح بعده بلا تسجيل دخول. الآن تُمسح عند إغلاق التبويب لحسابات
+   الإدارة والمدربين (حساب المتدرب يرى بياناته هو، فنُبقي له السرعة). */
+(function(){
+  const wipeOnLeave=()=>{ try{ if(typeof role!=='undefined'&&(role==='a'||role==='t'))clearDataSnapshot(); }catch(e){} };
+  window.addEventListener('pagehide',wipeOnLeave);
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden')wipeOnLeave(); });
+})();
 /* ⚡ هل عندنا نسخة صالحة لهذا المستخدم قبل أن يسجّل الدخول؟
    إن كانت موجودة، نطلب من الخادم «تحقّق فقط» بلا حزمة البيانات — فيرجع الرد
    في جزء من ثانية بدل ثوانٍ، وتظهر المنصة من النسخة المحفوظة فوراً،
@@ -3369,9 +3390,9 @@ async function withRetry(fn,tries){
   throw last;
 }
 // إرسال POST يقرأ الرد (لتسجيل الدخول: الرمز يذهب في الـ body وليس في الرابط)
-async function postJSONRead(url,params){
+async function postJSONRead(url,params,msTimeout){
   const ctl=('AbortController' in window)?new AbortController():null;
-  const to=setTimeout(()=>ctl&&ctl.abort(),12000);
+  const to=setTimeout(()=>ctl&&ctl.abort(),msTimeout||12000);
   try{
     const r=await fetch(url,{method:'POST',redirect:'follow',cache:'no-store',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
@@ -3488,12 +3509,17 @@ async function doLogin(){
       .map(([t,m])=>setTimeout(()=>{const e=document.getElementById('ldgTxt');if(e)e.textContent=m;},t));
     try{
       try{
-        d=await jsonpTo(AUTH_URL,_lp,28000);        // ⏱️ 28 ثانية بدل 10
+        /* 🔐 كان الدخول يمرّ بـJSONP أولاً — أي أن كلمة السر تُكتب في رابط
+           وسم <script>. والرابط يبقى في performance.getEntriesByType('resource')
+           فيُقرأ من أي سكربت في الصفحة بعد انتهاء الطلب، ويُسجَّل في سجلات
+           الخادم والوسطاء. الآن POST أولاً (الجسم لا يُسجَّل ولا يُقرأ)،
+           وJSONP احتياطٌ أخير فقط إن تعذّر POST تماماً. */
+        d=await postJSONRead(AUTH_URL,_lp,28000);
       }catch(_){
         // ⭐ نحتفظ بسبب فشل المحاولة الأولى — المسارات الاحتياطية تفشل برسالة عامة
         //    فتضيع معلومة «الخادم تأخّر» وهي أهم ما يحتاج المستخدم يعرفه
-        if(_ && /timeout/i.test(_.message||'')) _slow=true;
-        try{ d=await postJSONRead(AUTH_URL,_lp); }
+        if(_ && /timeout|abort/i.test(_.message||'')) _slow=true;
+        try{ d=await jsonpTo(AUTH_URL,_lp,28000); }
         catch(__){ d=await fetchGet(AUTH_URL,_lp); }
       }
     } finally { _tick.forEach(clearTimeout); }
@@ -3534,7 +3560,14 @@ async function doLogin(){
       }
     }
     return;
-  }catch(e){/* تم عرض الخطأ أعلاه */}
+  }catch(e){
+    /* ⚠️ التعليق كان يقول «عُرض أعلاه» — وهذا صحيح لمسارات showErr وحدها.
+       أما انهيار تحميل البيانات بعد قبول كلمة السر فيصل هنا بلا أي رسالة:
+       تختفي الدوّارة ويبقى المستخدم أمام شاشة الدخول يظن أنه أخطأ. */
+    const _m=String(e&&e.message||'');
+    if(_m!=='auth'&&_m!=='shown'&&typeof showErr==='function')
+      showErr('تم التحقق، لكن تعذّر تحميل بياناتك — أعد المحاولة');
+  }
   LOGIN_BUSY=false;
   if(typeof mascotReact==='function')mascotReact('oops');          // 😖 يوقف التفكير ويهتز
   document.getElementById('lbtn').disabled=false;
@@ -4054,26 +4087,38 @@ async function loadDepExceptions(){
   }
 }
 // هل فُتحت خانة التقييم لهذا المتدرب في هذه المادة؟
-function isDepExempt(sid,code,course,grp){
+/* ⚠️ كان الاستثناء بلا ترم: المنحة في «النصف الأول» تبقى سارية بعد إنهائه،
+   فيُعاد تسجيل المتدرب في النصف التالي وتُفتح خانته تلقائياً بلا قرار جديد.
+   صار مقيَّداً بالنصف الذي مُنح فيه (والسجلات القديمة بلا ترم تبقى عامة). */
+function termKeyOf(t){ return String(t==null?'':t).replace(/\s+/g,'').trim(); }
+function isDepExempt(sid,code,course,grp,term){
   const S=String(sid||'').replace(/[^0-9]/g,''); if(!S)return false;
-  const gk=grpKey(grp||'');
+  const gk=grpKey(grp||''), tk=termKeyOf(term);
   return (depExceptions||[]).some(x=>{
     if(x.sid!==S)return false;
     const hit=(code&&x.code&&normCode(x.code)===normCode(code))||sameCourse(x.course,course);
     if(!hit)return false;
-    const xg=grpKey(x.grp); return !xg||!gk||xg===gk;
+    const xg=grpKey(x.grp); if(xg&&gk&&xg!==gk)return false;
+    const xt=termKeyOf(x.term); if(xt&&tk&&xt!==tk)return false;   // نصف آخر = لا استثناء
+    return true;
   });
 }
-function depExceptionOf(sid,code,course,grp){
-  const S=String(sid||'').replace(/[^0-9]/g,'');
-  return (depExceptions||[]).find(x=>x.sid===S&&
-    (((code&&x.code&&normCode(x.code)===normCode(code))||sameCourse(x.course,course))))||null;
+function depExceptionOf(sid,code,course,grp,term){
+  const S=String(sid||'').replace(/[^0-9]/g,''), gk=grpKey(grp||''), tk=termKeyOf(term);
+  return (depExceptions||[]).find(x=>{
+    if(x.sid!==S)return false;
+    if(!((code&&x.code&&normCode(x.code)===normCode(code))||sameCourse(x.course,course)))return false;
+    const xg=grpKey(x.grp); if(xg&&gk&&xg!==gk)return false;
+    const xt=termKeyOf(x.term); if(xt&&tk&&xt!==tk)return false;
+    return true;
+  })||null;
 }
 /* الحرمان لسجلٍّ بعينه — يحترم الاستثناء. (isDeprived(abs) تبقى للأرقام المجرّدة) */
 function isDeprivedRec(c){
   if(!c)return false;
   if(!isDeprived(c.abs))return false;
-  return !isDepExempt(c.sid||c.id,c.code,c.course,c.grp);
+  // الترم في سجل المقررات هو العمود K الذي يقرأه العميل باسم half
+  return !isDepExempt(c.sid||c.id,c.code,c.course,c.grp,c.half||c.term);
 }
 /* منح الاستثناء أو إلغاؤه — إداري فقط (الخادم يتحقق أيضاً) */
 async function depExcept(sid,name,code,course,grp,term,remove){
@@ -4101,7 +4146,7 @@ async function depExcept(sid,name,code,course,grp,term,remove){
   }catch(e){ showToast('تعذّر الاتصال بالخادم','e'); }
 }
 window.depExcept=depExcept;
-window.loadDepExceptions=loadDepExceptions;window.isDepExempt=isDepExempt;
+window.loadDepExceptions=loadDepExceptions;window.isDepExempt=isDepExempt;window.termKeyOf=termKeyOf;
 window.isDeprivedRec=isDeprivedRec;window.depExceptionOf=depExceptionOf;
 
 // قائمة الموظفين لاختيار المكلَّف (أصحاب الحسابات فقط: مدربون + إداريون)
@@ -4199,8 +4244,8 @@ async function showDelegations(){
         <div style="font-size:12px;color:var(--muted);margin:3px 0">من: ${esc(d.byName)} ← إلى: ${esc(d.toName)} · النطاق: ${esc(d.scope)}${d.expiry?' · ينتهي: '+esc(d.expiry):''}</div>
         <div style="font-size:11px;color:var(--muted)">المرحلة: ${stageLbl}</div>
         ${canAct?`<div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn btn-b btn-sm" onclick="approveDeleg('${d.id}','${stage}','approve')">✔ اعتماد</button>
-          <button class="btn btn-out btn-sm" onclick="approveDeleg('${d.id}','${stage}','reject')">✕ رفض</button>
+          <button class="btn btn-b btn-sm" onclick="approveDeleg('${jsq(d.id)}','${jsq(stage)}','approve')">✔ اعتماد</button>
+          <button class="btn btn-out btn-sm" onclick="approveDeleg('${jsq(d.id)}','${jsq(stage)}','reject')">✕ رفض</button>
         </div>`:`<div style="font-size:11px;color:var(--muted);margin-top:6px">بانتظار المدير</div>`}
       </div>`;
     }).join(''):'<div class="alert ab"><span class="aicon">ℹ️</span>لا يوجد طلبات تنتظر اعتمادك</div>';
@@ -4222,7 +4267,7 @@ async function showDelegations(){
     <div style="font-weight:700">${esc(d.course||d.code)} · شعبة ${esc(d.grp||'—')} → ${esc(d.toName)}</div>
     <div style="font-size:12px;color:var(--muted)">المشرف: ${esc(d.supStatus)} · المدير: ${esc(d.dirStatus)} · النطاق: ${esc(d.scope)}</div>
     <div style="font-size:12px;color:${delStatusColor(d)};font-weight:700;margin-top:3px">${esc(d.finalStatus)}</div>
-    ${(isAdmin&&lvl==='director'&&d.finalStatus==='نشط')?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="revokeDeleg('${d.id}')">إلغاء التكليف</button>`:''}
+    ${(isAdmin&&lvl==='director'&&d.finalStatus==='نشط')?`<button class="btn btn-out btn-sm" style="margin-top:6px" onclick="revokeDeleg('${jsq(d.id)}')">إلغاء التكليف</button>`:''}
   </div>`).join(''):'<div class="alert ab"><span class="aicon">ℹ️</span>لم ترسل أي تكليف بعد</div>';
 
   overlay.innerHTML=`<div class="modal-box" style="max-width:560px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:18px;padding:20px;max-height:88vh;overflow-y:auto">
@@ -4477,7 +4522,7 @@ function myTaughtCourses(){
   });
   for(const g in (schedule||{})){
     for(const sl in (schedule[g]||{})){
-      const c=schedule[g][sl]; if(!c||nrm(c.trainer)!==me)continue;
+      const c=schedule[g][sl]; if(!c||!schHasTrainer(c.trainer,me))continue;
       const k=nrm(c.course); if(!k)continue;
       if(!map.has(k))map.set(k,{course:c.course,code:c.code||'',viaSchedule:true});
     }
@@ -4492,7 +4537,7 @@ function myTaughtGroups(){
   (students||[]).filter(s=>isActive(s.status)).forEach(s=>{ if(s.grp)set.add(String(s.grp)); });
   for(const g in (schedule||{})){
     for(const sl in (schedule[g]||{})){
-      const c=schedule[g][sl]; if(c&&nrm(c.trainer)===me&&g)set.add(String(g));
+      const c=schedule[g][sl]; if(c&&schHasTrainer(c.trainer,me)&&g)set.add(String(g));
     }
   }
   return [...set].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
@@ -4556,13 +4601,33 @@ function myScheduledGroupsOf(courseName){
   for(const g in (schedule||{}))
     for(const sl in (schedule[g]||{})){
       const v=schedule[g][sl];
-      if(v&&sameCourse(v.course,courseName)&&nrmName(v.trainer)===me)out.add(grpKey(g));
+      if(v&&sameCourse(v.course,courseName)&&schHasTrainer(v.trainer,me))out.add(grpKey(g));
     }
   return out;
 }
 window.grpKey=grpKey;window.scheduledGroupsOf=scheduledGroupsOf;
 window.myScheduledGroupsOf=myScheduledGroupsOf;
 
+/* ============================================================
+ * 👥 أكثر من مدرّب على حصّة واحدة
+ * ------------------------------------------------------------
+ * خانة المدرب في «الجدول» كانت اسماً واحداً. صارت تقبل عدة أسماء مفصولة
+ * بـ«+» (أو فاصلة عربية/إنجليزية)، وكل قارئ للجدول يفكّها. فالمادة التي
+ * يحضرها ثلاثة في الوقت نفسه تُكتب في خلية واحدة بدل ثلاثة صفوف.
+ * ============================================================ */
+const SCH_SEP=' + ';
+function schTrainerList(v){
+  return String(v==null?'':v).split(/\s*[+،,]\s*/).map(x=>x.trim()).filter(Boolean);
+}
+function schTrainerJoin(arr){
+  return [...new Set((arr||[]).map(x=>String(x||'').trim()).filter(Boolean))].join(SCH_SEP);
+}
+// هل هذا الاسم ضمن مدرّبي الخلية؟
+function schHasTrainer(cellTrainer,name){
+  const nm=nrmName(name);
+  return schTrainerList(cellTrainer).some(x=>nrmName(x)===nm);
+}
+window.schTrainerList=schTrainerList;window.schTrainerJoin=schTrainerJoin;window.schHasTrainer=schHasTrainer;
 function todayCoursesForTrainer(trainerName,dayName){
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
   const found=new Map(); // course → {course, grps:Set}
@@ -4570,7 +4635,7 @@ function todayCoursesForTrainer(trainerName,dayName){
     const g=schedule[grp];
     for(const slot in g){
       const [d]=slot.split('|');
-      if(d===dayName && nrm(g[slot].trainer)===nrm(trainerName)){
+      if(d===dayName && schHasTrainer(g[slot].trainer,trainerName)){
         const c=g[slot].course;
         if(!found.has(c))found.set(c,{course:c,code:g[slot].code,grps:new Set()});
         found.get(c).grps.add(grp);
@@ -5484,6 +5549,53 @@ function schClear(grp,slot){
   showAPage('schedule',null);
 }
 // تغيير معمل خانة مع تنبيه التعارض
+/* 👥 مدربو الحصّة — المادة الواحدة قد يحضرها أكثر من مدرّب في الوقت نفسه
+   (كالمشروع والورش). نختارهم هنا بدل تكرار صفوف في الجدول. */
+function openSchTrainers(grp,slot){
+  const c=(schedule[grp]||{})[slot]; if(!c){showToast('الحصة فاضية','w');return;}
+  const cur=new Set(schTrainerList(c.trainer).map(nrmName));
+  const [day,p]=String(slot).split('|');
+  const list=(trainersDB||[]).filter(t=>String(t.name||'').trim());
+  const old=document.getElementById('schTrModal'); if(old)old.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='schTrModal';
+  ov.onclick=e=>{ if(e.target===ov)ov.remove(); };
+  const row=t=>{
+    const on=cur.has(nrmName(t.name));
+    // تعارض: عنده مادة أخرى بنفس الوقت
+    const busy=!on&&typeof trainerBusy==='function'&&trainerBusy(grp,day,p,t.name,c.course);
+    return `<label class="sch-tr-row">
+      <input type="checkbox" class="sch-tr-cb" value="${escAttr(t.name)}" ${on?'checked':''}>
+      <span style="flex:1;min-width:0">${esc(t.name)}${t.spec?`<span style="font-size:11px;color:var(--muted)"> · ${esc(t.spec)}</span>`:''}</span>
+      ${busy?'<span class="pill py" style="font-size:10px">مشغول هذا الوقت</span>':''}
+    </label>`;
+  };
+  ov.innerHTML=`<div class="modal" style="max-width:520px;max-height:86vh;overflow-y:auto">
+    <div class="modal-title"><span>👥 مدربو الحصّة</span>
+      <button class="modal-close" onclick="document.getElementById('schTrModal').remove()">✕</button></div>
+    <div style="font-size:12.5px;color:var(--muted);margin:4px 0 12px;line-height:1.75">
+      <b style="color:var(--text)">${esc(c.course)}</b> · الشعبة ${esc(String(grp))} · ${esc(day)} الحصة ${(+p)+1}<br>
+      اختر مدرّباً أو أكثر — كلهم يحضّرون هذه المادة، والدرجات تبقى لصاحبها في «سجل المقررات».
+    </div>
+    <div id="schTrList">${list.length?list.map(row).join(''):'<div class="empty">ما فيه مدربون مسجّلون</div>'}</div>
+    <div class="btn-eq" style="margin-top:14px">
+      <button class="btn btn-g" onclick="saveSchTrainers('${jsq(grp)}','${jsq(slot)}')">💾 اعتمد</button>
+      <button class="btn btn-out" onclick="document.getElementById('schTrModal').remove()">إلغاء</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+function saveSchTrainers(grp,slot){
+  const c=(schedule[grp]||{})[slot]; if(!c)return;
+  const picked=[...document.querySelectorAll('#schTrModal .sch-tr-cb:checked')].map(x=>x.value);
+  c.trainer=schTrainerJoin(picked);
+  document.getElementById('schTrModal')?.remove();
+  showToast(picked.length
+    ? `✅ ${picked.length} مدرّب على «${c.course}» — احفظ الجدول ليسري`
+    : '⚠️ الحصة بلا مدرّب — ما يظهر لها تحضير عند أحد','s');
+  showAPage('schedule',null);
+}
+window.openSchTrainers=openSchTrainers;window.saveSchTrainers=saveSchTrainers;
+
 function schSetRoom(grp,slot,room){
   if(!schedule[grp]||!schedule[grp][slot])return;
   const [day,p]=slot.split('|');
@@ -5731,7 +5843,7 @@ function navHTML(r,pages){
     news:{icon:'📰',lbl:'الأخبار والإعلانات'}
   };
   const ac=r==='s'?'active':r==='t'?'active at':'active aa';
-  return pages.map(p=>`<div class="sitem" onclick="show${r.toUpperCase()}Page('${p}',this)" id="sn-${p}"><span class="sicon">${map[p]?.icon||'📌'}</span>${map[p]?.lbl||p}</div>`).join('');
+  return pages.map(p=>`<div class="sitem" onclick="show${r.toUpperCase()}Page('${jsq(p)}',this)" id="sn-${p}"><span class="sicon">${map[p]?.icon||'📌'}</span>${map[p]?.lbl||p}</div>`).join('');
 }
 
 function buildMobNav(r,pages){
@@ -6002,9 +6114,9 @@ const sPgs={
       ${cur?`<div class="bpill bp-b" style="font-size:12px">🟢 حالية: ${cur}</div>`:''}
       ${past?`<div class="bpill" style="font-size:12px;background:rgba(150,150,150,.15);color:#aaa;border:1px solid rgba(150,150,150,.3)">⚪ سابقة: ${past}</div>`:''}
     </div>
-    ${statuses.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">الحالة</div><div class="term-tabs"><button class="tterm active" data-grp="status" onclick="filterTerm('status','all',this)">الكل</button>${statuses.map(s=>`<button class="tterm" data-grp="status" onclick="filterTerm('status','${s}',this)">${s}</button>`).join('')}</div>`:''}
-    ${halves.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">النصف المجزأ</div><div class="term-tabs"><button class="tterm active" data-grp="half" onclick="filterTerm('half','all',this)">الكل</button>${halves.map(h=>`<button class="tterm" data-grp="half" onclick="filterTerm('half','${h}',this)">${h}</button>`).join('')}</div>`:''}
-    ${letters.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">التقدير</div><div class="term-tabs"><button class="tterm active" data-grp="letter" onclick="filterTerm('letter','all',this)">الكل</button>${letters.map(l=>`<button class="tterm" data-grp="letter" onclick="filterTerm('letter','${l}',this)">${l}</button>`).join('')}</div>`:''}
+    ${statuses.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">الحالة</div><div class="term-tabs"><button class="tterm active" data-grp="status" onclick="filterTerm('status','all',this)">الكل</button>${statuses.map(s=>`<button class="tterm" data-grp="status" onclick="filterTerm('status','${jsq(s)}',this)">${s}</button>`).join('')}</div>`:''}
+    ${halves.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">النصف المجزأ</div><div class="term-tabs"><button class="tterm active" data-grp="half" onclick="filterTerm('half','all',this)">الكل</button>${halves.map(h=>`<button class="tterm" data-grp="half" onclick="filterTerm('half','${jsq(h)}',this)">${h}</button>`).join('')}</div>`:''}
+    ${letters.length>1?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">التقدير</div><div class="term-tabs"><button class="tterm active" data-grp="letter" onclick="filterTerm('letter','all',this)">الكل</button>${letters.map(l=>`<button class="tterm" data-grp="letter" onclick="filterTerm('letter','${jsq(l)}',this)">${l}</button>`).join('')}</div>`:''}
     <div id="coursesList">${courses.length?courses.map(c=>courseCardHTML(c)).join(''):'<div class="empty"><div class="empty-icon">📚</div>لا توجد مقررات مسجلة</div>'}</div>`;
   },
   performance:()=>{
@@ -6659,9 +6771,9 @@ function lessonCard(lp,showTrainer,canDelete){
         ${(()=>{const ss=lpSessions(lp);const first=ss[0]?lpFmtDate(ss[0].date):'—';const more=ss.length>1?` (+${ss.length-1} تاريخ)`:'';return `<div class="cc-meta">${showTrainer?`👨‍🏫 ${esc(lp.tname||'')} · `:''}${lp.grade?`شعبة ${esc(lp.grade)} · `:''}📅 ${esc(first)}${more}</div>`;})()}
         ${lp.sentAt?`<div class="cc-meta lp-sent">أُرسل: ${esc(lpSentAt(lp.sentAt))}</div>`:''}</div>
       <div class="lp-card-acts">
-        <button class="btn btn-sm btn-b" onclick="viewLessonPrep('${esc(lp.id)}')">👁️ عرض/طباعة</button>
-        ${canDelete?`<button class="btn btn-sm btn-out" onclick="editLessonPrep('${esc(lp.id)}')">✏️ تعديل</button>`:''}
-        ${canDelete?`<button class="btn btn-sm lp-del" onclick="delLessonPrep('${esc(lp.id)}')">🗑️</button>`:''}
+        <button class="btn btn-sm btn-b" onclick="viewLessonPrep('${jsq(lp.id)}')">👁️ عرض/طباعة</button>
+        ${canDelete?`<button class="btn btn-sm btn-out" onclick="editLessonPrep('${jsq(lp.id)}')">✏️ تعديل</button>`:''}
+        ${canDelete?`<button class="btn btn-sm lp-del" onclick="delLessonPrep('${jsq(lp.id)}')">🗑️</button>`:''}
       </div>
     </div></div>`;
 }
@@ -7046,7 +7158,7 @@ const tPgs={
     const view=window._clsView||'current';
     const curCrs=[...new Set(students.filter(s=>isActive(s.status)).map(s=>s.course))].length;
     const oldCrs=[...new Set(students.filter(s=>!isActive(s.status)).map(s=>s.course))].length;
-    const tbtn=(id,lbl,n)=>`<button class="tterm ${view===id?'active':''}" onclick="window._clsView='${id}';showTPage('students',document.getElementById('sn-students'))" style="padding:9px 16px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;background:${view===id?'linear-gradient(135deg,var(--brand-1),var(--brand-2))':'var(--card2,rgba(255,255,255,.04))'};color:${view===id?'#fff':'var(--text)'}">${lbl} (${n})</button>`;
+    const tbtn=(id,lbl,n)=>`<button class="tterm ${view===id?'active':''}" onclick="window._clsView='${jsq(id)}';showTPage('students',document.getElementById('sn-students'))" style="padding:9px 16px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-family:inherit;font-size:13px;font-weight:700;background:${view===id?'linear-gradient(135deg,var(--brand-1),var(--brand-2))':'var(--card2,rgba(255,255,255,.04))'};color:${view===id?'#fff':'var(--text)'}">${lbl} (${n})</button>`;
     const tabs=`<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">${tbtn('current','🟢 الحالية',curCrs)}${tbtn('archived','🗄️ السابقة (المؤرشفة)',oldCrs)}</div>`;
     const isArch=view==='archived';
     const pool=students.filter(s=>isArch?!isActive(s.status):isActive(s.status));
@@ -7219,13 +7331,13 @@ const tPgs={
             if(rub.length){
               cells=rub.map((r,ri)=>{
                 const val=detailGrade(s.key,code,r.cat);
-                return `<td><input class="grade-input rbin ${cid}" data-key="${esc(sk)}" data-cat="${esc(String(r.cat))}" data-max="${r.max}" type="number" min="0" max="${r.max}" placeholder="/${r.max}" ${dep||ro?'disabled':''}${ro?' title="الرصد عند صاحب المادة"':''} value="${val}" oninput="rbSum('${cid}','${jsq(sk)}')"></td>`;
+                return `<td><input class="grade-input rbin ${cid}" data-key="${esc(sk)}" data-cat="${esc(String(r.cat))}" data-max="${r.max}" type="number" min="0" max="${r.max}" placeholder="/${r.max}" ${dep||ro?'disabled':''}${ro?' title="الرصد عند صاحب المادة"':''} value="${val}" oninput="rbSum('${jsq(cid)}','${jsq(sk)}')"></td>`;
               }).join('')+`<td><b class="rbtot" id="tot-${cid}-${esc(sk)}" style="color:var(--acc-g)">${dep?'محروم':(rbInitTotal(s.key,code,rub))}</b></td>`;
             }else{
-              cells=`<td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${dep?'disabled title="محروم"':(ro?'disabled title="الرصد عند صاحب المادة"':'')} value="${ro?(s.pct>0?s.pct:''):(gradesData[s.key]||'')}" onchange="gradesData['${sk}']=this.value"></td>`;
+              cells=`<td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${dep?'disabled title="محروم"':(ro?'disabled title="الرصد عند صاحب المادة"':'')} value="${ro?(s.pct>0?s.pct:''):(gradesData[s.key]||'')}" onchange="gradesData['${jsq(sk)}']=this.value"></td>`;
             }
             // 🔓 من فُتح له استثناء: نقوله صراحةً ومع سببه، لا خانة تُفتح بلا تفسير
-            const _ex=exm?depExceptionOf(s.sid,code,course,s.grp):null;
+            const _ex=exm?depExceptionOf(s.sid,code,course,s.grp,s.half||s.term):null;
             return `<tr>
               <td>${esc(s.name.split(' ').slice(0,3).join(' '))}${exm?`<span class="pill py" style="font-size:9.5px;margin-inline-start:5px" title="${escAttr('فُتحت خانة التقييم بقرار الإدارة'+(_ex&&_ex.reason?' — '+_ex.reason:'')+(_ex&&_ex.by?' · '+_ex.by:''))}">🔓 استثناء</span>`:''}</td>
               <td style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%${dep?' <span style="font-size:10px">⛔</span>':''}</td>
@@ -7500,7 +7612,18 @@ async function saveAttendance(course){
       const s=document.createElement('script');
       s.id='jsonp_'+cb;
       s.src=url+'&callback='+cb;
-      s.onerror=()=>{delete window[cb];reject(new Error('network'))};
+      /* ⏱️ كان النداء الوحيد في المنصة بلا مهلة. ولو ردّ الخادم صفحة خطأ
+         بدل دالة (تجاوز حصة · نشر جارٍ · شبكة مقيَّدة) فلا onerror ولا
+         callback — فيعلّق «جاري الحفظ...» للأبد، ويبقى وسم <script> في
+         الصفحة وفيه التوكن. الآن مهلة كبقية المسارات. */
+      const _tmo=setTimeout(()=>{
+        delete window[cb];
+        document.getElementById('jsonp_'+cb)?.remove();
+        reject(new Error('timeout'));
+      },15000);
+      const _done=window[cb];
+      window[cb]=(d)=>{ clearTimeout(_tmo); _done(d); };
+      s.onerror=()=>{clearTimeout(_tmo);delete window[cb];s.remove();reject(new Error('network'))};
       document.head.appendChild(s);
     });
     showToast('✅ تم حفظ الحضور في الشيت','s');
@@ -7989,7 +8112,7 @@ function courseModal(mode,data){
     <input type="hidden" id="crs_oldCode" value="${escAttr(data.code||'')}">
     <div style="display:flex;gap:10px;margin-top:12px">
       <button class="btn btn-out" style="flex:1" onclick="document.getElementById('crsModal').remove()">إلغاء</button>
-      <button class="btn btn-b" style="flex:1" onclick="saveCourse('${mode}')">${mode==='edit'?'حفظ التعديل':'إضافة'}</button>
+      <button class="btn btn-b" style="flex:1" onclick="saveCourse('${jsq(mode)}')">${mode==='edit'?'حفظ التعديل':'إضافة'}</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
@@ -8006,7 +8129,7 @@ function renderCrsMats(type){
   box.innerHTML=mats.length?mats.map((m,i)=>`<div style="display:flex;align-items:center;gap:8px;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;padding:8px 10px">
       <span style="font-size:15px">📄</span>
       <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:600;color:var(--text)">${esc(m.title||'مادة علمية')}</div><div style="font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escUrl(m.url)}</div></div>
-      <span onclick="crsRemoveMat('${type}',${i})" style="cursor:pointer;color:var(--acc-r);font-weight:800">✕</span>
+      <span onclick="crsRemoveMat('${jsq(type)}',${i})" style="cursor:pointer;color:var(--acc-r);font-weight:800">✕</span>
     </div>`).join(''):'<span style="font-size:11px;color:var(--muted)">لا توجد مواد بعد</span>';
 }
 function crsAddMat(type){
@@ -8202,19 +8325,52 @@ function fmtTerm(v){
     .replace(/(^|\s)ترم(\s)/g,'$1الفصل$2');
 }
 // إنهاء النصف المجزأ: تحويل كل مواده لسابق
+/* 🏁 إنهاء نصف مجزأ — عملية لا رجعة فيها بضغطة واحدة، فتُعاين قبل التنفيذ.
+   كانت الواجهة تعلن أرشفة غياب وتحاضير وطلبات لا يفعلها الخادم إطلاقاً —
+   أزلناها وصرنا نعرض ما يحدث فعلاً: كم مادة ستُنهى، وكم منها بلا درجة. */
 async function endTerm(){
   const term=document.getElementById('endTermSel')?.value;
   if(!term){showToast('اختر النصف المجزأ','w');return;}
-  const termLbl=fmtTerm(term.replace(/-/g,' '));
-  if(!confirm(`⚠️ هل تريد إنهاء النصف المجزأ: ${termLbl}؟\n\nسيتم تحويل كل مواد هذا النصف إلى "سابق" (منتهية).\nلن تظهر بعدها في المواد الحالية.`))return;
+  const termLbl=fmtTerm(String(term).replace(/-/g,' '));
+  showToast('جاري فحص النصف قبل إنهائه...','i');
+  // ① معاينة: الخادم يحسب بلا أن يغيّر شيئاً
+  let pv=null;
+  try{ pv=await jsonpCall({action:'endTerm',data:JSON.stringify([{term,dry:true}])}); }catch(_){}
+  if(!pv||pv.status!=='ok'){
+    showToast('تعذّر فحص النصف — تأكد من نشر نسخة الخادم الجديدة','e'); return;
+  }
+  if(!pv.willEnd){
+    showToast(`ℹ️ ما فيه مواد جارية في «${termLbl}»`+(pv.already?` — ${pv.already} منتهية أصلاً`:''),'w');
+    return;
+  }
+  const who=(pv.who||[]).join('، ');
+  const hv=pv.halves||[];
+  const lines=[`⚠️ إنهاء النصف المجزأ: ${termLbl}`,'',
+    `• ${pv.willEnd} مادة جارية ستتحول إلى «سابق»`];
+  // مفتاح يشمل أكثر من نصف = ينهيها كلها. لا يحدث بصمت.
+  if(hv.length>1)lines.push('',
+    `🔴 هذا الاختيار يشمل ${hv.length} أنصاف وليس نصفاً واحداً:`,
+    ...hv.slice(0,4).map(x=>`   — ${fmtTerm(String(x).replace(/-/g,' '))}`),
+    hv.length>4?`   — و${hv.length-4} غيرها`:'',
+    '   ستنتهي كلها معاً.');
+  if(pv.already)  lines.push(`• ${pv.already} مادة منتهية أصلاً — لن تتأثر`);
+  if(pv.ungraded) lines.push('',
+    `🔴 ${pv.ungraded} منها بلا درجة مرصودة — ستُحفظ سابقة بصفر`,
+    who?`   مثل: ${who}${pv.ungraded>(pv.who||[]).length?' وغيرهم':''}`:'',
+    '   ارصد درجاتهم أولاً، أو افتح لهم استثناء حرمان، وإلا بقيت موادهم بلا درجة.');
+  lines.push('','هذه العملية لا رجعة فيها. متابعة؟');
+  if(!confirm(lines.filter(x=>x!==undefined).join('\n')))return;
   showToast('جاري إنهاء النصف المجزأ...','i');
   try{
     const res=await jsonpCall({action:'endTerm',data:JSON.stringify([{term}])});
-    const n=(res&&res.updated)||0;
-    const arc=(res&&res.archivedAbsence)||0;
-    const al=(res&&res.archivedLessons)||0, aq=(res&&res.archivedRequests)||0;
-    const extra=[arc?`${arc} غياب`:'',al?`${al} تحضير`:'',aq?`${aq} طلب`:''].filter(Boolean).join(' · ');
-    showToast(`✅ تم إنهاء النصف المجزأ — ${n} مادة إلى سابق`+(extra?` · أُرشِف: ${extra}`:''),'s');
+    if(!res||res.status!=='ok'){
+      showToast('❌ تعذّر الإنهاء'+(res&&res.hint?' — '+res.hint:''),'e'); return;
+    }
+    const n=res.updated||0;
+    showToast(`✅ تم إنهاء «${termLbl}» — ${n} مادة إلى سابق`
+      +(res.ungraded?` · ${res.ungraded} بلا درجة`:''),'s');
+    if(res.ungraded)setTimeout(()=>showToast(
+      `ℹ️ ${res.ungraded} مادة حُفِظت بلا درجة — تلقاها في «تسجيل جماعي» بوسم «بلا درجة مرصودة» لو احتجت إعادتها`,'i'),1600);
     loadAdmin().then(()=>showAPage('manage_courses',document.getElementById('sn-manage_courses'))).catch(()=>{});
   }catch(e){showToast('تعذّر إنهاء النصف المجزأ — جرب مرة أخرى','e');}
 }
@@ -8384,7 +8540,7 @@ function accountModal(type,mode,data){
     <div style="padding:8px 0"><input type="hidden" id="acc_oldid" value="${esc((data&&data.id)||'')}">${accountFormFields(type,data,mode)}</div>
     <div style="display:flex;gap:10px;margin-top:12px">
       <button class="btn btn-out" style="flex:1" onclick="document.getElementById('accModal').remove()">إلغاء</button>
-      <button class="btn btn-b" style="flex:1" onclick="saveAccount('${type}','${mode}')">${mode==='edit'?'حفظ التعديل':'إضافة'}</button>
+      <button class="btn btn-b" style="flex:1" onclick="saveAccount('${jsq(type)}','${jsq(mode)}')">${mode==='edit'?'حفظ التعديل':'إضافة'}</button>
     </div>
   </div>`;
   document.body.appendChild(overlay);
@@ -9052,9 +9208,11 @@ function courseProbe(courseName){
       const v=schedule[g][sl]; if(!v||!sameCourse(v.course,courseName))continue;
       const k=gkey(g)||'—';
       const o=sched[k]||(sched[k]={grp:g,trainers:{}});
-      const t=nrm(v.trainer)||'(بلا مدرّب)';
       const day=String(sl).split('|')[0]||'';
-      (o.trainers[t]||(o.trainers[t]=new Set())).add(day);
+      const tl=schTrainerList(v.trainer);        // قد تحمل الخلية عدة مدربين
+      (tl.length?tl:['(بلا مدرّب)']).forEach(t=>{
+        (o.trainers[t]||(o.trainers[t]=new Set())).add(day);
+      });
     }
   }
   const keys=[...new Set([...Object.keys(byGrp),...Object.keys(sched)])]
@@ -9215,7 +9373,7 @@ function openGraduatesList(){
       <div style="display:flex;gap:10px;align-items:center;padding:11px 13px;border-bottom:1px solid var(--border)">
         <div style="flex:1"><div style="font-weight:600;font-size:14px">${esc(s.name)}</div>
           <div style="font-size:12px;color:var(--muted)">${esc(s.id.toString())} · ${esc(s.spec||'—')}${s.gradBatch?' · '+esc(s.gradBatch):''}</div></div>
-        <button class="btn btn-b btn-sm" onclick="printGraduateTranscript('${esc(s.id.toString())}')">🖨️ كشف تخرّج</button>
+        <button class="btn btn-b btn-sm" onclick="printGraduateTranscript('${jsq(s.id.toString())}')">🖨️ كشف تخرّج</button>
       </div>`).join('')}</div>`
     :'<div class="empty"><div class="empty-icon">🎓</div>لا يوجد خريجون بعد</div>'}
   </div>`;
@@ -9502,7 +9660,7 @@ const aPgs={
   attlog:()=>renderAttLog(true,true),    // كل المعهد + تعديل
   manage_courses:()=>{
     const tab=window._mcTab||'plan';
-    const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${id}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
+    const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${jsq(id)}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
     let body='';
     if(tab==='plan'){
       // إدارة الخطة الدراسية (المقررات)
@@ -9513,11 +9671,16 @@ const aPgs={
         <td><button onclick='editCourse(${jsonAttr(c)})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${jsq(c.code)}","${jsq(c.name)}")' class="btn btn-sm" style="background:#cf1f2f;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="9" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
       // التروم الموجودة فعلاً في سجل المقررات (النشطة فقط)
-      const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>{
-        // نأخذ الجزء قبل " · " (الترم بدون النصف) لتجميع النصفين
-        return String(c.half||'').split(' · ')[0].trim();
-      }).filter(Boolean))].sort();
-      const termOpts=activeTerms.map(t=>`<option value="${t}">${fmtTerm(t.replace(/-/g,' '))}</option>`).join('');
+      /* ⚠️ كانت تُسقط النصف وتُبقي الترم وحده «لتجميع النصفين» — والزر اسمه
+         «إنهاء النصف المجزأ». فالمطابقة في الخادم بالاحتواء تُنهي النصفين
+         معاً: تُنهي الأول فينتهي الثاني وهو ما زال جارياً. نعرض كل نصف
+         على حدة كما تفعل صفحة الصيانة، فيصير الزر يفعل ما يقوله. */
+      const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status))
+        .map(c=>String(c.half||'').trim()).filter(t=>t&&t!=='غير محدد'))].sort();
+      const termOpts=activeTerms.map(t=>{
+        const n=allCourses.filter(c=>isActive(c.status)&&String(c.half||'').trim()===t).length;
+        return `<option value="${escAttr(t)}">${esc(fmtTerm(t.replace(/-/g,' ')))} — ${n} مادة</option>`;
+      }).join('');
       body=`
       <div style="background:linear-gradient(135deg,rgba(231,76,60,.08),rgba(201,162,39,.06));border:1px solid rgba(231,76,60,.25);border-radius:12px;padding:16px;margin-bottom:20px">
         <div style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)">🏁 إنهاء نصف مجزأ</div>
@@ -9581,7 +9744,7 @@ const aPgs={
       const current=catCourses.filter(c=>c.st==='current');
       const remaining=catCourses.filter(c=>c.st==='remaining');
       // أزرار اختيار الشعبة
-      const grpTabs=grps.map(g=>`<button onclick="window._enrGrp='${g}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="padding:8px 18px;border:none;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;background:${selGrp===g?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${selGrp===g?'#fff':'var(--text)'}">🏫 الشعبة ${g}</button>`).join('');
+      const grpTabs=grps.map(g=>`<button onclick="window._enrGrp='${jsq(g)}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="padding:8px 18px;border:none;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;background:${selGrp===g?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${selGrp===g?'#fff':'var(--text)'}">🏫 الشعبة ${g}</button>`).join('');
       // صندوق مقرر (حسب الحالة)
       const crsBox=(c,selectable)=>{
         const badge=c.st==='done'?'<span style="font-size:10px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">✓ منتهية</span>':c.st==='current'?'<span style="font-size:10px;background:#6ab8f7;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">▶ حالية</span>':`<span style="font-size:10px;background:var(--muted);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">باقية${c.need?` · ${c.need} يحتاجها`:''}</span>`;
@@ -9693,7 +9856,7 @@ const aPgs={
   accounts:()=>{
     const t=window._accTab||'student';
     // مصادر البيانات لكل نوع
-    const tabBtn=(id,lbl,icon)=>`<button onclick="window._accTab='${id}';showAPage('accounts',document.getElementById('sn-accounts'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${t===id?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${t===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
+    const tabBtn=(id,lbl,icon)=>`<button onclick="window._accTab='${jsq(id)}';showAPage('accounts',document.getElementById('sn-accounts'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${t===id?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${t===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
     // بناء صفوف الجدول حسب النوع
     let rows='',cols='';
     if(t==='student'){
@@ -9819,7 +9982,7 @@ const aPgs={
         const maxC=Math.max(1,...counts);
         const bars=bands.map((b,i)=>{
           const h=Math.round(counts[i]/maxC*130);
-          return `<div onclick="showBandStudents(${b.min},${b.max},'${b.lbl}')" style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;cursor:pointer">
+          return `<div onclick="showBandStudents(${b.min},${b.max},'${jsq(b.lbl)}')" style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;cursor:pointer">
             <div style="font-size:12px;font-weight:700;color:${b.c}">${counts[i]}</div>
             <div style="width:70%;height:${h}px;min-height:4px;background:linear-gradient(180deg,${b.c},${b.c}aa);border-radius:5px 5px 0 0;transition:height .6s"></div>
             <div style="font-size:9px;color:var(--muted);text-align:center;line-height:1.2">${b.lbl}</div>
@@ -10037,11 +10200,14 @@ const aPgs={
       const slot=day+'|'+p;
       const c=grid[slot];
       return `<td class="sch-cell ${c?'filled':''}" 
-        ondragover="event.preventDefault()" ondrop="schDrop(event,'${g}','${slot}')"
+        ondragover="event.preventDefault()" ondrop="schDrop(event,'${jsq(g)}','${jsq(slot)}')"
         onclick="${c?`schClear('${jsq(g)}','${jsq(slot)}')`:''}">
-        ${c?`<div class="sch-item" draggable="true" ondragstart="schDrag(event,'${g}','${slot}')">
+        ${c?`<div class="sch-item" draggable="true" ondragstart="schDrag(event,'${jsq(g)}','${jsq(slot)}')">
           <div class="sch-course">${esc(c.course)}</div>
-          <div class="sch-trainer">${esc(c.trainer||'')}</div>
+          <div class="sch-trainer">${(()=>{const L=schTrainerList(c.trainer);
+            return L.length?L.map(esc).join('<br>'):'<span style="opacity:.6">— بلا مدرّب —</span>';})()}</div>
+          <button class="sch-tr-btn" onclick="event.stopPropagation();openSchTrainers('${jsq(g)}','${jsq(slot)}')"
+            title="مدربو هذه الحصة">👥 ${schTrainerList(c.trainer).length||0}</button>
           <select class="sch-room" onclick="event.stopPropagation()" onchange="schSetRoom('${jsq(g)}','${jsq(slot)}',this.value)">
             ${LABS.map(l=>`<option value="${l}" ${c.room===l?'selected':''}>${l}</option>`).join('')}
           </select>
@@ -10078,7 +10244,7 @@ const aPgs={
             const placed=placedByCode[k]||0;
             const remaining=Math.max(0,c.sessions-placed);
             const done=remaining===0;
-            return `<div class="sch-pal-card ${done?'pal-done':''}" draggable="true" ondragstart="schPalDrag(event,'${g}','${esc(String(c.code))}')">
+            return `<div class="sch-pal-card ${done?'pal-done':''}" draggable="true" ondragstart="schPalDrag(event,'${jsq(g)}','${jsq(String(c.code))}')">
               <div class="sch-pal-name">${esc(c.course)}</div>
               <div class="sch-pal-meta">${esc(c.trainer)}</div>
               <div class="sch-pal-count ${done?'pc-done':remaining<c.sessions?'pc-part':'pc-none'}">${done?'✅ مكتملة':`${placed}/${c.sessions} حصة`}</div>
@@ -10329,7 +10495,10 @@ const aPgs={
   },
   maintenance:()=>{
     const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>c.half).filter(t=>t&&t!=='غير محدد'))];
-    const termOpts=activeTerms.map(t=>`<option value="${esc(t)}">${esc(fmtTerm(String(t).replace(/-/g,' ')))}</option>`).join('');
+    const termOpts=activeTerms.map(t=>{
+      const n=allCourses.filter(c=>isActive(c.status)&&String(c.half||'').trim()===t).length;
+      return `<option value="${escAttr(t)}">${esc(fmtTerm(String(t).replace(/-/g,' ')))} — ${n} مادة</option>`;
+    }).join('');
     const cadence=[['شهرياً','نسخة احتياطية كاملة للملف'],['نهاية كل نصف مجزأ','زر «إنهاء النصف المجزأ»'],['نهاية كل دبلوم','زر «تخريج دفعة»'],['سنوياً','نقل تبويبات الأرشيف لملف منفصل'],['مرّة واحدة','إلزام تغيير كلمة المرور (مفعّل ✓)']];
     return `
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
@@ -10665,29 +10834,29 @@ function reqFlowHTML(){
     const rows=c.stages.map((st,i)=>`
       <div class="rf-stage" data-cat="${esc(k)}" data-i="${i}">
         <div class="rf-num">${i+1}</div>
-        <select class="rf-who" onchange="rqSet('${esc(k)}',${i},'who',this.value)">${rqWhoOptions(st.who)}</select>
+        <select class="rf-who" onchange="rqSet('${jsq(k)}',${i},'who',this.value)">${rqWhoOptions(st.who)}</select>
         <label class="rf-chk" title="يقدر يرفض الطلب نهائياً">
-          <input type="checkbox" ${st.reject!==false?'checked':''} onchange="rqSet('${esc(k)}',${i},'reject',this.checked)"><span>يرفض</span></label>
+          <input type="checkbox" ${st.reject!==false?'checked':''} onchange="rqSet('${jsq(k)}',${i},'reject',this.checked)"><span>يرفض</span></label>
         <label class="rf-chk" title="يقدر يرجعه لصاحبه للتعديل">
-          <input type="checkbox" ${st.ret!==false?'checked':''} onchange="rqSet('${esc(k)}',${i},'ret',this.checked)"><span>يُرجع</span></label>
+          <input type="checkbox" ${st.ret!==false?'checked':''} onchange="rqSet('${jsq(k)}',${i},'ret',this.checked)"><span>يُرجع</span></label>
         <label class="rf-chk" title="يقدر يصعّده لمدير الأكاديمية">
-          <input type="checkbox" ${st.escalate?'checked':''} onchange="rqSet('${esc(k)}',${i},'escalate',this.checked)"><span>يصعّد</span></label>
+          <input type="checkbox" ${st.escalate?'checked':''} onchange="rqSet('${jsq(k)}',${i},'escalate',this.checked)"><span>يصعّد</span></label>
         <div class="rf-ops">
-          <button class="btn btn-sm btn-out" title="أعلى" ${i===0?'disabled':''} onclick="rqMove('${esc(k)}',${i},-1)">↑</button>
-          <button class="btn btn-sm btn-out" title="أسفل" ${i===c.stages.length-1?'disabled':''} onclick="rqMove('${esc(k)}',${i},1)">↓</button>
-          <button class="btn btn-sm btn-out rf-del" title="احذف المرحلة" onclick="rqDel('${esc(k)}',${i})">🗑️</button>
+          <button class="btn btn-sm btn-out" title="أعلى" ${i===0?'disabled':''} onclick="rqMove('${jsq(k)}',${i},-1)">↑</button>
+          <button class="btn btn-sm btn-out" title="أسفل" ${i===c.stages.length-1?'disabled':''} onclick="rqMove('${jsq(k)}',${i},1)">↓</button>
+          <button class="btn btn-sm btn-out rf-del" title="احذف المرحلة" onclick="rqDel('${jsq(k)}',${i})">🗑️</button>
         </div>
       </div>`).join('');
     return `<div class="rf-card">
       <div class="rf-head">
-        <input class="rf-icon" value="${esc(c.icon)}" maxlength="4" onchange="rqSetCat('${esc(k)}','icon',this.value)">
-        <input class="rf-lbl" value="${esc(c.label)}" maxlength="40" onchange="rqSetCat('${esc(k)}','label',this.value)">
+        <input class="rf-icon" value="${esc(c.icon)}" maxlength="4" onchange="rqSetCat('${jsq(k)}','icon',this.value)">
+        <input class="rf-lbl" value="${esc(c.label)}" maxlength="40" onchange="rqSetCat('${jsq(k)}','label',this.value)">
         <label class="rf-chk rf-on"><input type="checkbox" ${c.on!==false?'checked':''}
-          onchange="rqSetCat('${esc(k)}','on',this.checked)"><span>مفعّل</span></label>
+          onchange="rqSetCat('${jsq(k)}','on',this.checked)"><span>مفعّل</span></label>
       </div>
       <div class="rf-hint">${c.on===false?'⛔ موقوف — لا يقدر أحد يقدّم هذا النوع':'يمرّ الطلب على هذه المراحل بالترتيب. تمرّ للمرحلة التالية فقط بعد اعتماد اللي قبلها.'}</div>
       <div class="rf-list">${rows||'<div class="rf-empty">بلا مراحل — الطلب يُقدَّم ولا يُعتمد أبداً</div>'}</div>
-      ${c.stages.length<5?`<button class="btn btn-out btn-sm" onclick="rqAdd('${esc(k)}')">➕ أضف مرحلة</button>`
+      ${c.stages.length<5?`<button class="btn btn-out btn-sm" onclick="rqAdd('${jsq(k)}')">➕ أضف مرحلة</button>`
         :'<div class="rf-hint" style="margin:0">بلغت الحد الأقصى: ٥ مراحل</div>'}
     </div>`;
   };
@@ -11602,8 +11771,8 @@ function showRepDetail(kind){
       ? '<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المتدربون المحرومون (غياب 25%+) — تقدر تفتح خانة التقييم لمن معه عذر مقبول، والغياب يبقى مسجّلاً:</div>'
       : '<div class="alert as"><span class="aicon">✅</span>لا توجد حالات حرمان</div>';
     dep.forEach(c=>{
-      const open=isDepExempt(c.sid,c.code,c.course,c.grp);
-      const ex=open?depExceptionOf(c.sid,c.code,c.course,c.grp):null;
+      const open=isDepExempt(c.sid,c.code,c.course,c.grp,c.half||c.term);
+      const ex=open?depExceptionOf(c.sid,c.code,c.course,c.grp,c.half||c.term):null;
       html+=`<div class="ccard ${open?'cc-g':'cc-r'}" style="margin-bottom:8px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
           <div style="min-width:150px">
@@ -12698,7 +12867,7 @@ function showStudentDetail(sid){
         </div>
         ${st.cert&&st.cert.startsWith('http')?`
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-          <a href="${st.cert}" target="_blank" class="btn btn-g btn-sm" style="text-decoration:none;flex:1;text-align:center">🔗 فتح الشهادة</a>
+          <a href="${escUrl(st.cert)}" target="_blank" class="btn btn-g btn-sm" style="text-decoration:none;flex:1;text-align:center">🔗 فتح الشهادة</a>
           <button class="btn btn-b btn-sm" onclick="navigator.clipboard.writeText('${jsq(st.cert)}').then(()=>showToast('تم نسخ الرابط','s'))" style="flex:1">📋 نسخ الرابط</button>
         </div>
         <div title="${escAttr(st.cert)}" style="padding:9px 12px;background:var(--card2-soft);border-radius:8px;font-size:11.5px;color:var(--muted);direction:ltr;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.cert)}</div>
@@ -12824,7 +12993,7 @@ function showAddUser(type){
       <div class="mform-group"><label>البريد الإلكتروني</label><input type="email" id="nu-email" placeholder="example@email.com"></div>
       <div class="btn-row" style="justify-content:flex-end;margin-top:8px">
         <button class="btn btn-out" onclick="document.getElementById('addUserModal').remove()">إلغاء</button>
-        <button class="btn ${isStudent?'btn-r':'btn-b'}" onclick="submitNewUser('${type}')">إضافة ✓</button>
+        <button class="btn ${isStudent?'btn-r':'btn-b'}" onclick="submitNewUser('${jsq(type)}')">إضافة ✓</button>
       </div>
     </div>
   `;
@@ -12908,7 +13077,7 @@ function renderExcuseDates(){
     const info=course?(sessions>0?`${sessions} حصة · ${hrs} ساعة`:'لا حصص لهذه المادة بهذا اليوم'):'اختر المادة أولاً';
     return `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--card2);padding:8px 12px;border-radius:6px;border:1px solid var(--border)">
       <div><span style="font-weight:700">${day}</span> <span style="color:var(--muted);font-size:12px">${dt}</span> <span style="font-size:11px;color:var(--acc-b);margin-right:8px">${info}</span></div>
-      <button type="button" onclick="removeExcuseDate('${dt}')" style="background:none;border:none;color:var(--acc-r);cursor:pointer;font-size:16px">✕</button>
+      <button type="button" onclick="removeExcuseDate('${jsq(dt)}')" style="background:none;border:none;color:var(--acc-r);cursor:pointer;font-size:16px">✕</button>
     </div>`;
   }).join('');
   if(totalDiv&&course){
@@ -13165,7 +13334,7 @@ function reqCard(r,opts){
       ${ex.days?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">أيام الغياب</span><span style="font-weight:700;text-align:left;max-width:60%">${esc(ex.days)}</span></div>`:''}
       <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الساعات المطلوب عذرها</span><span style="font-weight:700">${esc(ex.hours)} ساعة</span></div>
       ${ex.reason&&ex.reason!=='—'?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">السبب</span><span style="font-weight:600;text-align:left;max-width:60%">${esc(ex.reason)}</span></div>`:''}
-      ${ex.file?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الملف الداعم</span><a href="${ex.file}" target="_blank" style="color:var(--acc-b);font-weight:700">📎 فتح الملف</a></div>`:''}
+      ${ex.file?`<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0"><span style="color:var(--muted)">الملف الداعم</span><a href="${escUrl(ex.file)}" target="_blank" style="color:var(--acc-b);font-weight:700">📎 فتح الملف</a></div>`:''}
       ${dedu}
     </div>`;
   }else{
@@ -13177,13 +13346,13 @@ function reqCard(r,opts){
     const isLast=reqChainLast(r)===active;
     const stg=reqStageOf(cat,active)||{reject:true,ret:true,escalate:active==='tgt'};
     actions=`<div class="btn-row" style="flex-wrap:wrap;gap:8px">
-      <button class="btn btn-g btn-sm" onclick="actOnRequest('${r.rid}','معتمد')">✓ اعتماد${(cat==='عذر'&&isLast)?' وخصم الساعات':''}</button>
-      ${stg.escalate?`<button class="btn btn-b btn-sm" onclick="actOnRequest('${r.rid}','تصعيد')">⬆ تصعيد للمدير</button>`:''}
-      ${stg.ret!==false?`<button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','معاد')">↩ إرجاع للتعديل</button>`:''}
-      ${stg.reject!==false?`<button class="btn btn-out btn-sm" onclick="actOnRequest('${r.rid}','مرفوض')">✕ رفض نهائي</button>`:''}
+      <button class="btn btn-g btn-sm" onclick="actOnRequest('${jsq(r.rid)}','معتمد')">✓ اعتماد${(cat==='عذر'&&isLast)?' وخصم الساعات':''}</button>
+      ${stg.escalate?`<button class="btn btn-b btn-sm" onclick="actOnRequest('${jsq(r.rid)}','تصعيد')">⬆ تصعيد للمدير</button>`:''}
+      ${stg.ret!==false?`<button class="btn btn-out btn-sm" onclick="actOnRequest('${jsq(r.rid)}','معاد')">↩ إرجاع للتعديل</button>`:''}
+      ${stg.reject!==false?`<button class="btn btn-out btn-sm" onclick="actOnRequest('${jsq(r.rid)}','مرفوض')">✕ رفض نهائي</button>`:''}
     </div>`;
   }else if(isOwner&&fin==='بانتظار التعديل'){
-    actions=`<div class="btn-row"><button class="btn btn-r btn-sm" onclick="resubmitRequest('${r.rid}')">✏️ تعديل وإعادة إرسال</button></div>`;
+    actions=`<div class="btn-row"><button class="btn btn-r btn-sm" onclick="resubmitRequest('${jsq(r.rid)}')">✏️ تعديل وإعادة إرسال</button></div>`;
   }else if(isOwner&&cat==='تعريف'&&fin==='معتمد'){
     actions=`<div class="btn-row"><button class="btn btn-b btn-sm" onclick="printMyIntro()">🖨️ اطبع ورقة التعريف (الإفادة)</button></div>`;
   }
@@ -13595,7 +13764,7 @@ function activeThemeAuto(d){
 function themePickHTML(){
   const now=activeThemeAuto();
   const card=k=>{const t=SCHEMES[k];return `<button type="button" class="thm-card ${SCHEME_ME===k?'on':''}"
-      onclick="setScheme('${k}')" aria-pressed="${SCHEME_ME===k}">
+      onclick="setScheme('${jsq(k)}')" aria-pressed="${SCHEME_ME===k}">
       <div class="tc-sw" data-sw="${k}">${t.emo}</div>
       <div class="tc-body"><div class="tc-name">${esc(t.name)}${SCHEME_ME===k?' ✓':''}</div>
         <div class="tc-when">${esc(t.sub)}</div></div></button>`;};
@@ -13827,7 +13996,7 @@ function themePanelHTML(){
         <label style="display:flex;align-items:center;gap:7px;font-size:12.5px;cursor:pointer;margin:0">
           <input type="checkbox" class="thm-on" data-k="${k}" ${on?'checked':''} onchange="themePanelPreview()"> مفعّلة
         </label>
-        <button class="btn btn-out btn-sm" onclick="themeForce('${k}')">👁️ جرّبها الآن</button>
+        <button class="btn btn-out btn-sm" onclick="themeForce('${jsq(k)}')">👁️ جرّبها الآن</button>
       </div></div>`;
   };
   return `<label style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;cursor:pointer;margin:0 0 12px">
