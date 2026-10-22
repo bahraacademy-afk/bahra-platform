@@ -5145,7 +5145,7 @@ async function saveSchedule(){
 async function loadRubrics(){
   const [rub,det]=await Promise.all([
     fetchSheet('بنود الدرجات!A:D').catch(()=>[]),
-    fetchSheet('درجات تفصيلية!A:D').catch(()=>[])
+    fetchSheet('درجات تفصيلية!A:E').catch(()=>[])   // E = الترم (يفصل الأنصاف)
   ]);
   rubrics={};
   for(let i=1;i<rub.length;i++){
@@ -5158,15 +5158,32 @@ async function loadRubrics(){
   gradeDetails=[];
   for(let i=1;i<det.length;i++){
     const r=det[i]; if(!n0(r[0]))continue;
-    gradeDetails.push({key:n0(r[0]),code:n0(r[1]),cat:n0(r[2]),grade:parseFloat(r[3])||0});
+    gradeDetails.push({key:n0(r[0]),code:n0(r[1]),cat:n0(r[2]),grade:parseFloat(r[3])||0,term:n0(r[4])});
   }
 }
 // بنود مادة معيّنة (بالرمز)
 function rubricFor(code){return rubrics[normCode(code)]||[];}
-// درجة طالب في بند معيّن
-function detailGrade(key,code,cat){
-  const d=gradeDetails.find(x=>String(x.key).trim()===String(key).trim()&&normCode(x.code)===normCode(code)&&String(x.cat).trim()===String(cat).trim());
-  return d?d.grade:'';
+/* درجة طالب في بند معيّن.
+   ⚠️ المفاتيح القديمة تتكرّر بين الأنصاف (كانت «رمز-رقم» بلا نصف)، فصفّان
+   لنصفين مختلفين يحملان المفتاح نفسه. نرجّح الصف الذي ترمه يطابق نصف
+   السجل؛ والصفوف القديمة بلا ترم تُقبل كاحتياطي فقط. */
+function dgMatch(x,key,code,cat){
+  return String(x.key).trim()===String(key).trim()
+      && normCode(x.code)===normCode(code)
+      && String(x.cat).trim()===String(cat).trim();
+}
+function detailGrade(key,code,cat,term){
+  const tk=termKeyOf(term||'');
+  const hits=(gradeDetails||[]).filter(x=>dgMatch(x,key,code,cat));
+  if(!hits.length)return '';
+  if(tk){
+    const exact=hits.find(x=>termKeyOf(x.term||'')===tk);
+    if(exact)return exact.grade;
+    const bare=hits.find(x=>!termKeyOf(x.term||''));
+    if(bare)return bare.grade;
+    return '';                        // بنود نصف آخر لا تُعرض هنا
+  }
+  return hits[0].grade;
 }
 
 /* ============================================================
@@ -5192,7 +5209,7 @@ function rubricStanding(rec){
     return {hasRubric:false,items:[],graded:0,total:0,complete:!isActive(rec.status),weak:[],earned:0,possible:0,pctOfGraded:null};
   }
   const items=rub.map(r=>{
-    const raw=detailGrade(rec.key,rec.code,r.cat);
+    const raw=detailGrade(rec.key,rec.code,r.cat,rec.half||rec.term);
     const has=(raw!==''&&raw!==null&&raw!==undefined);
     const max=parseFloat(r.max)||0;
     const val=parseFloat(raw)||0;
@@ -6546,7 +6563,7 @@ function courseCardHTML(c){
   let detHTML='';
   if(rub.length){
     const key=c.key||((c.code||'')+'-'+(c.sid||''));
-    const rows=rub.map(r=>{const g=detailGrade(key,c.code,r.cat);return g!==''?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0"><span style="color:var(--muted)">${esc(r.cat)}</span><span style="font-weight:700">${g} / ${r.max}</span></div>`:'';}).filter(Boolean).join('');
+    const rows=rub.map(r=>{const g=detailGrade(key,c.code,r.cat,c.half||c.term);return g!==''?`<div style="display:flex;justify-content:space-between;font-size:11px;padding:3px 0"><span style="color:var(--muted)">${esc(r.cat)}</span><span style="font-weight:700">${g} / ${r.max}</span></div>`:'';}).filter(Boolean).join('');
     if(rows&&!_lock)detHTML=`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)"><div style="font-size:11px;color:var(--acc-y);font-weight:700;margin-bottom:4px">📊 تفصيل الدرجات</div>${rows}</div>`;
   }
   return `<div class="ccard ${_lock?'':ccClass(p)}">
@@ -7424,9 +7441,9 @@ const tPgs={
             let cells;
             if(rub.length){
               cells=rub.map((r,ri)=>{
-                const val=detailGrade(s.key,code,r.cat);
+                const val=detailGrade(s.key,code,r.cat,s.half||s.term);
                 return `<td><input class="grade-input rbin ${cid}" data-key="${esc(sk)}" data-cat="${esc(String(r.cat))}" data-max="${r.max}" type="number" min="0" max="${r.max}" placeholder="/${r.max}" ${dep||ro?'disabled':''}${ro?' title="الرصد عند صاحب المادة"':''} value="${val}" oninput="rbSum('${jsq(cid)}','${jsq(sk)}')"></td>`;
-              }).join('')+`<td><b class="rbtot" id="tot-${cid}-${esc(sk)}" style="color:var(--acc-g)">${dep?'محروم':(rbInitTotal(s.key,code,rub))}</b></td>`;
+              }).join('')+`<td><b class="rbtot" id="tot-${cid}-${esc(sk)}" style="color:var(--acc-g)">${dep?'محروم':(rbInitTotal(s.key,code,rub,s.half||s.term))}</b></td>`;
             }else{
               /* 🚫 المحروم: بدل خانة مقفلة فاضية نعرض الدرجة المسجّلة مشطوبة
                  ونقول إن المحتسب صفر — فالمدرّب يعرف ما الذي يدخل فعلاً. */
@@ -7742,9 +7759,9 @@ async function saveAttendance(course){
 
 // ===== نظام بنود الدرجات التفصيلية =====
 // حساب المجموع الأولي لطالب من درجاته المحفوظة
-function rbInitTotal(key,code,rub){
+function rbInitTotal(key,code,rub,term){
   let sum=0,any=false;
-  rub.forEach(r=>{const v=detailGrade(key,code,r.cat);if(v!==''){sum+=parseFloat(v)||0;any=true;}});
+  rub.forEach(r=>{const v=detailGrade(key,code,r.cat,term);if(v!==''){sum+=parseFloat(v)||0;any=true;}});
   return any?Math.round(sum*10)/10:'—';
 }
 // إعادة حساب مجموع صف طالب عند الإدخال
@@ -7845,11 +7862,13 @@ async function saveDetailGrades(code,course){
   if(!details.length){showToast('أدخل درجة واحدة على الأقل','w');return;}
   showToast('جاري حفظ درجات '+course+'...','i');
   try{
-    const payload={token:SESSION.token,action:'saveDetailGrades',code,grp:(ss[0]||{}).grp,details,totals};
+    // الترم يُرسل ليفصل بنود هذا النصف عن بنود نصف سابق بنفس المفتاح
+    const termD=String((ss[0]||{}).half||(ss[0]||{}).term||'').trim();
+    const payload={token:SESSION.token,action:'saveDetailGrades',code,grp:(ss[0]||{}).grp,term:termD,details,totals};
     // ⭐ POST يقرأ الرد ولا يتقيّد بطول الرابط (يناسب كثرة البنود/الطلاب) — و JSONP احتياطي
     let r=null;
     try{ r=await withRetry(()=>postJSONRead(SCRIPT_URL,payload),2); }
-    catch(_){ r=await jsonpCall({action:'saveDetailGrades',data:JSON.stringify({code,grp:(ss[0]||{}).grp,details,totals})}); }
+    catch(_){ r=await jsonpCall({action:'saveDetailGrades',data:JSON.stringify({code,grp:(ss[0]||{}).grp,term:termD,details,totals})}); }
     if(!r||(r.status&&r.status!=='ok')){showToast('❌ تعذّر حفظ درجات '+course+': '+attErrMsg(r&&r.msg,r&&r.hint),'e');return;}
     const n=(r&&typeof r.updated!=='undefined')?r.updated:details.length;
     if(n===0){ showToast('⚠️ ما تطابق أي طالب في «'+course+'» — تأكد أنك مدرّب المادة وأن الشعبة صحيحة','w'); return; }
@@ -8521,12 +8540,27 @@ document.addEventListener('change',function(e){
 });
 // التسجيل الجماعي: كل طالب محدد × كل مقرر محدد
 // تنسيق عرض الفصل: القيم المخزّنة تبقى «ترم ...» لكن يُعرض للمستخدم «الفصل ...»
+/* عرض اسم الفصل بصيغة واحدة مهما كُتب في الشيت.
+   ⚠️ كانت تتعامل مع «ترم أول» وحدها، فبيانات مكتوبة «ترم2 نصف2 2025/2026»
+   تظهر كما هي في شيت الكنترول وفي كل مكان — غير مفهومة ولا موحّدة. */
+const _TORD={'1':'الأول','2':'الثاني','3':'الثالث','أول':'الأول','اول':'الأول','ثاني':'الثاني','ثان':'الثاني','ثالث':'الثالث'};
 function fmtTerm(v){
-  return String(v||'')
-    .replace('ترم أول','الفصل الأول')
-    .replace('ترم ثاني','الفصل الثاني')
-    .replace('ترم صيفي','الفصل الصيفي')
-    .replace(/(^|\s)ترم(\s)/g,'$1الفصل$2');
+  let t=String(v==null?'':v).trim();
+  if(!t)return '';
+  // صيغ مضغوطة: ترم2 · نصف2 · ت2ن1
+  t=t.replace(/ترم\s*([123])/g,(m,d)=>'الفصل '+_TORD[d])
+     .replace(/نصف\s*([123])/g,(m,d)=>'النصف '+_TORD[d])
+     .replace(/(^|\s)ت([123])\s*ن([123])(?=\s|$|-)/g,(m,a,x,y)=>a+'الفصل '+_TORD[x]+' · النصف '+_TORD[y]);
+  t=t.replace('ترم أول','الفصل الأول')
+     .replace('ترم ثاني','الفصل الثاني')
+     .replace('ترم ثالث','الفصل الثالث')
+     .replace('ترم صيفي','الفصل الصيفي')
+     .replace(/(^|\s)ترم(\s)/g,'$1الفصل$2');
+  // «الفصل الأول-2026/2027» → «الفصل الأول 2026/2027»
+  t=t.replace(/(الفصل\s+[^\s-]+)-(?=\d{4})/,'$1 ');
+  // فاصل واضح بين الفصل والنصف إذا جاءا متلاصقين
+  t=t.replace(/(الفصل\s+\S+)\s+(النصف\s+\S+)/,'$1 · $2');
+  return t.replace(/\s{2,}/g,' ').trim();
 }
 // إنهاء النصف المجزأ: تحويل كل مواده لسابق
 /* 🏁 إنهاء نصف مجزأ — عملية لا رجعة فيها بضغطة واحدة، فتُعاين قبل التنفيذ.
@@ -8658,8 +8692,8 @@ const ARC_VIEW=[
    cols:[{i:0,h:'الرقم'},{i:1,h:'الاسم'},{i:2,h:'المادة'},{i:4,h:'الشعبة'},{i:5,h:'التاريخ'},{i:6,h:'الحالة'}], termCol:8},
   {k:'requests',tab:'أرشيف الطلبات',            range:'أرشيف الطلبات!A:V',            lbl:'الطلبات',        ico:'📋',
    cols:[{i:0,h:'رقم الطلب'},{i:2,h:'الاسم'},{i:4,h:'النوع'},{i:6,h:'التاريخ'},{i:9,h:'الحالة'}], termCol:20},
-  {k:'details', tab:'أرشيف الدرجات التفصيلية',  range:'أرشيف الدرجات التفصيلية!A:F',  lbl:'الدرجات التفصيلية', ico:'📝',
-   cols:[{i:0,h:'مفتاح الطالب'},{i:1,h:'رمز المادة'},{i:2,h:'البند'},{i:3,h:'الدرجة'}], termCol:4}
+  {k:'details', tab:'أرشيف الدرجات التفصيلية',  range:'أرشيف الدرجات التفصيلية!A:G',  lbl:'الدرجات التفصيلية', ico:'📝',
+   cols:[{i:0,h:'مفتاح الطالب'},{i:1,h:'رمز المادة'},{i:2,h:'البند'},{i:3,h:'الدرجة'}], termCol:5}
 ];
 let ARCHIVE={};            // {k:[rows...]} بلا ترويسة
 async function loadArchive(force){
@@ -13003,16 +13037,20 @@ function csHalves(){
 let CS_ARC_DET=null;
 async function csEnsureArchive(){
   if(CS_ARC_DET)return CS_ARC_DET;
-  const rows=await fetchSheet('أرشيف الدرجات التفصيلية!A:F').catch(()=>[]);
+  const rows=await fetchSheet('أرشيف الدرجات التفصيلية!A:G').catch(()=>[]);
   CS_ARC_DET=rows.length>1?rows.slice(1).map(r=>({key:String(r[0]||'').trim(),code:String(r[1]||'').trim(),
-    cat:String(r[2]||'').trim(),grade:r[3]})):[];
+    cat:String(r[2]||'').trim(),grade:r[3],term:String(r[4]||'').trim()})):[];
   return CS_ARC_DET;
 }
-function csDetail(key,code,cat){
-  const live=detailGrade(key,code,cat);
+function csDetail(key,code,cat,term){
+  const live=detailGrade(key,code,cat,term);
   if(live!==''&&live!=null)return live;
-  const a=(CS_ARC_DET||[]).find(x=>x.key===String(key).trim()&&normCode(x.code)===normCode(code)&&x.cat===String(cat).trim());
-  return a?a.grade:'';
+  const tk=termKeyOf(term||'');
+  const hits=(CS_ARC_DET||[]).filter(x=>x.key===String(key).trim()&&normCode(x.code)===normCode(code)&&x.cat===String(cat).trim());
+  if(!hits.length)return '';
+  if(tk){ const ex=hits.find(x=>termKeyOf(x.term||'')===tk); if(ex)return ex.grade;
+    const bare=hits.find(x=>!termKeyOf(x.term||'')); return bare?bare.grade:''; }
+  return hits[0].grade;
 }
 function controlShell(bodyHtml,subtitle){
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
@@ -13030,9 +13068,18 @@ function controlShell(bodyHtml,subtitle){
   .hdr .meta{margin-right:auto;text-align:left;font-size:11px;color:#5a6b85;line-height:1.7}
   .hdr .meta b{color:${B.deep}}
   .cs-title{font-weight:800;color:#fff;background:linear-gradient(135deg,${B.deep},${B.deep2});
-    padding:8px 13px;border-radius:7px;margin:14px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+    padding:8px 13px;border-radius:7px;margin:6px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
   .cs-title .cs-k{font-size:11px;font-weight:600;opacity:.92}
-  .cs-block{margin-bottom:20px}
+  /* ترويسة المعهد تتكرّر فوق كل شعبة — كل صفحة مستقلة بذاتها */
+  .cs-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    border-bottom:2px solid ${B.gold};padding-bottom:5px;margin-top:16px}
+  .cs-h1{font-size:13px;font-weight:800;color:${B.deep}}
+  .cs-h2{font-size:11px;color:#5a6b85;font-weight:600}
+  .cs-block{margin-bottom:20px;border:1px solid #dbe2ec;border-radius:10px;padding:10px 12px 14px}
+  @media print{.cs-block{border:none;padding:0}}
+  .cs-note{font-size:10px;color:#7a5a12;background:#fdf6e3;border:1px solid #e8d9a8;
+    border-radius:6px;padding:6px 9px;margin-top:8px}
+  table.cs td.lo{color:${B.red}}
   @media print{
     .cs-block{break-after:page;page-break-after:always}
     .cs-block:last-of-type{break-after:auto;page-break-after:auto}
@@ -13067,6 +13114,9 @@ function controlShell(bodyHtml,subtitle){
   .cs-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:#5a6b85;margin:7px 2px 0}
   .cs-legend span{display:inline-flex;align-items:center;gap:5px}
   .cs-legend i{width:15px;height:12px;border:1px solid ${B.line};display:inline-block;font-style:normal;text-align:center;line-height:11px;font-size:9px;font-weight:700}
+  .cs-legend i.lg-g{color:${B.red}}
+  .cs-legend i.lg-d{background:#fdecea;color:${B.red}}
+  .cs-legend i.lg-n{background:repeating-linear-gradient(135deg,#eceff4 0 6px,#e3e8ef 6px 12px);color:#9aa7ba}
   .cs-stats{display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:#41526d;margin:7px 2px 0;
     border-top:1px dashed #c5cfdd;padding-top:7px}
   .cs-stats b{color:${B.deep}}
@@ -13114,29 +13164,47 @@ function openControlSheet(){
       <button class="modal-close" onclick="document.getElementById('csModal').remove()">✕</button></div>
     <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">اختر النصف المجزأ — يُطبع لكل شعبة صفحة مستقلة، وكل مادة ببنودها ومجموعها.</div>
     <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">النصف المجزأ</label>
-    <select id="csHalf" aria-label="النصف المجزأ" title="النصف المجزأ" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px">
+    <select id="csHalf" aria-label="النصف المجزأ" title="النصف المجزأ" onchange="csFillGrps()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:12px">
       ${halves.map(h=>`<option value="${escAttr(h.half)}">${esc(fmtTerm(String(h.half).replace(/-/g,' ')))} — ${h.n} سجل${h.cur?' · جارٍ':' · منتهٍ'}</option>`).join('')}
     </select>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">الشعبة</label>
+    <select id="csGrp" aria-label="الشعبة" title="الشعبة" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"></select>
     <div style="display:flex;gap:9px">
       <button class="btn btn-out" style="flex:1" onclick="document.getElementById('csModal').remove()">إلغاء</button>
-      <button class="btn btn-b" style="flex:2" onclick="const v=document.getElementById('csHalf').value;document.getElementById('csModal').remove();printControlSheet(v)">🖨️ جهّز الشيت</button>
+      <button class="btn btn-b" style="flex:2" onclick="const v=document.getElementById('csHalf').value,gp=document.getElementById('csGrp').value;document.getElementById('csModal').remove();printControlSheet(v,gp)">🖨️ جهّز الشيت</button>
     </div></div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click',e=>{ if(e.target===ov)ov.remove(); });
+  csFillGrps();
 }
-async function printControlSheet(half){
+/* شعب هذا النصف وحدها — لا كل شعب المعهد */
+function csFillGrps(){
+  const H=(document.getElementById('csHalf')||{}).value||'';
+  const sel=document.getElementById('csGrp'); if(!sel)return;
+  const gs=[...new Set((allCourses||[]).filter(c=>!H||String(c.half||'').trim()===H)
+    .map(c=>String(c.grp||'')).filter(Boolean))]
+    .sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  sel.innerHTML='<option value="">كل الشعب ('+gs.length+') — كل شعبة في صفحة</option>'
+    +gs.map(g=>`<option value="${escAttr(g)}">الشعبة ${esc(g)} فقط</option>`).join('');
+}
+window.csFillGrps=csFillGrps;
+async function printControlSheet(half,onlyGrp){
   const H=String(half==null?'':half).trim();
   const inHalf=c=>!H||String(c.half||'').trim()===H;
   // سجلات النصف المطلوب (أي حالة) — فالشيت يصلح للجاري وللمنتهي
-  const recs=(allCourses||[]).filter(inHalf);
+  let recs=(allCourses||[]).filter(inHalf);
+  if(onlyGrp)recs=recs.filter(c=>String(c.grp||'')===String(onlyGrp));
   if(!recs.length){showToast('ما فيه سجلات في هذا النصف','w');return;}
   showToast('جاري تجهيز شيت الكنترول...','i');
   await csEnsureArchive().catch(()=>{});
-  const sidsIn=new Set(recs.map(c=>String(c.sid)));
   const grps=[...new Set(recs.map(c=>String(c.grp||'')).filter(Boolean))]
     .sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  const hLbl=H?fmtTerm(String(H).replace(/-/g,' ')):'كل الفصول';
   let body='';
   grps.forEach(g=>{
+    /* 🔒 عزل تام: كل شيء في هذه الكتلة يُبنى من سجلات هذه الشعبة في هذا
+       النصف وحدها — لا من قائمة المتدربين الحالية ولا من شعبة أخرى.
+       (متدرب نُقل لشعبة أخرى يبقى في شعبته وقت ذلك النصف.) */
     const gRecs=recs.filter(c=>String(c.grp||'')===String(g));
     const gIds=[...new Set(gRecs.map(c=>String(c.sid)))];
     const gs=gIds.map(id=>{
@@ -13148,7 +13216,18 @@ async function printControlSheet(half){
     const cmap=new Map();
     gRecs.forEach(c=>{ const k=normCode(c.code); if(!k)return;
       if(!cmap.has(k))cmap.set(k,{code:c.code,course:c.course,cats:rubricFor(c.code)}); });
-    const courses=[...cmap.values()];
+    /* 🎯 مادة لها بنود لكن لم تُرصد أي درجة بند لأحد في هذه الشعبة وهذا
+       النصف كانت تُرسم خمسة أعمدة كلها «غ» — جدار أحمر بلا معلومة،
+       والمجموع بجانبه مرصود فعلاً. نطويها إلى عمود «الدرجة» واحد. */
+    const courses=[...cmap.values()].map(co=>{
+      const cats=co.cats||[];
+      const anyItem=cats.length&&gs.some(st=>{
+        const c=gRecs.find(x=>String(x.sid)===st.id&&normCode(x.code)===normCode(co.code));
+        if(!c)return false;
+        return cats.some(ct=>{const v=csDetail(c.key,co.code,ct.cat,c.half||c.term);return v!==''&&v!=null;});
+      });
+      return {...co, cats: anyItem?cats:[], folded: cats.length&&!anyItem};
+    }).sort((a,b)=>String(a.course||a.code).localeCompare(String(b.course||b.code),'ar'));
     if(!courses.length)return;
     let h1=`<th rowspan="2" style="width:26px">م</th><th rowspan="2" class="nm">اسم المتدرب</th><th rowspan="2" style="width:92px">الرقم التدريبي</th>`;
     let h2='', h3='';
@@ -13164,61 +13243,68 @@ async function printControlSheet(half){
         h3+=`<th>${cats.reduce((a,c)=>a+(parseFloat(c.max)||0),0)||100}</th>`;
       }else{ h2+=`<th>الدرجة</th><th class="tot">مجموع</th>`; h3+=`<th>100</th><th>100</th>`; }
     });
-    let nDep=0, nMissing=0, sumAll=0, cntAll=0;
+    let nDep=0,nMissing=0,nPass=0,nFail=0,sumAll=0,cntAll=0;
     const rows=gs.map((s,i)=>{
-      let tds=`<td>${i+1}</td><td class="nm">${esc(s.name)}</td><td>${esc(s.id)}</td>`;
+      let tds=`<td>${i+1}</td><td class="nm" title="${escAttr(s.name)}">${esc(s.name)}</td><td>${esc(s.id)}</td>`;
       courses.forEach(co=>{
         const c=gRecs.find(x=>String(x.sid)===s.id&&normCode(x.code)===normCode(co.code));
         const cats=co.cats||[];
         if(!c){ tds+=Array((cats.length||1)+1).fill('<td class="na">·</td>').join(''); return; }
-        const dep=isDeprivedRec(c);
-        if(dep){ nDep++;
+        if(isDeprivedRec(c)){ nDep++; nFail++; cntAll++;
           tds+=Array(cats.length||1).fill('<td class="dep">—</td>').join('')+'<td class="tot dep">محروم</td>';
-          sumAll+=0; cntAll++; return; }
+          return; }
+        let total='';
         if(cats.length){
           let sum=0,any=false,cells='';
           cats.forEach(ct=>{
-            const v=csDetail(c.key,co.code,ct.cat);
+            const v=csDetail(c.key,co.code,ct.cat,c.half||c.term);
             if(v!==''&&v!=null){sum+=parseFloat(v)||0;any=true;cells+=`<td>${v}</td>`;}
             else cells+=`<td class="g">غ</td>`;
           });
-          const total=any?(Math.round(sum*10)/10):((parseFloat(c.pct)||0)?Math.round(c.pct):'');
-          if(total===''){nMissing++;} else {sumAll+=parseFloat(total)||0;cntAll++;}
-          tds+=cells+`<td class="tot">${total!==''?total:'—'}</td>`;
+          total=any?(Math.round(sum*10)/10):((parseFloat(c.pct)||0)?Math.round(c.pct):'');
+          tds+=cells;
         }else{
-          const grade=(parseFloat(c.pct)||0)?Math.round(c.pct):'';
-          if(grade===''){nMissing++;} else {sumAll+=grade;cntAll++;}
-          tds+=`<td>${grade!==''?grade:'<span class="g">غ</span>'}</td><td class="tot">${grade!==''?grade:'—'}</td>`;
+          total=(parseFloat(c.pct)||0)?Math.round(c.pct):'';
+          tds+=`<td${total===''?' class="g"':''}>${total!==''?total:'غ'}</td>`;
         }
+        if(total===''){ nMissing++; tds+=`<td class="tot">—</td>`; }
+        else{ const n=parseFloat(total)||0; sumAll+=n; cntAll++; (n>=60?nPass++:nFail++);
+          tds+=`<td class="tot${n<60?' lo':''}">${total}</td>`; }
       });
       return `<tr>${tds}</tr>`;
     }).join('');
     const avgG=cntAll?Math.round(sumAll/cntAll):0;
+    const folded=courses.filter(c=>c.folded).map(c=>c.course||c.code);
     body+=`<div class="cs-block" data-grp="${esc(String(g))}">
-      <div class="cs-title"><span>🎛️ شيت كنترول — الشعبة ${esc(String(g))}</span>
-        <span class="cs-k">${gs.length} متدرب · ${courses.length} مادة${H?' · '+esc(fmtTerm(String(H).replace(/-/g,' '))):''}</span></div>
-      <div class="cs-sub">معهد المعرفة والإبداع العالي للتدريب · الشعبة ${esc(String(g))}${H?' · '+esc(fmtTerm(String(H).replace(/-/g,' '))):''} · ${esc(new Date().toLocaleDateString('en-GB'))}</div>
+      <div class="cs-head">
+        <div class="cs-h1">معهد المعرفة والإبداع العالي للتدريب</div>
+        <div class="cs-h2">شيت الكنترول · ${esc(hLbl)}</div>
+      </div>
+      <div class="cs-title"><span>🎛️ الشعبة ${esc(String(g))}</span>
+        <span class="cs-k">${gs.length} متدرب · ${courses.length} مادة</span></div>
       <table class="cs"><thead>
         <tr>${h1}</tr>
         <tr>${h2}</tr>
         <tr class="mxr"><th colspan="3" style="text-align:center">الدرجة العظمى ←</th>${h3}</tr>
       </thead><tbody>${rows}</tbody></table>
       <div class="cs-stats">
-        <span>متوسط الشعبة المحتسب: <b>${avgG}%</b></span>
-        <span>نتائج محتسبة: <b>${cntAll}</b></span>
-        <span>لم تُرصد بعد: <b>${nMissing}</b></span>
+        <span>متوسط الشعبة: <b>${avgG}%</b></span>
+        <span>ناجحون: <b>${nPass}</b></span>
+        <span>راسبون: <b>${nFail}</b></span>
         <span>محرومون: <b>${nDep}</b></span>
+        <span>لم تُرصد: <b>${nMissing}</b></span>
       </div>
       <div class="cs-legend">
-        <span><i style="color:#b3261e">غ</i> مسجّل ولم تُرصد درجته</span>
-        <span><i style="background:#fdecea;color:#b3261e">—</i> محروم · يُحتسب صفراً</span>
-        <span><i style="background:repeating-linear-gradient(135deg,#eceff4 0 6px,#e3e8ef 6px 12px);color:#9aa7ba">·</i> غير مسجّل في المادة</span>
+        <span><i class="lg-g">غ</i> مسجّل ولم تُرصد درجته</span>
+        <span><i class="lg-d">—</i> محروم · يُحتسب صفراً</span>
+        <span><i class="lg-n">·</i> غير مسجّل في المادة</span>
       </div>
+      ${folded.length?`<div class="cs-note">ℹ️ عُرضت بعمود «الدرجة» فقط لأنها لا تحمل درجات بنود في هذا النصف: ${esc(folded.join('، '))}</div>`:''}
       <div class="cs-sign"><div>مدرّب المادة<u></u></div><div>مشرف التخصص<u></u></div><div>مدير الأكاديمية<u></u></div></div>
       </div>`;
   });
   if(!body){showToast('لا توجد شعب أو درجات لعرضها','w');return;}
-  openReport(controlShell(body, 'شيت الكنترول'+(H?' — '+fmtTerm(String(H).replace(/-/g,' ')):'')));
+  openReport(controlShell(body, 'شيت الكنترول — '+hLbl));
 }
 window.openControlSheet=openControlSheet;
 window.printControlSheet=printControlSheet;
@@ -15414,6 +15500,18 @@ function toggleTx(){
   const b=document.getElementById('txBtn');
   if(m.style.display==='none'||!m.style.display){
     m.style.display='block';
+    /* 🐞 القائمة كانت داخل .topbar: ارتفاعه ٧٠px وفيه overflow:hidden
+       و backdrop-filter — والأخير يجعله «كتلة احتواء» حتى للعناصر
+       الثابتة، فتُقصّ القائمة بالكامل: تُفتح فعلاً ولا يُرى منها شيء.
+       ننقلها إلى body ونحسب موضعها من الزر، فلا يقصّها أي أب. */
+    try{
+      if(m.parentElement!==document.body)document.body.appendChild(m);
+      m.style.position='fixed'; m.style.margin='0'; m.style.zIndex='10050';
+      m.style.insetInlineStart=''; m.style.right='';
+      const r=b.getBoundingClientRect(), W=m.offsetWidth||170;
+      m.style.top=Math.round(Math.min(r.bottom+8, window.innerHeight-m.offsetHeight-10))+'px';
+      m.style.left=Math.round(Math.max(10,Math.min(r.left+r.width/2-W/2, window.innerWidth-W-10)))+'px';
+    }catch(_){}
     b.style.background='color-mix(in srgb,var(--brand-1) 30%,transparent)';
     b.innerHTML='✕';
   }else{
@@ -15423,12 +15521,18 @@ function toggleTx(){
   }
 }
 document.addEventListener('click',function(e){
-  const w=document.getElementById('txWidget');
-  if(w&&!w.contains(e.target)){
-    document.getElementById('txMenu').style.display='none';
+  const w=document.getElementById('txWidget'), m=document.getElementById('txMenu');
+  // القائمة صارت في body، فلا بد من استثنائها صراحةً وإلا أُغلقت فور فتحها
+  if(w&&!w.contains(e.target)&&m&&!m.contains(e.target)){
+    m.style.display='none';
     const b=document.getElementById('txBtn');
     if(b) b.innerHTML=currentLang==='en'?'🇸🇦':'🌐';
   }
+});
+window.addEventListener('resize',function(){
+  const m=document.getElementById('txMenu');
+  if(m&&m.style.display==='block'){ m.style.display='none';
+    const b=document.getElementById('txBtn'); if(b)b.innerHTML=currentLang==='en'?'🇸🇦':'🌐'; }
 });
 </script>
 
