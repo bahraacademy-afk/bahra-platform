@@ -2157,7 +2157,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwZLkS8YdyUPinI0LMixoODht4G8D8b0VTOjLo1YPSV2jW_VDVc7jA0OTmX7CZHlOzR/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxAoT-21hZm9_6BFqr7AxLZo6Og2v31sCzI0kR-RaP4gM8IrR_V6dmWuwaWGbrcN2k7/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2962,7 +2962,8 @@ function assistAdmin(has,q){
   if(has('اضيف خبر','خبر جديد','اعلان','انشر','نشر خبر')) return '📰 لنشر خبر: «الأخبار والإعلانات» → «＋ خبر جديد» → اكتب العنوان والنص، وارفع صورة/مرفقات، وحدّد الفئة والجدولة → نشر.'+assistActs(assistAct('📰 الأخبار','news'));
   if(has('جدول','اسوي جدول','انشئ جدول','جدول طالب')) return '📅 لإنشاء جدول: «الجدول» → اختر شعبة أو «جدول طالب مخصّص» → اسحب المواد أو «ولّد الجدول» → «حفظ الجدول».'+assistActs(assistAct('📅 الجدول','schedule'));
   if(has('صيانه','نسخه احتياطيه','باك اب','ارشفه','نسخه','اصلاح','مفاتيح')) return '🧰 من «الصيانة»: فحص صحة النظام، 🛠️ إصلاح التبويبات، 🔑 فحص المفاتيح، 🧹 تنبيهات أُرسلت بالخطأ، نسخة احتياطية، وأرشفة الدفعات.'+assistActs(assistAct('🧰 الصيانة','maintenance'));
-  if(has('شيت كنترول','كنترول','الكنترول','طباعه')) return '🖨️ شيت الكنترول من «المقررات» → «شيت الكنترول»، وكل شعبة تُطبع في صفحة مستقلة.'+assistActs(assistAct('📚 المقررات','all_courses'));
+  if(has('شيت كنترول','كنترول','الكنترول','طباعه')) return '🖨️ شيت الكنترول من «التقارير» → «🎛️ شيت الكنترول (لكل نصف)»: تختار النصف المجزأ — جارياً كان أو منتهياً — وكل شعبة تُطبع في صفحة مستقلة ببنودها ومجاميعها وخانات التوقيع.'+assistActs(assistAct('📊 التقارير','reports'));
+  if(has('أرشفة','ارشفة','الأرشيف','الارشيف','أرشف','ارشف')) return '📦 بعد «إنهاء النصف المجزأ» افتح «المقررات → الخطة الدراسية» واضغط «📦 أرشفة نصف منتهٍ»: تُنقل تحاضير المدربين وسجل الغياب اليومي والطلبات المنتهية والدرجات التفصيلية إلى تبويبات أرشيف — لا تُحذف، وتستعرضها متى شئت من «🗄️ استعرض الأرشيف».'+assistActs(assistAct('📖 المقررات','manage_courses'),assistAct('🧰 الصيانة','maintenance'));
   return null;
 }
 // بطاقة متدرب (للإداري فقط)
@@ -4198,6 +4199,11 @@ async function depExcept(sid,name,code,course,grp,term,remove){
     showToast(remove?('↩︎ رجع «'+name+'» محروماً في «'+course+'»')
                     :('🔓 انفتحت خانة التقييم لـ «'+name+'» في «'+course+'» — الغياب باقٍ '+'كما هو'),'s');
     document.getElementById('detailModal')?.remove();
+    /* 🔁 الاستثناء يغيّر المتوسط والمعدّل والترتيب فوراً — فنعيد رسم الصفحة
+       تحت النافذة. كانت الأرقام تبقى على حالها حتى ينتقل لصفحة أخرى،
+       فيظن أن المنحة ما اشتغلت. (النوافذ في body فلا يمسحها الرسم.) */
+    try{ const act=document.querySelector('#sidebar .sitem.active');
+      if(act&&act.id&&typeof showAPage==='function')showAPage(act.id.replace('sn-',''),act); }catch(_){}
     showRepDetail('deprived');                      // أعِد فتح القائمة محدَّثة
   }catch(e){ showToast('تعذّر الاتصال بالخادم','e'); }
 }
@@ -4462,6 +4468,9 @@ function isFailed(c){
   const L=String(c.letter||'').replace(/\s+/g,'').trim();
   const failLetters=['F','f','هـ','ه','راسب','محروم','ر'];
   const letterFail=failLetters.some(x=>L===x||L.includes('راسب')||L.includes('محروم'));
+  // 🚫 الحرمان رسوبٌ بذاته مهما كانت الدرجة — فلا يُسقط متطلباً سابقاً
+  //    ولا يُعدّ اجتيازاً عند إعادة التسجيل.
+  if(typeof isDeprivedRec==='function'&&isDeprivedRec(c))return true;
   // نعتبره راسباً لو الدرجة مرصودة (>0) وأقل من 60، أو الحرفي راسب
   return (g>0&&g<60)||letterFail;
 }
@@ -5676,7 +5685,12 @@ function gradeToGPA(g){
 }
 // ⭐ المقررات المكتملة فقط (المواد السابقة التي رُصدت لها درجات) — تُستثنى المواد الحالية من حساب المعدل
 // المنطق: مثل الجامعات، الترم الحالي ما يُحسب في المعدل التراكمي حتى ترصد درجاته النهائية
-function completedCourses(list){return (list||[]).filter(c=>!isActive(c.status));}
+/* المكتملة المحتسبة: انتهت ولها نتيجة محتسبة (درجة مرصودة أو حرمان).
+   هذه الدالة مصدر المعدّل التراكمي والترتيب وحدها.
+   ⚠️ كانت «انتهت» فقط: فمادةٌ أُنهيت ولم تُرصد درجتها تدخل المعدّل
+   بصفر = نقطة 1.00 فتسحبه لأسفل بلا سبب، والمحروم يدخل بدرجته كاملة.
+   الآن: غير المرصودة تُستثنى، والمحروم يدخل بصفر لأنه نتيجة لا نقص. */
+function completedCourses(list){return (list||[]).filter(c=>!isActive(c.status)&&isScored(c));}
 function hasCompleted(list){return completedCourses(list).length>0;}
 // متوسط الدرجات من المكتملة فقط (رقم، 0 لو ما فيه مكتمل)
 /* ⚠️ كان يحسب من «المواد المكتملة» فقط. والمعهد في منتصف الترم تكون كل
@@ -5697,13 +5711,20 @@ function avgPct(list){ return avgScoredNum(list); }
  * حالية كانت أو سابقة — وما لم يُرصد لا يُحسب صفراً بل يُستثنى،
  * وإن لم يُرصد شيء تُعرض «—» لا «٠٪».
  * ============================================================ */
-const isScored=c=>(parseFloat(c&&c.pct)||0)>0;
+/* 🚫 الحرمان رسوبٌ بصفر — لا استبعاد.
+   كان الحرمان مجرد شارة حمراء: الدرجة المسجّلة تدخل المتوسط والمعدّل
+   والترتيب، فطالبٌ غاب ٩٤٪ من «مشروع» يتصدّر الأوائل بـ٧١٪. والاستبعاد
+   الكامل يخفي الرسوب ويعرض «—» كأنه بلا بيانات. فالقاعدة: المحروم مادةٌ
+   محتسبة بدرجة صفر، ومَن فُتح له استثناء تُحسب درجته المسجّلة كما هي. */
+function effPct(c){ return isDeprivedRec(c)?0:(parseFloat(c&&c.pct)||0); }
+const isScored=c=>isDeprivedRec(c)||(parseFloat(c&&c.pct)||0)>0;
+window.effPct=effPct;
 function scoredOf(list){return (list||[]).filter(isScored);}
 function scoredCount(list){return scoredOf(list).length;}
 function avgScored(list){
   const d=scoredOf(list);
   if(!d.length)return null;                       // لا شيء مرصود — ليس صفراً
-  return Math.round(d.reduce((a,c)=>a+(parseFloat(c.pct)||0),0)/d.length);
+  return Math.round(d.reduce((a,c)=>a+effPct(c),0)/d.length);   // المحروم صفر
 }
 function avgScoredNum(list){const v=avgScored(list);return v===null?0:v;}   // للأشرطة والترتيب
 function avgScoredTxt(list){const v=avgScored(list);return v===null?'—':v+'%';}
@@ -5715,7 +5736,7 @@ function avgPctDisplay(list){ return avgScoredTxt(list); }   // «—» حين �
 function gpaFrom(list){
   const done=completedCourses(list); // المواد المكتملة فقط
   if(!done.length)return '0.00';
-  const sum=done.reduce((a,c)=>a+gradeToGPA(c.pct),0);
+  const sum=done.reduce((a,c)=>a+gradeToGPA(effPct(c)),0);   // المحروم صفر
   return (sum/done.length).toFixed(2);
 }
 // المعدل للعرض (يظهر — لو ما خلّص ولا مادة)
@@ -5737,7 +5758,7 @@ function gpaPoint(g){
 function calcGPA(list){
   const done=completedCourses(list); // المواد المكتملة فقط
   if(!done.length)return 0;
-  const sum=done.reduce((a,c)=>a+gpaPoint(c.pct),0);
+  const sum=done.reduce((a,c)=>a+gpaPoint(effPct(c)),0);     // المحروم صفر
   return (sum/done.length).toFixed(2);
 }
 // لون المعدل من 5
@@ -7407,7 +7428,11 @@ const tPgs={
                 return `<td><input class="grade-input rbin ${cid}" data-key="${esc(sk)}" data-cat="${esc(String(r.cat))}" data-max="${r.max}" type="number" min="0" max="${r.max}" placeholder="/${r.max}" ${dep||ro?'disabled':''}${ro?' title="الرصد عند صاحب المادة"':''} value="${val}" oninput="rbSum('${jsq(cid)}','${jsq(sk)}')"></td>`;
               }).join('')+`<td><b class="rbtot" id="tot-${cid}-${esc(sk)}" style="color:var(--acc-g)">${dep?'محروم':(rbInitTotal(s.key,code,rub))}</b></td>`;
             }else{
-              cells=`<td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${dep?'disabled title="محروم"':(ro?'disabled title="الرصد عند صاحب المادة"':'')} value="${ro?(s.pct>0?s.pct:''):(gradesData[s.key]||'')}" onchange="gradesData['${jsq(sk)}']=this.value"></td>`;
+              /* 🚫 المحروم: بدل خانة مقفلة فاضية نعرض الدرجة المسجّلة مشطوبة
+                 ونقول إن المحتسب صفر — فالمدرّب يعرف ما الذي يدخل فعلاً. */
+              cells=dep
+                ? `<td title="محروم — تُحتسب المادة صفراً"><span style="color:var(--acc-r);font-weight:700">⛔ محروم · 0</span>${(parseFloat(s.pct)||0)>0?` <span style="color:var(--muted);font-size:11px">(مسجّل <span style="text-decoration:line-through">${Math.round(s.pct)}</span>)</span>`:''}</td>`
+                : `<td><input class="grade-input" type="number" min="0" max="100" placeholder="0-100" ${ro?'disabled title="الرصد عند صاحب المادة"':''} value="${ro?(s.pct>0?s.pct:''):(gradesData[s.key]||'')}" onchange="gradesData['${jsq(sk)}']=this.value"></td>`;
             }
             // 🔓 من فُتح له استثناء: نقوله صراحةً ومع سببه، لا خانة تُفتح بلا تفسير
             const _ex=exm?depExceptionOf(s.sid,code,course,s.grp,s.half||s.term):null;
@@ -8507,6 +8532,198 @@ function fmtTerm(v){
 /* 🏁 إنهاء نصف مجزأ — عملية لا رجعة فيها بضغطة واحدة، فتُعاين قبل التنفيذ.
    كانت الواجهة تعلن أرشفة غياب وتحاضير وطلبات لا يفعلها الخادم إطلاقاً —
    أزلناها وصرنا نعرض ما يحدث فعلاً: كم مادة ستُنهى، وكم منها بلا درجة. */
+/* ============================================================
+ * 📦 أرشفة النصف المجزأ — خطوة ثانية بعد الإنهاء
+ * ------------------------------------------------------------
+ * «إنهاء النصف» يحوّل المواد لـ«سابق» فقط؛ التحاضير والغياب اليومي
+ * والطلبات المنتهية والدرجات التفصيلية تبقى في التبويبات الحيّة
+ * فتكبر بلا حدّ. الأرشفة **تنقلها لا تحذفها** — تبقى للرجوع والطباعة.
+ * عمليتان منفصلتان بقصد: لو وقفت إحداهما تعرف أين أنت.
+ * ============================================================ */
+const ARC_PARTS=[
+  {k:'preps',   lbl:'تحاضير المدربين',     ico:'📚', note:'ما تاريخ درسه اليوم أو قبله · المستقبلي يبقى'},
+  {k:'absence', lbl:'سجل الغياب اليومي',   ico:'🗂️', note:'جلسات هذا النصف وحده · نِسب الغياب تبقى في سجل المقررات'},
+  {k:'requests',lbl:'الطلبات المنتهية',    ico:'📋', note:'المعتمد والمرفوض والملغي · المعلّق يبقى'},
+  {k:'details', lbl:'الدرجات التفصيلية',   ico:'📝', note:'بنود هذا النصف · المجموع النهائي يبقى في سجل المقررات'}
+];
+function arcPickedParts(){
+  const o={}; let any=false;
+  document.querySelectorAll('.arc-part:checked').forEach(c=>{o[c.value]=true;any=true;});
+  return any?o:null;
+}
+function arcHalvesList(){
+  /* الأنصاف المنتهية أولاً (هي المرشّحة للأرشفة) ثم الباقي */
+  const m=new Map();
+  (allCourses||[]).forEach(c=>{
+    const h=String(c.half||'').trim(); if(!h||h==='غير محدد')return;
+    const o=m.get(h)||{half:h,n:0,cur:0}; o.n++; if(isActive(c.status))o.cur++; m.set(h,o);
+  });
+  return [...m.values()].sort((a,b)=>(a.cur-b.cur)||String(a.half).localeCompare(String(b.half),'ar'));
+}
+function openArchiveHalf(preTerm){
+  if(role!=='a'){showToast('الأرشفة من الإدارة','w');return;}
+  const halves=arcHalvesList();
+  if(!halves.length){showToast('ما فيه أنصاف مجزأة في سجل المقررات','w');return;}
+  const sel=preTerm&&halves.some(h=>h.half===preTerm)?preTerm:(halves[0]||{}).half;
+  document.getElementById('arcModal')?.remove();
+  const ov=document.createElement('div');
+  ov.className='overlay'; ov.id='arcModal';
+  ov.innerHTML=`<div class="modal" style="max-width:620px">
+    <div class="modal-title"><span>📦 أرشفة النصف المجزأ</span>
+      <button class="modal-close" onclick="document.getElementById('arcModal').remove()">✕</button></div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">تُنقل بيانات النصف المنتهي إلى تبويبات أرشيف — <b>لا تُحذف</b>، وتقدر ترجع لها وتطبعها من «📦 الأرشيف». الهدف: يخفّ النظام ويصير أسرع.</div>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">النصف المجزأ</label>
+    <select id="arcTerm" aria-label="النصف المجزأ" title="النصف المجزأ" onchange="arcPreview()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px">
+      ${halves.map(h=>`<option value="${escAttr(h.half)}"${h.half===sel?' selected':''}>${esc(fmtTerm(String(h.half).replace(/-/g,' ')))} — ${h.n} مادة${h.cur?` · ⚠️ ${h.cur} ما زالت حالية`:' · منتهٍ'}</option>`).join('')}
+    </select>
+    <div style="display:grid;gap:7px;margin-bottom:12px">
+      ${ARC_PARTS.map(x=>`<label class="prt-row" style="margin:0"><input type="checkbox" class="arc-part" value="${escAttr(x.k)}" checked onchange="arcPreview()">
+        <span style="flex:1"><b>${x.ico} ${esc(x.lbl)}</b><div style="font-size:11px;color:var(--muted);font-weight:400">${esc(x.note)}</div></span>
+        <span class="arc-n" data-k="${escAttr(x.k)}" style="font-size:12px;font-weight:800;color:var(--acc-b);min-width:58px;text-align:left">…</span></label>`).join('')}
+    </div>
+    <div id="arcMsg" style="font-size:12px;margin-bottom:12px;color:var(--muted)">جاري المعاينة…</div>
+    <div style="display:flex;gap:9px">
+      <button class="btn btn-out" style="flex:1" onclick="document.getElementById('arcModal').remove()">إلغاء</button>
+      <button class="btn btn-b" id="arcGo" style="flex:2" disabled onclick="runArchiveHalf()">📦 أرشف الآن</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{ if(e.target===ov)ov.remove(); });
+  arcPreview();
+}
+let _arcPv=null;
+async function arcPreview(){
+  const term=document.getElementById('arcTerm')?.value||'';
+  const msg=document.getElementById('arcMsg'), go=document.getElementById('arcGo');
+  _arcPv=null; if(go)go.disabled=true;
+  document.querySelectorAll('.arc-n').forEach(x=>x.textContent='…');
+  if(!term){ if(msg)msg.textContent='اختر نصفاً'; return; }
+  if(msg){msg.style.color='var(--muted)';msg.textContent='جاري المعاينة…';}
+  const parts=arcPickedParts();
+  if(!parts){ if(msg){msg.style.color='var(--acc-y)';msg.textContent='اختر جزءاً واحداً على الأقل';} return; }
+  const r=await callWrite('archiveHalf',{records:[{term,dry:true,parts}]}).catch(()=>null);
+  if(!r||r.status!=='ok'){
+    if(msg){msg.style.color='var(--acc-r)';msg.textContent='تعذّرت المعاينة: '+attErrMsg(r&&r.msg,r&&r.hint);}
+    return;
+  }
+  _arcPv=r;
+  let tot=0;
+  ARC_PARTS.forEach(x=>{
+    const el=document.querySelector('.arc-n[data-k="'+x.k+'"]'); if(!el)return;
+    const p=(r.parts||{})[x.k];
+    if(!p){el.textContent='—';return;}
+    if(p.missing){el.textContent='لا تبويب';el.style.color='var(--muted)';return;}
+    tot+=p.moved; el.textContent=p.moved+' صف'; el.style.color=p.moved?'var(--acc-b)':'var(--muted)';
+  });
+  if(r.curInHalf>0){
+    if(msg){msg.style.color='var(--acc-r)';
+      msg.innerHTML='⚠️ هذا النصف ما زال فيه <b>'+r.curInHalf+'</b> مادة «حالي» — أنهِ النصف أولاً من «🏁 إنهاء النصف المجزأ» ثم أرشفه.';}
+    return;
+  }
+  if(!tot){ if(msg){msg.style.color='var(--acc-g)';msg.textContent='✅ ما فيه صفوف للأرشفة في هذا النصف — مؤرشف سلفاً أو فاضٍ.';} return; }
+  if(msg){msg.style.color='var(--text)';
+    msg.innerHTML='سيُنقل <b>'+tot+'</b> صفاً إلى الأرشيف. تقدر ترجع لها من «📦 الأرشيف» في أي وقت.';}
+  if(go)go.disabled=false;
+}
+async function runArchiveHalf(){
+  const term=document.getElementById('arcTerm')?.value||'';
+  const parts=arcPickedParts();
+  if(!term||!parts||!_arcPv){showToast('أعد المعاينة أولاً','w');return;}
+  const tot=Object.values(_arcPv.parts||{}).reduce((a,p)=>a+((p&&p.moved)||0),0);
+  if(!confirm('أرشفة «'+fmtTerm(String(term).replace(/-/g,' '))+'»\n\nسيُنقل '+tot+' صفاً إلى تبويبات الأرشيف.\nلا شيء يُحذف — وتقدر تستعرضها من «📦 الأرشيف».\n\nمتابعة؟'))return;
+  const go=document.getElementById('arcGo'); if(go){go.disabled=true;go.textContent='⏳ جاري الأرشفة…';}
+  showToast('جاري أرشفة النصف — لا تغلق الصفحة','i');
+  const r=await callWrite('archiveHalf',{records:[{term,parts}]},{tries:2}).catch(()=>null);
+  if(!r||r.status!=='ok'){
+    showToast('❌ تعذّرت الأرشفة: '+attErrMsg(r&&r.msg,r&&r.hint),'e');
+    if(go){go.disabled=false;go.textContent='📦 أرشف الآن';}
+    return;
+  }
+  const lines=ARC_PARTS.filter(x=>(r.parts||{})[x.k]&&r.parts[x.k].moved)
+    .map(x=>x.ico+' '+x.lbl+': '+r.parts[x.k].moved);
+  document.getElementById('arcModal')?.remove();
+  showToast('✅ تمت الأرشفة — '+(lines.join(' · ')||'ما فيه صفوف'),'s');
+  try{ await loadAdmin(); }catch(_){}
+  try{ const act=document.querySelector('#sidebar .sitem.active');
+    if(act&&act.id)showAPage(act.id.replace('sn-',''),act); }catch(_){}
+}
+window.openArchiveHalf=openArchiveHalf;window.arcPreview=arcPreview;window.runArchiveHalf=runArchiveHalf;
+
+/* ============================================================
+ * 📦 الأرشيف — الرجوع لما أُرشف
+ * ============================================================ */
+const ARC_VIEW=[
+  {k:'preps',   tab:'أرشيف التحاضير',           range:'أرشيف التحاضير!A:U',           lbl:'تحاضير المدربين', ico:'📚',
+   cols:[{i:2,h:'المدرب'},{i:3,h:'المادة'},{i:5,h:'الصف'},{i:6,h:'التاريخ'},{i:7,h:'الحصة'},{i:8,h:'الموضوع'}], termCol:19},
+  {k:'absence', tab:'أرشيف الغياب',             range:'أرشيف الغياب!A:J',             lbl:'سجل الغياب',     ico:'🗂️',
+   cols:[{i:0,h:'الرقم'},{i:1,h:'الاسم'},{i:2,h:'المادة'},{i:4,h:'الشعبة'},{i:5,h:'التاريخ'},{i:6,h:'الحالة'}], termCol:8},
+  {k:'requests',tab:'أرشيف الطلبات',            range:'أرشيف الطلبات!A:V',            lbl:'الطلبات',        ico:'📋',
+   cols:[{i:0,h:'رقم الطلب'},{i:2,h:'الاسم'},{i:4,h:'النوع'},{i:6,h:'التاريخ'},{i:9,h:'الحالة'}], termCol:20},
+  {k:'details', tab:'أرشيف الدرجات التفصيلية',  range:'أرشيف الدرجات التفصيلية!A:F',  lbl:'الدرجات التفصيلية', ico:'📝',
+   cols:[{i:0,h:'مفتاح الطالب'},{i:1,h:'رمز المادة'},{i:2,h:'البند'},{i:3,h:'الدرجة'}], termCol:4}
+];
+let ARCHIVE={};            // {k:[rows...]} بلا ترويسة
+async function loadArchive(force){
+  if(ARCHIVE._at && !force && (Date.now()-ARCHIVE._at)<120000) return ARCHIVE;
+  const out={_at:Date.now()};
+  for(const v of ARC_VIEW){
+    const rows=await fetchSheet(v.range).catch(()=>[]);
+    out[v.k]=rows.length>1?rows.slice(1):[];
+  }
+  ARCHIVE=out; return ARCHIVE;
+}
+function arcTermsOf(a){
+  const m=new Map();
+  ARC_VIEW.forEach(v=>{ (a[v.k]||[]).forEach(r=>{
+    const t=String(r[v.termCol]==null?'':r[v.termCol]).trim(); if(!t)return;
+    const o=m.get(t)||{term:t,n:0}; o.n++; m.set(t,o); }); });
+  return [...m.values()].sort((x,y)=>String(y.term).localeCompare(String(x.term),'ar'));
+}
+async function openArchiveBrowser(preTerm){
+  document.getElementById('arcViewModal')?.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='arcViewModal';
+  ov.innerHTML=`<div class="modal" style="max-width:900px"><div class="modal-title"><span>📦 الأرشيف</span>
+    <button class="modal-close" onclick="document.getElementById('arcViewModal').remove()">✕</button></div>
+    <div class="empty"><div class="empty-icon">⏳</div>جاري تحميل الأرشيف…</div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{ if(e.target===ov)ov.remove(); });
+  const a=await loadArchive(true).catch(()=>({}));
+  const terms=arcTermsOf(a);
+  if(!terms.length){
+    ov.querySelector('.modal').innerHTML=`<div class="modal-title"><span>📦 الأرشيف</span>
+      <button class="modal-close" onclick="document.getElementById('arcViewModal').remove()">✕</button></div>
+      <div class="empty"><div class="empty-icon">📭</div>ما فيه شيء مؤرشف بعد
+      <div style="font-size:12px;margin-top:8px">تظهر هنا بيانات كل نصف بعد «📦 أرشفة النصف»</div></div>`;
+    return;
+  }
+  window._arcT=(preTerm&&terms.some(t=>t.term===preTerm))?preTerm:terms[0].term;
+  window._arcV=window._arcV||'preps';
+  window._arcTerms=terms;
+  arcRender();
+}
+function arcRender(){
+  const ov=document.getElementById('arcViewModal'); if(!ov)return;
+  const terms=window._arcTerms||[], t=window._arcT, k=window._arcV||'preps';
+  const v=ARC_VIEW.find(x=>x.k===k)||ARC_VIEW[0];
+  const rowsOf=vv=>(ARCHIVE[vv.k]||[]).filter(r=>String(r[vv.termCol]==null?'':r[vv.termCol]).trim()===t);
+  const rows=rowsOf(v);
+  ov.querySelector('.modal').innerHTML=`<div class="modal-title"><span>📦 الأرشيف</span>
+    <button class="modal-close" onclick="document.getElementById('arcViewModal').remove()">✕</button></div>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">النصف المؤرشف</label>
+    <select id="arcVT" aria-label="النصف المؤرشف" title="النصف المؤرشف" onchange="window._arcT=this.value;arcRender()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:12px">
+      ${terms.map(x=>`<option value="${escAttr(x.term)}"${x.term===t?' selected':''}>${esc(fmtTerm(String(x.term).replace(/-/g,' ')))} — ${x.n} صف</option>`).join('')}
+    </select>
+    <div class="pg-tabs" role="tablist">${ARC_VIEW.map(x=>`<button class="pg-tab${x.k===k?' on':''}" role="tab" aria-selected="${x.k===k?'true':'false'}" onclick="window._arcV='${jsq(x.k)}';arcRender()"><span>${x.ico}</span><span>${esc(x.lbl)}</span><span class="pg-tab-n">${rowsOf(x).length}</span></button>`).join('')}</div>
+    <div data-listwrap>
+      ${searchBoxHTML('ابحث في الأرشيف…')}
+      <div class="gtable" style="max-height:50vh;overflow:auto"><table>
+        <thead><tr>${v.cols.map(c=>`<th>${esc(c.h)}</th>`).join('')}</tr></thead>
+        <tbody>${rows.length?rows.map(r=>`<tr>${v.cols.map(c=>`<td>${esc(String(r[c.i]==null?'':r[c.i]))}</td>`).join('')}</tr>`).join('')
+          :`<tr data-empty><td colspan="${v.cols.length}" style="text-align:center;color:var(--muted)">ما فيه صفوف في هذا الجزء لهذا النصف</td></tr>`}</tbody>
+      </table></div></div>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:10px">💡 الأرشيف للقراءة والطباعة — البيانات محفوظة في تبويبات «أرشيف …» داخل ملف Google Sheets نفسه، ويقدر شيت الكنترول يقرأ منها.</div>`;
+}
+window.openArchiveBrowser=openArchiveBrowser;window.arcRender=arcRender;window.loadArchive=loadArchive;
+
 async function endTerm(){
   const term=document.getElementById('endTermSel')?.value;
   if(!term){showToast('اختر النصف المجزأ','w');return;}
@@ -9578,12 +9795,16 @@ async function printGraduateTranscript(sid){
   for(let i=1;i<arc.length;i++){
     const r=arc[i]; if(!r||dg(r[1])!==dg(sid))continue;
     const k=n0(r[0]); if(seen[k])continue; seen[k]=1;
-    rows.push({course:n0(r[5]),code:n0(r[4]),grp:n0(r[3]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),term:n0(r[10])});
+    // sid لازم ليُحترم استثناء الحرمان في هذا الكشف كما في بقية النظام
+    rows.push({sid:n0(r[1]),course:n0(r[5]),code:n0(r[4]),grp:n0(r[3]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),term:n0(r[10])});
   }
   if(!rows.length){showToast('لا توجد بيانات مؤرشفة لهذا الخرّيج بعد','w');return;}
-  const done=rows.filter(c=>c.pct>0);
-  const avg=done.length?Math.round(done.reduce((a,c)=>a+c.pct,0)/done.length*10)/10:0;
-  const passed=rows.filter(c=>c.pct>=60).length;
+  /* 🚫 المحروم يدخل المعدّل بصفر ولا يُعدّ مجتازاً — كان الكشف يحتسب
+     درجته كاملةً فيتخرّج بمعدّل مبنيّ على مواد لم يحضرها. */
+  const done=rows.filter(c=>isDeprivedRec(c)||c.pct>0);
+  const avg=done.length?Math.round(done.reduce((a,c)=>a+(isDeprivedRec(c)?0:c.pct),0)/done.length*10)/10:0;
+  const passed=rows.filter(c=>c.pct>=60&&!isDeprivedRec(c)).length;
+  const nDep=rows.filter(c=>isDeprivedRec(c)).length;
   const grade=n=>n>=90?'ممتاز':n>=80?'جيد جداً':n>=70?'جيد':n>=60?'مقبول':'راسب';
   const body=`
     <div style="text-align:center;margin-bottom:18px">
@@ -9604,13 +9825,13 @@ async function printGraduateTranscript(sid){
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الدرجة</th>
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">التقدير</th>
       </tr></thead>
-      <tbody>${rows.map((c,i)=>`<tr>
+      <tbody>${rows.map((c,i)=>{const dp=isDeprivedRec(c);return `<tr>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${i+1}</td>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:right">${esc(c.course)}</td>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${esc(fmtTerm(c.term)||'—')}</td>
-        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center;font-weight:700">${c.pct?c.pct:'—'}</td>
-        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${c.pct?grade(c.pct):'—'}</td>
-      </tr>`).join('')}</tbody>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center;font-weight:700${dp?';text-decoration:line-through;color:#8a94a6':''}">${c.pct?c.pct:'—'}</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center${dp?';color:#b3261e;font-weight:700':''}">${dp?'محروم (0)':(c.pct?grade(c.pct):'—')}</td>
+      </tr>`;}).join('')}</tbody>
     </table>
     <table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:13px">
       <tr>
@@ -9619,9 +9840,10 @@ async function printGraduateTranscript(sid){
         <td style="padding:8px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;text-align:center">المجتازة</td>
         <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center">${passed}</td>
         <td style="padding:8px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;text-align:center">المعدل العام</td>
-        <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center;font-weight:800;color:#0a2348">${avg} — ${grade(avg)}</td>
+        <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center;font-weight:800;color:#0a2348">${done.length?avg+' — '+grade(avg):'—'}</td>
       </tr>
     </table>
+    ${nDep?`<div style="margin-top:8px;font-size:11.5px;color:#b3261e">🚫 ${nDep} مقرر بحرمان — يُحتسب صفراً في المعدل ولا يُعدّ من المجتازة.</div>`:''}
     <div style="display:flex;justify-content:space-between;margin-top:44px;font-size:13px;color:#1a2942">
       <div style="text-align:center">مدير الأكاديمية<br><br>............................</div>
       <div style="text-align:center">ختم المعهد<br><br>............................</div>
@@ -9646,7 +9868,7 @@ function buildTVContent(){
     const stCourses=allCourses.filter(c=>sidKey(c)===k);
     if(!stCourses.length)return;
     const done=completedCourses(stCourses); // المعدل من المكتملة فقط
-    const sumPct=done.reduce((a,c)=>a+c.pct,0);
+    const sumPct=done.reduce((a,c)=>a+effPct(c),0);     // المحروم صفر
     const sumAbs=stCourses.reduce((a,c)=>a+(c.abs||0),0);
     byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,nDone:done.length,n:stCourses.length};
   });
@@ -9961,7 +10183,13 @@ const aPgs={
             <select id="endTermSel" aria-label="اختر الفصل التدريبي" title="الفصل التدريبي" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">${termOpts}</select>
           </div>
           <button class="btn" style="background:#cf1f2f;color:#fff;font-weight:700" onclick="endTerm()">🏁 إنهاء النصف المجزأ</button>
-        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة</div>'}
+        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة · الأنصاف المنتهية تُؤرشف من الزر أدناه</div>'}
+        <!-- 📦 خطوة ثانية مستقلة: الإنهاء يحوّل الحالة، والأرشفة تنقل البيانات -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)">
+          <button class="btn btn-out btn-sm" onclick="openArchiveHalf()">📦 أرشفة نصف منتهٍ</button>
+          <button class="btn btn-out btn-sm" onclick="openArchiveBrowser()">🗄️ استعرض الأرشيف</button>
+          <span style="font-size:11.5px;color:var(--muted);align-self:center">بعد الإنهاء: انقل التحاضير والغياب والطلبات والدرجات التفصيلية للأرشيف — تبقى للرجوع ويخفّ النظام</span>
+        </div>
       </div>`;
     }else if(tab==='current'){
       body=coursesCurrentBody();
@@ -10198,7 +10426,7 @@ const aPgs={
       const stCourses=allCourses.filter(c=>c.sid===st.id);
       if(!stCourses.length)return;
       const done=completedCourses(stCourses); // المعدل من المكتملة فقط
-      const sumPct=done.reduce((a,c)=>a+c.pct,0);
+      const sumPct=done.reduce((a,c)=>a+effPct(c),0);   // المحروم صفر
       const sumAbs=stCourses.reduce((a,c)=>a+(c.abs||0),0);
       byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,nDone:done.length,n:stCourses.length};
     });
@@ -10647,7 +10875,7 @@ const aPgs={
       <button class="btn btn-b" onclick="printGradesReport()">📝 تقرير الدرجات المفصّل</button>
       <button class="btn btn-b" onclick="printRequestsReport()">📋 تقرير الأعذار والطلبات</button>
       <button class="btn btn-b" onclick="printSectionLists()">🧑‍🤝‍🧑 قوائم الشعب</button>
-      <button class="btn btn-b" onclick="printControlSheet()">🎛️ شيت الكنترول (كل المواد)</button>
+      <button class="btn btn-b" onclick="openControlSheet()">🎛️ شيت الكنترول (لكل نصف)</button>
       <button class="btn btn-b" onclick="printLessonPrepForm()">📝 نموذج تحضير الدروس</button>
     </div>
     <div class="stitle" style="margin-top:8px">👤 تقرير طالب فردي</div>
@@ -10710,7 +10938,7 @@ const aPgs={
       const n=allCourses.filter(c=>isActive(c.status)&&String(c.half||'').trim()===t).length;
       return `<option value="${escAttr(t)}">${esc(fmtTerm(String(t).replace(/-/g,' ')))} — ${n} مادة</option>`;
     }).join('');
-    const cadence=[['شهرياً','نسخة احتياطية كاملة للملف — من هذه الصفحة'],['نهاية كل نصف مجزأ','المقررات › الخطة الدراسية › «إنهاء النصف المجزأ»'],['نهاية كل دبلوم','الأشخاص › المتدربون › «تخريج دفعة»'],['سنوياً','نقل تبويبات الأرشيف لملف منفصل'],['مرّة واحدة','إلزام تغيير كلمة المرور (مفعّل ✓)']];
+    const cadence=[['شهرياً','نسخة احتياطية كاملة للملف — من هذه الصفحة'],['نهاية كل نصف مجزأ','① المقررات › الخطة الدراسية › «إنهاء النصف» ثم ② «📦 أرشفة نصف منتهٍ»'],['نهاية كل دبلوم','الأشخاص › المتدربون › «تخريج دفعة»'],['سنوياً','نقل تبويبات الأرشيف لملف منفصل'],['مرّة واحدة','إلزام تغيير كلمة المرور (مفعّل ✓)']];
     return `
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
@@ -10739,9 +10967,13 @@ const aPgs={
         <button class="btn btn-out btn-sm" onclick="showBackupSteps()">📋 عرض الخطوات</button>
       </div>
       <div class="ccard cc-b">
-        <div class="cc-name">📦 سنوياً — أرشفة لملف منفصل</div>
-        <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">انقل تبويبات الأرشيف لملف مستقل ليبقى النظام سريعاً للأبد.</div>
-        <button class="btn btn-out btn-sm" onclick="showArchiveSteps()">📋 عرض الخطوات</button>
+        <div class="cc-name">📦 نهاية كل نصف — أرشفة البيانات</div>
+        <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">بعد إنهاء النصف انقل تحاضيره وغيابه اليومي وطلباته المنتهية ودرجاته التفصيلية للأرشيف — تبقى للرجوع والطباعة ويخفّ الحيّ.</div>
+        <!-- 🏠 بيت العملية: المقررات › الخطة الدراسية -->
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <button class="btn btn-out btn-sm" onclick="goAdmin('manage_courses','_mcTab','plan')">📦 افتح الخطة للأرشفة ↗</button>
+          <button class="btn btn-out btn-sm" onclick="showArchiveSteps()">📋 نقل الأرشيف لملف منفصل (سنوياً)</button>
+        </div>
       </div>
     </div>
 
@@ -12015,7 +12247,7 @@ function studentRanking(){
     const stCourses=allCourses.filter(c=>c.sid===st.id);
     if(!stCourses.length)return;
     const done=completedCourses(stCourses);
-    const sumPct=done.reduce((a,c)=>a+c.pct,0);
+    const sumPct=done.reduce((a,c)=>a+effPct(c),0);     // المحروم صفر
     const sumAbs=stCourses.reduce((a,c)=>a+(c.abs||0),0);
     byStudent[st.id]={sid:st.id,name:st.name,grp:st.grp,courses:stCourses,sumPct,sumAbs,nDone:done.length,n:stCourses.length};
   });
@@ -12747,58 +12979,103 @@ function printLessonPrepForm(){
 }
 window.printLessonPrepForm=printLessonPrepForm;
 
-// ===== شيت الكنترول: لكل شعبة جدول عريض (كل مادة ببنود درجاتها ومجموعها) =====
-function controlShell(bodyHtml){
+/* ============================================================
+ * 🎛️ شيت الكنترول — لكل نصف مجزأ على حدة
+ * ------------------------------------------------------------
+ * كان يطبع «المواد الحالية» فقط، فلا يمكن إخراج شيت لنصف انتهى —
+ * وهو بالضبط الوقت الذي يُطلب فيه الكنترول. صار يختار النصف
+ * (جارياً كان أو منتهياً أو مؤرشفاً) ويقرأ البنود من الحيّ أو من
+ * «أرشيف الدرجات التفصيلية».
+ * وكانت ألوانه تستعمل متغيّرات CSS غير معرّفة في نافذة الطباعة
+ * (var(--acc-r)/‎var(--brand-deep-1)) فتخرج الترويسة بلا لون
+ * و«غ» بلا تمييز — صارت ألواناً صريحة للطباعة.
+ * ============================================================ */
+const CS_BRAND={deep:'#0a2348',deep2:'#12457e',gold:'#c9a227',red:'#b3261e',green:'#1e7b45',ink:'#1a2942',line:'#6b7a90'};
+function csHalves(){
+  const m=new Map();
+  (allCourses||[]).forEach(c=>{
+    const h=String(c.half||'').trim(); if(!h||h==='غير محدد')return;
+    const o=m.get(h)||{half:h,n:0,cur:0}; o.n++; if(isActive(c.status))o.cur++; m.set(h,o);
+  });
+  return [...m.values()].sort((a,b)=>(b.cur-a.cur)||String(a.half).localeCompare(String(b.half),'ar'));
+}
+/* بنود النصف: من الحيّ، وما لم يوجد يُقرأ من الأرشيف (بعد الأرشفة) */
+let CS_ARC_DET=null;
+async function csEnsureArchive(){
+  if(CS_ARC_DET)return CS_ARC_DET;
+  const rows=await fetchSheet('أرشيف الدرجات التفصيلية!A:F').catch(()=>[]);
+  CS_ARC_DET=rows.length>1?rows.slice(1).map(r=>({key:String(r[0]||'').trim(),code:String(r[1]||'').trim(),
+    cat:String(r[2]||'').trim(),grade:r[3]})):[];
+  return CS_ARC_DET;
+}
+function csDetail(key,code,cat){
+  const live=detailGrade(key,code,cat);
+  if(live!==''&&live!=null)return live;
+  const a=(CS_ARC_DET||[]).find(x=>x.key===String(key).trim()&&normCode(x.code)===normCode(code)&&x.cat===String(cat).trim());
+  return a?a.grade:'';
+}
+function controlShell(bodyHtml,subtitle){
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
   const today=new Date().toLocaleDateString('en-GB');
+  const B=CS_BRAND;
   return `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="utf-8"><title>شيت الكنترول</title>
   <style>
-  @page{size:A4 landscape;margin:8mm}
+  @page{size:A4 landscape;margin:7mm}
   *{font-family:'Tajawal','Segoe UI',Arial,sans-serif;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  body{margin:0;color:#1a2942;background:#fff}
-  .hdr{display:flex;align-items:center;gap:14px;border-bottom:3px solid #c9a227;padding-bottom:10px;margin-bottom:12px}
-  .hdr img{width:52px;height:52px;border-radius:50%}.hdr .t1{font-size:18px;font-weight:800;color:#0a2348}.hdr .t2{font-size:11px;color:#5a6b85;margin-top:2px}
-  .hdr .meta{margin-right:auto;text-align:left;font-size:11px;color:#5a6b85}
-  .cs-title{font-weight:800;color:#fff;background:linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2));padding:7px 12px;border-radius:6px;margin:16px 0 8px}
-  .cs-block{margin-bottom:22px}
-  /* ⭐ كل شعبة في صفحة طباعة مستقلة */
+  body{margin:0;color:${B.ink};background:#fff}
+  .hdr{display:flex;align-items:center;gap:14px;border-bottom:3px solid ${B.gold};padding-bottom:10px;margin-bottom:6px}
+  .hdr img{width:54px;height:54px;border-radius:50%}
+  .hdr .t1{font-size:19px;font-weight:800;color:${B.deep};letter-spacing:.2px}
+  .hdr .t2{font-size:11.5px;color:#5a6b85;margin-top:3px}
+  .hdr .meta{margin-right:auto;text-align:left;font-size:11px;color:#5a6b85;line-height:1.7}
+  .hdr .meta b{color:${B.deep}}
+  .cs-title{font-weight:800;color:#fff;background:linear-gradient(135deg,${B.deep},${B.deep2});
+    padding:8px 13px;border-radius:7px;margin:14px 0 8px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .cs-title .cs-k{font-size:11px;font-weight:600;opacity:.92}
+  .cs-block{margin-bottom:20px}
   @media print{
     .cs-block{break-after:page;page-break-after:always}
     .cs-block:last-of-type{break-after:auto;page-break-after:auto}
     .cs-block.hidden{display:none}
-    table.cs thead{display:table-header-group}      /* تتكرّر الترويسة في كل صفحة */
+    table.cs thead{display:table-header-group}
     table.cs tr{break-inside:avoid;page-break-inside:avoid}
     .hdr{break-after:avoid;page-break-after:avoid}
   }
   .cs-block.hidden{display:none}
   .cs-sub{font-size:10px;color:#5a6b85;margin:0 2px 6px;display:none}
   @media print{.cs-sub{display:block}}
-  .cs-bar{position:fixed;top:8px;left:60px;display:flex;gap:8px;align-items:center;background:#0a2348;
-    padding:7px 12px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:50}
+  .cs-bar{position:fixed;top:8px;left:58px;display:flex;gap:8px;align-items:center;background:${B.deep};
+    padding:7px 12px;border-radius:9px;box-shadow:0 6px 20px rgba(0,0,0,.3);z-index:50}
   .cs-bar label{color:#dbe7f5;font-size:12px;font-weight:700}
-  .cs-bar select{font-family:'Tajawal',sans-serif;font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #2b4a7a;background:#fff;color:#0a2348;font-weight:700}
-  .cs-hint{color:var(--acc-y);font-size:11px;font-weight:700}
+  .cs-bar select{font-family:'Tajawal',sans-serif;font-size:12px;padding:5px 8px;border-radius:6px;border:1px solid #2b4a7a;background:#fff;color:${B.deep};font-weight:700}
+  .cs-hint{color:${B.gold};font-size:11px;font-weight:700}
   table.cs{width:100%;border-collapse:collapse;font-size:10px}
-  table.cs th,table.cs td{border:1px solid #6b7a90;padding:3px 4px;text-align:center;line-height:1.35}
-  table.cs th{background:#0a2348;color:#fff;font-weight:700}
-  table.cs th.cgrp{background:#12457e;font-size:11px}
-  table.cs td.nm,table.cs th.nm{text-align:right;white-space:nowrap;padding-inline:8px}
-  table.cs .tot{font-weight:800;background:#eef3f9;color:#0a2348}
-  table.cs td.g{color:var(--acc-r);font-weight:700}
-  /* خلية «غير مسجّل في المادة» — تُميَّز بصرياً ولا تُقرأ كغياب رصد */
-  table.cs td.na{background:repeating-linear-gradient(135deg,#eceff4 0 6px,#e3e8ef 6px 12px)!important;color:#9aa7ba;font-weight:700}
-  table.cs tbody tr:nth-child(even) td.na{background:repeating-linear-gradient(135deg,#e7ebf1 0 6px,#dde3ec 6px 12px)!important}
-  .cs-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:#5a6b85;margin:6px 2px 0}
-  .cs-legend span{display:inline-flex;align-items:center;gap:5px}
-  .cs-legend i{width:14px;height:12px;border:1px solid #6b7a90;display:inline-block;font-style:normal;text-align:center;line-height:11px;font-size:9px;font-weight:700}
-  table.cs td.l{color:#c77c11;font-weight:700}
-  table.cs td.p{color:var(--acc-g);font-weight:700}
-  table.cs th.dt{font-size:9px;white-space:nowrap;min-width:30px}
-  table.cs .mxr th{background:#c9a227;color:#0a2348;font-weight:700}
+  table.cs th,table.cs td{border:1px solid ${B.line};padding:3px 4px;text-align:center;line-height:1.35}
+  table.cs th{background:${B.deep};color:#fff;font-weight:700}
+  table.cs th.cgrp{background:${B.deep2};font-size:11px}
+  /* عمود الاسم كان يبتلع كل العرض المتبقي فتضيق أعمدة الدرجات */
+  table.cs td.nm,table.cs th.nm{text-align:right;white-space:nowrap;padding-inline:8px;width:172px;max-width:172px;overflow:hidden;text-overflow:ellipsis}
+  table.cs .tot{font-weight:800;background:#eef3f9;color:${B.deep}}
+  table.cs td.g{color:${B.red};font-weight:700}
+  table.cs td.dep{background:#fdecea;color:${B.red};font-weight:800}
+  table.cs td.na{background:repeating-linear-gradient(135deg,#eceff4 0 6px,#e3e8ef 6px 12px);color:#9aa7ba;font-weight:700}
+  table.cs tbody tr:nth-child(even) td.na{background:repeating-linear-gradient(135deg,#e7ebf1 0 6px,#dde3ec 6px 12px)}
+  table.cs .mxr th{background:${B.gold};color:${B.deep};font-weight:700}
   table.cs tbody tr:nth-child(even) td{background:#f6f8fb}
-  .noprint{position:fixed;top:8px;left:8px;background:#0a2348;color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:700}
+  table.cs tbody tr:nth-child(even) td.tot{background:#e7eef7}
+  table.cs tbody tr:nth-child(even) td.dep{background:#fbe2df}
+  .cs-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10px;color:#5a6b85;margin:7px 2px 0}
+  .cs-legend span{display:inline-flex;align-items:center;gap:5px}
+  .cs-legend i{width:15px;height:12px;border:1px solid ${B.line};display:inline-block;font-style:normal;text-align:center;line-height:11px;font-size:9px;font-weight:700}
+  .cs-stats{display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:#41526d;margin:7px 2px 0;
+    border-top:1px dashed #c5cfdd;padding-top:7px}
+  .cs-stats b{color:${B.deep}}
+  .cs-sign{display:flex;justify-content:space-between;margin-top:26px;font-size:11px;color:#41526d}
+  .cs-sign div{text-align:center;min-width:170px}
+  .cs-sign u{display:block;margin-top:30px;border-top:1px solid ${B.line};text-decoration:none;padding-top:4px}
+  .noprint{position:fixed;top:8px;left:8px;background:${B.deep};color:#fff;border:none;padding:9px 18px;border-radius:9px;cursor:pointer;font-weight:700}
   .closebtn{position:fixed;top:8px;right:8px;background:#cf1f2f;color:#fff;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:700}
-  @media print{.noprint,.closebtn{display:none}}
+  @media print{.noprint,.closebtn,.cs-bar{display:none}}
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
   <button class="closebtn" onclick="window.close()">✕</button>
@@ -12807,10 +13084,11 @@ function controlShell(bodyHtml){
     <select id="csPick" onchange="csFilter(this.value)"></select>
     <span class="cs-hint">💡 اختر «أفقي / Landscape» في إعدادات الطباعة</span>
   </div>
-  <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">شيت الكنترول — كشف درجات مجمّع لكل شعبة</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
+  <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div>
+    <div class="t2">${esc(subtitle||'شيت الكنترول — كشف درجات مجمّع لكل شعبة')}</div></div>
+    <div class="meta">تاريخ الإصدار: <b>${today}</b></div></div>
   ${bodyHtml}
   <script>
-  // كل شعبة في صفحة مستقلة عند الطباعة · ويمكن طباعة شعبة واحدة فقط
   (function(){
     var blocks=[].slice.call(document.querySelectorAll('.cs-block'));
     var sel=document.getElementById('csPick');
@@ -12825,31 +13103,58 @@ function controlShell(bodyHtml){
   <\/script>
   </body></html>`;
 }
-function printControlSheet(){
-  const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+/* اختيار النصف ثم الطباعة */
+function openControlSheet(){
+  const halves=csHalves();
+  if(!halves.length){ printControlSheet(''); return; }
+  document.getElementById('csModal')?.remove();
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='csModal';
+  ov.innerHTML=`<div class="modal" style="max-width:520px">
+    <div class="modal-title"><span>🎛️ شيت الكنترول</span>
+      <button class="modal-close" onclick="document.getElementById('csModal').remove()">✕</button></div>
+    <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">اختر النصف المجزأ — يُطبع لكل شعبة صفحة مستقلة، وكل مادة ببنودها ومجموعها.</div>
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">النصف المجزأ</label>
+    <select id="csHalf" aria-label="النصف المجزأ" title="النصف المجزأ" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px">
+      ${halves.map(h=>`<option value="${escAttr(h.half)}">${esc(fmtTerm(String(h.half).replace(/-/g,' ')))} — ${h.n} سجل${h.cur?' · جارٍ':' · منتهٍ'}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:9px">
+      <button class="btn btn-out" style="flex:1" onclick="document.getElementById('csModal').remove()">إلغاء</button>
+      <button class="btn btn-b" style="flex:2" onclick="const v=document.getElementById('csHalf').value;document.getElementById('csModal').remove();printControlSheet(v)">🖨️ جهّز الشيت</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{ if(e.target===ov)ov.remove(); });
+}
+async function printControlSheet(half){
+  const H=String(half==null?'':half).trim();
+  const inHalf=c=>!H||String(c.half||'').trim()===H;
+  // سجلات النصف المطلوب (أي حالة) — فالشيت يصلح للجاري وللمنتهي
+  const recs=(allCourses||[]).filter(inHalf);
+  if(!recs.length){showToast('ما فيه سجلات في هذا النصف','w');return;}
+  showToast('جاري تجهيز شيت الكنترول...','i');
+  await csEnsureArchive().catch(()=>{});
+  const sidsIn=new Set(recs.map(c=>String(c.sid)));
+  const grps=[...new Set(recs.map(c=>String(c.grp||'')).filter(Boolean))]
+    .sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
   let body='';
   grps.forEach(g=>{
-    const gs=uniqStudents(students.filter(s=>String(s.grp)===String(g)))
-      .sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ar'));
+    const gRecs=recs.filter(c=>String(c.grp||'')===String(g));
+    const gIds=[...new Set(gRecs.map(c=>String(c.sid)))];
+    const gs=gIds.map(id=>{
+      const st=(students||[]).find(x=>String(x.id)===id);
+      const r=gRecs.find(c=>String(c.sid)===id)||{};
+      return {id,name:(st&&st.name)||r.sname||r.name||id};
+    }).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar'));
     if(!gs.length)return;
-    const sids=new Set(gs.map(s=>String(s.id||s.sid)));
-    // مواد هذه الشعبة (الحالية) — بدون تكرار بالرمز
     const cmap=new Map();
-    (allCourses||[]).forEach(c=>{
-      if(!sids.has(String(c.sid))||!isActive(c.status))return;
-      const k=normCode(c.code); if(!k)return;
-      if(!cmap.has(k))cmap.set(k,{code:c.code,course:c.course,cats:rubricFor(c.code)});
-    });
+    gRecs.forEach(c=>{ const k=normCode(c.code); if(!k)return;
+      if(!cmap.has(k))cmap.set(k,{code:c.code,course:c.course,cats:rubricFor(c.code)}); });
     const courses=[...cmap.values()];
     if(!courses.length)return;
-    // ترويسة عمودية (صفّان) + صف الدرجة العظمى
-    let h1=`<th rowspan="2" style="width:26px">م</th><th rowspan="2" class="nm">اسم الطالب</th><th rowspan="2" style="width:90px">الرقم التدريبي</th>`;
+    let h1=`<th rowspan="2" style="width:26px">م</th><th rowspan="2" class="nm">اسم المتدرب</th><th rowspan="2" style="width:92px">الرقم التدريبي</th>`;
     let h2='', h3='';
     courses.forEach(co=>{
-      const cats=co.cats||[];
-      const span=(cats.length||1)+1;
-      // كم متدرب من الشعبة مسجّل فعلاً في هذه المادة
-      const enr=gs.filter(st=>(allCourses||[]).some(x=>String(x.sid)===String(st.id||st.sid)&&normCode(x.code)===normCode(co.code)&&isActive(x.status))).length;
+      const cats=co.cats||[], span=(cats.length||1)+1;
+      const enr=gs.filter(st=>gRecs.some(x=>String(x.sid)===st.id&&normCode(x.code)===normCode(co.code))).length;
       const part=(enr<gs.length)?` <span style="font-weight:400;font-size:9px;opacity:.9">(${enr} من ${gs.length})</span>`:'';
       h1+=`<th colspan="${span}" class="cgrp">${esc(co.course||co.code)}${part}</th>`;
       if(cats.length){
@@ -12857,57 +13162,65 @@ function printControlSheet(){
         h2+=`<th class="tot">مجموع</th>`;
         cats.forEach(ct=>{h3+=`<th>${ct.max}</th>`;});
         h3+=`<th>${cats.reduce((a,c)=>a+(parseFloat(c.max)||0),0)||100}</th>`;
-      }else{
-        h2+=`<th>الدرجة</th><th class="tot">مجموع</th>`;
-        h3+=`<th>100</th><th>100</th>`;
-      }
+      }else{ h2+=`<th>الدرجة</th><th class="tot">مجموع</th>`; h3+=`<th>100</th><th>100</th>`; }
     });
+    let nDep=0, nMissing=0, sumAll=0, cntAll=0;
     const rows=gs.map((s,i)=>{
-      const ssid=String(s.id||s.sid||'');
-      let tds=`<td>${i+1}</td><td class="nm">${esc(s.name||'')}</td><td>${esc(ssid)}</td>`;
+      let tds=`<td>${i+1}</td><td class="nm">${esc(s.name)}</td><td>${esc(s.id)}</td>`;
       courses.forEach(co=>{
-        const c=(allCourses||[]).find(x=>String(x.sid)===ssid&&normCode(x.code)===normCode(co.code)&&isActive(x.status));
-        const key=c?c.key:'';
+        const c=gRecs.find(x=>String(x.sid)===s.id&&normCode(x.code)===normCode(co.code));
         const cats=co.cats||[];
-        // ⭐ الطالب غير مسجّل في هذه المادة → خانات مظلّلة بـ«·» لا «غ».
-        //   («غ» تعني «مسجّل ولم تُرصد درجته» — كانت تظهر للجميع حتى غير المسجّلين)
-        if(!c){
-          const n=(cats.length||1)+1;
-          tds+=Array(n).fill('<td class="na">·</td>').join('');
-          return;
-        }
+        if(!c){ tds+=Array((cats.length||1)+1).fill('<td class="na">·</td>').join(''); return; }
+        const dep=isDeprivedRec(c);
+        if(dep){ nDep++;
+          tds+=Array(cats.length||1).fill('<td class="dep">—</td>').join('')+'<td class="tot dep">محروم</td>';
+          sumAll+=0; cntAll++; return; }
         if(cats.length){
           let sum=0,any=false,cells='';
           cats.forEach(ct=>{
-            const v=detailGrade(key,co.code,ct.cat);
+            const v=csDetail(c.key,co.code,ct.cat);
             if(v!==''&&v!=null){sum+=parseFloat(v)||0;any=true;cells+=`<td>${v}</td>`;}
             else cells+=`<td class="g">غ</td>`;
           });
-          const total=any?(Math.round(sum*10)/10):(c.pct?Math.round(c.pct):'');
+          const total=any?(Math.round(sum*10)/10):((parseFloat(c.pct)||0)?Math.round(c.pct):'');
+          if(total===''){nMissing++;} else {sumAll+=parseFloat(total)||0;cntAll++;}
           tds+=cells+`<td class="tot">${total!==''?total:'—'}</td>`;
         }else{
-          const grade=c.pct?Math.round(c.pct):'';
-          tds+=`<td>${grade!==''?grade:'<span style="color:var(--acc-r);font-weight:700">غ</span>'}</td><td class="tot">${grade!==''?grade:'—'}</td>`;
+          const grade=(parseFloat(c.pct)||0)?Math.round(c.pct):'';
+          if(grade===''){nMissing++;} else {sumAll+=grade;cntAll++;}
+          tds+=`<td>${grade!==''?grade:'<span class="g">غ</span>'}</td><td class="tot">${grade!==''?grade:'—'}</td>`;
         }
       });
       return `<tr>${tds}</tr>`;
     }).join('');
-    body+=`<div class="cs-block" data-grp="${esc(String(g))}"><div class="cs-title">🎛️ شيت كنترول — الشعبة ${esc(String(g))} <span style="font-size:11px;opacity:.85">(${gs.length} متدرب · ${courses.length} مادة)</span></div>
-      <div class="cs-sub">معهد المعرفة والإبداع العالي للتدريب · ${esc(new Date().toLocaleDateString('en-GB'))}</div>
+    const avgG=cntAll?Math.round(sumAll/cntAll):0;
+    body+=`<div class="cs-block" data-grp="${esc(String(g))}">
+      <div class="cs-title"><span>🎛️ شيت كنترول — الشعبة ${esc(String(g))}</span>
+        <span class="cs-k">${gs.length} متدرب · ${courses.length} مادة${H?' · '+esc(fmtTerm(String(H).replace(/-/g,' '))):''}</span></div>
+      <div class="cs-sub">معهد المعرفة والإبداع العالي للتدريب · الشعبة ${esc(String(g))}${H?' · '+esc(fmtTerm(String(H).replace(/-/g,' '))):''} · ${esc(new Date().toLocaleDateString('en-GB'))}</div>
       <table class="cs"><thead>
         <tr>${h1}</tr>
         <tr>${h2}</tr>
         <tr class="mxr"><th colspan="3" style="text-align:center">الدرجة العظمى ←</th>${h3}</tr>
       </thead><tbody>${rows}</tbody></table>
+      <div class="cs-stats">
+        <span>متوسط الشعبة المحتسب: <b>${avgG}%</b></span>
+        <span>نتائج محتسبة: <b>${cntAll}</b></span>
+        <span>لم تُرصد بعد: <b>${nMissing}</b></span>
+        <span>محرومون: <b>${nDep}</b></span>
+      </div>
       <div class="cs-legend">
-        <span><i style="color:var(--acc-r)">غ</i> مسجّل ولم تُرصد درجته</span>
-        <span><i class="na" style="background:repeating-linear-gradient(135deg,#eceff4 0 6px,#e3e8ef 6px 12px);color:#9aa7ba">·</i> غير مسجّل في المادة</span>
-        <span><i>—</i> لا يوجد مجموع بعد</span>
-      </div></div>`;
+        <span><i style="color:#b3261e">غ</i> مسجّل ولم تُرصد درجته</span>
+        <span><i style="background:#fdecea;color:#b3261e">—</i> محروم · يُحتسب صفراً</span>
+        <span><i style="background:repeating-linear-gradient(135deg,#eceff4 0 6px,#e3e8ef 6px 12px);color:#9aa7ba">·</i> غير مسجّل في المادة</span>
+      </div>
+      <div class="cs-sign"><div>مدرّب المادة<u></u></div><div>مشرف التخصص<u></u></div><div>مدير الأكاديمية<u></u></div></div>
+      </div>`;
   });
   if(!body){showToast('لا توجد شعب أو درجات لعرضها','w');return;}
-  openReport(controlShell(body));
+  openReport(controlShell(body, 'شيت الكنترول'+(H?' — '+fmtTerm(String(H).replace(/-/g,' ')):'')));
 }
+window.openControlSheet=openControlSheet;
 window.printControlSheet=printControlSheet;
 
 // ===== سجل الغياب اليومي لكل مادة (يجمع كل التواريخ في جدول واحد) =====
@@ -12991,8 +13304,8 @@ function printStudentReport(sid){
   const gpa=gpaFrom(sc);
   const maxAbs=current.length?Math.max(...current.map(c=>c.abs)):0;
   let body=`<div class="kpis">
-    <div class="kpi"><div class="n">${gpa}</div><div class="l">المعدل التراكمي /5</div></div>
-    <div class="kpi"><div class="n">${avg}%</div><div class="l">متوسط الدرجات</div></div>
+    <div class="kpi"><div class="n">${gpaDisplay(sc)}</div><div class="l">المعدل التراكمي /5</div></div>
+    <div class="kpi"><div class="n">${avgPctDisplay(sc)}</div><div class="l">متوسط الدرجات</div></div>
     <div class="kpi"><div class="n">${sc.length}</div><div class="l">إجمالي المواد</div></div>
     <div class="kpi"><div class="n">${absBadge(maxAbs)}</div><div class="l">أعلى غياب</div></div>
   </div>
@@ -13006,13 +13319,16 @@ function printStudentReport(sid){
     <tr><th>البريد</th><td>${st.email||'—'}</td></tr>
   </tbody></table>`;
   if(current.length){
-    const rows=current.map(c=>`<tr><td style="text-align:right">${esc(c.course)}</td><td>${esc(c.code||'—')}</td><td class="${c.pct>=60?'ok':c.pct>0?'danger':''}">${Math.round(c.pct)}%</td><td>${esc(c.letter||'—')}</td><td>${absBadge(c.abs)}</td></tr>`).join('');
+    /* 🚫 الدرجة المحرومة مشطوبة في الكشف — والمحتسب صفر */
+    const rows=current.map(c=>{const dp=isDeprivedRec(c);
+      return `<tr><td style="text-align:right">${esc(c.course)}</td><td>${esc(c.code||'—')}</td><td class="${dp?'danger':c.pct>=60?'ok':c.pct>0?'danger':''}"${dp?' style="text-decoration:line-through"':''}>${Math.round(c.pct)}%</td><td>${dp?'محروم — تُحتسب صفراً':esc(c.letter||'—')}</td><td>${absBadge(c.abs)}</td></tr>`;}).join('');
     body+=`<div class="sec-title">المواد الحالية (${current.length})</div>
     <table><thead><tr><th>المادة</th><th>الرمز</th><th>الدرجة</th><th>التقدير</th><th>الغياب</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
   const prev=sc.filter(c=>!isActive(c.status));
   if(prev.length){
-    const rows=prev.map(c=>`<tr><td style="text-align:right">${esc(c.course)}</td><td>${esc(c.code||'—')}</td><td class="${c.pct>=60?'ok':c.pct>0?'danger':''}">${Math.round(c.pct)}%</td><td>${esc(c.letter||'—')}</td><td>${c.pct>=60?'ناجح':'راسب'}</td></tr>`).join('');
+    const rows=prev.map(c=>{const dp=isDeprivedRec(c);
+      return `<tr><td style="text-align:right">${esc(c.course)}</td><td>${esc(c.code||'—')}</td><td class="${dp?'danger':c.pct>=60?'ok':c.pct>0?'danger':''}"${dp?' style="text-decoration:line-through"':''}>${Math.round(c.pct)}%</td><td>${dp?'—':esc(c.letter||'—')}</td><td>${dp?'محروم — تُحتسب صفراً':(c.pct>=60?'ناجح':'راسب')}</td></tr>`;}).join('');
     body+=`<div class="sec-title">المواد السابقة (${prev.length})</div>
     <table><thead><tr><th>المادة</th><th>الرمز</th><th>الدرجة</th><th>التقدير</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
@@ -13074,7 +13390,8 @@ function showStudentDetail(sid){
         <div class="iitem"><div class="ilbl">الرقم الأكاديمي</div><div class="ival">${st.id}</div></div>
         <div class="iitem"><div class="ilbl">الجوال</div><div class="ival">${esc(st.ph||'—'.toString())}</div></div>
         <div class="iitem"><div class="ilbl">المعدّل التراكمي</div><div class="ival" style="color:${gpaColor(gpaFrom(stCourses))};font-weight:700">${gpaDisplay(stCourses)} <span style="font-size:11px;color:var(--muted);font-weight:400">/ 5</span></div></div>
-        <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival" style="color:${avg>=70?'var(--green)':avg>=60?'var(--gold)':'var(--red)'}">${avg}%</div></div>
+        <!-- «٠٪» توحي أنه حصل صفراً؛ الصحيح «—» حين لا توجد درجة محتسبة -->
+        <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival" style="color:${!scoredCount(stCourses)?'var(--muted)':avg>=70?'var(--green)':avg>=60?'var(--gold)':'var(--red)'}">${avgPctDisplay(stCourses)}</div></div>
       </div>
       
       <div class="ccard ${st.cert&&st.cert.startsWith('http')?'cc-g':'cc-y'}" style="margin-bottom:16px;padding:18px">
@@ -13097,15 +13414,24 @@ function showStudentDetail(sid){
       <div class="stitle">المقررات (${stCourses.length})</div>
       ${stCourses.length?stCourses.map(c=>{
         const p=Math.round(c.pct);
-        return `<div class="ccard cc-b" style="margin-bottom:8px;padding:14px 16px">
+        /* 🚫 المحروم: الدرجة المسجّلة تُعرض مشطوبة، والمحتسب صفر.
+           كانت تُعرض «إنجاز ٨٠٪» بشريط أخضر وكلمة «محروم» جانبها — فيظن
+           القارئ أنه أنجز ٨٠٪ وهي تدخل متوسطه كـ٨٠ لا كصفر. */
+        const dep=isDeprivedRec(c);
+        const exm=!dep&&isDeprived(c.abs);      // محروم لكن فُتح له استثناء
+        return `<div class="ccard ${dep?'cc-r':'cc-b'}" style="margin-bottom:8px;padding:14px 16px">
           <div class="cc-top" style="margin-bottom:8px">
             <div><div class="cc-name" style="font-size:13px">${esc(c.course)}</div><div class="cc-meta">${esc(c.trainer||'—')}</div></div>
-            <span class="pill ${p>=80?'pg':p>=50?'py':'pr'}">${p}%</span>
+            ${dep?`<span class="pill pr" title="محروم — تُحتسب المادة صفراً في المتوسط والمعدّل">🚫 محروم · 0%</span>`
+                 :`<span class="pill ${p>=80?'pg':p>=50?'py':'pr'}">${p}%</span>`}
           </div>
-          <div class="prog"><div class="pfill ${p>=80?'pf-g':p>=50?'pf-y':'pf-r'}" style="width:${p}%"></div></div>
-          <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--muted)">
-            <span>إنجاز: ${p}%</span><span>غياب: ${Math.round(c.abs)}%</span>
-            ${isDeprived(c.abs)?'<span style="color:var(--acc-r)">⚠️ محروم</span>':''}
+          ${dep?'':`<div class="prog"><div class="pfill ${p>=80?'pf-g':p>=50?'pf-y':'pf-r'}" style="width:${p}%"></div></div>`}
+          <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--muted);flex-wrap:wrap">
+            ${dep?`<span>الدرجة المسجّلة: <span style="text-decoration:line-through">${p}%</span></span>
+                   <span style="color:var(--acc-r);font-weight:700">🚫 محروم — تُحتسب صفراً</span>`
+                 :`<span>إنجاز: ${p}%</span>`}
+            <span>غياب: ${Math.round(c.abs)}%</span>
+            ${exm?'<span style="color:var(--acc-g)">🔓 استثناء — تُحتسب درجته</span>':''}
           </div>
         </div>`;
       }).join(''):'<div class="empty">لا توجد مقررات</div>'}
