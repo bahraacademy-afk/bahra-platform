@@ -1533,6 +1533,62 @@ a{transition:color .15s,opacity .15s}
 .sitem .sicon{opacity:.85}
 .sitem.active .sicon{opacity:1}
 
+/* ===== عناوين أقسام القائمة =====
+   كانت ١٦ بنداً مسطحاً بلا تجميع، فالعين تمسح القائمة كاملة في كل مرة
+   للوصول إلى بند واحد. الأقسام تقصّر المسافة إلى ثلاثة أو أربعة بنود. */
+.snav-sec{display:flex;align-items:center;gap:9px;margin:16px 20px 5px;
+  font-size:10.5px;font-weight:800;letter-spacing:.7px;color:var(--muted);
+  user-select:none;white-space:nowrap}
+.snav-sec:first-child{margin-top:6px}
+.snav-sec::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ===== شريط تبويبات موحّد للصفحات =====
+   كل صفحة كانت تكتب تنسيق تبويباتها بيدها، فاختلفت الأحجام والحواف
+   بين «إدارة المقررات» و«الحسابات». واحد لكل الصفحات. */
+.pg-tabs{display:flex;gap:6px;margin-bottom:16px;padding:5px;flex-wrap:wrap;
+  background:color-mix(in srgb,var(--brand-1) 6%,transparent);
+  border:1px solid var(--border);border-radius:16px}
+.pg-tab{flex:1;min-width:115px;padding:11px 14px;border:none;border-radius:12px;cursor:pointer;
+  font-size:13.5px;font-weight:700;background:transparent;color:var(--text);
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:background .2s,color .2s,box-shadow .2s;font-family:inherit}
+.pg-tab:hover{background:color-mix(in srgb,var(--brand-1) 12%,transparent)}
+.pg-tab.on{color:#fff;background:linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2));
+  box-shadow:0 3px 12px color-mix(in srgb,var(--brand-deep-1) 32%,transparent)}
+.pg-tab-n{font-size:11px;font-weight:800;border-radius:9px;padding:1px 7px;min-width:20px;
+  background:color-mix(in srgb,var(--text) 13%,transparent)}
+.pg-tab.on .pg-tab-n{background:rgba(255,255,255,.24)}
+@media(max-width:640px){.pg-tab{min-width:0;flex:1 1 42%;font-size:12.5px;padding:10px 8px;gap:5px}}
+
+/* ===== صف إجراءات الصفحة =====
+   الأزرار كانت تتناثر بأحجام مختلفة فوق كل صفحة. صف واحد بعنوان. */
+.pg-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px;
+  padding:12px 14px;border:1px solid var(--border);border-radius:14px;
+  background:color-mix(in srgb,var(--brand-1) 4%,transparent)}
+.pg-acts-lbl{font-size:11px;font-weight:800;color:var(--muted);letter-spacing:.4px;
+  margin-inline-end:4px;white-space:nowrap}
+.pg-acts .btn{margin:0}
+@media(max-width:640px){.pg-acts{padding:10px}.pg-acts .btn{flex:1 1 46%}}
+
+/* صندوق البحث الموحّد داخل صف فيه قوائم تصفية */
+.search-row .list-search{flex:1 1 260px;margin:0;min-width:180px}
+@media(max-width:560px){.search-row .list-search{flex:1 1 100%}}
+/* 🌞 حقول البحث والتصفية كانت بخلفية غامقة ثابتة rgba(7,17,31,.6)،
+   فتظهر مربّعين رماديين وسط صفحة بيضاء. تتبع البطاقة الآن. */
+body.light-mode .search-row input,
+body.light-mode .search-row select{background:#fff;color:var(--text);
+  border-color:color-mix(in srgb,var(--brand-deep-2) 14%,transparent)}
+
+/* تسمية مربّع اختيار تصير مساحة لمس كافية على الجوال — المربّع نفسه
+   ١٨px، والضغط على التسمية يبدّله، فنوسّعها بدل تكبير المربّع. */
+.tap-lbl{display:inline-flex;align-items:center;min-height:24px}
+@media(max-width:640px){.tap-lbl{min-height:44px;flex:1}}
+
+/* خلية اسم تفتح الملف — زر بمظهر نص، لا تكسر مظهر الجدول */
+.lnk-cell{background:none;border:none;padding:0;margin:0;font:inherit;font-weight:600;
+  color:var(--text);cursor:pointer;text-align:start;border-bottom:1px dashed transparent}
+.lnk-cell:hover{color:var(--acc-b);border-bottom-color:currentColor}
+
 /* ===== بطاقات المؤشرات: أيقونة داخل مربّع ملوّن فوق الرقم ===== */
 .mcard{padding:20px 18px 18px !important}
 .micon{display:inline-flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:14px;
@@ -5815,8 +5871,9 @@ window.updateNotifBadges=updateNotifBadges;
 
 // ===== STUDENT APP =====
 function buildStudentApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('s',['home','news','courses','library','performance','schedule','services','record','attachments','profile']);
-  buildMobNav('s',['home','news','courses','library','performance','schedule','services','record','attachments','profile']);
+  const SPAGES=['home','news','courses','performance','schedule','library','record','services','attachments','profile'];
+  document.getElementById('sidebar').innerHTML=navHTML('s',SPAGES);
+  buildMobNav('s',SPAGES);
   showSPage('home',null);
 }
 
@@ -5831,8 +5888,8 @@ function navHTML(r,pages){
     alerts:{icon:'🔔',lbl:'الاشعارات'},attachments:{icon:'📎',lbl:'المرفقات'},
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     dashboard:{icon:'📈',lbl:'لوحة المؤشرات والأوائل'},
-    accounts:{icon:'👥',lbl:'إضافة الحسابات'},
-    manage_courses:{icon:'📖',lbl:'إدارة المقررات'},
+    accounts:{icon:'👥',lbl:'المتدربون والمدربون'},
+    manage_courses:{icon:'📖',lbl:'المقررات والتسجيل'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
     settings:{icon:'⚙️',lbl:'الإعدادات'},
     record:{icon:'🏅',lbl:'السجل التدريبي'},
@@ -5843,17 +5900,31 @@ function navHTML(r,pages){
     news:{icon:'📰',lbl:'الأخبار والإعلانات'}
   };
   const ac=r==='s'?'active':r==='t'?'active at':'active aa';
-  return pages.map(p=>`<div class="sitem" onclick="show${r.toUpperCase()}Page('${jsq(p)}',this)" id="sn-${p}"><span class="sicon">${map[p]?.icon||'📌'}</span>${map[p]?.lbl||p}</div>`).join('');
+  const secs=NAV_SECS[r]||{}, ovr=NAV_LBL_OVR[r]||{};
+  return pages.map(p=>{ const m=ovr[p]||map[p]||{};
+    return (secs[p]?`<div class="snav-sec">${esc(secs[p])}</div>`:'')
+    +`<div class="sitem" onclick="show${r.toUpperCase()}Page('${jsq(p)}',this)" id="sn-${p}"><span class="sicon">${m.icon||'📌'}</span>${m.lbl||p}</div>`;}).join('');
 }
+/* نفس المُعرّف بمعنى أوسع عند الإداري: «سجل الغياب» صار يضم التحاضير */
+const NAV_LBL_OVR={a:{attlog:{icon:'🗂️',lbl:'متابعة التدريب'}}};
+/* 🗂️ عنوان القسم يسبق البند الذي اسمه مفتاح هنا — فتنقسم القائمة إلى
+   مجموعات قصيرة بدل قائمة واحدة طويلة. */
+const NAV_SECS={
+  a:{overview:'الرئيسية', accounts:'الأشخاص', manage_courses:'التدريب',
+     attlog:'المتابعة اليومية', reports:'التقارير', maintenance:'النظام'},
+  t:{home:'الرئيسية', attendance:'التحضير والدرجات', students:'متدربوني',
+     library:'المتابعة والمرفقات'},
+  s:{home:'الرئيسية', courses:'دراستي', services:'خدماتي'}
+};
 
 function buildMobNav(r,pages){
   const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',lesson:'📝',lessons:'📚',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖',maintenance:'🧰',news:'📰'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:'سجل الغياب اليومي',lesson:'تحضير الدروس',lessons:'تحاضير المدربين',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الحسابات',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'إدارة المقررات',maintenance:'الصيانة',news:'الأخبار'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:r==='a'?'متابعة التدريب':'سجل الغياب اليومي',lesson:'تحضير الدروس',lessons:'تحاضير المدربين',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الأشخاص',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'المقررات',maintenance:'الصيانة',news:'الأخبار'};
   window._mobPages={pages,role:r,map,lbls,active:pages[0]};
   // ⭐ الصفحات الأربع الأكثر استخداماً لكل دور في الشريط السفلي، والباقي في «المزيد»
   const PRIMARY={s:['home','courses','schedule','services'],
                  t:['home','attendance','grades','requests'],
-                 a:['overview','requests','all_students','schedule']};
+                 a:['overview','accounts','manage_courses','requests']};
   const prim=(PRIMARY[r]||[]).filter(p=>pages.includes(p));
   while(prim.length<4){ const nxt=pages.find(p=>!prim.includes(p)); if(!nxt)break; prim.push(nxt); }
   const rest=pages.filter(p=>!prim.includes(p));
@@ -6489,8 +6560,9 @@ function filterTerm(grp,val,btn){
 
 // ===== TRAINER APP =====
 function buildTrainerApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('t',['home','news','students','library','schedule','attendance','attlog','lesson','grades','requests','alerts','attachments']);
-  buildMobNav('t',['home','news','students','library','schedule','attendance','attlog','lesson','grades','requests','alerts','attachments']);
+  const TPAGES=['home','news','attendance','grades','attlog','lesson','students','schedule','library','requests','alerts','attachments'];
+  document.getElementById('sidebar').innerHTML=navHTML('t',TPAGES);
+  buildMobNav('t',TPAGES);
   showTPage('home',null);
 }
 
@@ -6589,14 +6661,15 @@ body.light-mode .pill.pb{background:color-mix(in srgb,var(--brand-1) 10%,transpa
 /* scopeAll: هل يرى جلسات كل المعهد (إداري) أم مواده فقط (مدرب)
    canEdit : هل يقدر يعدّل ويحذف — الاثنان كانا متغيّراً واحداً،
              فكان تمكين التعديل للمدرب يفتح له سجلات المعهد كله. */
-function renderAttLog(scopeAll,canEdit){
+function renderAttLog(scopeAll,canEdit,bare){
   if(canEdit===undefined)canEdit=scopeAll;
   const list=atlBuildSessions(scopeAll);
   window._attSessions=list; window._attEditable=canEdit; window._attScopeAll=scopeAll; window._attFilter={q:'',course:'all'};
   const editable=canEdit;
   const title=scopeAll?'إدارة سجل الغياب اليومي':'سجل الغياب اليومي';
   const subtitle=scopeAll?'استعرض وعدّل واحذف جلسات التحضير لكل المدربين':'كل جلسات التحضير التي سجّلتها — لموادك والمواد المكلَّف بها';
-  const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">🗂️ ${title}</div><div class="bsub">${subtitle}</div></div>${editable?'<span class="pill pb">وضع الإدارة</span>':'<span class="pill pg">عرض</span>'}</div>`;
+  /* bare = مدموجة داخل «متابعة التدريب»، فالبانر للصفحة لا للتبويب */
+  const banner=bare?'':`<div class="banner"><div><div class="cc-name" style="font-size:19px">🗂️ ${title}</div><div class="bsub">${subtitle}</div></div>${editable?'<span class="pill pb">وضع الإدارة</span>':'<span class="pill pg">عرض</span>'}</div>`;
   if(!list.length)
     return atlCss()+`<div class="atl-wrap">${banner}<div class="empty"><div class="empty-icon">📭</div>ما فيه تحضيرات مسجّلة بعد<br><span style="font-size:12px">تظهر هنا فور تسجيل أي حضور</span></div></div>`;
   const totalAbs=list.reduce((n,s)=>n+s.students.filter(x=>x.status==='غائب').length,0);
@@ -6813,9 +6886,9 @@ function lessonFormPage(){
   const list=mine.length?`<div class="stitle" style="margin-top:22px">تحاضيري المُرسلة (${mine.length})</div>`+mine.map(lp=>lessonCard(lp,false,true)).join(''):`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>ما أرسلت أي تحضير بعد</div>`;
   return `<style>${LP_CSS}</style>`+banner+form+list;
 }
-function adminLessonsPage(){
+function adminLessonsPage(bare){
   const list=lessonPreps.slice();
-  const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">📚 تحاضير المدربين</div><div class="bsub">التحاضير التي أرسلها المدربون — استعراض وطباعة</div></div><span class="pill pb">${list.length} تحضير</span></div>`;
+  const banner=bare?'':`<div class="banner"><div><div class="cc-name" style="font-size:19px">📚 تحاضير المدربين</div><div class="bsub">التحاضير التي أرسلها المدربون — استعراض وطباعة</div></div><span class="pill pb">${list.length} تحضير</span></div>`;
   if(!list.length)return `<style>${LP_CSS}</style>`+banner+`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>ما وصل أي تحضير بعد</div>`;
   const trainers=[...new Set(list.map(x=>x.tname).filter(Boolean))];
   const opts=['<option value="all">كل المدربين</option>'].concat(trainers.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`)).join('');
@@ -7898,12 +7971,32 @@ function refreshFileList(course){
 
 // ===== ADMIN APP =====
 function buildAdminApp(){
-  document.getElementById('sidebar').innerHTML=navHTML('a',['overview','news','all_students','all_courses','library','manage_courses','schedule','attlog','lessons','requests','alerts','reports','dashboard','accounts','maintenance','settings']);
-  buildMobNav('a',['overview','news','all_students','all_courses','library','manage_courses','schedule','attlog','lessons','requests','alerts','reports','dashboard','accounts','maintenance','settings']);
+  /* 🧭 ١٣ بنداً في ٦ أقسام بدل ١٦ مسطحة — و«المتدربون» اندمجت في «الحسابات»
+     و«المقررات» في «إدارة المقررات» و«التحاضير» في «سجل الغياب». */
+  const APAGES=['overview','news','accounts','manage_courses','schedule','library',
+                'attlog','requests','alerts','reports','dashboard','maintenance','settings'];
+  document.getElementById('sidebar').innerHTML=navHTML('a',APAGES);
+  buildMobNav('a',APAGES);
   showAPage('overview',null);
 }
 
+/* 🧭 اختصار ينقل لبيت الإجراء بدل نسخة ثانية منه.
+   كان نفس الزر مكتوباً في صفحتين أو ثلاث، فتتغيّر إحداها وتبقى الأخرى. */
+function goAdmin(pg,key,tab){
+  try{ if(key)window[key]=tab; showAPage(pg,document.getElementById('sn-'+pg)); }catch(e){}
+}
+window.goAdmin=goAdmin;
+/* 🔀 صفحات اندمجت في غيرها — كل رابط قديم (بطاقة لوحة المتابعة، اقتراح
+   المساعد، زر داخل صفحة) يصل إلى بيته الجديد وتُفتح التبويبة الصحيحة،
+   بدل ما ينكسر أو يفتح صفحة فاضية. */
+const A_MERGED={
+  all_students:{pg:'accounts',  key:'_accTab', tab:'student'},
+  all_courses: {pg:'manage_courses', key:'_mcTab', tab:'current'},
+  lessons:     {pg:'attlog',    key:'_trkTab', tab:'lessons'}
+};
 function showAPage(pg,el){
+  const mg=A_MERGED[pg];
+  if(mg){ window[mg.key]=mg.tab; pg=mg.pg; el=document.getElementById('sn-'+pg); }
   if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active aa'}
   if(window._mobPages){window._mobPages.active=pg;} if(typeof setMobActive==='function')setMobActive(pg);
   const mc=document.getElementById('mcontent');
@@ -8226,9 +8319,10 @@ function updateEnrCounts(){
 }
 // ===== فحص المتطلبات السابقة عند التسجيل الجماعي =====
 // حالة مادة معيّنة لطالب معيّن: none | current | passed | failed
-function studentCourseState(sid, code){
-  const recs=(allCourses||[]).filter(c=>String(c.sid)===String(sid)&&normCode(c.code)===normCode(code));
-  if(!recs.length)return 'none';
+/* قاعدة واحدة تحكم الحالة — لا تُكرَّر: كل مَن يحتاجها (الشارة، القفل،
+   التسجيل الجماعي) يمرّ من هنا، فلا تتفرّق النسخ وتختلف النتائج. */
+function enrStateFromRecs(recs){
+  if(!recs||!recs.length)return 'none';
   if(recs.some(c=>isActive(c.status)))return 'current'; // مسجّل حالياً
   /* ⚠️ كان أي سجل سابق غير «راسب» يُعدّ اجتيازاً. و‎isFailed‎ تشترط درجة > 0،
      فالمادة السابقة التي لم تُرصد درجتها إطلاقاً كانت تُحسب «اجتازها» ويُتخطّى
@@ -8238,6 +8332,56 @@ function studentCourseState(sid, code){
   if(recs.some(c=>graded(c)&&!isFailed(c)))return 'passed';   // اجتاز محاولة مرصودة
   if(recs.every(c=>!graded(c)))return 'ungraded';             // سابقة بلا درجة إطلاقاً
   return 'failed';                                            // رُصدت ورسب → يعيدها
+}
+// حالة مادة معيّنة لطالب معيّن: none | current | passed | ungraded | failed
+function studentCourseState(sid, code){
+  return enrStateFromRecs((allCourses||[]).filter(c=>String(c.sid)===String(sid)&&normCode(c.code)===normCode(code)));
+}
+/* 📇 فهرس (متدرب|رمز) ← سجلاته — مسحة واحدة على allCourses بدل مسحة لكل
+   خلية. الشارات تُحسب عند كل تغيير تحديد، فبلا فهرس تصير العملية
+   (مواد × متدربين × كل السجلات) وتتجمّد الصفحة في الشُعب الكبيرة. */
+function enrRecIdx(sids){
+  const want=new Set((sids||[]).map(x=>String(x)));
+  const m=new Map();
+  (allCourses||[]).forEach(c=>{
+    const s=String(c.sid); if(!want.has(s))return;
+    const k=s+'|'+normCode(c.code);
+    const a=m.get(k); if(a)a.push(c); else m.set(k,[c]);
+  });
+  return m;
+}
+function enrStateIdx(idx,sid,code){
+  return enrStateFromRecs(idx?idx.get(String(sid)+'|'+normCode(code)):null);
+}
+// اسم مختصر للعرض في التلميح
+function enrShortName(sid){
+  const s=(students||[]).find(x=>String(x.id)===String(sid));
+  return s?String(s.name||sid).split(' ').slice(0,2).join(' '):String(sid);
+}
+/* 🎯 حالة المادة بالنسبة للمحددين وحدهم — هذا قلب العلّة: كانت الشارة
+   تُحسب مرّة واحدة وقت الرسم على الشعبة كلها، فمادةٌ اجتازها المحدَّد
+   بدرجة مرصودة تبقى «باقية · N يحتاجها» (وN هم غيره) فيظنّها لم تُدرَّس له. */
+function enrSelState(code,sids,idx){
+  const need=[],cur=[],ps=[];
+  (sids||[]).forEach(sid=>{
+    const st=enrStateIdx(idx,sid,code), nm=enrShortName(sid);
+    if(st==='passed')ps.push(nm); else if(st==='current')cur.push(nm); else need.push(nm);
+  });
+  const cut=a=>a.slice(0,3).join('، ')+(a.length>3?' و'+(a.length-3)+' غيرهم':'');
+  const tip=[need.length?'يحتاجها: '+cut(need):'',
+             cur.length?'مسجّل حالياً: '+cut(cur):'',
+             ps.length?'اجتازها: '+cut(ps):''].filter(Boolean).join(' · ');
+  return {st:need.length?'remaining':(cur.length?'current':'done'),
+          need:need.length,cur:cur.length,passed:ps.length,tip:tip};
+}
+/* شارة واحدة لمستويين: الشعبة كلها (of=0) أو المحددون (of=عددهم) */
+function enrBadgeHTML(st,need,of){
+  const B='font-size:10px;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700;white-space:nowrap';
+  const many=of>1;
+  if(st==='done')    return '<span class="enr-badge" style="'+B+';background:#2ecc71">✓ '+(of?(many?'اجتازوها':'اجتازها'):'منتهية')+'</span>';
+  if(st==='current') return '<span class="enr-badge" style="'+B+';background:#6ab8f7">▶ '+(of?(many?'مسجّلون فيها':'مسجّل فيها'):'حالية')+'</span>';
+  const n=(of&&need<of)?' · '+need+' من '+of+' محدد':(need?' · '+need+' يحتاجها':'');
+  return '<span class="enr-badge" style="'+B+';background:var(--muted)">باقية'+n+'</span>';
 }
 // تطبيع نص لمطابقة رموز المواد (أرقام + حروف عربي/لاتيني فقط)
 function normTok(s){ return String(s||'').replace(/[^0-9\u0600-\u06FFa-zA-Z]/g,'').toLowerCase(); }
@@ -8277,23 +8421,44 @@ function studentPassedPrereq(sid, prereq){
     return parts.every(onePart);
   });
 }
-// قفل صناديق المواد التي لم يستوفِ متطلبها المتدربون المحددون
+/* قفل صناديق المواد وتحديث شاراتها حسب المتدربين المحددين
+   — المتطلب السابق غير مستوفى ⇒ 🔒
+   — المحددون كلهم اجتازوها أو مسجّلون فيها ⇒ لا شيء يُسجَّل، فتُقفل وتُعلَن
+     «✓ اجتازها / ▶ مسجّل فيها» بدل «باقية» الكاذبة. وهذا يوافق ما يفعله
+     enrollBatch أصلاً: يتخطّى passed وcurrent، فكان يقول «ما انسجّل شي». */
 function applyPrereqLocks(){
   const sids=[...document.querySelectorAll('.enr-student-cb:checked')].map(c=>c.value);
+  const idx=sids.length?enrRecIdx(sids):null;
   document.querySelectorAll('.enr-course-cb').forEach(cb=>{
     const code=(cb.value||'').split('|')[0];
     const cat=(catalog||[]).find(c=>normCode(c.code)===normCode(code));
     const prereq=cat?cat.prereq:'';
     const wrap=cb.closest('label');
     const old=wrap?wrap.querySelector('.prereq-lock'):null; if(old)old.remove();
+    // 🎯 الشارة: على المحددين إن وُجدوا، وإلا تعود لحالة الشعبة المحفوظة
+    let satisfied=false;
+    if(wrap){
+      const bd=wrap.querySelector('.enr-badge');
+      if(bd){
+        if(sids.length){
+          const sel=enrSelState(code,sids,idx);
+          bd.outerHTML=enrBadgeHTML(sel.st,sel.need,sids.length);
+          satisfied=(sel.need===0);
+          if(sel.tip)wrap.setAttribute('title',sel.tip); else wrap.removeAttribute('title');
+        }else{
+          bd.outerHTML=enrBadgeHTML(wrap.dataset.gst||'remaining',parseInt(wrap.dataset.gneed||'0',10)||0,0);
+          wrap.removeAttribute('title');
+        }
+      }
+    }
     let blocked=false, missing='';
     if(prereq && sids.length){
       // مقفلة إذا وُجد متدرب واحد على الأقل لم يستوفِ المتطلب
       for(const sid of sids){ if(!studentPassedPrereq(sid,prereq)){ blocked=true; missing=prereq; break; } }
     }
-    cb.disabled=blocked;
+    cb.disabled=blocked||satisfied;
+    if(cb.disabled)cb.checked=false;
     if(blocked){
-      cb.checked=false;
       if(wrap){
         wrap.style.opacity='.55';
         const tag=document.createElement('span');
@@ -8302,8 +8467,22 @@ function applyPrereqLocks(){
         tag.textContent='🔒 المتطلب: '+missing;
         wrap.appendChild(tag);
       }
-    }else if(wrap){ wrap.style.opacity=''; }
+    }else if(wrap){ wrap.style.opacity=satisfied?'.6':''; }
   });
+  /* ترويسة «المواد الباقية (8)» كانت تعدّ الشعبة كلها، فتناقض الشارات:
+     ثماني مواد «متاحة للتسجيل» وستٌّ منها مقفلة لأن المحدَّد اجتازها.
+     صارت تقول كم مادة تُفتح للمحددين فعلاً من أصل مواد الشعبة. */
+  const hd=document.getElementById('enrAvailHead');
+  if(hd){
+    const tot=parseInt(hd.dataset.n||'0',10)||document.querySelectorAll('.enr-course-cb').length;
+    if(!sids.length){ hd.textContent='🆕 المواد الباقية ('+tot+') — متاحة للتسجيل'; }
+    else{
+      const open=[...document.querySelectorAll('.enr-course-cb')].filter(c=>!c.disabled).length;
+      hd.textContent=sids.length===1
+        ? '🆕 متاح لـ'+enrShortName(sids[0])+': '+open+' من '+tot
+        : '🆕 متاح للمحددين ('+sids.length+'): '+open+' من '+tot;
+    }
+  }
   updateEnrCountsRaw();
 }
 // تحديث العدّاد فقط (بدون إعادة استدعاء القفل لتفادي التكرار اللانهائي)
@@ -8394,7 +8573,17 @@ async function enrollBatch(){
   // الترم الصيفي ما له نصف مجزأ
   const half=term.includes('صيفي')?'':(document.getElementById('enr_half')?.value||'');
   if(!sids.length){showToast('اختر متدرباً واحداً على الأقل','w');return;}
-  if(!crs.length){showToast('اختر مقرراً واحداً على الأقل','w');return;}
+  if(!crs.length){
+    /* لا يكفي «اختر مقرراً»: لو كانت كل المواد مقفلة على المحددين فالسبب
+       أنهم اجتازوها أو مسجّلون فيها أو ينقصهم متطلب — نقوله بدل ما يبحث. */
+    const all=[...document.querySelectorAll('.enr-course-cb')];
+    const open=all.filter(c=>!c.disabled).length;
+    if(all.length&&!open){
+      const who=sids.length===1?enrShortName(sids[0]):(sids.length+' محددين');
+      showToast('⚠️ ما فيه مادة متاحة لـ'+who+' — كل المواد الباقية إمّا اجتازها أو مسجّل فيها أو ينقصه متطلبها','w');
+    }else showToast('اختر مقرراً واحداً على الأقل'+(open?' من المواد المتاحة ('+open+')':''),'w');
+    return;
+  }
   /* 🔐 بلا مدرّب يصير السجل بلا صاحب: ما يظهر لأحد في التحضير ولا يقدر أحد
      يرصد درجاته — وهي نفس الورطة التي تُشخَّص لاحقاً بـ«فحص مادة». نمنعها هنا. */
   if(!String(trainer).trim()){
@@ -9652,12 +9841,84 @@ async function admAttDelete(recs){
 }
 window.admAttSet=admAttSet;window.admAttDelOne=admAttDelOne;window.admAttDelSession=admAttDelSession;
 
+/* 📚 جسم تبويب «المواد الحالية» — كان صفحة «المقررات» المستقلة */
+function coursesCurrentBody(){
+    // المواد الحالية فقط (المسجّل فيها طلاب نشطون هذا الترم)
+    const active=allCourses.filter(c=>isActive(c.status));
+    // تجميع حسب المادة
+    const byCourse={};
+    active.forEach(c=>{
+      const k=c.course;
+      if(!byCourse[k])byCourse[k]={course:k,code:c.code,trainer:c.trainer,students:[],grps:new Set()};
+      byCourse[k].students.push(c);
+      if(c.grp)byCourse[k].grps.add(c.grp);
+    });
+    const courses=Object.values(byCourse);
+    if(!courses.length)return `<div class="empty"><div class="empty-icon">📭</div>لا توجد مقررات حالية — ما فيه متدربون مسجّلون في هذا الفصل التدريبي<div style="font-size:12px;margin-top:10px">سجّلهم من تبويب «🔗 تسجيل جماعي»</div></div>`;
+    // ملخّص علوي
+    const totStudents=new Set(active.map(c=>c.sid)).size;
+    const avgAll=avgPct(active);
+    return `
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+      <div class="stitle" style="margin:0">📚 المواد الحالية (${courses.length} مقرر · ${totStudents} متدرب)</div>
+      <span class="pill ${pillClass(avgAll)}">متوسط ${avgAll}%</span>
+    </div>
+    <div data-listwrap>
+    ${searchBoxHTML('ابحث عن مقرر أو رمز أو مدرب...')}
+    <div class="gtable"><table>
+      <thead><tr><th>المقرر</th><th>الرمز</th><th>المدرب</th><th>الشعب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>متوسط الغياب</th><th>محرومون</th></tr></thead>
+      <tbody>${courses.map(c=>{
+        const n=c.students.length;
+        const avg=avgScoredNum(c.students);
+        const avgAbs=Math.round(c.students.reduce((a,s)=>a+(s.abs||0),0)/n);
+        const banned=c.students.filter(s=>(s.abs||0)>=25).length;
+        const grpsLbl=[...c.grps].sort().join('، ');
+        return `<tr style="cursor:pointer" onclick="showCourseDetail('${jsq(c.course)}')">
+          <td style="font-weight:700;color:var(--acc-b)">${esc(c.course)}</td>
+          <td>${esc(c.code||'-')}</td>
+          <td>${esc(c.trainer||'—')}</td>
+          <td>${grpsLbl||'-'}</td>
+          <td style="text-align:center;font-weight:700">${n}</td>
+          <td><span class="pill ${pillClass(avg)}">${avg}%</span></td>
+          <td><span style="color:${avgAbs>=25?'var(--red)':avgAbs>=15?'var(--gold)':'var(--muted)'}">${avgAbs}%</span></td>
+          <td style="text-align:center">${banned?`<span style="color:var(--acc-r);font-weight:700">${banned}</span>`:'0'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اضغط على أي مقرر لعرض تفاصيل المتدربين المسجّلين فيه</div>`;
+  }
+
+/* 🧷 شريط تبويبات واحد لكل الصفحات المدموجة — شكل موحّد بدل تنسيق مكتوب
+   بيد كل صفحة على حدة. items=[{id,lbl,icon,n}] */
+function pgTabs(pageId,stateKey,active,items){
+  return '<div class="pg-tabs" role="tablist">'+(items||[]).map(it=>{
+    const on=String(active)===String(it.id);
+    return `<button class="pg-tab${on?' on':''}" role="tab" aria-selected="${on?'true':'false'}" `
+      +`onclick="window.${jsq(stateKey)}='${jsq(it.id)}';showAPage('${jsq(pageId)}',document.getElementById('sn-${jsq(pageId)}'))">`
+      +`<span>${it.icon||''}</span><span>${esc(it.lbl)}</span>`
+      +(it.n!=null?`<span class="pg-tab-n">${esc(String(it.n))}</span>`:'')+`</button>`;
+  }).join('')+'</div>';
+}
+/* صف الإجراءات العلوي — عنوان صغير ثم الأزرار، بدل أزرار متناثرة */
+function pgActs(label,html){
+  if(!String(html||'').trim())return '';
+  return `<div class="pg-acts"><span class="pg-acts-lbl">${esc(label||'إجراءات')}</span>${html}</div>`;
+}
 const aPgs={
   news:()=>adminNewsPage(),
-  lessons:()=>adminLessonsPage(),
   library:()=>buildLibrary(null, true),
   // ===== سجل التحضير (أدمن) — عرض + تعديل + حذف =====
-  attlog:()=>renderAttLog(true,true),    // كل المعهد + تعديل
+  /* 🗂️ «متابعة التدريب» — دمج «سجل الغياب اليومي» و«تحاضير المدربين».
+     الاثنان متابعة يومية لعمل المدرب، وكانا بندين منفصلين في القائمة. */
+  attlog:()=>{
+    const tab=window._trkTab||'att';
+    const body=(tab==='lessons')?adminLessonsPage(true):renderAttLog(true,true,true);
+    return `<div class="banner"><div><div class="btitle">🗂️ متابعة التدريب</div><div class="bsub">جلسات التحضير اليومية وتحاضير المدربين — استعراض وتعديل وطباعة</div></div><span class="pill pb">وضع الإدارة</span></div>`
+      +pgTabs('attlog','_trkTab',tab,[
+        {id:'att',lbl:'سجل الغياب اليومي',icon:'🗂️'},
+        {id:'lessons',lbl:'تحاضير المدربين',icon:'📚',n:(lessonPreps||[]).length}])
+      +body;
+  },
   manage_courses:()=>{
     const tab=window._mcTab||'plan';
     const tabBtn=(id,lbl,icon)=>`<button onclick="window._mcTab='${jsq(id)}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${tab===id?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${tab===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
@@ -9682,6 +9943,15 @@ const aPgs={
         return `<option value="${escAttr(t)}">${esc(fmtTerm(t.replace(/-/g,' ')))} — ${n} مادة</option>`;
       }).join('');
       body=`
+      <div class="stitle" style="margin:0 0 12px">📖 الخطة الدراسية (${(catalog||[]).length} مقرر)</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ — واتركه فارغاً ليصلح لكل التخصصات</div>
+      <div data-listwrap>
+      ${searchBoxHTML('ابحث عن مقرر أو رمز...')}
+      <div class="gtable"><table>
+        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الفصل التدريبي</th><th>الوحدات</th><th>الساعات</th><th>المتطلب</th><th>التخصصات</th><th>المادة العلمية</th><th>إجراءات</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div></div>
+      <!-- 🏁 عملية نهاية فصل: أسفل الصفحة لا أعلاها — كانت تتصدّر الخطة اليومية -->
       <div style="background:linear-gradient(135deg,rgba(231,76,60,.08),rgba(201,162,39,.06));border:1px solid rgba(231,76,60,.25);border-radius:12px;padding:16px;margin-bottom:20px">
         <div style="font-size:14px;font-weight:700;margin-bottom:6px;color:var(--text)">🏁 إنهاء نصف مجزأ</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px">عند انتهاء النصف المجزأ، حوّل كل مواده إلى "سابق" (منتهية) بضغطة — تنتقل للتاريخ الأكاديمي وتخرج من المواد الحالية</div>
@@ -9692,18 +9962,9 @@ const aPgs={
           </div>
           <button class="btn" style="background:#cf1f2f;color:#fff;font-weight:700" onclick="endTerm()">🏁 إنهاء النصف المجزأ</button>
         </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة</div>'}
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div class="stitle" style="margin:0">📖 الخطة الدراسية (${(catalog||[]).length} مقرر)</div>
-        <button class="btn btn-b" onclick="addCourse()">➕ إضافة مقرر</button>
-      </div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ — واتركه فارغاً ليصلح لكل التخصصات</div>
-      <div data-listwrap>
-      ${searchBoxHTML('ابحث عن مقرر أو رمز...')}
-      <div class="gtable"><table>
-        <thead><tr><th>الرمز</th><th>اسم المقرر</th><th>الفصل التدريبي</th><th>الوحدات</th><th>الساعات</th><th>المتطلب</th><th>التخصصات</th><th>المادة العلمية</th><th>إجراءات</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div></div>`;
+      </div>`;
+    }else if(tab==='current'){
+      body=coursesCurrentBody();
     }else{
       // ===== تسجيل جماعي ذكي (بفلتر الشعبة وحالة المواد) =====
       const seen=new Set();
@@ -9730,8 +9991,9 @@ const aPgs={
          فمادةٌ أخذها كل متدربي الشعبة تحت شعبة أخرى تعطي: لا أحد يحتاجها +
          لا سجل في هذه الشعبة ⇒ «باقية · 0 يحتاجها»، فتظهر متاحة للتسجيل
          وهي منتهية فعلاً. القرار الآن من المتدربين أنفسهم لا من الصفوف. */
+      const gIdx=enrRecIdx(gStudentIds);
       const courseInfo=code=>{
-        const states=gStudentIds.map(sid=>studentCourseState(sid,code));
+        const states=gStudentIds.map(sid=>enrStateIdx(gIdx,sid,code));
         const needs=states.filter(x=>x!=='passed'&&x!=='current').length;
         if(!gStudentIds.length)   return {st:'remaining', need:0};   // شعبة بلا متدربين
         if(needs)                 return {st:'remaining', need:needs};
@@ -9746,24 +10008,25 @@ const aPgs={
       // أزرار اختيار الشعبة
       const grpTabs=grps.map(g=>`<button onclick="window._enrGrp='${jsq(g)}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" style="padding:8px 18px;border:none;border-radius:20px;cursor:pointer;font-size:13px;font-weight:700;background:${selGrp===g?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${selGrp===g?'#fff':'var(--text)'}">🏫 الشعبة ${g}</button>`).join('');
       // صندوق مقرر (حسب الحالة)
+      /* data-gst/data-gneed = حالة الشعبة المحفوظة، تُستعاد عند إلغاء التحديد
+         لأن applyPrereqLocks تعيد بناء الشارة على المحددين. */
       const crsBox=(c,selectable)=>{
-        const badge=c.st==='done'?'<span style="font-size:10px;background:#2ecc71;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">✓ منتهية</span>':c.st==='current'?'<span style="font-size:10px;background:#6ab8f7;color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">▶ حالية</span>':`<span style="font-size:10px;background:var(--muted);color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">باقية${c.need?` · ${c.need} يحتاجها`:''}</span>`;
-        return `<label style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;cursor:${selectable?'pointer':'default'};padding:8px;border:1px solid var(--border);border-radius:8px;${!selectable?'opacity:.6':''}">
+        return `<label data-gst="${escAttr(String(c.st||'remaining'))}" data-gneed="${escAttr(String(c.need||0))}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;cursor:${selectable?'pointer':'default'};padding:8px;border:1px solid var(--border);border-radius:8px;${!selectable?'opacity:.6':''}">
           <span style="display:flex;align-items:center;gap:8px">${selectable?`<input type="checkbox" class="enr-course-cb" value="${esc(c.code)}|${esc(c.name)}" style="cursor:pointer">`:''}<span><b>${esc(c.code)}</b> · ${esc(c.name)}</span></span>
-          ${badge}
+          ${enrBadgeHTML(c.st,c.need,0)}
         </label>`;
       };
       body=`
       <div class="stitle">🔗 تسجيل جماعي ذكي</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">💡 اختر الشعبة لترى المواد المنتهية والحالية والباقية، ثم سجّل المتدربين في المواد الباقية · 🔒 عند تحديد متدرب تُقفل المواد التي لم يجتز متطلبها السابق</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">💡 اختر الشعبة لترى المواد المنتهية والحالية والباقية، ثم سجّل المتدربين في المواد الباقية · 🎯 عند تحديد متدرب تتحوّل الشارات إليه وحده: ما اجتازه يظهر «✓ اجتازها» وما هو مسجّل فيه «▶ مسجّل فيها» وتُقفل، وما بقي عليه يبقى متاحاً · 🔒 والمواد التي لم يجتز متطلبها السابق تُقفل كذلك</div>
       <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">${grpTabs}</div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="enr-grid">
         <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px">
           <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text)">👥 متدربو الشعبة ${selGrp} <span id="stCount" style="font-size:11px;color:var(--acc-b)">(0 محدد)</span></div>
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:6px 10px;background:rgba(106,184,247,.1);border-radius:6px">
-            <input type="checkbox" onchange="document.querySelectorAll('.enr-student-cb').forEach(c=>c.checked=this.checked);updateEnrCounts()" id="grpAll" style="width:18px;height:18px;cursor:pointer">
-            <label for="grpAll" style="font-weight:700;color:var(--acc-b);cursor:pointer;font-size:13px">تحديد كل الشعبة (${gStudents.length})</label>
+            <input type="checkbox" aria-label="تحديد كل متدربي الشعبة" onchange="document.querySelectorAll('.enr-student-cb').forEach(c=>c.checked=this.checked);updateEnrCounts()" id="grpAll" style="width:18px;height:18px;cursor:pointer">
+            <label for="grpAll" class="tap-lbl" style="font-weight:700;color:var(--acc-b);cursor:pointer;font-size:13px">تحديد كل الشعبة (${gStudents.length})</label>
           </div>
           <div style="max-height:320px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px">
             ${gStudents.map(s=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:4px"><input type="checkbox" class="enr-student-cb" value="${escAttr(String(s.id==null?'':s.id))}" style="cursor:pointer">${esc(String(s.name||'—').split(' ').slice(0,3).join(' '))}</label>`).join('')||'<div style="color:var(--muted)">لا يوجد متدربون بهذه الشعبة</div>'}
@@ -9772,7 +10035,7 @@ const aPgs={
         <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px">
           <div style="font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text)">📚 مواد الشعبة ${selGrp} <span id="crsCount" style="font-size:11px;color:var(--acc-b)">(0 محدد)</span></div>
           <div style="max-height:340px;overflow-y:auto">
-            ${remaining.length?`<div style="font-size:12px;font-weight:700;color:var(--text);margin:4px 0 6px">🆕 المواد الباقية (${remaining.length}) — متاحة للتسجيل
+            ${remaining.length?`<div style="font-size:12px;font-weight:700;color:var(--text);margin:4px 0 6px"><span id="enrAvailHead" data-n="${remaining.length}">🆕 المواد الباقية (${remaining.length}) — متاحة للتسجيل</span>
               <button class="btn btn-out btn-sm" style="margin-right:8px" onclick="document.querySelectorAll('.enr-course-cb').forEach(c=>{if(!c.disabled)c.checked=true});updateEnrCounts()">تحديد الكل</button></div>
             <div style="display:grid;gap:5px;margin-bottom:14px">${remaining.map(c=>crsBox(c,true)).join('')}</div>`:'<div style="color:var(--acc-g);font-size:12px;margin-bottom:12px">✅ كل المواد مسجّلة لهذه الشعبة</div>'}
             ${current.length?`<div style="font-size:12px;font-weight:700;color:var(--acc-b);margin:4px 0 6px">▶ المواد الحالية (${current.length})</div>
@@ -9784,14 +10047,14 @@ const aPgs={
       </div>
       <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;max-width:500px">
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">👨‍🏫 صاحب المادة — الرئيسي (له التحضير والدرجات)</label>
-        <select id="enr_trainer" onchange="enrCoList()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"><option value="">— اختر المدرب —</option>${trOpts}</select>
+        <select id="enr_trainer" aria-label="صاحب المادة — المدرب الرئيسي" title="صاحب المادة — المدرب الرئيسي" onchange="enrCoList()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"><option value="">— اختر المدرب —</option>${trOpts}</select>
         <!-- 🤝 معه مدربون يحضّرون في الوقت نفسه · والدرجات تبقى لصاحب المادة -->
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">🤝 مدربون مشاركون في التحضير <span style="font-size:11px">(اختياري · يحضّرون معه ولا يرصدون)</span></label>
         <div id="enr_co" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:5px;max-height:150px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:9px;margin-bottom:14px">${enrCoBoxes('')}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
           <div>
             <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 الفصل التدريبي</label>
-            <select id="enr_term" onchange="toggleHalfField()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
+            <select id="enr_term" aria-label="الفصل التدريبي" title="الفصل التدريبي" onchange="toggleHalfField()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
               <option value="ترم صيفي-2025/2026">الفصل الصيفي 2025/2026</option>
               <option value="ترم أول-2026/2027">الفصل الأول 2026/2027</option>
               <option value="ترم ثاني-2026/2027">الفصل الثاني 2026/2027</option>
@@ -9803,7 +10066,7 @@ const aPgs={
           </div>
           <div id="halfFieldWrap">
             <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📖 النصف المجزأ</label>
-            <select id="enr_half" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
+            <select id="enr_half" aria-label="النصف المجزأ" title="النصف المجزأ" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
               <option value="النصف الأول">النصف الأول</option>
               <option value="النصف الثاني">النصف الثاني</option>
             </select>
@@ -9842,70 +10105,85 @@ const aPgs={
         setTimeout(()=>apply(32),40);
       }
     }
+    /* 📖 «المقررات» — دمج صفحة «المقررات» (عرض المواد الحالية) مع
+       «إدارة المقررات» (الخطة + التسجيل). كانتا صفحتين لموضوع واحد،
+       و«فحص مادة» كان مكرراً هنا وفي صفحة الحسابات. */
+    const nCur=new Set((allCourses||[]).filter(c=>isActive(c.status)).map(c=>c.course)).size;
     return `
-    <div class="banner"><div><div class="btitle">📖 إدارة المقررات</div><div class="bsub">الخطة الدراسية وتسجيل المتدربين — يدعم تخصصات متعددة</div></div></div>
-    <div style="display:flex;gap:10px;margin-bottom:12px">
-      ${tabBtn('plan','الخطة الدراسية','📖')}
-      ${tabBtn('enroll','تسجيل جماعي','🔗')}
-    </div>
-    <div class="ctl-row" style="margin-bottom:20px">
-      <button class="btn btn-out" onclick="openCourseProbe()">🔍 فحص مادة — وين متدربوها ومَن يدرّسها</button>
-    </div>
+    <div class="banner"><div><div class="btitle">📖 المقررات</div><div class="bsub">المواد الحالية والخطة الدراسية وتسجيل المتدربين — يدعم تخصصات متعددة</div></div></div>
+    ${pgTabs('manage_courses','_mcTab',tab,[
+      {id:'current',lbl:'المواد الحالية',icon:'📚',n:nCur},
+      {id:'plan',lbl:'الخطة الدراسية',icon:'📖',n:(catalog||[]).length},
+      {id:'enroll',lbl:'تسجيل جماعي',icon:'🔗'}])}
+    ${pgActs('إجراءات',`<button class="btn btn-out" onclick="openCourseProbe()">🔍 فحص مادة — وين متدربوها ومَن يدرّسها</button>`
+      +(tab==='plan'?`<button class="btn btn-b" onclick="addCourse()">➕ إضافة مقرر</button>`:''))}
     ${body}`;
   },
+  /* 👥 «الأشخاص» — دمج صفحتَي «المتدربون» و«إدارة الحسابات».
+     كانتا تعرضان الجدول نفسه: واحدة للقراءة وفيها زرّا إضافة، والأخرى
+     للتعديل والحذف وفيها الأدوات. فصار زر «إضافة متدرب» في مكانين،
+     و«إضافة مدرب» في صفحة المتدربين. الآن: بيت واحد بثلاث تبويبات. */
   accounts:()=>{
     const t=window._accTab||'student';
-    // مصادر البيانات لكل نوع
-    const tabBtn=(id,lbl,icon)=>`<button onclick="window._accTab='${jsq(id)}';showAPage('accounts',document.getElementById('sn-accounts'))" style="flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;font-weight:700;background:${t===id?'linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2))':'rgba(255,255,255,.05)'};color:${t===id?'#fff':'var(--text)'};transition:all .2s">${icon} ${lbl}</button>`;
+    const seen=new Set();
+    const uniqSt=(students||[]).filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;})
+                               .filter(s=>s.status!=='خرّيج');
     // بناء صفوف الجدول حسب النوع
-    let rows='',cols='';
+    let rows='',cols='',filters='';
+    const actBtns=(kind,s)=>`<button onclick='editAccount(${JSON.stringify(kind)},${jsonAttr(s)})' class="btn btn-out btn-sm" title="تعديل" aria-label="تعديل ${esc(s.name)}">✏️</button> <button onclick='deleteAccount(${JSON.stringify(kind)},"${jsq(s.id)}","${jsq(s.name)}")' class="btn btn-sm" style="background:#cf1f2f;color:#fff" title="حذف" aria-label="حذف ${esc(s.name)}">🗑️</button>`;
     if(t==='student'){
       cols=`<th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>التخصص</th><th>الجوال</th><th>البريد</th><th>إجراءات</th>`;
-      const seen=new Set();
-      const uniq=students.filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;}).filter(s=>s.status!=='خرّيج');
-      rows=uniq.map(s=>`<tr>
-        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.grp||'-')}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
-        <td><button onclick='editAccount("student",${jsonAttr(s)})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("student","${jsq(s.id)}","${jsq(s.name)}")' class="btn btn-sm" style="background:#cf1f2f;color:#fff">🗑️</button></td>
+      // الاسم يفتح ملف المتدرب — كانت هذه ميزة صفحة «المتدربون» وحدها
+      rows=uniqSt.map(s=>`<tr data-g="${escAttr(String(s.grp||''))}" data-sp="${escAttr(String(s.spec||'').trim())}">
+        <td style="color:var(--muted)">${esc(s.id.toString())}</td>
+        <td><button class="lnk-cell" onclick="showStudentDetail('${jsq(String(s.id))}')" title="افتح ملف المتدرب">${esc(s.name)}</button></td>
+        <td>${esc(s.grp||'-')}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
+        <td>${actBtns('student',s)}</td>
       </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد متدربون</td></tr>`;
+      const specs=[...new Set(uniqSt.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+      const grps=[...new Set(uniqSt.map(s=>String(s.grp||'').trim()).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+      filters=`<select data-filter="sp" aria-label="تصفية بالتخصص" title="التخصص" onchange="filterListSel(this)"><option value="">كل التخصصات</option>${specs.map(sp=>`<option value="${escAttr(sp)}">${esc(sp)}</option>`).join('')}</select>
+        <select data-filter="g" aria-label="تصفية بالشعبة" title="الشعبة" onchange="filterListSel(this)"><option value="">كل الشعب</option>${grps.map(g=>`<option value="${escAttr(String(g))}">الشعبة ${esc(String(g))}</option>`).join('')}</select>`;
     }else if(t==='trainer'){
       cols=`<th>الرقم</th><th>الاسم</th><th>التخصص</th><th>الجوال</th><th>البريد</th><th>إجراءات</th>`;
-      rows=(trainersDB||[]).map(s=>`<tr>
-        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
-        <td><button onclick='editAccount("trainer",${jsonAttr(s)})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("trainer","${jsq(s.id)}","${jsq(s.name)}")' class="btn btn-sm" style="background:#cf1f2f;color:#fff">🗑️</button></td>
+      rows=(trainersDB||[]).map(s=>`<tr data-sp="${escAttr(String(s.spec||'').trim())}">
+        <td style="color:var(--muted)">${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
+        <td>${actBtns('trainer',s)}</td>
       </tr>`).join('')||`<tr data-empty><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مدربون</td></tr>`;
+      const specs=[...new Set((trainersDB||[]).map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+      if(specs.length)filters=`<select data-filter="sp" aria-label="تصفية بالتخصص" title="التخصص" onchange="filterListSel(this)"><option value="">كل التخصصات</option>${specs.map(sp=>`<option value="${escAttr(sp)}">${esc(sp)}</option>`).join('')}</select>`;
     }else{
       cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الصلاحية</th><th>التخصص</th><th>الجوال</th><th>إجراءات</th>`;
       rows=(adminsDB||[]).map(s=>`<tr>
-        <td>${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td>
+        <td style="color:var(--muted)">${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.title||'-')}</td>
         <td>${(s.level&&String(s.level).includes('مدير'))?'<span class="pill py">مدير (مشرف عام)</span>':'<span class="pill pb">مشرف تخصص</span>'}</td>
         <td>${(s.level&&String(s.level).includes('مدير'))?'<span class="pill pg">جميع التخصصات</span>':specListHtml(s.spec)}</td>
         <td style="color:var(--muted)">${esc(s.ph||'-')}</td>
-        <td><button onclick='editAccount("admin",${jsonAttr(s)})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteAccount("admin","${jsq(s.id)}","${jsq(s.name)}")' class="btn btn-sm" style="background:#cf1f2f;color:#fff">🗑️</button></td>
+        <td>${actBtns('admin',s)}</td>
       </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
     }
     const tLbl=t==='student'?'متدرب':t==='trainer'?'مدرب':'إداري';
-    return `
-    <div class="banner"><div><div class="btitle">👥 إدارة الحسابات</div><div class="bsub">إضافة وتعديل وحذف حسابات المتدربين والمدربين والإداريين</div></div></div>
-    <div style="display:flex;gap:10px;margin-bottom:20px">
-      ${tabBtn('student','المتدربون','🎓')}
-      ${tabBtn('trainer','المدربون','👨‍🏫')}
-      ${tabBtn('admin','الإداريون','⚙️')}
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div class="stitle" style="margin:0">${t==='student'?'🎓 المتدربون':t==='trainer'?'👨‍🏫 المدربون':'⚙️ الإداريون'}</div>
-      <div class="btn-eq" style="margin:0">
-        ${t==='student'?`<button class="btn btn-out" onclick="openUpdateNumbers()">🔢 تحديث الأرقام التدريبية</button>
+    const nRelink=(typeof relinkScan==='function')?relinkScan().length:0;
+    /* أدوات المتدربين — بيتها هنا وحدها. «فحص مادة» انتقلت لصفحة المقررات. */
+    const acts=(t==='student'?`
         <button class="btn btn-out" onclick="openTraineeProbe()">🔎 فحص متدرب</button>
-        ${(function(){const n=(typeof relinkScan==='function')?relinkScan().length:0;
-          return n?`<button class="btn btn-r" onclick="openRelinkTrainee()">🔗 بيانات منفصلة (${n})</button>`
-                  :`<button class="btn btn-out" onclick="openRelinkTrainee()">🔗 ربط بيانات منفصلة</button><button class="btn btn-out" onclick="openCourseProbe()">🔍 فحص مادة</button>`;})()}
+        <button class="btn btn-out" onclick="openUpdateNumbers()">🔢 تحديث الأرقام التدريبية</button>
+        <button class="btn ${nRelink?'btn-r':'btn-out'}" onclick="openRelinkTrainee()">🔗 ${nRelink?'بيانات منفصلة ('+nRelink+')':'ربط بيانات منفصلة'}</button>
         <button class="btn btn-out" onclick="openGraduatesList()">🎓 الخريجون (${graduates.length})</button>
-        <button class="btn btn-g" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>`:''}
-        <button class="btn btn-b" onclick='addAccount("${t}")'>➕ إضافة ${tLbl}</button>
-      </div>
-    </div>
+        <button class="btn btn-g" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>`:'')
+      +`<button class="btn btn-b" onclick='addAccount("${jsq(t)}")'>➕ إضافة ${tLbl}</button>`;
+    return `
+    <div class="banner"><div><div class="btitle">👥 الأشخاص</div><div class="bsub">المتدربون والمدربون والإداريون — الإضافة والتعديل والحذف والأدوات في مكان واحد</div></div></div>
+    ${pgTabs('accounts','_accTab',t,[
+      {id:'student',lbl:'المتدربون',icon:'🎓',n:uniqSt.length},
+      {id:'trainer',lbl:'المدربون',icon:'👨‍🏫',n:(trainersDB||[]).length},
+      {id:'admin',lbl:'الإداريون',icon:'⚙️',n:(adminsDB||[]).length}])}
+    ${pgActs('إجراءات',acts)}
     <div data-listwrap>
-    ${searchBoxHTML('ابحث بالاسم أو الرقم أو البريد...')}
+    <div class="search-row">
+      ${searchBoxHTML('ابحث بالاسم أو الرقم أو البريد...')}
+      ${filters}
+    </div>
     <div class="gtable"><table>
       <thead><tr>${cols}</tr></thead>
       <tbody>${rows}</tbody>
@@ -10074,9 +10352,9 @@ const aPgs={
     return `
     <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div><div class="bpill bp-y" style="text-align:center">${user.level==='director'?'المشرف العام · إشراف كامل':(user.spec&&user.spec!=='جميع الدبلومات'?'مشرف تخصص · '+esc(user.spec):'مشرف')}</div></div>
     <div class="metrics">
-      <div class="mcard mc-b" data-nav="all_students" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
-      <div class="mcard mc-g" data-nav="all_courses" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
-      <div class="mcard mc-y" data-nav="trainers" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${trainers}">${trainers}</div><div class="mlbl">المدربون</div></div>
+      <div class="mcard mc-b" data-nav="accounts" data-tab="student" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
+      <div class="mcard mc-g" data-nav="manage_courses" data-tab="current" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
+      <div class="mcard mc-y" data-nav="accounts" data-tab="trainer" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${trainers}">${trainers}</div><div class="mlbl">المدربون</div></div>
       <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
     </div>
     ${warns?`<div class="alert ad"><span class="aicon">🔴</span>${warns} حالة تحتاج متابعة فورية</div>`:''}
@@ -10115,74 +10393,7 @@ const aPgs={
       }).join('');
     })()}`;
   },
-  all_students:()=>`
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-      <div class="stitle" style="margin-bottom:0">جميع المتدربين (${students.length})</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn btn-r btn-sm" onclick="showAddUser('student')">➕ إضافة متدرب</button>
-        <button class="btn btn-b btn-sm" onclick="showAddUser('trainer')">➕ إضافة مدرب</button>
-      </div>
-    </div>
-    <div class="search-row">
-      <input type="text" id="stSearch" placeholder="ابحث بالاسم أو الرقم..." oninput="filterSt()">
-      <select id="stSpec" aria-label="تصفية بالتخصص" title="التخصص" onchange="filterSt()">
-        <option value="">كل التخصصات</option>
-        ${[...new Set(students.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar')).map(sp=>`<option value="${esc(sp)}">${esc(sp)}</option>`).join('')}
-      </select>
-      <select id="stGrp" aria-label="تصفية بالشعبة" title="الشعبة" onchange="filterSt()">
-        <option value="">كل الشعب</option>
-        ${[...new Set(students.map(s=>s.grp))].map(g=>`<option value="${g}">الشعبة ${g}</option>`).join('')}
-      </select>
-    </div>
-    <div class="gtable"><table>
-      <thead><tr><th>الرقم</th><th>الاسم</th><th>الشعبة</th><th>التخصص</th><th>الجوال</th></tr></thead>
-      <tbody id="stBody">${students.map(s=>`<tr data-n="${esc(s.name)}" data-i="${esc(s.id.toString())}" data-g="${esc(s.grp)}" data-sp="${esc(String(s.spec||'').trim())}" onclick="showStudentDetail(this.dataset.i)" style="cursor:pointer;transition:background .2s" onmouseover="this.style.background='rgba(100,160,220,0.08)'" onmouseout="this.style.background=''">
-        <td style="color:var(--muted)">${esc(s.id.toString())}</td><td>${esc(s.name)}</td><td>${esc(s.grp)}</td>
-        <td style="color:var(--muted);font-size:12px">${esc(s.spec||'—')}</td><td style="color:var(--muted)">${esc(s.ph||'—')}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>`,
-  all_courses:()=>{
-    // المواد الحالية فقط (المسجّل فيها طلاب نشطون هذا الترم)
-    const active=allCourses.filter(c=>isActive(c.status));
-    // تجميع حسب المادة
-    const byCourse={};
-    active.forEach(c=>{
-      const k=c.course;
-      if(!byCourse[k])byCourse[k]={course:k,code:c.code,trainer:c.trainer,students:[],grps:new Set()};
-      byCourse[k].students.push(c);
-      if(c.grp)byCourse[k].grps.add(c.grp);
-    });
-    const courses=Object.values(byCourse);
-    if(!courses.length)return `<div class="stitle">📚 المقررات الحالية</div><div class="empty"><div class="empty-icon">📭</div>لا توجد مقررات حالية (لا يوجد طلاب مسجّلون هذا الفصل التدريبي)</div>`;
-    // ملخّص علوي
-    const totStudents=new Set(active.map(c=>c.sid)).size;
-    const avgAll=avgPct(active);
-    return `
-    <div class="banner"><div><div class="btitle">📚 المقررات الحالية</div><div class="bsub">المواد التي يدرسها المتدربون هذا الفصل التدريبي — ${courses.length} مقرر · ${totStudents} متدرب</div></div><div class="bpill bp-b">${avgAll}% متوسط</div></div>
-    <div data-listwrap>
-    ${searchBoxHTML('ابحث عن مقرر أو رمز أو مدرب...')}
-    <div class="gtable"><table>
-      <thead><tr><th>المقرر</th><th>الرمز</th><th>المدرب</th><th>الشعب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>متوسط الغياب</th><th>محرومون</th></tr></thead>
-      <tbody>${courses.map(c=>{
-        const n=c.students.length;
-        const avg=avgScoredNum(c.students);
-        const avgAbs=Math.round(c.students.reduce((a,s)=>a+(s.abs||0),0)/n);
-        const banned=c.students.filter(s=>(s.abs||0)>=25).length;
-        const grpsLbl=[...c.grps].sort().join('، ');
-        return `<tr style="cursor:pointer" onclick="showCourseDetail('${jsq(c.course)}')">
-          <td style="font-weight:700;color:var(--acc-b)">${esc(c.course)}</td>
-          <td>${esc(c.code||'-')}</td>
-          <td>${esc(c.trainer||'—')}</td>
-          <td>${grpsLbl||'-'}</td>
-          <td style="text-align:center;font-weight:700">${n}</td>
-          <td><span class="pill ${pillClass(avg)}">${avg}%</span></td>
-          <td><span style="color:${avgAbs>=25?'var(--red)':avgAbs>=15?'var(--gold)':'var(--muted)'}">${avgAbs}%</span></td>
-          <td style="text-align:center">${banned?`<span style="color:var(--acc-r);font-weight:700">${banned}</span>`:'0'}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table></div></div>
-    <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اضغط على أي مقرر لعرض تفاصيل المتدربين المسجّلين فيه</div>`;
-  },
+
   schedule:()=>{
     const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
     const cur=window._schedGrp||'all';
@@ -10499,12 +10710,12 @@ const aPgs={
       const n=allCourses.filter(c=>isActive(c.status)&&String(c.half||'').trim()===t).length;
       return `<option value="${escAttr(t)}">${esc(fmtTerm(String(t).replace(/-/g,' ')))} — ${n} مادة</option>`;
     }).join('');
-    const cadence=[['شهرياً','نسخة احتياطية كاملة للملف'],['نهاية كل نصف مجزأ','زر «إنهاء النصف المجزأ»'],['نهاية كل دبلوم','زر «تخريج دفعة»'],['سنوياً','نقل تبويبات الأرشيف لملف منفصل'],['مرّة واحدة','إلزام تغيير كلمة المرور (مفعّل ✓)']];
+    const cadence=[['شهرياً','نسخة احتياطية كاملة للملف — من هذه الصفحة'],['نهاية كل نصف مجزأ','المقررات › الخطة الدراسية › «إنهاء النصف المجزأ»'],['نهاية كل دبلوم','الأشخاص › المتدربون › «تخريج دفعة»'],['سنوياً','نقل تبويبات الأرشيف لملف منفصل'],['مرّة واحدة','إلزام تغيير كلمة المرور (مفعّل ✓)']];
     return `
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
     <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
-    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المعتمدة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="openRelinkTrainee()">🔗 ربط بيانات منفصلة</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
+    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المعتمدة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="goAdmin('accounts','_accTab','student')" title="بيتها: الأشخاص › المتدربون">🔗 ربط بيانات منفصلة ↗</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
     <div class="alert ab" style="margin-top:8px;font-size:12.5px"><span class="aicon">💡</span>«إصلاح التبويبات» يوسّع أعمدة التبويبات الضيقة في Google Sheets · «فحص المفاتيح» يعرض السجلات التي مفتاحها لا يطابق الرقم الأكاديمي الحالي (يحدث بعد تحديث الأرقام) ويصلحها بضغطة.</div>
 
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
@@ -10512,15 +10723,15 @@ const aPgs={
       <div class="ccard cc-b">
         <div class="cc-name">🗓️ نهاية كل نصف مجزأ</div>
         <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">حوّل مواد النصف المجزأ إلى «سابق» وأرشف الغياب والتحاضير والطلبات، ليبدأ نصف نظيف.</div>
-        ${activeTerms.length?`<div class="ctl-row" style="margin-bottom:0">
-          <select id="endTermSel" aria-label="اختر الفصل التدريبي" title="الفصل التدريبي" style="flex:1 1 140px;min-width:0;font-size:13px">${termOpts}</select>
-          <button class="btn" style="background:#cf1f2f;color:#fff;font-weight:700" onclick="endTerm()">🏁 إنهاء النصف المجزأ</button>
-        </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة</div>'}
+        <!-- 🏠 بيت العملية: المقررات › الخطة الدراسية. هنا تذكير لا نسخة ثانية -->
+        ${activeTerms.length?`<button class="btn btn-out btn-sm" onclick="goAdmin('manage_courses','_mcTab','plan')">🏁 افتح الخطة لإنهاء نصف (${activeTerms.length}) ↗</button>`
+          :'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة</div>'}
       </div>
       <div class="ccard cc-g">
         <div class="cc-name">🎓 نهاية كل دبلوم</div>
         <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">خرّج الدفعة المنتهية: تعليمهم «خرّيج» ونقل بياناتهم للأرشيف وإصدار الكشوف.</div>
-        <button class="btn btn-g btn-sm" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>
+        <!-- 🏠 بيت العملية: الأشخاص › المتدربون -->
+        <button class="btn btn-out btn-sm" onclick="goAdmin('accounts','_accTab','student')">🎓 افتح المتدربين للتخريج ↗</button>
       </div>
       <div class="ccard cc-y">
         <div class="cc-name">💾 شهرياً — نسخة احتياطية</div>
@@ -10558,9 +10769,8 @@ const aPgs={
         <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">البند الذي تقل درجة المتدرب فيه عن هذه النسبة من درجته القصوى تُرسل له رسالة «حسّن درجتك». مثال: بند الواجب 20 درجة والحد 60% ← رسالة لمن أقل من 12. الحد الحالي: <b>${gradeAlertPct()}%</b></div>
         <div class="btn-grid" style="margin-bottom:0">
           <button class="btn btn-out" onclick="setGradeAlertPct()">⚙️ غيّر الحد</button>
-          <button class="btn btn-out" onclick="previewPerfNotices()">👁️ معاينة من ينطبق عليه</button>
-          <button class="btn btn-g" onclick="sendPerfNotices()">📧 أرسل رسائل التحسين</button>
-          <button class="btn btn-out" onclick="clearPrematureAlerts(true)">🧹 تنبيهات أُرسلت بالخطأ</button>
+          <!-- 🏠 بيت الإرسال: صفحة الاشعارات. هنا ضبط الحد وحده -->
+          <button class="btn btn-out" onclick="goAdmin('alerts')">🔔 المعاينة والإرسال في «الاشعارات» ↗</button>
         </div>
       </div>
       <div class="ccard cc-g" style="grid-column:1/-1">
@@ -11429,22 +11639,32 @@ function filterSt(){
 }
 // ===== بحث عام لأي جدول =====
 // يوضع صندوق البحث داخل حاوية فيها [data-listwrap]، ويفلتر صفوف tbody بالنص
-function filterList(inp){
-  const q=(inp.value||'').trim().toLowerCase();
-  const wrap=inp.closest('[data-listwrap]'); if(!wrap)return;
+/* البحث النصّي + أي قوائم تصفية داخل نفس الحاوية معاً.
+   كان البحث نصّاً فقط، والتصفية بالشعبة والتخصص في صفحة أخرى — فصارا هنا. */
+function applyListFilters(wrap){
+  if(!wrap)return;
+  const inp=wrap.querySelector('.list-search input');
+  const q=((inp&&inp.value)||'').trim().toLowerCase();
+  const sels=[...wrap.querySelectorAll('select[data-filter]')]
+    .map(s=>({k:s.dataset.filter,v:String(s.value||'').trim()})).filter(x=>x.v);
   const tb=wrap.querySelector('tbody'); if(!tb)return;
   let shown=0, real=0;
   tb.querySelectorAll('tr').forEach(tr=>{
     if(tr.hasAttribute('data-empty'))return; // صف "لا يوجد" الأصلي
     real++;
-    const hit=!q||tr.textContent.toLowerCase().includes(q);
+    let hit=!q||tr.textContent.toLowerCase().includes(q);
+    if(hit)hit=sels.every(f=>String(tr.dataset[f.k]||'')===f.v);
     tr.style.display=hit?'':'none'; if(hit)shown++;
   });
   let nr=wrap.querySelector('.list-nores');
   if(!nr){ nr=document.createElement('div'); nr.className='list-nores empty'; nr.innerHTML='<div class="empty-icon">🔍</div>لا نتائج مطابقة'; wrap.appendChild(nr); }
   nr.style.display=(real&&!shown)?'block':'none';
-  const cl=inp.parentElement.querySelector('.ls-clear'); if(cl)cl.style.display=q?'flex':'none';
+  const cl=inp&&inp.parentElement.querySelector('.ls-clear'); if(cl)cl.style.display=q?'flex':'none';
+  const cnt=wrap.querySelector('[data-listcount]');
+  if(cnt)cnt.textContent=(q||sels.length)?('عرض '+shown+' من '+real):(real+'');
 }
+function filterList(inp){ applyListFilters(inp.closest('[data-listwrap]')); }
+function filterListSel(sel){ applyListFilters(sel.closest('[data-listwrap]')); }
 function filterListClear(btn){ const inp=btn.parentElement.querySelector('input'); if(inp){inp.value='';filterList(inp);inp.focus();} }
 // مولّد HTML لصندوق بحث موحّد
 function searchBoxHTML(ph){ return `<div class="list-search"><span class="ls-ico">🔍</span><input type="text" placeholder="${ph||'ابحث...'}" oninput="filterList(this)"><span class="ls-clear" onclick="filterListClear(this)">✕</span></div>`; }
@@ -14101,27 +14321,13 @@ function showGroupDetail(grp){
 document.addEventListener('click', function(e){
   const card = e.target && e.target.closest && e.target.closest('[data-nav]');
   if(card){
-    const target = card.dataset.nav;
-    if(target === 'trainers'){
-      // عرض المدربين الفعليين فقط (نفس مصدر العدد في البطاقة) — لا كل اسم ظهر بسجل المقررات
-      const trainerNames = activeTrainerNames();
-      const overlay=document.createElement('div');
-      overlay.className='modal-overlay';
-      overlay.id='trainersModal';
-      overlay.innerHTML=`<div class="modal" style="max-width:500px">
-        <div class="modal-title"><div>👨‍🏫 المدربون (${trainerNames.length})</div>
-        <button class="modal-close" onclick="document.getElementById('trainersModal').remove()">✕</button></div>
-        ${trainerNames.map(t=>{
-          const tc=allCourses.filter(c=>c.trainer===t);
-          const ta=avgScoredTxt(tc), tn=scoredCount(tc);
-          return `<div class="iitem" style="margin-bottom:8px"><div class="ilbl">${esc(t)}</div><div class="ival">${tc.length} مقرر · متوسط ${ta}${tn&&tn<tc.length?` <span style="font-size:11px;color:var(--muted);font-weight:400">(من ${tn} مرصودة)</span>`:''}</div></div>`;
-        }).join('')}
-      </div>`;
-      document.body.appendChild(overlay);
-      overlay.addEventListener('click',ev=>{ if(ev.target===overlay) overlay.remove(); });
-    } else {
-      showAPage(target, document.querySelector(`.sitem[onclick*="${target}"]`));
-    }
+    /* 🧭 كل بطاقة مؤشر تفتح بيتها والتبويب الصحيح فيه.
+       كانت بطاقة «المدربون» تفتح نافذة بقائمة أسماء — معلومة موجودة أصلاً
+       في «التقارير»، والصفحة الحقيقية للمدربين صارت «الأشخاص › المدربون». */
+    const target = card.dataset.nav, tab = card.dataset.tab||'';
+    const KEY={accounts:'_accTab',manage_courses:'_mcTab',attlog:'_trkTab'}[target];
+    if(KEY&&tab)window[KEY]=tab;
+    showAPage(target, document.getElementById('sn-'+target));
   }
 });
 
@@ -14579,6 +14785,8 @@ Object.assign(TRANSLATIONS.en, {
   'كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ – واتركه فارغاً ليصلح لكل التخصصات':'Each course can be linked to multiple specializations via edit ✏️ – leave empty to apply to all',
   'تسجيل جماعي ذكي':'Smart Bulk Enrollment','اختر الشعبة لترى المواد المنتهية والحالية والباقية. ثم سجّل المتدربين في المواد الباقية':'Select a section to see finished, current and remaining courses, then enroll trainees in remaining ones',
   'تحديد الكل':'Select All','باقية':'Remaining','حالية':'Current','منتهية':'Finished',
+  '✓ منتهية':'✓ Finished','▶ حالية':'▶ Current','✓ اجتازها':'✓ Passed it','✓ اجتازوها':'✓ They passed it',
+  '▶ مسجّل فيها':'▶ Enrolled','▶ مسجّلون فيها':'▶ They are enrolled',
   'المدرب (لكل المواد المختارة)':'Trainer (for all selected courses)','— اختر المدرب —':'— Select Trainer —',
   'النصف المجزأ':'Half Split','النصف الأول':'First Half','النصف الثاني':'Second Half','غير محدد':'Unspecified',
   'تسجيل المحددين دفعة واحدة':'Enroll Selected at Once',
@@ -14608,6 +14816,10 @@ EN_PATTERNS.push(
   [/^مواد الشعبة\s+(\d+)\s*\((\d+)\s*محدد\)$/,'Section $1 Courses ($2 selected)'],
   [/^تحديد كل الشعبة\s*\((\d+)\)$/,'Select whole section ($1)'],
   [/^المواد الباقية\s*\((\d+)\)\s*[–-]\s*متاحة للتسجيل$/,'Remaining Courses ($1) – available to enroll'],
+  [/^متاح لـ(.+?)\s*:\s*(\d+)\s*من\s*(\d+)$/,'Available for $1: $2 of $3'],
+  [/^متاح للمحددين\s*\((\d+)\)\s*:\s*(\d+)\s*من\s*(\d+)$/,'Available for selected ($1): $2 of $3'],
+  [/^باقية\s*·\s*(\d+)\s*من\s*(\d+)\s*محدد$/,'Remaining · $1 of $2 selected'],
+  [/^باقية\s*·\s*(\d+)\s*يحتاجها$/,'Remaining · $1 need it'],
   [/^المواد الحالية\s*\((\d+)\)$/,'Current Courses ($1)'],
   [/^المواد المنتهية\s*\((\d+)\)$/,'Finished Courses ($1)'],
   [/^راسبون\s*\((\d+)\)$/,'Failed ($1)'],
