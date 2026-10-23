@@ -1579,6 +1579,71 @@ body.light-mode .search-row input,
 body.light-mode .search-row select{background:#fff;color:var(--text);
   border-color:color-mix(in srgb,var(--brand-deep-2) 14%,transparent)}
 
+/* ===== 🎓 لوحة التخرّج ===== */
+.grad-hero{position:relative;overflow:hidden;border-radius:22px;padding:30px 24px 26px;margin-bottom:18px;
+  text-align:center;color:#fff;
+  /* ⚠️ كانت أفتح محطّة var(--brand-1): في الزمرّد والغروب يهبط تباين
+     النص الأبيض إلى ٣.٩ — أدنى من الحد. المحطّات كلها عميقة الآن. */
+  background:linear-gradient(135deg,var(--brand-deep-1),var(--brand-deep-2) 55%,var(--brand-2));
+  box-shadow:0 14px 40px color-mix(in srgb,var(--brand-deep-1) 40%,transparent)}
+.grad-ray{position:absolute;inset:-60% -20% auto -20%;height:220%;pointer-events:none;
+  background:conic-gradient(from 210deg at 50% 0%,
+    rgba(255,255,255,.14) 0deg, transparent 22deg, rgba(255,255,255,.10) 44deg,
+    transparent 66deg, rgba(255,255,255,.14) 88deg, transparent 110deg);
+  filter:blur(12px);opacity:.75;
+  animation:gradSpin 26s linear infinite}
+@keyframes gradSpin{to{transform:rotate(360deg)}}
+.grad-cap{position:relative;font-size:46px;line-height:1;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35));
+  animation:gradPop .7s cubic-bezier(.34,1.56,.64,1) both}
+@keyframes gradPop{from{transform:scale(.4) rotate(-14deg);opacity:0}to{transform:none;opacity:1}}
+/* قصاصات تهنئة — تهبط مرة واحدة ثم تثبت (لا حركة أبدية تُشتّت) */
+.grad-conf{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.grad-conf i{position:absolute;top:-14px;width:7px;height:12px;border-radius:2px;opacity:0;
+  left:calc(4% + var(--i) * 6.8%);
+  background:var(--gold,#c9a227);
+  animation:gradFall 2.6s cubic-bezier(.33,.6,.5,1) both;
+  animation-delay:calc(var(--i) * .13s)}
+.grad-conf i:nth-child(3n){background:#fff;width:6px;height:6px;border-radius:50%}
+.grad-conf i:nth-child(3n+1){background:color-mix(in srgb,var(--brand-1) 70%,#fff)}
+@keyframes gradFall{
+  0%{opacity:0;transform:translateY(0) rotate(0)}
+  12%{opacity:.95}
+  100%{opacity:0;transform:translateY(230px) rotate(420deg)}}
+.grad-t1{position:relative;font-size:26px;font-weight:900;margin-top:10px;letter-spacing:.3px;
+  text-shadow:0 2px 10px rgba(0,0,0,.28)}
+.grad-t2{position:relative;font-size:13.5px;opacity:1;margin-top:5px;font-weight:600;color:rgba(255,255,255,.96)}
+.grad-line{position:relative;width:76px;height:3px;border-radius:3px;margin:14px auto;
+  background:linear-gradient(90deg,transparent,var(--gold,#c9a227),transparent)}
+.grad-stats{position:relative;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:12px}
+.grad-s{min-width:112px;background:rgba(0,0,0,.20);border:1px solid rgba(255,255,255,.22);
+  border-radius:14px;padding:11px 14px;backdrop-filter:blur(6px)}
+.grad-s b{display:block;font-size:21px;font-weight:900;line-height:1.2}
+.grad-s span{display:block;font-size:11px;opacity:1;color:rgba(255,255,255,.93);margin-top:3px}
+/* الشارة تجلس على تدرّج داكن في الوضعين، فلونها ثابت لا يتبع --gold
+   (الذي يصير #b06d10 في النهاري فيهبط التباين إلى ٣.٧). */
+.grad-batch{position:relative;display:inline-block;background:#ffd45e;color:#20170a;
+  font-weight:800;font-size:12px;border-radius:14px;padding:4px 14px;margin-bottom:10px}
+.grad-msg{position:relative;font-size:13px;opacity:1;color:rgba(255,255,255,.95);line-height:1.85;max-width:560px;margin:0 auto 16px}
+.grad-acts{position:relative;display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+.grad-acts .btn{min-width:140px}
+/* ⚠️ .btn-out نصّه داكن في الوضع النهاري، وهو هنا فوق تدرّج داكن
+   فيكاد يختفي. نثبّت له مظهراً فاتحاً داخل اللوحة في الوضعين. */
+.grad-acts .btn-out,
+body.light-mode .grad-acts .btn-out{
+  background:rgba(255,255,255,.14)!important;color:#fff!important;
+  border:1px solid rgba(255,255,255,.42)!important}
+.grad-acts .btn-out:hover,
+body.light-mode .grad-acts .btn-out:hover{background:rgba(255,255,255,.26)!important}
+@media(max-width:640px){
+  .grad-hero{padding:24px 16px 22px}
+  .grad-t1{font-size:21px}
+  .grad-s{min-width:92px;padding:9px 11px}
+  .grad-s b{font-size:18px}
+  .grad-acts .btn{flex:1 1 46%;min-width:0}
+}
+@media (prefers-reduced-motion:reduce){
+  .grad-ray{animation:none}.grad-cap{animation:none}.grad-conf{display:none}}
+
 /* ===== شارات تخصص المقرر في المكتبة ===== */
 .lib-sprow{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .lib-sp{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;
@@ -3253,6 +3318,15 @@ function setBootPayload(bp){
   if(bp.theme)setThemeCfg(bp.theme);     // 🎉 إعداد المناسبات من الخادم → الجميع يراه
   if(bp.grel)setGradesRel(bp.grel);      // 🔒 موعد إظهار الدرجات من الخادم
   if(bp.staff&&bp.staff.length)applyStaffDir(bp.staff);
+  /* 🎓 حالة المتدرب تُصحَّح في كل إقلاع — فمن دخل قبل تحديث الخادم
+     بقيت نسخته بلا «الحالة» فلا يُهنَّأ بتخرّجه حتى يخرج ويدخل. */
+  if(bp.me&&user&&user.role==='s'){
+    let ch=false;
+    ['status','gradBatch','cert'].forEach(k=>{
+      if(bp.me[k]!=null&&String(bp.me[k])!==String(user[k]==null?'':user[k])){ user[k]=bp.me[k]; ch=true; }
+    });
+    if(ch){ currentUser=user; try{localStorage.setItem('bla_user',JSON.stringify(user));}catch(e){} }
+  }
   return true;
 }
 function bootTake(tab){
@@ -3971,7 +4045,7 @@ function showErr(m){
 // ===== LOAD DATA =====
 async function loadStudent(){
   // ⭐ «تحضير الدروس» غير مسموح لدور الطالب على الخادم — كان يُطلب في كل دخول ويعود forbidden
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadStaffDir(), loadNews(), loadAttachments()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadStaffDir(), loadNews(), loadAttachments(), loadSpecs()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:K').catch(()=>[])
@@ -3994,7 +4068,7 @@ async function loadStudent(){
 }
 
 async function loadTrainer(){
-  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps(), loadStaffDir(), loadNews(), loadAttachments(), loadCoTrainers(), loadDepExceptions()]);
+  const p2=Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadRubrics(), loadLessonPreps(), loadStaffDir(), loadNews(), loadAttachments(), loadCoTrainers(), loadDepExceptions(), loadSpecs()]);
   const [cr,cat]=await Promise.all([
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:K').catch(()=>[]),
@@ -4038,8 +4112,8 @@ async function loadAdmin(){
     students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),pw:n0(r[7]),join:n0(r[8]),status:n0(r[9])||'نشط',gradBatch:n0(r[10])});
   }
   // افصل الخريجين عن النشطين — يختفون من كل القوائم النشطة ويظهرون في «الخريجون» فقط
-  graduates=[...new Map(students.filter(s=>s.status==='خرّيج').map(s=>[s.id,s])).values()];
-  students=students.filter(s=>s.status!=='خرّيج');
+  graduates=[...new Map(students.filter(s=>isGradStatus(s.status)).map(s=>[s.id,s])).values()];
+  students=students.filter(s=>!isGradStatus(s.status));
   allCourses=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
@@ -4062,7 +4136,7 @@ async function loadAdmin(){
     const r=ad[i];
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6]),spec:n0(r[7])});
   }
-  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics(), loadLessonPreps(), loadCoTrainers(), loadDepExceptions()]);
+  await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics(), loadLessonPreps(), loadCoTrainers(), loadDepExceptions(), loadSpecs()]);
   allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
@@ -5762,7 +5836,11 @@ function avgPct(list){ return avgScoredNum(list); }
    محتسبة بدرجة صفر، ومَن فُتح له استثناء تُحسب درجته المسجّلة كما هي. */
 function effPct(c){ return isDeprivedRec(c)?0:(parseFloat(c&&c.pct)||0); }
 const isScored=c=>isDeprivedRec(c)||(parseFloat(c&&c.pct)||0)>0;
-window.effPct=effPct;
+/* اختبار النجاح الوحيد في النظام — يحترم قاعدة الحرمان (صفر) والاستثناء.
+   ⚠️ كانت عدّة شاشات تقول `c.pct>=60` مباشرة، فيظهر المحروم «ناجحاً»
+   بدرجته المرصودة في عدّاد «ناجح» بينما معدّله محسوب بصفر. */
+function isPass(c){ return effPct(c)>=60; }
+window.effPct=effPct;window.isPass=isPass;
 function scoredOf(list){return (list||[]).filter(isScored);}
 function scoredCount(list){return scoredOf(list).length;}
 function avgScored(list){
@@ -5808,6 +5886,10 @@ function calcGPA(list){
 // لون المعدل من 5
 // ⭐ لون المعدّل — مقياس 5.00 (gradeToGPA أقصاها 5.00 وكل الواجهات تعرض «/5»)
 function gpaColor(g){g=parseFloat(g)||0;return g>=4.5?'var(--acc-g)':g>=3.5?'var(--acc-b)':g>=2.5?'var(--acc-y)':'var(--acc-r)'}
+/* التقدير العام من متوسط الدرجات — نفس حدود الأكاديمية (٩٠/٨٠/٧٠/٦٠) */
+function honorOf(n){n=parseFloat(n)||0;return n>=90?'ممتاز':n>=80?'جيد جداً':n>=70?'جيد':n>=60?'مقبول':'—';}
+function honorTxt(list){const a=avgScored(list);return a==null?'—':honorOf(a);}
+window.honorOf=honorOf;window.honorTxt=honorTxt;
 function animCards(){
   setTimeout(()=>{
     document.querySelectorAll('.mcard').forEach((el,i)=>{el.classList.add('anim-scale','d'+(Math.min(i+1,6)));});
@@ -6087,6 +6169,176 @@ function showSPage(pg,el){
 // ===== المكتبة العلمية (نظري + عملي لكل المقررات) =====
 // scope: مصفوفة أكواد مسموحة (مقررات الطالب)، أو null = كل المقررات
 /* ============================================================
+ * 🎓 سجل التخصصات المركزي
+ * ------------------------------------------------------------
+ * كان التخصص نصّاً حرّاً يُكتب في المقرر والمتدرب والمدرب والإداري،
+ * فهمزةٌ غلط («الألكترونيات») تصنع تخصصاً مستقلاً بصمت ولا طريقة
+ * لتصحيحه. السجل هنا، والنماذج تختار منه، والتصحيح يمرّ على الكل.
+ * ============================================================ */
+let specsDB=[];
+async function loadSpecs(){
+  const rows=await fetchSheet('التخصصات!A:C').catch(()=>[]);
+  specsDB=[];
+  for(let i=1;i<rows.length;i++){
+    const nm=n0(rows[i][0]); if(!nm)continue;
+    specsDB.push({name:nm,status:n0(rows[i][1])||'نشط',note:n0(rows[i][2])});
+  }
+}
+window.loadSpecs=loadSpecs;
+/* مفتاح مقارنة التخصص — متسامح مع فروق الكتابة اليدوية.
+   ⚠️ «إلكترونيات» و«الكترونيات» تخصّص واحد يكتبه البشر بطريقتين،
+   وبالمقارنة الحرفية تصبح الخطة الدراسية «مقررات عامة فقط». */
+const arNorm=v=>String(v==null?'':v)
+  .replace(/[ً-ْٰـ]/g,'')   // تشكيل وتطويل
+  .replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه')
+  .replace(/\s+/g,'').trim();
+const specKey=v=>arNorm(v);
+/* كل التخصصات: المسجّلة + ما وُجد في البيانات (حتى لا يختفي شيء قبل تسجيله) */
+function allSpecs(activeOnly){
+  const m=new Map();
+  (specsDB||[]).forEach(x=>{
+    if(activeOnly&&/موقوف/.test(x.status))return;
+    m.set(specKey(x.name),{name:x.name,reg:true,status:x.status});
+  });
+  const add=v=>libSpecList(v).forEach(nm=>{
+    if(nm==='جميع الدبلومات')return;
+    const k=specKey(nm); if(!m.has(k))m.set(k,{name:nm,reg:false,status:'نشط'});
+  });
+  (catalog||[]).forEach(c=>add(c.specs));
+  (students||[]).forEach(x=>add(x.spec));
+  (trainersDB||[]).forEach(x=>add(x.spec));
+  return [...m.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar'));
+}
+/* 🎓 خطة المتدرب = مقررات تخصصه + المقررات العامة.
+   ⚠️ كانت «الخطة» كل الكتالوج بلا تمييز، فمتدرب إلكترونيات تُحسب عليه
+   مواد الميكانيكا: «نسبة إكمال ٦٦٪» و«١٧ مادة لم تُؤخذ بعد» وهي ليست
+   من خطته إطلاقاً. الآن تُقاس على تخصصه وحده. */
+function planForSpec(spec){
+  const k=specKey(spec||'');
+  return (catalog||[]).filter(c=>{
+    const L=libSpecList(c.specs);
+    if(!L.length||L.indexOf('جميع الدبلومات')>-1)return true;   // مقرر عام
+    if(!k)return true;                                          // متدرب بلا تخصص: الخطة كلها
+    return L.some(x=>specKey(x)===k);
+  });
+}
+function planForStudent(st){ return planForSpec(st&&st.spec); }
+/* هل هذه الحالة = خرّيج؟ (العمود J في قاعدة البيانات المركزية)
+   ⚠️ تُكتب باليد: خرّيج / خريج / متخرج / متخرّجة … فالمقارنة الحرفية
+   بـ'خرّيج' وحدها تُبقي الخرّيج في قوائم النشطين ولا تُظهر له تخرّجه. */
+const GRAD_ST_=['خريج','خريجه','متخرج','متخرجه','تخرج','graduate','graduated','alumni','alumnus'];
+function isGradStatus(v){
+  const k=arNorm(v).toLowerCase();
+  return !!k&&GRAD_ST_.indexOf(k)>-1;
+}
+function isGraduate(u){
+  const x=u||(typeof user!=='undefined'?user:null);
+  return !!(x&&isGradStatus(x.status));
+}
+window.planForSpec=planForSpec;window.planForStudent=planForStudent;
+window.isGraduate=isGraduate;window.isGradStatus=isGradStatus;window.arNorm=arNorm;
+/* كم مرة استُعمل هذا التخصص؟ */
+function specUsage(name){
+  const k=specKey(name), has=v=>libSpecList(v).some(x=>specKey(x)===k);
+  return {courses:(catalog||[]).filter(c=>has(c.specs)).length,
+          students:(students||[]).filter(x=>has(x.spec)).length,
+          trainers:(trainersDB||[]).filter(x=>has(x.spec)).length,
+          admins:(adminsDB||[]).filter(x=>has(x.spec)).length};
+}
+window.allSpecs=allSpecs;window.specUsage=specUsage;window.specKey=specKey;
+
+function openSpecs(){
+  if(role!=='a'){showToast('إدارة التخصصات من الإدارة','w');return;}
+  document.getElementById('specModal')?.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='specModal';
+  ov.innerHTML=`<div class="modal" style="max-width:620px">
+    <div class="modal-title"><span>🎓 تخصصات المعهد</span>
+      <button class="modal-close" onclick="document.getElementById('specModal').remove()">✕</button></div>
+    <div id="specBody"></div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{ if(e.target===ov)ov.remove(); });
+  renderSpecs();
+}
+function renderSpecs(){
+  const el=document.getElementById('specBody'); if(!el)return;
+  const list=allSpecs(false);
+  el.innerHTML=`<div class="dlg-hint">القائمة المعتمدة للمعهد — منها تختار في المقرر والمتدرب والمدرب، فلا كتابة حرة ولا أسماء متشابهة. تعديل الاسم هنا يصحّحه في كل مكان.</div>
+    <div class="dlg-field">
+      <label for="spNew">➕ تخصص جديد</label>
+      <div style="display:flex;gap:8px">
+        <input id="spNew" placeholder="مثال: تقنية الإلكترونيات الصناعية والتحكم" onkeydown="if(event.key==='Enter'){event.preventDefault();specAdd();}" style="flex:1">
+        <button class="btn btn-b" onclick="specAdd()">إضافة</button>
+      </div>
+    </div>
+    ${list.length?`<div class="gtable" style="max-height:46vh;overflow:auto"><table>
+      <thead><tr><th>التخصص</th><th>مقررات</th><th>متدربون</th><th>مدربون</th><th>إجراءات</th></tr></thead>
+      <tbody>${list.map(x=>{const u=specUsage(x.name);
+        return `<tr>
+          <td style="text-align:right"><b>${esc(x.name)}</b>${x.reg?'':' <span class="pill py" style="font-size:9.5px">غير مسجّل</span>'}${/موقوف/.test(x.status)?' <span class="pill pr" style="font-size:9.5px">موقوف</span>':''}</td>
+          <td style="text-align:center">${u.courses}</td>
+          <td style="text-align:center">${u.students}</td>
+          <td style="text-align:center">${u.trainers}</td>
+          <td style="white-space:nowrap">
+            <button class="btn btn-out btn-sm" title="تعديل الاسم في كل مكان" onclick="specRename('${jsq(x.name)}')">✏️</button>
+            <button class="btn btn-sm" style="background:#cf1f2f;color:#fff" title="حذف" onclick="specRemove('${jsq(x.name)}')">🗑️</button>
+          </td></tr>`;}).join('')}</tbody></table></div>`
+      :'<div class="empty"><div class="empty-icon">🎓</div>ما فيه تخصصات بعد — أضف أول تخصص بالأعلى</div>'}
+    <div style="font-size:11.5px;color:var(--muted);margin-top:10px">💡 «غير مسجّل» = اسم موجود في البيانات ولم يُضَف للقائمة — أضفه أو صحّحه ليختفي التنبيه.</div>`;
+}
+async function specSaveList(list){
+  const r=await callWrite('saveSpecs',{records:list.map(x=>({name:x.name,status:x.status||'نشط',note:x.note||''}))});
+  if(!r||(r.status&&r.status!=='ok')){showToast('تعذّر الحفظ: '+attErrMsg(r&&r.msg,r&&r.hint),'e');return false;}
+  await loadSpecs().catch(()=>{});
+  return true;
+}
+async function specAdd(){
+  const inp=document.getElementById('spNew'); const nm=String((inp&&inp.value)||'').trim();
+  if(!nm){showToast('اكتب اسم التخصص','w');return;}
+  if((specsDB||[]).some(x=>specKey(x.name)===specKey(nm))){showToast('التخصص مسجّل سلفاً','w');return;}
+  showToast('جاري الحفظ...','i');
+  const list=[...(specsDB||[]),{name:nm,status:'نشط',note:''}];
+  if(await specSaveList(list)){ if(inp)inp.value=''; showToast('✅ أُضيف «'+nm+'»','s'); renderSpecs(); }
+}
+async function specRename(oldName){
+  const nm=prompt('الاسم الجديد لـ «'+oldName+'»\n(يُصحَّح في المقررات والمتدربين والمدربين والإداريين)',oldName);
+  if(nm===null)return;
+  const to=String(nm).trim();
+  if(!to||specKey(to)===specKey(oldName))return;
+  showToast('جاري الفحص...','i');
+  const pv=await callWrite('renameSpec',{records:[{from:oldName,to,dry:true}]}).catch(()=>null);
+  if(!pv||pv.status!=='ok'){showToast('تعذّرت المعاينة: '+attErrMsg(pv&&pv.msg,pv&&pv.hint),'e');return;}
+  const per=pv.per||{};
+  const lines=['تعديل «'+oldName+'» ← «'+to+'»','',
+    'سيُحدَّث في:',
+    '• المقررات: '+(per['قاعدة بيانات المقررات']||0),
+    '• المتدربون: '+(per['قاعدة بيانات مركزي']||0),
+    '• المدربون: '+(per['قاعدة بيانات المدربين']||0),
+    '• الإداريون: '+(per['قاعدة بيانات الاداريين']||0),
+    '', 'الإجمالي: '+(pv.total||0)+' صف. متابعة؟'];
+  if(!confirm(lines.join('\n')))return;
+  showToast('جاري التعديل...','i');
+  const r=await callWrite('renameSpec',{records:[{from:oldName,to}]}).catch(()=>null);
+  if(!r||r.status!=='ok'){showToast('تعذّر التعديل: '+attErrMsg(r&&r.msg,r&&r.hint),'e');return;}
+  showToast('✅ تعدّل في '+(r.total||0)+' صف','s');
+  try{ await loadAdmin(); }catch(_){}
+  await loadSpecs().catch(()=>{});
+  renderSpecs();
+}
+async function specRemove(name){
+  const u=specUsage(name), used=u.courses+u.students+u.trainers+u.admins;
+  if(!confirm('حذف «'+name+'»'+(used?('\n\n⚠️ مستعمل في '+used+' سجل — سيُزال منها (المقرر يصير «عام»، والمتدرب بلا تخصص).'):'')+'\n\nمتابعة؟'))return;
+  showToast('جاري الحذف...','i');
+  const r=await callWrite('renameSpec',{records:[{from:name,remove:true}]}).catch(()=>null);
+  if(!r||r.status!=='ok'){showToast('تعذّر الحذف: '+attErrMsg(r&&r.msg,r&&r.hint),'e');return;}
+  showToast('🗑️ حُذف «'+name+'»'+(r.total?(' من '+r.total+' سجل'):''),'s');
+  try{ await loadAdmin(); }catch(_){}
+  await loadSpecs().catch(()=>{});
+  renderSpecs();
+}
+window.openSpecs=openSpecs;window.renderSpecs=renderSpecs;window.specAdd=specAdd;
+window.specRename=specRename;window.specRemove=specRemove;
+
+/* ============================================================
  * 📚 المكتبة العلمية — مكتبة لكل تخصص
  * ------------------------------------------------------------
  * كانت مكتبة واحدة تُسرد فيها كل المقررات معاً، فتختلط مواد
@@ -6280,6 +6532,65 @@ async function libSaveMat(code){
 }
 window.libAddMat=libAddMat;window.libSaveMat=libSaveMat;
 
+/* ============================================================
+ * 🎓 لوحة التخرّج — للخرّيج وحده
+ * ------------------------------------------------------------
+ * كان الخرّيج يرى نفس شاشة المتدرب الجاري: «لا توجد مواد حالية»
+ * و«١٧ مادة لم تُؤخذ بعد» ونسبة خطة ناقصة — وهو أنهى كل شيء.
+ * ============================================================ */
+function gradPanelHTML(){
+  if(!isGraduate())return '';
+  const first=String(user.name||'').trim().split(/\s+/)[0]||'';
+  const done=completedCourses(courses);
+  const gpa=gpaDisplay(courses), avg=avgPctDisplay(courses);
+  const units=done.reduce((a,c)=>{
+    const cat=(catalog||[]).find(x=>normCode(x.code)===normCode(c.code));
+    return a+(parseFloat(cat&&cat.units)||0);
+  },0);
+  const cert=String(user.cert||'').trim();
+  const honor=honorTxt(courses);
+  return `
+  <div class="grad-hero anim-up">
+    <div class="grad-ray" aria-hidden="true"></div>
+    <div class="grad-conf" aria-hidden="true">${Array.from({length:14},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
+    <div class="grad-cap" aria-hidden="true">🎓</div>
+    <div class="grad-t1">ألف مبروك التخرّج</div>
+    <div class="grad-t2">أهلاً بخرّيجنا ${esc(first)}${user.spec?' · '+esc(user.spec):''}${user.grp?' · الشعبة '+esc(user.grp):''}</div>
+    <div class="grad-line"></div>
+    <div class="grad-stats">
+      <div class="grad-s"><b>${esc(gpa)}</b><span>المعدّل التراكمي /5</span></div>
+      <div class="grad-s"><b>${esc(avg)}</b><span>متوسط الدرجات</span></div>
+      <div class="grad-s"><b>${done.length||courses.length}</b><span>مقرر مكتمل</span></div>
+      ${units?`<div class="grad-s"><b>${Math.round(units)}</b><span>وحدة دراسية</span></div>`:''}
+      ${honor&&honor!=='—'?`<div class="grad-s"><b>${esc(honor)}</b><span>التقدير العام</span></div>`:''}
+    </div>
+    ${user.gradBatch?`<div class="grad-batch">دفعة ${esc(user.gradBatch)}</div>`:''}
+    <div class="grad-msg">أنهيت خطتك الدراسية كاملة — نفخر بك، ونتمنّى لك التوفيق في مسيرتك المهنية.</div>
+    <div class="grad-acts">
+      <button class="btn btn-b" onclick="showSPage('record',null)">🏅 سجلّي التدريبي</button>
+      ${cert&&/^https?:\/\//i.test(cert)?`<a class="btn btn-g" style="text-decoration:none" href="${escUrl(cert)}" target="_blank" rel="noopener noreferrer">📜 شهادتي</a>`:''}
+      <button class="btn btn-out" onclick="printMyIntro()">📄 تعريف بالتخرّج</button>
+      <button class="btn btn-out" onclick="showSPage('courses',null)">📚 كل موادي</button>
+    </div>
+  </div>`;
+}
+/* 🏅 أبرز مقررات الخرّيج — بديل «موادك الحالية» الفارغة */
+function gradTopHTML(){
+  const done=(completedCourses(courses).length?completedCourses(courses):(courses||[]))
+    .slice().sort((a,b)=>effPct(b)-effPct(a));
+  if(!done.length)return '<div class="alert ab"><span class="aicon">📭</span>لا توجد مقررات مسجّلة في سجلّك</div>';
+  const top=done.slice(0,5);
+  return `<div class="gtable"><table>
+    <thead><tr><th>المقرر</th><th>الدرجة</th><th>التقدير</th></tr></thead>
+    <tbody>${top.map(c=>{
+      const p=Math.round(effPct(c));
+      return `<tr><td style="text-align:right">${esc(c.course)}</td>
+        <td class="${p>=60?'ok':'danger'}">${p}%</td>
+        <td style="color:var(--muted)">${esc(honorOf(p))}</td></tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+window.gradPanelHTML=gradPanelHTML;window.gradTopHTML=gradTopHTML;
 const sPgs={
   news:()=>newsFeedHTML(),
   library:()=>buildLibrary([...new Set((courses||[]).map(c=>c.code))], false),
@@ -6289,7 +6600,12 @@ const sPgs={
     const past=courses.filter(c=>c.status==='سابق');
     // ⭐ بنود تحت الحد (أثناء الترم) بدل «راسب» على مجموع ناقص
     const weakCrs=current.filter(c=>weakItemsOf(c).length>0);
+    /* 🎓 الخرّيج: لا «مواد حالية» ولا جدول اليوم ولا تحذير غياب —
+       انتهى كل ذلك. تُستبدل بلوحة التخرّج وملخّص سجلّه. */
+    const grad=isGraduate();
     return `
+    ${gradPanelHTML()}
+    ${grad?'':`
     <div class="shero anim-up">
       <div class="shero-t">
         <div>
@@ -6299,16 +6615,21 @@ const sPgs={
         <div class="shero-av">${esc(String(user.name||'').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join(''))}</div>
       </div>
       ${studentStatStrip()}
-    </div>
+    </div>`}
     ${pinnedNewsBanner()}
-    ${todayCardHTML()}
-    ${absWarnBanner()}
-    ${weakCrs.length?`<div class="alert aw" style="border-color:rgba(255,138,60,.3)"><span class="aicon">📉</span><div><b>بنود تحتاج تحسين</b>
+    ${grad?'':todayCardHTML()}
+    ${grad?'':absWarnBanner()}
+    ${!grad&&weakCrs.length?`<div class="alert aw" style="border-color:rgba(255,138,60,.3)"><span class="aicon">📉</span><div><b>بنود تحتاج تحسين</b>
       <div style="font-size:12px;color:var(--muted);margin-top:3px">${weakCrs.slice(0,3).map(c=>esc(c.course)+': '+esc(weakItemsText(c,'، '))).join('<br>')}</div>
       <div style="font-size:11.5px;color:var(--muted);margin-top:4px">الترم ما انتهى — راجع مدرّب المادة لرفع درجتك</div></div></div>`:''}
+    ${grad?`
+    <div class="stitle">🏅 أبرز ما في سجلّك</div>
+    ${gradTopHTML()}
+    <div style="text-align:center;margin-top:16px"><button class="btn btn-b btn-sm" onclick="showSPage('record',null)">🏅 السجل التدريبي الكامل (${tot} مقرر)</button></div>`
+    :`
     <div class="stitle">📚 موادك الحالية ${current.length?`(${current.length})`:''}</div>
     ${current.length?current.map(c=>courseCardHTML(c)).join(''):'<div class="alert ab"><span class="aicon">📭</span>لا توجد مواد حالية مسجّلة الآن — موادك السابقة مكتملة</div>'}
-    ${past.length?`<div style="text-align:center;margin-top:16px"><button class="btn btn-out btn-sm" onclick="showSPage('courses',null)">عرض جميع المواد (${tot}) — حالية وسابقة</button></div>`:''}`;
+    ${past.length?`<div style="text-align:center;margin-top:16px"><button class="btn btn-out btn-sm" onclick="showSPage('courses',null)">عرض جميع المواد (${tot}) — حالية وسابقة</button></div>`:''}`}`;
   },
   courses:()=>{
     activeFilters={half:'all',letter:'all',status:'all'};
@@ -6356,13 +6677,15 @@ const sPgs={
         <div style="font-size:11.5px;color:var(--muted);margin-top:5px">راجع مدرّب المادة — أمامك وقت لرفع درجتك في هذه البنود.</div></div>
       </div>`;
     }
-    // مقارنة مع الخطة الدراسية الكاملة (قاعدة بيانات المقررات)
+    // مقارنة مع خطة تخصّصه (لا كل الكتالوج) — والخرّيج خطته مكتملة
     const norm=s=>String(s||'').replace(/\s/g,'');
+    const grad=isGraduate();
+    const myPlan=planForStudent(user);
     const takenCodes=new Set(courses.map(c=>norm(c.code)));
-    const remaining=catalog.filter(cat=>!takenCodes.has(norm(cat.code)));
-    const totalPlan=catalog.length;
-    const takenCount=catalog.length?catalog.filter(cat=>takenCodes.has(norm(cat.code))).length:tot;
-    const planPct=totalPlan?Math.round(takenCount/totalPlan*100):0;
+    const remaining=grad?[]:myPlan.filter(cat=>!takenCodes.has(norm(cat.code)));
+    const totalPlan=myPlan.length;
+    const takenCount=totalPlan?myPlan.filter(cat=>takenCodes.has(norm(cat.code))).length:tot;
+    const planPct=grad?100:(totalPlan?Math.round(takenCount/totalPlan*100):0);
     let compareSection='';
     if(totalPlan>0){
       compareSection=`
@@ -6373,9 +6696,11 @@ const sPgs={
           <div style="font-size:18px;font-weight:900;color:${planPct>=80?'var(--acc-g)':planPct>=50?'var(--acc-y)':'var(--acc-b)'}">${planPct}%</div>
         </div>
         <div class="prog"><div class="pfill ${planPct>=80?'pf-g':planPct>=50?'pf-y':'pf-b'}" style="width:${planPct}%"></div></div>
-        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--muted)">
-          <span>✅ مجتاز: ${takenCount}</span><span>⏳ متبقي: ${remaining.length}</span><span>📚 الإجمالي: ${totalPlan}</span>
+        <div style="display:flex;gap:16px;margin-top:10px;font-size:12px;color:var(--muted);flex-wrap:wrap">
+          <span>✅ مجتاز: ${grad?totalPlan:takenCount}</span><span>⏳ متبقي: ${remaining.length}</span><span>📚 الإجمالي: ${totalPlan}</span>
+          ${user.spec?`<span>🎓 ${esc(user.spec)}</span>`:''}
         </div>
+        ${grad?'<div style="font-size:12px;color:var(--acc-g);font-weight:700;margin-top:8px">🎉 أكملت خطتك الدراسية وتخرّجت — مبروك!</div>':''}
       </div>
       ${remaining.length?`
       <div style="font-size:13px;font-weight:700;color:var(--acc-y);margin-bottom:10px">⏳ مواد لم تُؤخذ بعد (${remaining.length})</div>
@@ -6388,13 +6713,14 @@ const sPgs={
       </table></div>`:'<div class="alert as"><span class="aicon">🎓</span>أكملت جميع مواد الخطة الدراسية!</div>'}`;
     }
     return `
+    ${gradPanelHTML()}
     <div class="banner anim-up"><div><div class="btitle">تقرير الأداء 📊</div><div class="bsub">نظرة شاملة على مستواك الأكاديمي</div></div><div class="bpill bp-b" style="font-size:18px;font-weight:900;text-align:center;line-height:1.2">${gpaDisplay(courses)}<div style="font-size:10px;font-weight:400;opacity:.8">من 5</div></div></div>
     ${failSection}
     <div class="metrics">
       <div class="mcard mc-p"><div class="micon">🏆</div><div class="mnum" style="color:${gpaColor(gpaFrom(courses))}">${gpaDisplay(courses)}<span style="font-size:13px;color:var(--muted)">/5</span></div><div class="mlbl">المعدّل التراكمي</div></div>
       <div class="mcard mc-r"><div class="micon">📈</div><div class="mnum cr">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
       <div class="mcard mc-b"><div class="micon">📚</div><div class="mnum cb">${tot}</div><div class="mlbl">مقرر مأخوذ</div></div>
-      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${courses.filter(c=>c.pct>=60).length}</div><div class="mlbl">ناجح</div></div>
+      <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${courses.filter(isPass).length}</div><div class="mlbl">ناجح</div></div>
     </div>
     ${compareSection}
     <div class="stitle">تفاصيل المقررات المأخوذة</div>
@@ -6409,6 +6735,11 @@ const sPgs={
     </div>`;
   },
   schedule:()=>{
+    /* 🎓 الخرّيج: لا جدول — كان يرى شبكة شعبته القديمة كأنه ما زال يدرس */
+    if(isGraduate())return `<div class="stitle">جدولي</div>
+      <div class="alert as"><span class="aicon">🎓</span><div><b>تخرّجت — لا جدول حصص بعد الآن</b>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px">سجلّك التدريبي ودرجاتك محفوظة ومتاحة لك في «السجل» و«أدائي».</div></div></div>
+      <div style="text-align:center;margin-top:14px"><button class="btn btn-b btn-sm" onclick="showSPage('record',null)">🏅 السجل التدريبي</button></div>`;
     const grp=user.grp;
     // مواد الطالب الحالية فقط (عشان مادة الإعادة ما تظهر لكل الشعبة)
     const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -6640,6 +6971,11 @@ function studentStatStrip(){
   const worst=cur.reduce((a,c)=>Math.max(a,parseFloat(c.abs)||0),0);
   const wl=absLevel(worst);
   const chip=(v,l,color,fn)=>`<button class="sstat" onclick="${fn}"><span class="sv" style="color:${color}">${v}</span><span class="sl">${esc(l)}</span></button>`;
+  /* 🎓 الخرّيج: «مواد حالية ٠» و«أعلى غياب ٠٪» معلومتان فارغتان —
+     تُستبدلان بما يهمّه: ما أكمله وتقديره العام. */
+  /* 🎓 الخرّيج: لوحة التخرّج فوقها تحمل المعدّل والتقدير وعدد المقررات،
+     فتكرارها هنا حشوٌ — ولا معنى لـ«مواد حالية ٠» و«أعلى غياب ٠٪». */
+  if(isGraduate())return '';
   return `<div class="sstrip">
     ${chip(cur.length,'مواد حالية','var(--acc-b)',"showStudentStat('current')")}
     ${chip(past.length?gpa:'—','المعدّل',past.length?gpaColor(gpa):'var(--muted)',"showStudentStat('gpa')")}
@@ -8161,19 +8497,28 @@ function computeKPI(grp){
   const gc = allCourses.filter(c=>ids.has(c.sid));
   const traineeCount = gs.length;
   const avg = avgPct(gc);
-  // نسبة إكمال الخطة = المواد المأخوذة ÷ إجمالي مواد الخطة الدراسية
+  // نسبة إكمال الخطة = مواد كل متدرب ÷ مواد خطة تخصّصه هو (لا كل الكتالوج)
+  // ⚠️ كانت المقام = الكتالوج كاملاً، فتُحسب على متدرب الإلكترونيات
+  //    مواد الميكانيكا وتنزل نسبته بلا ذنب.
   let planTotal = catalog.length;
   if(!planTotal){
     // احتياطي: أكبر عدد مواد أخذها متدرب = الخطة الكاملة
-    const cnt={}; allCourses.forEach(c=>cnt[c.sid]=(cnt[c.sid]||0)+1);
-    planTotal = Math.max(1, ...Object.values(cnt).concat([1]));
+    const cnt0={}; allCourses.forEach(c=>cnt0[c.sid]=(cnt0[c.sid]||0)+1);
+    planTotal = Math.max(1, ...Object.values(cnt0).concat([1]));
   }
   const cnt={}; gc.forEach(c=>cnt[c.sid]=(cnt[c.sid]||0)+1);
-  const compVals = gs.map(s=>Math.min((cnt[s.id]||0)/planTotal,1));
+  const planCache={};
+  const planOf=s=>{
+    if(!catalog.length)return planTotal;
+    const k=specKey(s&&s.spec||'');
+    if(planCache[k]==null)planCache[k]=planForSpec(s&&s.spec).length||planTotal;
+    return planCache[k];
+  };
+  const compVals = gs.map(s=>isGradStatus(s.status)?1:Math.min((cnt[s.id]||0)/planOf(s),1));
   const completionRate = compVals.length?Math.round(compVals.reduce((a,b)=>a+b,0)/compVals.length*100):0;
   // نسبة التفوق = المواد بدرجة 80%+
   const excellenceRate = gc.length?Math.round(gc.filter(c=>c.pct>=80).length/gc.length*100):0;
-  const passRate = gc.length?Math.round(gc.filter(c=>c.pct>=60).length/gc.length*100):0;
+  const passRate = gc.length?Math.round(gc.filter(isPass).length/gc.length*100):0;
   const avgAbs = gc.length?Math.round(gc.reduce((a,c)=>a+c.abs,0)/gc.length):0;
   const alerts = gc.filter(hasIssue).length;
   const gpa = gpaFrom(gc);
@@ -8301,8 +8646,9 @@ function courseModal(mode,data){
   const f=(id,lbl,val,ph)=>`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">${lbl}</label><input id="crs_${id}" value="${escAttr(val||'')}" placeholder="${ph||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"></div>`;
   // ⭐ تجهيز التخصصات كمصفوفة (نفصل على | أو , أو ؛)
   window._crsSpecs=String(data.specs||'').split(/[|,؛;]/).map(x=>x.trim()).filter(Boolean);
-  // اقتراحات من تخصصات الطلاب والمدربين الموجودة
-  const suggestions=[...new Set([...(students||[]).map(s=>s.spec),...(trainersDB||[]).map(t=>t.spec)].map(x=>String(x||'').trim()).filter(Boolean))];
+  /* 🎓 الاختيار من سجل التخصصات — كانت كتابة حرّة باقتراحات، فتتسلّل
+     الأخطاء الإملائية وتصير تخصصات وهمية. */
+  const regSpecs=(typeof allSpecs==='function')?allSpecs(true):[];
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';overlay.id='crsModal';
   overlay.innerHTML=`<div class="modal" style="max-width:460px;max-height:88vh;overflow-y:auto">
@@ -8316,10 +8662,14 @@ function courseModal(mode,data){
       ${f('prereq','📌 المتطلب السابق',data.prereq,'مثال: الكت 101 / ريض 121 — اتركه فارغاً إن لا يوجد')}
       <div style="margin-bottom:12px">
         <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصصات (يمكن أكثر من تخصص)</label>
+        ${regSpecs.length?`<div style="border:1px solid var(--border);border-radius:10px;padding:7px 10px;max-height:168px;overflow:auto;margin-bottom:8px">
+          ${regSpecs.map(sp=>`<label class="tap-lbl" style="display:flex;gap:9px;align-items:center;padding:6px 2px;font-size:13px;cursor:pointer">
+            <input type="checkbox" class="crs_spec_chk" value="${escAttr(sp.name)}"${(window._crsSpecs||[]).some(x=>specKey(x)===specKey(sp.name))?' checked':''} onchange="crsSyncSpecs()" style="width:17px;height:17px;cursor:pointer"> ${esc(sp.name)}${sp.reg?'':' <span class="pill py" style="font-size:10.5px">غير مسجّل</span>'}
+          </label>`).join('')}
+        </div>`:`<div class="alert aw" style="margin-bottom:8px;font-size:12px"><span class="aicon">🎓</span>ما فيه تخصصات مسجّلة — أضفها من «الإعدادات ← تخصصات المعهد» ثم أشّر عليها هنا.</div>`}
         <div id="crsSpecChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-        <input id="crs_specInput" placeholder="اكتب تخصص واضغط Enter لإضافته" onkeydown="if(event.key==='Enter'||event.key===','){event.preventDefault();crsAddSpec(this.value);this.value='';}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
-        ${suggestions.length?`<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px">${suggestions.map(sp=>`<button type="button" onclick="crsAddSpec('${jsq(sp)}')" style="background:rgba(106,184,247,.12);color:var(--acc-b);border:1px solid rgba(106,184,247,.3);border-radius:16px;padding:9px 14px;font-size:12.5px;min-height:38px;cursor:pointer">+ ${sp}</button>`).join('')}</div>`:''}
-        <div style="font-size:11px;color:var(--muted);margin-top:6px">💡 اتركها فارغة = المقرر يصلح لكل التخصصات</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px">💡 بلا تأشير = المقرر <b>عام</b> يصلح لكل التخصصات</div>
+        ${role==='a'?`<button type="button" class="btn btn-out btn-sm" style="margin-top:8px" onclick="document.getElementById('crsModal').remove();openSpecs()">🎓 إدارة التخصصات ↗</button>`:''}
       </div>
       <div style="margin-bottom:12px">
         <label style="display:block;font-size:12px;color:var(--acc-b);font-weight:700;margin-bottom:6px">📘 المادة العلمية — نظري</label>
@@ -8391,6 +8741,27 @@ function renderCrsSpecs(){
   const specs=window._crsSpecs||[];
   box.innerHTML=specs.length?specs.map((sp,i)=>`<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(46,204,113,.15);color:var(--acc-g);border:1px solid rgba(46,204,113,.35);border-radius:14px;padding:4px 10px;font-size:12px;font-weight:600">${sp}<span onclick="crsRemoveSpec(${i})" style="cursor:pointer;font-weight:800;opacity:.8">✕</span></span>`).join(''):'<span style="font-size:11px;color:var(--muted)">لا توجد تخصصات — المقرر عام</span>';
 }
+/* التأشير هو المصدر — ونُبقي crsAddSpec للتوافق مع أي نداء قديم */
+function planSpecFilter(v){
+  const tb=document.querySelector('#mcontent [data-listwrap] tbody'); if(!tb)return;
+  const k=specKey(v); let shown=0, real=0;
+  tb.querySelectorAll('tr').forEach(tr=>{
+    if(tr.hasAttribute('data-empty'))return;
+    real++;
+    const sp=String(tr.dataset.sp||'');
+    const hit=!v || (v==='__gen__' ? sp==='__gen__'
+      : sp.split('|').some(x=>specKey(x)===k));
+    tr.style.display=hit?'':'none'; if(hit)shown++;
+  });
+  const c=document.getElementById('planCount');
+  if(c)c.textContent=v?('('+shown+' من '+real+' مقرر)'):('('+real+' مقرر)');
+}
+window.planSpecFilter=planSpecFilter;
+function crsSyncSpecs(){
+  window._crsSpecs=[...document.querySelectorAll('.crs_spec_chk:checked')].map(c=>c.value);
+  renderCrsSpecs();
+}
+window.crsSyncSpecs=crsSyncSpecs;
 function crsAddSpec(val){
   val=String(val||'').trim();if(!val)return;
   window._crsSpecs=window._crsSpecs||[];
@@ -9054,6 +9425,23 @@ window.enrCoBoxes=enrCoBoxes;window.enrCoList=enrCoList;
 window.toggleGrpStudents=toggleGrpStudents;window.updateEnrCounts=updateEnrCounts;window.enrollBatch=enrollBatch;
 
 // ===== إدارة الحسابات (إضافة/تعديل/حذف) =====
+/* 🎓 التخصص يُختار من السجل — كان حقلاً نصّياً حرّاً فتتكاثر الأسماء
+   المتشابهة ولا تنطبق تصفية التخصص على أحد. */
+function specField(cur){
+  const list=(typeof allSpecs==='function')?allSpecs(true):[];
+  const c=String(cur||'').trim();
+  const sel="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px";
+  if(!list.length)
+    return `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصص</label>
+      <input id="acc_spec" value="${escAttr(c)}" placeholder="أضف التخصصات من «الإعدادات ← تخصصات المعهد»" style="${sel}"></div>`;
+  const known=list.some(x=>specKey(x.name)===specKey(c));
+  return `<div style="margin-bottom:12px"><label for="acc_spec" style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصص</label>
+    <select id="acc_spec" style="${sel}">
+      <option value=""${!c?' selected':''}>— بلا تخصص —</option>
+      ${list.map(x=>`<option value="${escAttr(x.name)}"${specKey(x.name)===specKey(c)?' selected':''}>${esc(x.name)}${x.reg?'':' (غير مسجّل)'}</option>`).join('')}
+      ${(c&&!known)?`<option value="${escAttr(c)}" selected>${esc(c)} (غير مسجّل)</option>`:''}
+    </select></div>`;
+}
 function accountFormFields(type,data,mode){
   data=data||{};
   const f=(id,lbl,val,ph)=>`<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">${lbl}</label><input id="acc_${id}" value="${escAttr(val||'')}" placeholder="${ph||''}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px"></div>`;
@@ -9061,17 +9449,17 @@ function accountFormFields(type,data,mode){
     const idHint=mode==='edit'
       ?`<div id="acc_id_hint" style="font-size:11px;color:var(--muted);margin:-8px 0 12px;line-height:1.6">🔗 تغييره هنا يتعدّل في كل مكان تلقائياً — سجل المقررات والدرجات · قاعدة الغياب · طلبات الخدمات</div>`
       :'';
-    return f('id','الرقم الأكاديمي *',data.id)+idHint+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
+    return f('id','الرقم الأكاديمي *',data.id)+idHint+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+specField(data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
   }
-  if(type==='trainer')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
+  if(type==='trainer')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+specField(data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
   // admin — مشرف تخصص (لكل تخصص مشرفه يوافق على طلباته)، أو مدير الأكاديمية (المشرف العام) الذي يشرف على الكل ويعتمد نهائياً
-  const specOpts=[...new Set(students.map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
+  const specOpts=((typeof allSpecs==='function')?allSpecs(true):[]).map(x=>x.name);
   const selStyle="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px";
   return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('title','المسمى الوظيفي',data.title)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري *',data.pw)+
     `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">الصلاحية</label><select id="acc_level" style="${selStyle}"><option value="مشرف"${data.level==='مشرف'?' selected':''}>مشرف تخصص</option><option value="مدير"${(data.level||'').includes('مدير')?' selected':''}>مدير الأكاديمية (مشرف عام)</option></select></div>`+
     (function(){
       const cur=specListOf(data.spec);
-      const chk=(v,lbl)=>`<label style="display:flex;gap:8px;align-items:center;padding:6px 4px;font-size:13px;cursor:pointer"><input type="checkbox" class="acc_spec_chk" value="${esc(v)}"${cur.indexOf(v)>-1?' checked':''}> ${esc(lbl)}</label>`;
+      const chk=(v,lbl)=>`<label class="tap-lbl" style="display:flex;gap:8px;align-items:center;padding:6px 4px;font-size:13px;cursor:pointer"><input type="checkbox" class="acc_spec_chk" value="${esc(v)}"${cur.indexOf(v)>-1?' checked':''} style="width:17px;height:17px;cursor:pointer"> ${esc(lbl)}</label>`;
       return `<div style="margin-bottom:12px"><label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">التخصصات التي يشرف عليها (للمشرف — يمكن اختيار أكثر من تخصص)</label>
         <div style="border:1px solid var(--border);border-radius:8px;padding:6px 10px;max-height:170px;overflow:auto">
           ${chk('جميع الدبلومات','جميع التخصصات (كل الدبلومات)')}
@@ -10295,7 +10683,9 @@ const aPgs={
       // إدارة الخطة الدراسية (المقررات)
       const specChip=sp=>String(sp||'').split(/[|,؛;]/).map(x=>x.trim()).filter(Boolean).map(x=>`<span style="display:inline-block;background:rgba(106,184,247,.12);color:var(--acc-b);border-radius:10px;padding:2px 8px;font-size:10px;margin:1px">${x}</span>`).join('')||'<span style="color:var(--muted);font-size:11px">عام</span>';
       const matBadge=c=>{const n=parseMaterials(c.matTheory).length,p=parseMaterials(c.matPractical).length;const parts=[];if(n)parts.push('📘'+n);if(p)parts.push('🔧'+p);return parts.length?`<span style="background:rgba(46,204,113,.15);color:var(--acc-g);border-radius:10px;padding:2px 8px;font-size:10px">${parts.join(' ')}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>';};
-      const rows=(catalog||[]).map(c=>`<tr>
+      /* 🎓 تصفية الخطة بالتخصص — صفٌّ واحد لكل مقرر، وdata-sp تُستعمل
+         في التصفية الفورية بلا إعادة رسم الصفحة. */
+      const rows=(catalog||[]).map(c=>`<tr data-sp="${escAttr(libSpecList(c.specs).join('|')||'__gen__')}">
         <td style="font-weight:600">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(fmtTerm(c.term))||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${c.prereq?`<span style="background:rgba(244,162,97,.15);color:var(--acc-y);border-radius:10px;padding:2px 8px;font-size:10px">📌 ${esc(c.prereq)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
         <td><button onclick='editCourse(${jsonAttr(c)})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${jsq(c.code)}","${jsq(c.name)}")' class="btn btn-sm" style="background:#cf1f2f;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="9" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
@@ -10311,7 +10701,18 @@ const aPgs={
         return `<option value="${escAttr(t)}">${esc(fmtTerm(t.replace(/-/g,' ')))} — ${n} مادة</option>`;
       }).join('');
       body=`
-      <div class="stitle" style="margin:0 0 12px">📖 الخطة الدراسية (${(catalog||[]).length} مقرر)</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px">
+        <div class="stitle" style="margin:0">📖 الخطة الدراسية <span id="planCount">(${(catalog||[]).length} مقرر)</span></div>
+        ${(function(){const L=(typeof allSpecs==='function')?allSpecs(false):[];
+          if(!L.length)return '';
+          const gen=(catalog||[]).filter(c=>!libSpecList(c.specs).length).length;
+          return `<select id="planSpec" aria-label="تصفية بالتخصص" title="تصفية بالتخصص" onchange="planSpecFilter(this.value)" style="padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px;max-width:280px">
+            <option value="">🎓 كل التخصصات (${(catalog||[]).length})</option>
+            ${L.map(x=>{const n=(catalog||[]).filter(c=>libSpecList(c.specs).some(y=>specKey(y)===specKey(x.name))).length;
+              return `<option value="${escAttr(x.name)}">${esc(x.name)} (${n})</option>`;}).join('')}
+            ${gen?`<option value="__gen__">🌐 عامة — لكل التخصصات (${gen})</option>`:''}
+          </select>`;})()}
+      </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ — واتركه فارغاً ليصلح لكل التخصصات</div>
       <div data-listwrap>
       ${searchBoxHTML('ابحث عن مقرر أو رمز...')}
@@ -10490,7 +10891,7 @@ const aPgs={
       {id:'plan',lbl:'الخطة الدراسية',icon:'📖',n:(catalog||[]).length},
       {id:'enroll',lbl:'تسجيل جماعي',icon:'🔗'}])}
     ${pgActs('إجراءات',`<button class="btn btn-out" onclick="openCourseProbe()">🔍 فحص مادة — وين متدربوها ومَن يدرّسها</button>`
-      +(tab==='plan'?`<button class="btn btn-b" onclick="addCourse()">➕ إضافة مقرر</button>`:''))}
+      +(tab==='plan'?`<button class="btn btn-out" onclick="goAdmin('settings')" title="بيتها: الإعدادات ← تخصصات المعهد">🎓 التخصصات ↗</button><button class="btn btn-b" onclick="addCourse()">➕ إضافة مقرر</button>`:''))}
     ${body}`;
   },
   /* 👥 «الأشخاص» — دمج صفحتَي «المتدربون» و«إدارة الحسابات».
@@ -10501,7 +10902,7 @@ const aPgs={
     const t=window._accTab||'student';
     const seen=new Set();
     const uniqSt=(students||[]).filter(s=>{if(seen.has(s.id))return false;seen.add(s.id);return true;})
-                               .filter(s=>s.status!=='خرّيج');
+                               .filter(s=>!isGradStatus(s.status));
     // بناء صفوف الجدول حسب النوع
     let rows='',cols='',filters='';
     const actBtns=(kind,s)=>`<button onclick='editAccount(${JSON.stringify(kind)},${jsonAttr(s)})' class="btn btn-out btn-sm" title="تعديل" aria-label="تعديل ${esc(s.name)}">✏️</button> <button onclick='deleteAccount(${JSON.stringify(kind)},"${jsq(s.id)}","${jsq(s.name)}")' class="btn btn-sm" style="background:#cf1f2f;color:#fff" title="حذف" aria-label="حذف ${esc(s.name)}">🗑️</button>`;
@@ -10595,7 +10996,7 @@ const aPgs={
     const avgAll=avgPct(actives);
     const bannedCount=actives.filter(c=>(c.abs||0)>=25).length;
     const excellentCount=ranked.filter(s=>s.avg>=90).length;
-    const passCount=actives.filter(c=>c.pct>=60).length;
+    const passCount=actives.filter(isPass).length;
     const passRate=actives.length?Math.round(passCount/actives.length*100):0;
     // ميداليات
     const medal=r=>r===1?'🥇':r===2?'🥈':r===3?'🥉':`<span style="font-weight:800;color:var(--muted)">${r}</span>`;
@@ -11058,6 +11459,14 @@ const aPgs={
       <div class="rep-header"><div class="rep-title">🎉 ثيمات المناسبات</div></div>
       <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">تتبدّل ألوان المنصة مع المناسبة تلقائياً حسب التاريخ — والمناسبات الهجرية تُحسب بتقويم أم القرى فلا تحتاج تحديثاً كل سنة. ما تحفظه هنا يسري على كل المستخدمين.</div>
       <div id="thmPanel">${themePanelHTML()}</div>
+    </div>
+    <div class="rep-card" style="margin-bottom:14px">
+      <div class="rep-header"><div class="rep-title">🎓 تخصصات المعهد</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">القائمة المعتمدة التي يُختار منها تخصص كل مقرر ومتدرب ومدرب — بدل كتابته نصّاً حرّاً في كل مكان. تعديل اسم تخصص هنا يصحّحه في النظام كله، ولكل تخصص مكتبته وتصفيته.</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-b" onclick="openSpecs()">🎓 إدارة التخصصات</button>
+        <span style="font-size:12px;color:var(--muted)">المسجّلة الآن: <b>${(typeof specsDB!=='undefined'?specsDB.length:0)}</b>${(function(){const u=(typeof allSpecs==='function')?allSpecs(false).filter(x=>!x.reg).length:0;return u?` · <span style="color:var(--acc-y)">${u} غير مسجّل</span>`:'';})()}</span>
+      </div>
     </div>
     <div class="rep-card" style="margin-bottom:14px">
       <div class="rep-header"><div class="rep-title">🔒 موعد إظهار الدرجات</div></div>
@@ -12431,7 +12840,7 @@ function showOverallStat(kind){
     ex.forEach(s=>html+=stRow(s)); showDetail('المتفوقون','⭐',html);
   } else if(kind==='pass'){
     const done=allCourses.filter(c=>(parseFloat(c.pct)||0)>0);
-    const pass=done.filter(c=>c.pct>=60), fail=done.filter(c=>c.pct<60);
+    const pass=done.filter(isPass), fail=done.filter(c=>!isPass(c));
     let html=`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">المقررات المرصودة (${done.length}):</div>`;
     html+=detailRow('ناجحة (60%+)',pass.length+' مقرر','var(--green)')+detailRow('راسبة (<60%)',fail.length+' مقرر','var(--red)');
     if(fail.length){html+=`<div style="font-size:12px;color:var(--muted);margin-top:12px">الراسبة:</div>`;fail.forEach(c=>{const nm=c.sname||c.name||c.sid;html+=`<div ${_openStud(c.sid)}>${detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · '+esc(c.course),Math.round(c.pct)+'%','var(--red)')}</div>`;});}
@@ -12540,7 +12949,7 @@ function showTrainerCourseStudents(i){
   const back=`<div onclick="backToTrainer()" style="cursor:pointer;color:var(--acc-b);font-size:13px;margin-bottom:12px">← رجوع لبطاقة المدرب</div>`;
   let html=back+`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">${esc(co)} — المتدربون (${cc.length}):</div>`;
   cc.forEach(c=>{const nm=c.sname||c.name||c.sid;const extra=isHighAbs(c)?' · غياب '+Math.round(c.abs)+'%':'';
-    html+=detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(c.grp||'—'),Math.round(c.pct)+'%'+extra,c.pct>=60?'var(--green)':'var(--red)');});
+    html+=detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(c.grp||'—'),Math.round(c.pct)+'%'+extra,isPass(c)?'var(--green)':'var(--red)');});
   showDetail('مقرر: '+co,'📘',html);
 }
 // تفاصيل المادة عند المدرب — مقسّمة حسب الشعبة (كل شعبة بمتوسطها) + خطة المتطلب
@@ -12646,7 +13055,7 @@ function printAcademicReport(){
     const gs=students.filter(s=>s.grp===g);
     const gc=allCourses.filter(c=>gs.map(s=>s.id).includes(c.sid));
     const a=avgScoredNum(gc);
-    const pass=gc.length?Math.round(gc.filter(c=>c.pct>=60).length/gc.length*100):0;
+    const pass=gc.length?Math.round(gc.filter(isPass).length/gc.length*100):0;
     return `<tr><td>الشعبة ${g}</td><td>${gs.length}</td><td>${a}%</td><td>${pass}%</td><td>${gc.filter(c=>c.abs>=25).length}</td></tr>`;
   }).join('');
   const trRows=trainers.map(t=>{
@@ -13489,7 +13898,7 @@ function printGradesReport(){
   const grps=[...new Set(students.map(s=>s.grp))].filter(Boolean).sort();
   let body=`<div class="kpis">
     <div class="kpi"><div class="n">${students.length}</div><div class="l">متدرب</div></div>
-    <div class="kpi"><div class="n">${allCourses.filter(c=>c.pct>=60).length}</div><div class="l">ناجح</div></div>
+    <div class="kpi"><div class="n">${allCourses.filter(isPass).length}</div><div class="l">ناجح</div></div>
     <div class="kpi"><div class="n" style="color:var(--acc-r)">${allCourses.filter(c=>c.pct<60&&c.pct>0).length}</div><div class="l">راسب</div></div>
     <div class="kpi"><div class="n">${[...new Set(allCourses.map(c=>c.course))].filter(Boolean).length}</div><div class="l">مادة</div></div>
   </div>`;
@@ -13693,7 +14102,7 @@ function showCourseDetail(courseName,mode){
       
       <div class="metrics" style="margin-bottom:16px">
         <div class="mcard mc-b"><div class="micon">👥</div><div class="mnum cb">${cs.length}</div><div class="mlbl">متدرب</div></div>
-        <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${cs.filter(c=>c.pct>=60&&c.abs<=25).length}</div><div class="mlbl">ناجح</div></div>
+        <div class="mcard mc-g"><div class="micon">✅</div><div class="mnum cg">${cs.filter(isPass).length}</div><div class="mlbl">ناجح</div></div>
         <div class="mcard mc-r"><div class="micon">❌</div><div class="mnum cr">${cs.filter(c=>c.pct<60||isDeprived(c.abs)).length}</div><div class="mlbl">راسب/محروم</div></div>
       </div>
       ${hasBoth?`<div style="display:flex;gap:8px;margin-bottom:14px">
