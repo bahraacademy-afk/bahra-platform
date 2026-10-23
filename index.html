@@ -1579,6 +1579,33 @@ body.light-mode .search-row input,
 body.light-mode .search-row select{background:#fff;color:var(--text);
   border-color:color-mix(in srgb,var(--brand-deep-2) 14%,transparent)}
 
+/* ===== شارات تخصص المقرر في المكتبة ===== */
+.lib-sprow{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.lib-sp{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;
+  padding:3px 9px;border-radius:10px;white-space:nowrap;
+  background:color-mix(in srgb,var(--brand-1) 14%,transparent);
+  color:var(--acc-b);border:1px solid color-mix(in srgb,var(--brand-1) 30%,transparent)}
+.lib-sp.gen{background:rgba(46,204,113,.13);color:var(--acc-g);border-color:rgba(46,204,113,.3)}
+
+/* ===== نوافذ الحوار: حقل بعنوان · ملخّص · صف أزرار =====
+   موحّد بدل تنسيق مكتوب داخل كل نافذة على حدة. */
+.dlg-hint{font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:16px}
+.dlg-field{margin-bottom:14px}
+.dlg-field>label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);
+  letter-spacing:.3px;margin-bottom:6px}
+.dlg-field>select,.dlg-field>input{width:100%;padding:11px 12px;border:1px solid var(--border);
+  border-radius:11px;background:var(--card2,rgba(255,255,255,.04));color:var(--text);
+  font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+.dlg-field>select:focus,.dlg-field>input:focus{border-color:color-mix(in srgb,var(--brand-1) 55%,transparent)}
+body.light-mode .dlg-field>select,body.light-mode .dlg-field>input{background:#fff}
+.dlg-sum{font-size:12.5px;color:var(--text);background:color-mix(in srgb,var(--brand-1) 8%,transparent);
+  border:1px solid var(--border);border-radius:11px;padding:10px 13px;margin-bottom:16px}
+.dlg-sum b{color:var(--acc-b)}
+.dlg-sum.warn{color:var(--acc-y);background:rgba(244,162,97,.10)}
+.dlg-acts{display:flex;gap:9px}
+.dlg-acts .btn{flex:1}
+.dlg-acts .btn:last-child{flex:2}
+
 /* تسمية مربّع اختيار تصير مساحة لمس كافية على الجوال — المربّع نفسه
    ١٨px، والضغط على التسمية يبدّله، فنوسّعها بدل تكبير المربّع. */
 .tap-lbl{display:inline-flex;align-items:center;min-height:24px}
@@ -6059,6 +6086,52 @@ function showSPage(pg,el){
 
 // ===== المكتبة العلمية (نظري + عملي لكل المقررات) =====
 // scope: مصفوفة أكواد مسموحة (مقررات الطالب)، أو null = كل المقررات
+/* ============================================================
+ * 📚 المكتبة العلمية — مكتبة لكل تخصص
+ * ------------------------------------------------------------
+ * كانت مكتبة واحدة تُسرد فيها كل المقررات معاً، فتختلط مواد
+ * «إلكترونيات صناعية وتحكم» بمواد أي تخصص آخر. التخصص موجود أصلاً
+ * في «الخطة الدراسية» (عمود التخصصات) — صار يقسّم المكتبة.
+ * مقرر بلا تخصص = مادة عامة تظهر في كل التخصصات.
+ * ============================================================ */
+function libSpecList(v){ return String(v==null?'':v).split(/[|,،؛;\/]/).map(x=>x.trim()).filter(Boolean); }
+const LIB_ALL='__all__', LIB_GEN='__gen__';
+function libSpecsIn(cats){
+  const m=new Map(); let gen=0;
+  (cats||[]).forEach(c=>{
+    const L=libSpecList(c.specs);
+    if(!L.length||L.indexOf('جميع الدبلومات')>-1){ gen++; return; }
+    L.forEach(x=>m.set(x,(m.get(x)||0)+1));
+  });
+  return {specs:[...m.entries()].map(([k,n])=>({spec:k,n}))
+            .sort((a,b)=>String(a.spec).localeCompare(String(b.spec),'ar')), gen};
+}
+function libInSpec(c,spec){
+  if(spec===LIB_ALL)return true;
+  const L=libSpecList(c.specs);
+  const isGen=!L.length||L.indexOf('جميع الدبلومات')>-1;
+  if(spec===LIB_GEN)return isGen;
+  return isGen||L.indexOf(spec)>-1;      // العام يظهر مع كل تخصص
+}
+/* تخصص المستخدم الافتراضي: المتدرب تخصصه، والمدرب تخصصه، والإداري الكل */
+function libMySpec(){
+  try{
+    if(role==='s'){ const me=(students||[]).find(x=>String(x.id)===String(user.id));
+      const sp=libSpecList((me&&me.spec)||user.spec||''); return sp[0]||''; }
+    if(role==='t'){ const me=(trainersDB||[]).find(x=>String(x.id)===String(user.id)||nrmName(x.name)===nrmName(user.name));
+      const sp=libSpecList((me&&me.spec)||''); return sp[0]||''; }
+  }catch(_){}
+  return '';
+}
+function libPick(spec){
+  window._libSpec=spec;
+  try{
+    const act=document.querySelector('#sidebar .sitem.active');
+    const fn=(role==='s')?showSPage:(role==='t')?showTPage:showAPage;
+    fn('library', act&&act.id==='sn-library'?act:document.getElementById('sn-library'));
+  }catch(_){}
+}
+window.libPick=libPick;window.libSpecList=libSpecList;window.libInSpec=libInSpec;
 function buildLibrary(scope, canAdd){
   const norm=c=>normCode(c);
   let cats=(catalog||[]).filter(c=>{
@@ -6071,27 +6144,55 @@ function buildLibrary(scope, canAdd){
   });
   // إزالة التكرار بالكود
   const seen=new Set();cats=cats.filter(c=>{const k=norm(c.code);if(seen.has(k))return false;seen.add(k);return true;});
-  const totalMats=cats.reduce((a,c)=>{const m=getCourseMaterials(c.code);return a+m.theory.length+m.practical.length;},0);
+  // ── التخصصات المتاحة في هذا النطاق ──
+  const {specs,gen}=libSpecsIn(cats);
+  let pick=window._libSpec;
+  if(pick===undefined||pick===null){
+    const mine=libMySpec();
+    pick=(mine&&specs.some(x=>x.spec===mine))?mine:LIB_ALL;
+    window._libSpec=pick;
+  }
+  if(pick!==LIB_ALL&&pick!==LIB_GEN&&!specs.some(x=>x.spec===pick)){ pick=LIB_ALL; window._libSpec=pick; }
+  const shown=cats.filter(c=>libInSpec(c,pick));
+  const cntOf=sp=>cats.filter(c=>libInSpec(c,sp)).length;
+  const tabs=(specs.length>1||(specs.length===1&&gen))
+    ? `<div class="pg-tabs" role="tablist">
+        <button class="pg-tab${pick===LIB_ALL?' on':''}" role="tab" aria-selected="${pick===LIB_ALL}" onclick="libPick('${LIB_ALL}')"><span>📚</span><span>كل التخصصات</span><span class="pg-tab-n">${cats.length}</span></button>
+        ${specs.map(x=>`<button class="pg-tab${pick===x.spec?' on':''}" role="tab" aria-selected="${pick===x.spec}" onclick="libPick('${jsq(x.spec)}')" title="${escAttr(x.spec)}"><span>🎓</span><span>${esc(x.spec)}</span><span class="pg-tab-n">${cntOf(x.spec)}</span></button>`).join('')}
+        ${gen?`<button class="pg-tab${pick===LIB_GEN?' on':''}" role="tab" aria-selected="${pick===LIB_GEN}" onclick="libPick('${LIB_GEN}')"><span>🌐</span><span>مواد عامة</span><span class="pg-tab-n">${gen}</span></button>`:''}
+      </div>` : '';
+  const totalMats=shown.reduce((a,c)=>{const m=getCourseMaterials(c.code);return a+m.theory.length+m.practical.length;},0);
   const secBlock=(lbl,arr)=>arr.length?`<div style="margin-top:8px"><div style="font-size:11px;color:var(--muted);margin-bottom:5px">${lbl}</div><div style="display:flex;flex-wrap:wrap;gap:6px">${arr.map(matChipHTML).join('')}</div></div>`:'';
-  const cards=cats.map(c=>{
+  const specChipsOf=c=>{
+    const L=libSpecList(c.specs);
+    if(!L.length||L.indexOf('جميع الدبلومات')>-1)
+      return '<span class="lib-sp gen">🌐 عام — لكل التخصصات</span>';
+    return L.map(x=>`<span class="lib-sp">🎓 ${esc(x)}</span>`).join('');
+  };
+  const cards=shown.map(c=>{
     const m=getCourseMaterials(c.code);
     const empty=!m.theory.length&&!m.practical.length;
     const matNames=[...m.theory,...m.practical].map(x=>(x&&(x.name||x.title))||'').join(' ');
-    const sTxt=`${c.name||''} ${c.code||''} ${c.term||''} ${matNames}`.toLowerCase();
+    const sTxt=`${c.name||''} ${c.code||''} ${c.term||''} ${c.specs||''} ${matNames}`.toLowerCase();
     return `<div class="ccard libcard" data-s="${esc(sTxt)}" style="cursor:default">
       <div class="cc-top"><div><div class="cc-name">${esc(c.name||c.code)}</div><div class="cc-meta">${esc(c.code)}${c.term?' · '+esc(fmtTerm(c.term)):''}</div></div>
         <span class="pill ${empty?'py':'pg'}">${empty?'لا مواد':(m.theory.length+m.practical.length)+' مادة'}</span></div>
+      <div class="lib-sprow">${specChipsOf(c)}</div>
       ${c.prereq?`<div style="margin-top:8px"><span style="display:inline-block;background:rgba(244,162,97,.15);color:var(--acc-y);border:1px solid rgba(244,162,97,.3);border-radius:10px;padding:3px 10px;font-size:11px;font-weight:600">📌 المتطلب السابق: ${esc(c.prereq)}</span></div>`:''}
       ${secBlock('📘 نظري',m.theory)}${secBlock('🔧 عملي',m.practical)}
       ${empty?'<div style="font-size:12px;color:var(--muted);margin-top:8px">لم تُضف مواد لهذا المقرر بعد</div>':''}
       ${canAdd?`<div style="margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)"><button class="btn btn-out btn-sm" onclick='libAddMat(${jsonAttr({code:c.code,name:c.name})})'>➕ أضف مادة علمية</button></div>`:''}
     </div>`;
   }).join('');
+  const pickLbl=pick===LIB_ALL?'كل التخصصات':pick===LIB_GEN?'المواد العامة':pick;
   return `
     <div class="stitle">📚 المكتبة العلمية</div>
-    <div class="alert ab"><span class="aicon">📖</span>${scope?'المواد العلمية لمقرراتك (نظري + عملي)':'كل المواد العلمية لجميع المقررات'} · ${cats.length} مقرر · ${totalMats} مادة</div>
-    ${cats.length?`<div class="list-search"><span class="ls-ico">🔍</span><input type="text" id="libSearchBox" placeholder="ابحث عن مقرر أو مادة..." oninput="libFilter(this.value)"><span class="ls-clear" onclick="libFilterClear()">✕</span></div>`:''}
-    ${cats.length?`<div class="cgrid" id="libGrid">${cards}</div><div class="empty" id="libNoRes" style="display:none"><div class="empty-icon">🔍</div>لا نتائج مطابقة</div>`:'<div class="empty"><div class="empty-icon">📭</div>لا توجد مواد علمية بعد</div>'}`;
+    ${tabs}
+    <div class="alert ab"><span class="aicon">📖</span>${scope?'المواد العلمية لمقرراتك':'المواد العلمية'} · <b>${esc(pickLbl)}</b> · ${shown.length} مقرر · ${totalMats} مادة${(pick!==LIB_ALL&&pick!==LIB_GEN&&gen)?' <span style="color:var(--muted)">(تشمل المواد العامة)</span>':''}</div>
+    ${(!specs.length&&!scope&&canAdd)?`<div class="alert aw" style="margin-bottom:10px"><span class="aicon">💡</span>لفصل المكتبة إلى تخصصات: افتح «المقررات ← الخطة الدراسية» وحدّد «التخصصات» لكل مقرر من زر التعديل ✏️ — وكل تخصص تصير له مكتبته.</div>`:''}
+    ${shown.length?`<div class="list-search"><span class="ls-ico">🔍</span><input type="text" id="libSearchBox" placeholder="ابحث عن مقرر أو مادة أو تخصص..." oninput="libFilter(this.value)"><span class="ls-clear" onclick="libFilterClear()">✕</span></div>`:''}
+    ${shown.length?`<div class="cgrid" id="libGrid">${cards}</div><div class="empty" id="libNoRes" style="display:none"><div class="empty-icon">🔍</div>لا نتائج مطابقة</div>`
+      :`<div class="empty"><div class="empty-icon">📭</div>${specs.length?'لا توجد مواد في «'+esc(pickLbl)+'»':'لا توجد مواد علمية بعد'}</div>`}`;
 }
 // فلترة المكتبة حسب البحث
 function libFilter(q){
@@ -8209,7 +8310,7 @@ function courseModal(mode,data){
     <div style="padding:8px 0">
       ${f('code','رمز المقرر *',data.code,'مثال: الكت 101')}
       ${f('name','اسم المقرر *',data.name,'مثال: سلامة صناعية')}
-      ${f('term','الفصل التدريبي',data.term,'مثال: الفصل الأول')}
+      ${f('term','الفصل التدريبي',data.term,'مثال: الفصل التدريبي الأول')}
       ${f('units','عدد الوحدات',data.units)}
       ${f('hours','عدد الساعات',data.hours)}
       ${f('prereq','📌 المتطلب السابق',data.prereq,'مثال: الكت 101 / ريض 121 — اتركه فارغاً إن لا يوجد')}
@@ -8548,18 +8649,27 @@ function fmtTerm(v){
   let t=String(v==null?'':v).trim();
   if(!t)return '';
   // صيغ مضغوطة: ترم2 · نصف2 · ت2ن1
-  t=t.replace(/ترم\s*([123])/g,(m,d)=>'الفصل '+_TORD[d])
-     .replace(/نصف\s*([123])/g,(m,d)=>'النصف '+_TORD[d])
-     .replace(/(^|\s)ت([123])\s*ن([123])(?=\s|$|-)/g,(m,a,x,y)=>a+'الفصل '+_TORD[x]+' · النصف '+_TORD[y]);
-  t=t.replace('ترم أول','الفصل الأول')
-     .replace('ترم ثاني','الفصل الثاني')
-     .replace('ترم ثالث','الفصل الثالث')
-     .replace('ترم صيفي','الفصل الصيفي')
-     .replace(/(^|\s)ترم(\s)/g,'$1الفصل$2');
-  // «الفصل الأول-2026/2027» → «الفصل الأول 2026/2027»
-  t=t.replace(/(الفصل\s+[^\s-]+)-(?=\d{4})/,'$1 ');
+  t=t.replace(/ترم\s*([123])/g,(m,d)=>'الفصل التدريبي '+_TORD[d])
+     .replace(/نصف\s*([123])/g,(m,d)=>'النصف المجزأ '+_TORD[d])
+     .replace(/(^|\s)ت([123])\s*ن([123])(?=\s|$|-)/g,(m,a,x,y)=>a+'الفصل التدريبي '+_TORD[x]+' · النصف المجزأ '+_TORD[y]);
+  /* 📛 المصطلح المعتمد: «الفصل التدريبي الأول» و«النصف المجزأ الأول».
+     ⚠️ العرض وحده يتغيّر — القيم المخزّنة في الشيت تبقى «ترم أول … ·
+     النصف الأول» كما هي، وإلا ما طابقت السجلات القديمة عند إنهاء
+     النصف وأرشفته ومطابقة مفاتيحه. */
+  t=t.replace('ترم أول','الفصل التدريبي الأول')
+     .replace('ترم ثاني','الفصل التدريبي الثاني')
+     .replace('ترم ثالث','الفصل التدريبي الثالث')
+     .replace('ترم صيفي','الفصل التدريبي الصيفي')
+     .replace(/(^|\s)ترم(\s)/g,'$1الفصل التدريبي$2');
+  // «النصف الأول» المجرّد يصير «النصف المجزأ الأول» — وبلا تكرار الصفة
+  t=t.replace(/النصف\s+(?!المجزأ)(الأول|الاول|الثاني|الثالث)/g,'النصف المجزأ $1');
+  // «الفصل التدريبي الأول-2026/2027» → «… 2026/2027»
+  t=t.replace(/(الفصل التدريبي\s+[^\s-]+)-(?=\d{4})/,'$1 ');
   // فاصل واضح بين الفصل والنصف إذا جاءا متلاصقين
-  t=t.replace(/(الفصل\s+\S+)\s+(النصف\s+\S+)/,'$1 · $2');
+  t=t.replace(/(الفصل التدريبي\s+\S+)\s+(النصف\s+)/,'$1 · $2');
+  // لا تتضاعف الصفة مهما مرّت الدالة على النص مرتين
+  t=t.replace(/الفصل التدريبي التدريبي/g,'الفصل التدريبي')
+     .replace(/النصف المجزأ المجزأ/g,'النصف المجزأ');
   return t.replace(/\s{2,}/g,' ').trim();
 }
 // إنهاء النصف المجزأ: تحويل كل مواده لسابق
@@ -8601,7 +8711,9 @@ function openArchiveHalf(preTerm){
   const sel=preTerm&&halves.some(h=>h.half===preTerm)?preTerm:(halves[0]||{}).half;
   document.getElementById('arcModal')?.remove();
   const ov=document.createElement('div');
-  ov.className='overlay'; ov.id='arcModal';
+  /* الصنف الصحيح modal-overlay: «overlay» وحدها بلا تنسيق إطلاقاً،
+     فتنزل النافذة في ذيل الصفحة بلا تمركز ولا خلفية. */
+  ov.className='modal-overlay'; ov.id='arcModal';
   ov.innerHTML=`<div class="modal" style="max-width:620px">
     <div class="modal-title"><span>📦 أرشفة النصف المجزأ</span>
       <button class="modal-close" onclick="document.getElementById('arcModal').remove()">✕</button></div>
@@ -8714,7 +8826,7 @@ function arcTermsOf(a){
 }
 async function openArchiveBrowser(preTerm){
   document.getElementById('arcViewModal')?.remove();
-  const ov=document.createElement('div'); ov.className='overlay'; ov.id='arcViewModal';
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='arcViewModal';
   ov.innerHTML=`<div class="modal" style="max-width:900px"><div class="modal-title"><span>📦 الأرشيف</span>
     <button class="modal-close" onclick="document.getElementById('arcViewModal').remove()">✕</button></div>
     <div class="empty"><div class="empty-icon">⏳</div>جاري تحميل الأرشيف…</div></div>`;
@@ -10317,20 +10429,20 @@ const aPgs={
           <div>
             <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📅 الفصل التدريبي</label>
             <select id="enr_term" aria-label="الفصل التدريبي" title="الفصل التدريبي" onchange="toggleHalfField()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
-              <option value="ترم صيفي-2025/2026">الفصل الصيفي 2025/2026</option>
-              <option value="ترم أول-2026/2027">الفصل الأول 2026/2027</option>
-              <option value="ترم ثاني-2026/2027">الفصل الثاني 2026/2027</option>
-              <option value="ترم صيفي-2026/2027">الفصل الصيفي 2026/2027</option>
-              <option value="ترم أول-2027/2028">الفصل الأول 2027/2028</option>
-              <option value="ترم ثاني-2027/2028">الفصل الثاني 2027/2028</option>
-              <option value="ترم صيفي-2027/2028">الفصل الصيفي 2027/2028</option>
+              <option value="ترم صيفي-2025/2026">الفصل التدريبي الصيفي 2025/2026</option>
+              <option value="ترم أول-2026/2027">الفصل التدريبي الأول 2026/2027</option>
+              <option value="ترم ثاني-2026/2027">الفصل التدريبي الثاني 2026/2027</option>
+              <option value="ترم صيفي-2026/2027">الفصل التدريبي الصيفي 2026/2027</option>
+              <option value="ترم أول-2027/2028">الفصل التدريبي الأول 2027/2028</option>
+              <option value="ترم ثاني-2027/2028">الفصل التدريبي الثاني 2027/2028</option>
+              <option value="ترم صيفي-2027/2028">الفصل التدريبي الصيفي 2027/2028</option>
             </select>
           </div>
           <div id="halfFieldWrap">
             <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">📖 النصف المجزأ</label>
             <select id="enr_half" aria-label="النصف المجزأ" title="النصف المجزأ" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px">
-              <option value="النصف الأول">النصف الأول</option>
-              <option value="النصف الثاني">النصف الثاني</option>
+              <option value="النصف الأول">النصف المجزأ الأول</option>
+              <option value="النصف الثاني">النصف المجزأ الثاني</option>
             </select>
           </div>
         </div>
@@ -13158,25 +13270,47 @@ function openControlSheet(){
   const halves=csHalves();
   if(!halves.length){ printControlSheet(''); return; }
   document.getElementById('csModal')?.remove();
-  const ov=document.createElement('div'); ov.className='overlay'; ov.id='csModal';
-  ov.innerHTML=`<div class="modal" style="max-width:520px">
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='csModal';
+  ov.innerHTML=`<div class="modal" style="max-width:560px">
     <div class="modal-title"><span>🎛️ شيت الكنترول</span>
       <button class="modal-close" onclick="document.getElementById('csModal').remove()">✕</button></div>
-    <div style="font-size:12.5px;color:var(--muted);margin-bottom:12px">اختر النصف المجزأ — يُطبع لكل شعبة صفحة مستقلة، وكل مادة ببنودها ومجموعها.</div>
-    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">النصف المجزأ</label>
-    <select id="csHalf" aria-label="النصف المجزأ" title="النصف المجزأ" onchange="csFillGrps()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:12px">
-      ${halves.map(h=>`<option value="${escAttr(h.half)}">${esc(fmtTerm(String(h.half).replace(/-/g,' ')))} — ${h.n} سجل${h.cur?' · جارٍ':' · منتهٍ'}</option>`).join('')}
-    </select>
-    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:5px">الشعبة</label>
-    <select id="csGrp" aria-label="الشعبة" title="الشعبة" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px;margin-bottom:14px"></select>
-    <div style="display:flex;gap:9px">
-      <button class="btn btn-out" style="flex:1" onclick="document.getElementById('csModal').remove()">إلغاء</button>
-      <button class="btn btn-b" style="flex:2" onclick="const v=document.getElementById('csHalf').value,gp=document.getElementById('csGrp').value;document.getElementById('csModal').remove();printControlSheet(v,gp)">🖨️ جهّز الشيت</button>
+    <div class="dlg-hint">كشف درجات مجمّع — لكل شعبة صفحة مستقلة، وكل مادة ببنودها ومجموعها وخانات التوقيع.</div>
+    <div class="dlg-field">
+      <label for="csHalf">📅 النصف المجزأ</label>
+      <select id="csHalf" aria-label="النصف المجزأ" title="النصف المجزأ" onchange="csFillGrps()">
+        ${halves.map(h=>`<option value="${escAttr(h.half)}">${esc(fmtTerm(String(h.half).replace(/-/g,' ')))}${h.cur?' · جارٍ':' · منتهٍ'}</option>`).join('')}
+      </select>
+    </div>
+    <div class="dlg-field">
+      <label for="csGrp">🏫 الشعبة</label>
+      <select id="csGrp" aria-label="الشعبة" title="الشعبة"></select>
+    </div>
+    <div class="dlg-sum" id="csSum">…</div>
+    <div class="dlg-acts">
+      <button class="btn btn-out" onclick="document.getElementById('csModal').remove()">إلغاء</button>
+      <button class="btn btn-b" onclick="const v=document.getElementById('csHalf').value,gp=document.getElementById('csGrp').value;document.getElementById('csModal').remove();printControlSheet(v,gp)">🖨️ جهّز الشيت</button>
     </div></div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click',e=>{ if(e.target===ov)ov.remove(); });
   csFillGrps();
 }
+/* ملخّص ما سيُطبع — ليعرف قبل الضغط لا بعده */
+function csSummary(){
+  const el=document.getElementById('csSum'); if(!el)return;
+  const H=(document.getElementById('csHalf')||{}).value||'';
+  const G=(document.getElementById('csGrp')||{}).value||'';
+  let recs=(allCourses||[]).filter(c=>!H||String(c.half||'').trim()===H);
+  if(G)recs=recs.filter(c=>String(c.grp||'')===String(G));
+  const grps=new Set(recs.map(c=>String(c.grp||'')).filter(Boolean));
+  const sids=new Set(recs.map(c=>String(c.sid)));
+  const crs=new Set(recs.map(c=>normCode(c.code)).filter(Boolean));
+  const dep=recs.filter(c=>isDeprivedRec(c)).length;
+  if(!recs.length){ el.className='dlg-sum warn'; el.textContent='⚠️ ما فيه سجلات بهذا الاختيار'; return; }
+  el.className='dlg-sum';
+  el.innerHTML=`<b>${grps.size}</b> شعبة · <b>${sids.size}</b> متدرب · <b>${crs.size}</b> مادة · <b>${recs.length}</b> سجل`
+    +(dep?` · <span style="color:var(--acc-r)">${dep} محروم</span>`:'');
+}
+window.csSummary=csSummary;
 /* شعب هذا النصف وحدها — لا كل شعب المعهد */
 function csFillGrps(){
   const H=(document.getElementById('csHalf')||{}).value||'';
@@ -13186,6 +13320,8 @@ function csFillGrps(){
     .sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
   sel.innerHTML='<option value="">كل الشعب ('+gs.length+') — كل شعبة في صفحة</option>'
     +gs.map(g=>`<option value="${escAttr(g)}">الشعبة ${esc(g)} فقط</option>`).join('');
+  sel.onchange=csSummary;
+  csSummary();
 }
 window.csFillGrps=csFillGrps;
 async function printControlSheet(half,onlyGrp){
@@ -15200,7 +15336,7 @@ Object.assign(TRANSLATIONS.en, {
   '✓ منتهية':'✓ Finished','▶ حالية':'▶ Current','✓ اجتازها':'✓ Passed it','✓ اجتازوها':'✓ They passed it',
   '▶ مسجّل فيها':'▶ Enrolled','▶ مسجّلون فيها':'▶ They are enrolled',
   'المدرب (لكل المواد المختارة)':'Trainer (for all selected courses)','— اختر المدرب —':'— Select Trainer —',
-  'النصف المجزأ':'Half Split','النصف الأول':'First Half','النصف الثاني':'Second Half','غير محدد':'Unspecified',
+  'النصف المجزأ':'Split Half','النصف الأول':'First Split Half','النصف الثاني':'Second Split Half','النصف المجزأ الأول':'First Split Half','النصف المجزأ الثاني':'Second Split Half','النصف المجزأ الثالث':'Third Split Half','غير محدد':'Unspecified',
   'تسجيل المحددين دفعة واحدة':'Enroll Selected at Once',
   'الطلبات والموافقات':'Requests & Approvals','المشرف الأكاديمي – المراجعة الأولى':'Academic Supervisor – First Review',
   'مدير الأكاديمية – الاعتماد النهائي':'Academy Director – Final Approval','بانتظار اعتمادك':'Awaiting Your Approval',
@@ -15326,7 +15462,7 @@ Object.assign(TRANSLATIONS.en, {
   'طلباتي المرفوعة':'My Submitted Requests','تقديم طلب إداري / عام':'Submit Admin / General Request','➕ تقديم طلب إداري / عام':'➕ Submit Admin / General Request',
   'لم ترفع طلبات بعد':'No requests submitted yet','لا يوجد شيء بانتظار إجراءك':'Nothing awaiting your action',
   // المصطلحات
-  'الفصل التدريبي':'Training Semester','📅 الفصل التدريبي':'📅 Training Semester','الفصل الأول':'First Semester','الفصل الثاني':'Second Semester','الفصل الصيفي':'Summer Semester',
+  'الفصل التدريبي':'Training Semester','📅 الفصل التدريبي':'📅 Training Semester','الفصل الأول':'First Semester','الفصل الثاني':'Second Semester','الفصل الصيفي':'Summer Semester','الفصل التدريبي الأول':'First Training Semester','الفصل التدريبي الثاني':'Second Training Semester','الفصل التدريبي الثالث':'Third Training Semester','الفصل التدريبي الصيفي':'Summer Training Semester',
   'النصف المجزأ':'Split Half','📖 النصف المجزأ':'📖 Split Half',
   // الحسابات
   'إدارة الحسابات':'Account Management','إضافة وتعديل وحذف حسابات المتدربين والمدربين والإداريين':'Add, edit and delete trainee, trainer and admin accounts',
@@ -15344,6 +15480,10 @@ Object.assign(TRANSLATIONS.en, {
 EN_PATTERNS.push(
   [/^🎓 الخريجون\s*\((\d+)\)$/,'🎓 Graduates ($1)'],[/^الخريجون\s*\((\d+)\)$/,'Graduates ($1)'],
   [/^(\d+)\s*مختار$/,'$1 selected'],[/^(\d+)\s*صف$/,'$1 rows'],[/^(\d+)\s*رسالة$/,'$1 emails'],
+  [/^الفصل التدريبي الأول\s+(.+)$/,'First Training Semester $1'],
+  [/^الفصل التدريبي الثاني\s+(.+)$/,'Second Training Semester $1'],
+  [/^الفصل التدريبي الصيفي\s+(.+)$/,'Summer Training Semester $1'],
+  [/^الفصل التدريبي الأول\s+(.+)\s*·\s*النصف المجزأ (الأول|الثاني|الثالث)$/,'First Training Semester $1 · Split Half $2'],
   [/^الفصل الأول\s+(.+)$/,'First Semester $1'],[/^الفصل الثاني\s+(.+)$/,'Second Semester $1'],[/^الفصل الصيفي\s+(.+)$/,'Summer Semester $1'],
   [/^بانتظار\s+(.+)$/,'Awaiting $1'],[/^نتيجة طلبك:\s*(.+)$/,'Your request result: $1'],
   [/^طلباتي\s*\((\d+)\)$/,'My Requests ($1)'],[/^طلباتي المرفوعة\s*\((\d+)\)$/,'My Submitted Requests ($1)'],
