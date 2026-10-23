@@ -507,7 +507,7 @@ body.light-mode .ldg-txt{color:#1a2a4a}
 .rb-s{background:rgba(230,57,70,.15);color:var(--acc-r);border:1px solid rgba(230,57,70,.3)}
 .rb-t{background:color-mix(in srgb,var(--brand-1) 15%,transparent);color:var(--acc-b);border:1px solid color-mix(in srgb,var(--brand-1) 30%,transparent)}
 .rb-a{background:rgba(244,162,97,.15);color:var(--acc-y);border:1px solid rgba(244,162,97,.3)}
-.av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.av{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;overflow:hidden}
 .av-s{background:rgba(230,57,70,.2);color:var(--acc-r)}
 .av-t{background:color-mix(in srgb,var(--brand-1) 20%,transparent);color:var(--acc-b)}
 .av-a{background:rgba(244,162,97,.2);color:var(--acc-y)}
@@ -1644,6 +1644,94 @@ body.light-mode .grad-acts .btn-out:hover{background:rgba(255,255,255,.26)!impor
 @media (prefers-reduced-motion:reduce){
   .grad-ray{animation:none}.grad-cap{animation:none}.grad-conf{display:none}}
 
+/* ===== 📷 الصورة الشخصية (أو الأحرف الأولى) =====
+   ⚠️ الاسم .uav لا .av — فـ.av مأخوذ لشريحة المستخدم في الترويسة
+   (مربّع بزوايا ١٠px وقائمة منسدلة)، وسرقته تكسرها في كل الصفحات. */
+.uav{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+  border-radius:50%;color:#fff;font-weight:800;line-height:1;overflow:hidden;
+  box-shadow:0 2px 6px rgba(0,0,0,.22);vertical-align:middle;
+  background:var(--brand-2)}
+.uav-img{background:var(--card2,#223)}
+.uav img{width:100%;height:100%;object-fit:cover;display:block}
+/* صورة الخرّيج في لوحة التخرّج — إطار ذهبي */
+.grad-photo{position:relative;display:block;margin:0 auto 2px;
+  width:96px;height:96px;border-radius:50%;overflow:hidden;
+  border:3px solid var(--gold,#f4a261);
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+  animation:gradPop .7s cubic-bezier(.34,1.56,.64,1) both}
+.grad-photo img{width:100%;height:100%;object-fit:cover;display:block}
+@media(max-width:640px){.grad-photo{width:78px;height:78px}}
+@media (prefers-reduced-motion:reduce){.grad-photo{animation:none}}
+/* صفّ «رفع صورة» في بطاقة الحساب */
+.ph-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ph-row .uav{box-shadow:0 2px 10px rgba(0,0,0,.25)}
+/* صور المتوَّجين */
+.pod-av{border:2px solid var(--gold,#f4a261)}
+.tv-pod-av{position:relative;display:inline-block}
+.tv-pod-av .uav{border:3px solid rgba(255,255,255,.6)}
+.tv-pod-av i{position:absolute;bottom:-6px;inset-inline-start:-8px;font-style:normal;font-size:30px;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+
+/* ===== 🏅 شارات الإنجاز ===== */
+.ach-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.ach{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  min-width:136px;flex:1 1 136px;max-width:220px;text-align:center;
+  padding:12px 12px 11px;border-radius:14px;
+  background:var(--card2-soft,rgba(255,255,255,.04));
+  border:1px solid var(--border)}
+.ach i{font-size:26px;font-style:normal;line-height:1.1}
+.ach b{font-size:12.5px;font-weight:800;color:var(--text);margin-top:3px}
+.ach em{font-size:10.5px;font-style:normal;color:var(--muted);line-height:1.5}
+.ach-g{border-color:color-mix(in srgb,var(--acc-g) 42%,transparent);
+  background:color-mix(in srgb,var(--acc-g) 9%,transparent)}
+.ach-y{border-color:color-mix(in srgb,var(--acc-y) 46%,transparent);
+  background:color-mix(in srgb,var(--acc-y) 10%,transparent)}
+.ach-b{border-color:color-mix(in srgb,var(--acc-b) 38%,transparent);
+  background:color-mix(in srgb,var(--acc-b) 8%,transparent)}
+body.light-mode .ach{background:#fff}
+body.light-mode .ach-g{background:color-mix(in srgb,var(--acc-g) 8%,#fff)}
+body.light-mode .ach-y{background:color-mix(in srgb,var(--acc-y) 10%,#fff)}
+body.light-mode .ach-b{background:color-mix(in srgb,var(--acc-b) 8%,#fff)}
+@media(max-width:640px){.ach{min-width:0;flex:1 1 44%;padding:10px 8px}.ach i{font-size:22px}}
+
+/* ===== 🎊 احتفال أول دخول بعد التخرّج ===== */
+.gfx{position:fixed;inset:0;z-index:2200;display:flex;align-items:center;justify-content:center;
+  padding:18px;background:rgba(6,14,28,.72);backdrop-filter:blur(5px);
+  animation:gfxIn .35s ease both}
+@keyframes gfxIn{from{opacity:0}to{opacity:1}}
+.gfx-bits{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.gfx-bits i{position:absolute;top:-22px;left:calc(var(--x) * 1%);
+  width:calc(var(--w) * 1px);height:calc(var(--w) * 1.7px);border-radius:2px;
+  transform:rotate(calc(var(--r) * 1deg));
+  animation:gfxFall calc(var(--s) * 1s) linear both;
+  animation-delay:calc(var(--d) * 1s)}
+.gfx-bits .c0{background:#ffd45e}.gfx-bits .c1{background:#6ab8f7}
+.gfx-bits .c2{background:#5ad6a0}.gfx-bits .c3{background:#ff8a6b}
+.gfx-bits .c4{background:#fff;border-radius:50%}
+@keyframes gfxFall{
+  0%{opacity:0;transform:translateY(0) rotate(0)}
+  8%{opacity:1}
+  100%{opacity:.1;transform:translateY(102vh) rotate(760deg)}}
+.gfx-card{position:relative;max-width:420px;width:100%;text-align:center;color:#fff;
+  padding:30px 24px 24px;border-radius:22px;
+  background:linear-gradient(140deg,var(--brand-deep-1),var(--brand-deep-2) 58%,var(--brand-2));
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 24px 70px rgba(0,0,0,.5);
+  animation:gfxPop .5s cubic-bezier(.34,1.5,.64,1) both .1s}
+@keyframes gfxPop{from{transform:scale(.86) translateY(14px);opacity:0}to{transform:none;opacity:1}}
+.gfx-cap{font-size:58px;line-height:1;filter:drop-shadow(0 6px 16px rgba(0,0,0,.45))}
+.gfx-t1{font-size:24px;font-weight:900;margin-top:10px;text-shadow:0 2px 10px rgba(0,0,0,.3)}
+.gfx-t2{font-size:13.5px;color:rgba(255,255,255,.93);line-height:1.9;margin:10px auto 18px;max-width:330px}
+.gfx-acts{display:flex;gap:9px;flex-wrap:wrap;justify-content:center}
+.gfx-acts .btn{flex:1 1 150px}
+.gfx-acts .btn-out{background:rgba(255,255,255,.14)!important;color:#fff!important;
+  border:1px solid rgba(255,255,255,.42)!important}
+body.light-mode .gfx-acts .btn-out{background:rgba(255,255,255,.14)!important;color:#fff!important;
+  border:1px solid rgba(255,255,255,.42)!important}
+@media(max-width:640px){.gfx-t1{font-size:20px}.gfx-card{padding:24px 16px 20px}}
+@media (prefers-reduced-motion:reduce){
+  .gfx,.gfx-card{animation:none}.gfx-bits{display:none}}
+
 /* ===== شارات تخصص المقرر في المكتبة ===== */
 .lib-sprow{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .lib-sp{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700;
@@ -1680,6 +1768,10 @@ body.light-mode .dlg-field>select,body.light-mode .dlg-field>input{background:#f
 .lnk-cell{background:none;border:none;padding:0;margin:0;font:inherit;font-weight:600;
   color:var(--text);cursor:pointer;text-align:start;border-bottom:1px dashed transparent}
 .lnk-cell:hover{color:var(--acc-b);border-bottom-color:currentColor}
+/* زرّ الاسم ومعه صورته: الاسم الطويل يُقصّ ولا يلتفّ على ثلاثة أسطر */
+.lnk-av{display:inline-flex;align-items:center;gap:8px;max-width:100%;min-width:0}
+.lnk-av .lnk-nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:640px){.lnk-av .uav{display:none}}
 
 /* ===== بطاقات المؤشرات: أيقونة داخل مربّع ملوّن فوق الرقم ===== */
 .mcard{padding:20px 18px 18px !important}
@@ -2249,7 +2341,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxDJevXA8aSci9gL7BRCDnJI7dlpZnMChnIVveSZmqTX8T2S5kwURrdhTBC4cQCxZ0w/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyF_ZwpSUWeRuY3Ry9aXXKmeCmgev6U677-Oki1oEXp915U0S4LaboQ_CXw2lRm9f1f/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -3322,7 +3414,7 @@ function setBootPayload(bp){
      بقيت نسخته بلا «الحالة» فلا يُهنَّأ بتخرّجه حتى يخرج ويدخل. */
   if(bp.me&&user&&user.role==='s'){
     let ch=false;
-    ['status','gradBatch','cert'].forEach(k=>{
+    ['status','gradBatch','cert','photo'].forEach(k=>{
       if(bp.me[k]!=null&&String(bp.me[k])!==String(user[k]==null?'':user[k])){ user[k]=bp.me[k]; ch=true; }
     });
     if(ch){ currentUser=user; try{localStorage.setItem('bla_user',JSON.stringify(user));}catch(e){} }
@@ -4097,7 +4189,7 @@ async function loadTrainer(){
 
 async function loadAdmin(){
   const [sr,cr,cat,td,ad]=await Promise.all([
-    fetchSheet('قاعدة بيانات مركزي!A:K'),
+    fetchSheet('قاعدة بيانات مركزي!A:L'),
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:K').catch(()=>[]),
     fetchSheet('قاعدة بيانات المدربين!A:F').catch(()=>[]),
@@ -4109,7 +4201,7 @@ async function loadAdmin(){
   for(let i=1;i<sr.length;i++){
     const r=sr[i];
     if(!r[0])continue;
-    students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),pw:n0(r[7]),join:n0(r[8]),status:n0(r[9])||'نشط',gradBatch:n0(r[10])});
+    students.push({id:n0(r[0]),name:n0(r[1]),grp:n0(r[2]),spec:n0(r[3]),ph:n0(r[4]),email:n0(r[5]),cert:n0(r[6]),pw:n0(r[7]),join:n0(r[8]),status:n0(r[9])||'نشط',gradBatch:n0(r[10]),photo:n0(r[11])});
   }
   // افصل الخريجين عن النشطين — يختفون من كل القوائم النشطة ويظهرون في «الخريجون» فقط
   graduates=[...new Map(students.filter(s=>isGradStatus(s.status)).map(s=>[s.id,s])).values()];
@@ -4535,8 +4627,17 @@ function showApp(){
   if(typeof initAssistAutoHide==='function')initAssistAutoHide();
   if(typeof initModalWatch==='function')initModalWatch();
   const init=user.name.split(' ').slice(0,2).map(w=>w[0]||'').join('');
-  document.getElementById('topAv').textContent=init;
-  document.getElementById('topAv').className='av av-'+user.role;
+  const tav=document.getElementById('topAv');
+  tav.className='av av-'+user.role;
+  // 📷 صورته في الترويسة إن وُجدت — وإلا الأحرف الأولى كما كان
+  const tpic=(typeof photoOf==='function')?photoOf(user):'';
+  if(tpic){
+    tav.textContent='';
+    const im=document.createElement('img');
+    im.src=tpic; im.alt=user.name||''; im.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block';
+    im.onerror=()=>{ tav.textContent=init; };
+    tav.appendChild(im);
+  }else{ tav.textContent=init; }
   document.getElementById('topName').textContent=user.name.split(' ').slice(0,3).join(' ');
   const labels={s:'متدرب',t:'مدرب',a:'إداري'};
   const rbadge=document.getElementById('rbadge');
@@ -4550,6 +4651,8 @@ function showApp(){
   if(dBtn){ dBtn.style.display=(user.role==='t'||user.role==='a')?'':'none'; updateDelegBadge(); }
   initParticles();
   updateNotifBadges();
+  // 🎊 أول دخول بعد التخرّج — مرة واحدة لا تتكرّر
+  if(typeof maybeGradCelebrate==='function')maybeGradCelebrate();
 }
 
 // ===== UTILS =====
@@ -6235,8 +6338,61 @@ function isGraduate(u){
   const x=u||(typeof user!=='undefined'?user:null);
   return !!(x&&isGradStatus(x.status));
 }
+/* نص الدفعة كما يُعرض.
+   ⚠️ كانت الشارة تطبع «دفعة ${القيمة}» والقيمة في الورقة مكتوبة
+   «دفعة شعبة 1» — فتخرج «دفعة دفعة شعبة 1». البادئة تُضاف فقط إن غابت. */
+function batchTxt(v){
+  const t=String(v==null?'':v).trim();
+  if(!t)return '';
+  // ⚠️ لا تستعمل \b هنا: الحروف العربية ليست \w في JS فلا يتحقّق حدّ الكلمة أبداً
+  return /^دفع[ةه]/.test(t)?t:('دفعة '+t);
+}
 window.planForSpec=planForSpec;window.planForStudent=planForStudent;
 window.isGraduate=isGraduate;window.isGradStatus=isGradStatus;window.arNorm=arNorm;
+window.batchTxt=batchTxt;
+
+/* ============================================================
+ * 📷 الصورة الشخصية — العمود L في «قاعدة بيانات مركزي»
+ * ------------------------------------------------------------
+ * ترفعها الإدارة من «الأشخاص». تُعرض بدل الأحرف الأولى في
+ * الأوائل ولوحة التخرّج وبطاقة التهنئة. الرابط http/https فقط:
+ * يُعرض لكل المستخدمين، فلا نقبل مخطّطاً آخر.
+ * ============================================================ */
+function photoOf(x){
+  if(!x)return '';
+  const direct=safeUrl(x.photo||'');
+  if(direct)return direct;
+  const id=String(x.id||x.sid||'').trim();
+  if(!id)return '';
+  const rec=(students||[]).concat(graduates||[]).find(s=>String(s.id)===id);
+  return rec?safeUrl(rec.photo||''):'';
+}
+function initialsOf(name){
+  const p=String(name||'').trim().split(/\s+/).filter(Boolean);
+  return (((p[0]||'').charAt(0))+((p[1]||'').charAt(0)||'')).trim()||'؟';
+}
+/* لون ثابت لكل اسم — حتى يبقى للمتدرب نفس اللون في كل الشاشات */
+const AV_COLORS=['#2b6cb0','#2f855a','#975a16','#9b2c2c','#553c9a','#285e61','#744210','#702459'];
+function avColor(key){
+  const t=String(key||'');
+  let h=0; for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;
+  return AV_COLORS[h%AV_COLORS.length];
+}
+/* صورة أو أحرف أولى — عنصر واحد يُستعمل في كل مكان.
+   onerror: الرابط قد يُحذف من Drive لاحقاً، فنرجع للأحرف بدل أيقونة مكسورة. */
+function avatarHTML(x,size,cls){
+  const nm=String((x&&x.name)||(x&&x.sname)||'');
+  const url=photoOf(x);
+  const px=parseInt(size,10)||36;
+  const st=`width:${px}px;height:${px}px;font-size:${Math.max(10,Math.round(px*.36))}px`;
+  const k=(cls?' '+cls:'');
+  if(url) return `<span class="uav uav-img${k}" style="${st}">`
+    +`<img src="${escUrl(url)}" alt="${escAttr(nm)}" loading="lazy" `
+    +`onerror="this.parentNode.classList.remove('uav-img');this.parentNode.textContent=this.alt?this.alt.trim().split(/\\s+/).slice(0,2).map(w=>w[0]||'').join(''):'؟';">`
+    +`</span>`;
+  return `<span class="uav${k}" style="${st};background:${avColor(nm||(x&&x.id))}">${esc(initialsOf(nm))}</span>`;
+}
+window.photoOf=photoOf;window.avatarHTML=avatarHTML;window.initialsOf=initialsOf;window.avColor=avColor;
 /* كم مرة استُعمل هذا التخصص؟ */
 function specUsage(name){
   const k=specKey(name), has=v=>libSpecList(v).some(x=>specKey(x)===k);
@@ -6549,11 +6705,14 @@ function gradPanelHTML(){
   },0);
   const cert=String(user.cert||'').trim();
   const honor=honorTxt(courses);
+  const pic=photoOf(user);
   return `
   <div class="grad-hero anim-up">
     <div class="grad-ray" aria-hidden="true"></div>
     <div class="grad-conf" aria-hidden="true">${Array.from({length:14},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
-    <div class="grad-cap" aria-hidden="true">🎓</div>
+    ${pic?`<span class="grad-photo"><img src="${escUrl(pic)}" alt="${escAttr(user.name||'')}"
+      onerror="this.parentNode.outerHTML='<div class=\'grad-cap\' aria-hidden=\'true\'>🎓</div>'"></span>`
+      :`<div class="grad-cap" aria-hidden="true">🎓</div>`}
     <div class="grad-t1">ألف مبروك التخرّج</div>
     <div class="grad-t2">أهلاً بخرّيجنا ${esc(first)}${user.spec?' · '+esc(user.spec):''}${user.grp?' · الشعبة '+esc(user.grp):''}</div>
     <div class="grad-line"></div>
@@ -6564,7 +6723,7 @@ function gradPanelHTML(){
       ${units?`<div class="grad-s"><b>${Math.round(units)}</b><span>وحدة دراسية</span></div>`:''}
       ${honor&&honor!=='—'?`<div class="grad-s"><b>${esc(honor)}</b><span>التقدير العام</span></div>`:''}
     </div>
-    ${user.gradBatch?`<div class="grad-batch">دفعة ${esc(user.gradBatch)}</div>`:''}
+    ${batchTxt(user.gradBatch)?`<div class="grad-batch">${esc(batchTxt(user.gradBatch))}</div>`:''}
     <div class="grad-msg">أنهيت خطتك الدراسية كاملة — نفخر بك، ونتمنّى لك التوفيق في مسيرتك المهنية.</div>
     <div class="grad-acts">
       <button class="btn btn-b" onclick="showSPage('record',null)">🏅 سجلّي التدريبي</button>
@@ -6591,6 +6750,265 @@ function gradTopHTML(){
   </table></div>`;
 }
 window.gradPanelHTML=gradPanelHTML;window.gradTopHTML=gradTopHTML;
+
+/* ============================================================
+ * 🎊 احتفال أول دخول بعد التخرّج — مرة واحدة لا تتكرّر
+ * ------------------------------------------------------------
+ * العلامة باسم حسابه ودفعته: لو تخرّج في دفعة ثم أُعيد تخريجه
+ * في دفعة أخرى يراه مرة جديدة، ولا يراه زميله على نفس الجهاز.
+ * ============================================================ */
+function gradSeenKey(){
+  return 'bla_grad_seen_'+String((user&&user.id)||'guest')+'_'+arNorm((user&&user.gradBatch)||'-');
+}
+function gradCelebrated(){
+  try{ return localStorage.getItem(gradSeenKey())==='1'; }catch(e){ return true; }
+}
+function markGradCelebrated(){ try{ localStorage.setItem(gradSeenKey(),'1'); }catch(e){} }
+function maybeGradCelebrate(){
+  if(!isGraduate()||gradCelebrated())return;
+  markGradCelebrated();                       // قبل العرض: لو انكسر شيء لا يتكرّر كل مرة
+  setTimeout(()=>{ try{ gradCelebrate(); }catch(e){} }, 700);
+}
+function gradCelebrate(){
+  if(document.getElementById('gradFx'))return;
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const first=String((user&&user.name)||'').trim().split(/\s+/)[0]||'';
+  const fx=document.createElement('div');
+  fx.id='gradFx'; fx.className='gfx'; fx.setAttribute('role','dialog');
+  fx.setAttribute('aria-label','تهنئة التخرّج');
+  const n=reduce?0:70;
+  const bits=Array.from({length:n},(_,i)=>`<i style="--x:${Math.round(Math.random()*100)};--d:${(Math.random()*2.2).toFixed(2)};--r:${Math.round(Math.random()*360)};--s:${(2.6+Math.random()*2).toFixed(2)};--w:${6+Math.round(Math.random()*6)}" class="c${i%5}"></i>`).join('');
+  fx.innerHTML=`<div class="gfx-bits" aria-hidden="true">${bits}</div>
+    <div class="gfx-card">
+      <div class="gfx-cap" aria-hidden="true">🎓</div>
+      <div class="gfx-t1">ألف مبروك التخرّج${first?'، '+esc(first):''}!</div>
+      <div class="gfx-t2">أنهيت رحلتك في معهد المعرفة والإبداع العالي للتدريب — نفخر بك.</div>
+      <div class="gfx-acts">
+        <button class="btn btn-b" onclick="closeGradFx();openGradCard()">🖼️ بطاقة التهنئة</button>
+        <button class="btn btn-out" onclick="closeGradFx()">شكراً، ابدأ</button>
+      </div>
+    </div>`;
+  fx.addEventListener('click',e=>{ if(e.target===fx)closeGradFx(); });
+  document.body.appendChild(fx);
+  const esc1=e=>{ if(e.key==='Escape'){ closeGradFx(); document.removeEventListener('keydown',esc1); } };
+  document.addEventListener('keydown',esc1);
+  // القصاصات تنتهي وحدها؛ البطاقة تبقى حتى يغلقها
+  setTimeout(()=>{ const b=fx.querySelector('.gfx-bits'); if(b)b.remove(); }, reduce?0:9000);
+}
+function closeGradFx(){ const f=document.getElementById('gradFx'); if(f)f.remove(); }
+window.maybeGradCelebrate=maybeGradCelebrate;window.gradCelebrate=gradCelebrate;
+window.closeGradFx=closeGradFx;window.gradCelebrated=gradCelebrated;
+
+/* ============================================================
+ * 🖼️ بطاقة تهنئة قابلة للمشاركة — صورة مربّعة بهوية المعهد
+ * ترسم على canvas فيحفظها PNG ويشاركها (أو يحفظها من المعاينة).
+ * ============================================================ */
+function gradCardData(){
+  const done=completedCourses(courses);
+  return {
+    name:String((user&&user.name)||'').trim(),
+    spec:String((user&&user.spec)||'').trim(),
+    batch:batchTxt(user&&user.gradBatch),
+    gpa:gpaDisplay(courses),
+    honor:honorTxt(courses),
+    n:done.length||(courses||[]).length,
+    photo:photoOf(user)
+  };
+}
+function openGradCard(){
+  if(!isGraduate()){ showToast('بطاقة التهنئة للخرّيجين','w'); return; }
+  const d=gradCardData();
+  const ov=document.createElement('div');
+  ov.className='modal-overlay'; ov.id='gradCardModal';
+  ov.innerHTML=`<div class="modal" style="max-width:460px">
+    <div class="modal-title"><span>🖼️ بطاقة التهنئة</span>
+      <button class="modal-close" onclick="document.getElementById('gradCardModal').remove()">✕</button></div>
+    <div id="gcWrap" style="display:flex;justify-content:center;padding:6px 0 12px">
+      <div style="font-size:13px;color:var(--muted)">⏳ جاري تجهيز البطاقة...</div>
+    </div>
+    <div class="dlg-acts" style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn btn-b" style="flex:1;min-width:130px" onclick="gradCardSave()">⬇️ حفظ صورة</button>
+      <button class="btn btn-g" style="flex:1;min-width:130px" onclick="gradCardShare()">📤 مشاركة</button>
+      <button class="btn btn-out" style="flex:1;min-width:110px" onclick="document.getElementById('gradCardModal').remove()">إغلاق</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">إن لم تعمل المشاركة على جهازك، احفظ الصورة وشاركها من ألبومك.</div>
+  </div>`;
+  document.body.appendChild(ov);
+  drawGradCard(d).then(cv=>{
+    const w=document.getElementById('gcWrap'); if(!w)return;
+    window._gcCanvas=cv;
+    cv.style.cssText='width:100%;max-width:380px;height:auto;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.35)';
+    cv.setAttribute('role','img');
+    cv.setAttribute('aria-label','بطاقة تهنئة بتخرّج '+d.name);
+    w.innerHTML=''; w.appendChild(cv);
+  }).catch(()=>{
+    const w=document.getElementById('gcWrap');
+    if(w)w.innerHTML='<div style="font-size:13px;color:var(--acc-r)">تعذّر تجهيز البطاقة</div>';
+  });
+}
+/* الرسم على canvas — بلا مكتبات خارجية */
+async function drawGradCard(d){
+  const S=1080, cv=document.createElement('canvas');
+  cv.width=S; cv.height=S;
+  const x=cv.getContext('2d');
+  const css=v=>{ try{ return getComputedStyle(document.body).getPropertyValue(v).trim()||''; }catch(e){ return ''; } };
+  const c1=css('--brand-deep-1')||'#0a2348', c2=css('--brand-deep-2')||'#1a3a6b', c3=css('--brand-2')||'#0d4a80';
+  const g=x.createLinearGradient(0,0,S,S);
+  g.addColorStop(0,c1); g.addColorStop(.55,c2); g.addColorStop(1,c3);
+  x.fillStyle=g; x.fillRect(0,0,S,S);
+  // حلقات زخرفية خفيفة
+  x.strokeStyle='rgba(255,255,255,.07)'; x.lineWidth=2;
+  for(let i=0;i<7;i++){ x.beginPath(); x.arc(S*0.88,S*0.1,70+i*58,0,Math.PI*2); x.stroke(); }
+  // إطار ذهبي
+  x.strokeStyle='#f4a261'; x.lineWidth=6;
+  x.strokeRect(36,36,S-72,S-72);
+  const GOLD='#ffd45e';
+  x.textAlign='center'; x.direction='rtl';
+  const F=(w,s)=>`${w} ${s}px "Segoe UI",Tahoma,Arial,sans-serif`;
+  // الصورة أو القبعة
+  const cx=S/2, cy=300, R=112;
+  let drew=false;
+  if(d.photo){
+    const img=await new Promise(res=>{
+      const im=new Image(); im.crossOrigin='anonymous';
+      im.onload=()=>res(im); im.onerror=()=>res(null);
+      im.src=d.photo;
+      setTimeout(()=>res(null),4000);       // لا ننتظر رابطاً معطّلاً للأبد
+    });
+    /* ⚠️ crossOrigin='anonymous' شرطٌ لقراءة البطاقة بـtoBlob.
+       لو رفض المضيف CORS فشل التحميل ورجعنا للقبعة — والبطاقة تبقى
+       قابلة للحفظ والمشاركة. الصورة في بقية الشاشات لا تحتاج CORS. */
+    if(img){
+      x.save(); x.beginPath(); x.arc(cx,cy,R,0,Math.PI*2); x.clip();
+      const sc=Math.max(R*2/img.width,R*2/img.height);
+      x.drawImage(img,cx-img.width*sc/2,cy-img.height*sc/2,img.width*sc,img.height*sc);
+      x.restore();
+      x.strokeStyle=GOLD; x.lineWidth=8; x.beginPath(); x.arc(cx,cy,R,0,Math.PI*2); x.stroke();
+      drew=true;
+    }
+  }
+  if(!drew){ x.font=F('400',150); x.fillStyle='#fff'; x.fillText('🎓',cx,cy+54); }
+  x.fillStyle=GOLD; x.font=F('800',62);
+  x.fillText('ألف مبروك التخرّج', cx, 500);
+  x.fillStyle='#ffffff'; x.font=F('800',50);
+  x.fillText(fitTxt(x,d.name,S-180), cx, 580);
+  if(d.spec){ x.fillStyle='rgba(255,255,255,.92)'; x.font=F('600',31);
+    x.fillText(fitTxt(x,d.spec,S-200), cx, 632); }
+  // شريط الأرقام
+  const stats=[];
+  if(d.gpa&&d.gpa!=='—')stats.push([d.gpa,'المعدّل /5']);
+  if(d.honor&&d.honor!=='—')stats.push([d.honor,'التقدير']);
+  if(d.n)stats.push([String(d.n),'مقرر']);
+  if(stats.length){
+    const bw=250, gap=22, tw=stats.length*bw+(stats.length-1)*gap;
+    let bx=(S-tw)/2;
+    stats.forEach(([v,l])=>{
+      x.fillStyle='rgba(0,0,0,.26)'; rrect(x,bx,690,bw,118,20); x.fill();
+      x.strokeStyle='rgba(255,255,255,.26)'; x.lineWidth=2; rrect(x,bx,690,bw,118,20); x.stroke();
+      x.fillStyle='#fff'; x.font=F('800',44); x.fillText(fitTxt(x,v,bw-30),bx+bw/2,748);
+      x.fillStyle='rgba(255,255,255,.88)'; x.font=F('500',24); x.fillText(l,bx+bw/2,786);
+      bx+=bw+gap;
+    });
+  }
+  if(d.batch){
+    x.fillStyle=GOLD; const bw2=x.measureText(d.batch).width;
+    x.font=F('800',30);
+    const w2=Math.max(260,x.measureText(d.batch).width+70);
+    rrect(x,(S-w2)/2,846,w2,62,31); x.fill();
+    x.fillStyle='#20170a'; x.fillText(d.batch,cx,888);
+    void bw2;
+  }
+  x.fillStyle='rgba(255,255,255,.9)'; x.font=F('600',28);
+  x.fillText('معهد المعرفة والإبداع العالي للتدريب', cx, 980);
+  x.fillStyle='rgba(255,255,255,.6)'; x.font=F('400',22);
+  x.fillText('تمت بإشراف المؤسسة العامة للتدريب التقني والمهني', cx, 1022);
+  return cv;
+}
+function rrect(x,X,Y,W,H,R){
+  x.beginPath();
+  x.moveTo(X+R,Y); x.arcTo(X+W,Y,X+W,Y+H,R); x.arcTo(X+W,Y+H,X,Y+H,R);
+  x.arcTo(X,Y+H,X,Y,R); x.arcTo(X,Y,X+W,Y,R); x.closePath();
+}
+/* يقصّ النص إن تجاوز العرض — الأسماء الطويلة كانت تخرج من البطاقة */
+function fitTxt(x,t,max){
+  t=String(t==null?'':t);
+  if(x.measureText(t).width<=max)return t;
+  let s=t;
+  while(s.length>4&&x.measureText(s+'…').width>max)s=s.slice(0,-1);
+  return s+'…';
+}
+function gradCardName(){
+  const n=String((user&&user.name)||'graduate').trim().replace(/\s+/g,'-').replace(/[\\/:*?"<>|]/g,'');
+  return 'مبروك-التخرج-'+(n||'graduate')+'.png';
+}
+function gradCardSave(){
+  const cv=window._gcCanvas; if(!cv){showToast('البطاقة لم تجهز بعد','w');return;}
+  try{
+    const a=document.createElement('a');
+    a.download=gradCardName(); a.href=cv.toDataURL('image/png');
+    document.body.appendChild(a); a.click(); a.remove();
+    showToast('✅ تم حفظ البطاقة','s');
+  }catch(e){ showToast('تعذّر الحفظ — جرّب الضغط مطوّلاً على الصورة','w'); }
+}
+async function gradCardShare(){
+  const cv=window._gcCanvas; if(!cv){showToast('البطاقة لم تجهز بعد','w');return;}
+  const d=gradCardData();
+  const txt='ألف مبروك التخرّج — '+d.name+(d.spec?' · '+d.spec:'');
+  try{
+    const blob=await new Promise(r=>cv.toBlob(r,'image/png'));
+    if(!blob)throw new Error('blob');
+    const file=new File([blob],gradCardName(),{type:'image/png'});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:'تهنئة بالتخرّج',text:txt});
+      return;
+    }
+  }catch(e){ if(e&&e.name==='AbortError')return; }
+  gradCardSave();   // جهازه لا يدعم مشاركة الملفات — نحفظها ليشاركها بنفسه
+}
+window.openGradCard=openGradCard;window.gradCardSave=gradCardSave;
+window.gradCardShare=gradCardShare;window.drawGradCard=drawGradCard;window.fitTxt=fitTxt;
+
+/* ============================================================
+ * 🏅 شارات الإنجاز — محسوبة من سجلّه، لا تُكتب يدوياً
+ * ------------------------------------------------------------
+ * كلها تُشتقّ من مقرراته هو وحده، فتظهر للمتدرب في سجلّه
+ * وللإدارة في ملفه بلا أي عمود جديد ولا إدخال.
+ * المحروم صفر (effPct)، فشارة «بلا رسوب» لا تُمنح بدرجة محروم.
+ * ============================================================ */
+function achBadges(list,st){
+  const cs=(list||[]).slice();
+  const done=completedCourses(cs);
+  const out=[];
+  if(!cs.length)return out;
+  const avg=avgScored(done.length?done:cs);
+  const maxAbs=cs.reduce((a,c)=>Math.max(a,parseFloat(c.abs)||0),0);
+  const hasDep=cs.some(c=>isDeprivedRec(c));
+  const scored=scoredOf(cs);
+  const top=(re)=>cs.filter(c=>re.test(String(c.course||''))&&effPct(c)>=90);
+  const add=(icon,lbl,desc,tone)=>out.push({icon,lbl,desc,tone:tone||'b'});
+
+  if(isGradStatus(st&&st.status))      add('🎓','خرّيج','أنهى خطته التدريبية كاملة','g');
+  if(avg!=null&&avg>=90)               add('🏆','ممتاز','متوسط درجاته '+avg+'٪ فأعلى','y');
+  else if(avg!=null&&avg>=80)          add('⭐','متفوّق','متوسط درجاته '+avg+'٪','b');
+  if(scored.length&&scored.every(c=>effPct(c)>=60)&&!hasDep)
+                                       add('🛡️','بلا رسوب','اجتاز كل مقرراته المرصودة','g');
+  if(!maxAbs)                          add('🎯','بلا غياب','لم يُسجَّل عليه غياب','g');
+  else if(maxAbs<=5)                   add('⏰','انضباط عالٍ','أعلى غياب '+Math.round(maxAbs)+'٪ فقط','b');
+  if(cs.some(c=>effPct(c)>=100))       add('💯','علامة كاملة','حصل على ١٠٠٪ في مقرر','y');
+  if(top(/مشروع/).length)              add('📐','تفوّق في المشروع','٩٠٪ فأعلى في مشروع التخرّج','b');
+  if(top(/تعاون/).length)              add('🤝','تفوّق في التدريب التعاوني','٩٠٪ فأعلى في التدريب التعاوني','b');
+  const nEx=scored.filter(c=>effPct(c)>=90).length;
+  if(nEx>=5)                           add('🌟','خمسة امتيازات فأكثر',nEx+' مقرراً بدرجة ٩٠٪ فأعلى','y');
+  if(scored.length>=20)                add('📚','سجلّ حافل',scored.length+' مقرراً مرصوداً','b');
+  return out;
+}
+function achBadgesHTML(list,st,compact){
+  const b=achBadges(list,st);
+  if(!b.length)return compact?'':'<div class="alert ab"><span class="aicon">🏅</span>لا توجد شارات بعد — تظهر تلقائياً مع تقدّمك</div>';
+  return `<div class="ach-row">${b.map(x=>`<span class="ach ach-${esc(x.tone)}" title="${escAttr(x.desc)}">
+    <i aria-hidden="true">${x.icon}</i><b>${esc(x.lbl)}</b><em>${esc(x.desc)}</em></span>`).join('')}</div>`;
+}
+window.achBadges=achBadges;window.achBadgesHTML=achBadgesHTML;
 const sPgs={
   news:()=>newsFeedHTML(),
   library:()=>buildLibrary([...new Set((courses||[]).map(c=>c.code))], false),
@@ -6612,7 +7030,7 @@ const sPgs={
           <div class="shero-hi">مرحباً، ${esc(user.name.split(' ')[0])} 👋</div>
           <div class="shero-sub">${esc(user.spec||'')}${user.grp?' · الشعبة '+esc(user.grp):''}</div>
         </div>
-        <div class="shero-av">${esc(String(user.name||'').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join(''))}</div>
+        <div class="shero-av">${photoOf(user)?`<img src="${escUrl(photoOf(user))}" alt="${escAttr(user.name||'')}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block" onerror="this.parentNode.textContent=this.alt.trim().split(/\\s+/).slice(0,2).map(w=>w[0]||'').join('')">`:esc(String(user.name||'').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join(''))}</div>
       </div>
       ${studentStatStrip()}
     </div>`}
@@ -6821,10 +7239,19 @@ const sPgs={
     record:()=>{
     const certUrl = user.cert || '';
     const isEmpty = !certUrl || certUrl === 'سجل تدريبي' || certUrl === '' || certUrl === 'رابط الشهادة' || !certUrl.startsWith('http');
+    /* 🏅 الشارات أولاً — كانت الصفحة فارغة تماماً لمن لم تُرفع شهادته،
+       وله سجلٌّ كامل من الإنجازات يستحق أن يراه. */
+    const ach = '<div class="stitle">🏅 شاراتي</div>' + achBadgesHTML(courses,user)
+      + (isGraduate()?`<div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn btn-b btn-sm" onclick="openGradCard()">🖼️ بطاقة التهنئة</button>
+          <button class="btn btn-out btn-sm" onclick="printMyIntro()">📄 إفادة تخرّج</button>
+        </div>`:'');
     if(isEmpty){
-      return '<div class="empty"><div class="empty-icon">🏅</div><div>لم يتم رفع شهادتك بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">تواصل مع إدارة الأكاديمية</div></div>';
+      return ach + '<div class="stitle">📜 الشهادة</div>'
+        + '<div class="empty"><div class="empty-icon">📜</div><div>لم يتم رفع شهادتك بعد</div><div style="font-size:12px;color:var(--muted);margin-top:8px">تواصل مع إدارة الأكاديمية</div></div>';
     }
-    const html2 = '<div class="stitle">🏅 السجل التدريبي</div>'
+    const html2 = ach
+      + '<div class="stitle">📜 الشهادة</div>'
       + '<div class="alert as"><span class="aicon">✅</span>شهادتك جاهزة — اضغط لعرضها أو تنزيلها</div>'
       + '<div class="ccard cc-g" style="text-align:center;padding:32px">'
       + '<div style="font-size:48px;margin-bottom:16px">🏅</div>'
@@ -7181,14 +7608,14 @@ function attlogCards(){
     if(q&&!courseMatch){const qn2=reqNrmName(q);studs=studs.filter(o=>reqNrmName(o.st.name).includes(qn2)||String(o.st.sid).includes(q));}
     const openAttr=q?' open':'';
     const rowsHtml=studs.map(o=>{
-      const st=o.st, sti=o.i, col=atlColor(st.name);
+      const st=o.st, sti=o.i;   // اللون صار من avatarHTML (ثابت لكل اسم) أو من صورته
       const ctrl=editable?`<div class="atl-seg">
           <button class="${st.status==='حاضر'?'on-p':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'حاضر')">حاضر</button>
           <button class="${st.status==='متأخر'?'on-l':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'متأخر')">متأخر</button>
           <button class="${st.status==='غائب'?'on-a':''}" onclick="event.stopPropagation();admAttSet(${si},${sti},'غائب')">غائب</button>
         </div><button class="atl-del" title="حذف السجل" onclick="event.stopPropagation();admAttDelOne(${si},${sti})">🗑️</button>`
         :`<span class="pill ${st.status==='حاضر'?'pg':st.status==='متأخر'?'py':'pr'}">${esc(st.status)}</span>`;
-      return `<div class="atl-srow"><div class="atl-avatar" style="background:${col}">${esc(atlInitials(st.name))}</div>
+      return `<div class="atl-srow">${avatarHTML(st,34,'atl-avatar')}
         <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(st.name)}</div><div style="font-size:11px;color:var(--muted)">${esc(st.sid)}</div></div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">${ctrl}</div></div>`;
     }).join('')||'<div style="font-size:12px;color:var(--muted);padding:8px">لا توجد أسماء مطابقة</div>';
@@ -9449,7 +9876,7 @@ function accountFormFields(type,data,mode){
     const idHint=mode==='edit'
       ?`<div id="acc_id_hint" style="font-size:11px;color:var(--muted);margin:-8px 0 12px;line-height:1.6">🔗 تغييره هنا يتعدّل في كل مكان تلقائياً — سجل المقررات والدرجات · قاعدة الغياب · طلبات الخدمات</div>`
       :'';
-    return f('id','الرقم الأكاديمي *',data.id)+idHint+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+specField(data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
+    return f('id','الرقم الأكاديمي *',data.id)+idHint+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+specField(data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال')+photoField(data);
   }
   if(type==='trainer')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+specField(data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
   // admin — مشرف تخصص (لكل تخصص مشرفه يوافق على طلباته)، أو مدير الأكاديمية (المشرف العام) الذي يشرف على الكل ويعتمد نهائياً
@@ -9470,6 +9897,80 @@ function accountFormFields(type,data,mode){
       </div>`;
     })();
 }
+/* 📷 حقل الصورة الشخصية — للمتدرب وحده في «الأشخاص».
+   تُحفظ في العمود L فور الرفع (نداء مستقل لا يلمس بقية الصف)،
+   فلو أغلق النافذة بلا «حفظ التعديل» تبقى الصورة محفوظة. */
+function photoField(data){
+  data=data||{};
+  const cur=safeUrl(data.photo||'');
+  return `<div style="margin-bottom:12px">
+    <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:6px">الصورة الشخصية (اختياري)</label>
+    <div class="ph-row">
+      <span id="acc_ph_prev">${avatarHTML({name:data.name||'',photo:cur,id:data.id},56)}</span>
+      <input type="hidden" id="acc_photo" value="${escAttr(cur)}">
+      <input type="file" id="acc_photo_file" accept="image/*" style="display:none" onchange="accPhotoPick(this)">
+      <button type="button" class="btn btn-out btn-sm" onclick="document.getElementById('acc_photo_file').click()">📤 رفع صورة</button>
+      ${cur?`<button type="button" class="btn btn-sm" style="background:#cf1f2f;color:#fff" onclick="accPhotoClear()">🗑️ إزالة</button>`:''}
+    </div>
+    <div id="acc_ph_note" style="font-size:11px;color:var(--muted);margin-top:6px">
+      تظهر في قائمة الأوائل ولوحة تخرّجه وبطاقة التهنئة · الحد 5 ميجا · تُحفظ فور الرفع</div>
+  </div>`;
+}
+async function accPhotoPick(inp){
+  const f=inp&&inp.files&&inp.files[0]; if(!f)return;
+  inp.value='';
+  if(!/^image\//i.test(f.type||'')){showToast('اختر ملف صورة','w');return;}
+  if(f.size>5*1024*1024){showToast('حجم الصورة كبير (الحد 5 ميجا)','w');return;}
+  const sid=(document.getElementById('acc_oldid')||{}).value||(document.getElementById('acc_id')||{}).value||'';
+  if(!String(sid).trim()){showToast('اكتب الرقم الأكاديمي أولاً ثم ارفع الصورة','w');return;}
+  const note=document.getElementById('acc_ph_note');
+  if(note)note.innerHTML='<span style="color:var(--acc-b)">⏳ جاري رفع الصورة...</span>';
+  let up=null;
+  try{ up=await uploadOne(f); }catch(e){ up=null; }
+  /* ⚠️ up.url هو رابط صفحة الملف في Drive لا رابط صورة — <img src> عليه
+     يفشل دائماً. up.img هو الرابط المباشر للصورة (thumbnail). */
+  const picUrl=(up&&(up.img||up.url))||'';
+  if(!picUrl){
+    if(note)note.innerHTML='<span style="color:var(--acc-r)">❌ تعذّر رفع الصورة — تأكد من نشر الخادم</span>';
+    showToast('تعذّر رفع الصورة','e'); return;
+  }
+  await accPhotoSave(sid, picUrl);
+}
+function accPhotoClear(){
+  const sid=(document.getElementById('acc_oldid')||{}).value||(document.getElementById('acc_id')||{}).value||'';
+  if(!String(sid).trim()){showToast('لا يوجد حساب محدّد','w');return;}
+  if(!confirm('إزالة الصورة الشخصية؟'))return;
+  accPhotoSave(sid,'');
+}
+async function accPhotoSave(sid,url){
+  const note=document.getElementById('acc_ph_note');
+  if(note)note.innerHTML='<span style="color:var(--acc-b)">⏳ جاري الحفظ...</span>';
+  let res=null;
+  try{ res=await callWrite('setUserPhoto',{records:[{id:sid,url:url}]}); }catch(e){ res=null; }
+  if(!res||(res.status&&res.status!=='ok')){
+    if(note)note.innerHTML='<span style="color:var(--acc-r)">❌ تعذّر الحفظ'+(res&&res.hint?' — '+esc(res.hint):'')+'</span>';
+    showToast('تعذّر حفظ الصورة','e'); return;
+  }
+  if(res.updated===0){
+    if(note)note.innerHTML='<span style="color:var(--acc-y)">⚠️ لم يُعثر على السجل — احفظ الحساب أولاً ثم ارفع الصورة</span>';
+    return;
+  }
+  const saved=String(res.url||url||'');
+  // حدّث الذاكرة المحلية فوراً — لا ننتظر إعادة تحميل كل القاعدة
+  const dgp=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
+  (students||[]).concat(graduates||[]).forEach(s=>{ if(dgp(s.id)===dgp(sid))s.photo=saved; });
+  if(user&&dgp(user.id)===dgp(sid)){ user.photo=saved; try{localStorage.setItem('bla_user',JSON.stringify(user));}catch(e){} }
+  const hid=document.getElementById('acc_photo'); if(hid)hid.value=saved;
+  const prev=document.getElementById('acc_ph_prev');
+  if(prev)prev.innerHTML=avatarHTML({name:(document.getElementById('acc_name')||{}).value||'',photo:saved,id:sid},56);
+  if(note)note.innerHTML=saved?'<span style="color:var(--acc-g)">✅ تم حفظ الصورة</span>'
+                              :'<span style="color:var(--muted)">تمت إزالة الصورة</span>';
+  showToast(saved?'✅ تم حفظ الصورة':'تمت إزالة الصورة','s');
+  try{ saveDataSnapshot(); }catch(e){}
+}
+window.photoField=photoField;window.accPhotoPick=accPhotoPick;
+window.accPhotoClear=accPhotoClear;window.accPhotoSave=accPhotoSave;
+
 function accountModal(type,mode,data){
   const tLbl=type==='student'?'متدرب':type==='trainer'?'مدرب':'إداري';
   const title=(mode==='edit'?'✏️ تعديل ':'➕ إضافة ')+tLbl;
@@ -10311,6 +10812,7 @@ function openGraduatesList(){
     <div class="modal-title"><span>🎓 الخريجون (${grads.length})</span><button class="modal-close" onclick="document.getElementById('gradsModal').remove()">✕</button></div>
     ${grads.length?`<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">${grads.map(s=>`
       <div style="display:flex;gap:10px;align-items:center;padding:11px 13px;border-bottom:1px solid var(--border)">
+        ${avatarHTML(s,38)}
         <div style="flex:1"><div style="font-weight:600;font-size:14px">${esc(s.name)}</div>
           <div style="font-size:12px;color:var(--muted)">${esc(s.id.toString())} · ${esc(s.spec||'—')}${s.gradBatch?' · '+esc(s.gradBatch):''}</div></div>
         <button class="btn btn-b btn-sm" onclick="printGraduateTranscript('${jsq(s.id.toString())}')">🖨️ كشف تخرّج</button>
@@ -10464,7 +10966,9 @@ function buildTVContent(){
         ${podiumOrder.map((s,i)=>{
           const h=podiumH[i],clr=podiumC[i],r=s.rank;
           return `<div class="tv-pod-col">
-            <div class="tv-pod-medal">${r===1?'🥇':r===2?'🥈':'🥉'}</div>
+            <div class="tv-pod-medal">${photoOf({id:s.sid})
+              ?`<span class="tv-pod-av">${avatarHTML({name:s.name,id:s.sid},78)}<i>${r===1?'🥇':r===2?'🥈':'🥉'}</i></span>`
+              :(r===1?'🥇':r===2?'🥈':'🥉')}</div>
             <div class="tv-pod-name">${nm(s.name)}</div>
             <div class="tv-pod-info">شعبة ${esc(s.grp)} · ${s.avg}%</div>
             <div class="tv-pod-bar" style="height:${h}px;background:linear-gradient(180deg,${clr},${clr}bb);box-shadow:0 -4px 24px ${clr}66">
@@ -10911,7 +11415,7 @@ const aPgs={
       // الاسم يفتح ملف المتدرب — كانت هذه ميزة صفحة «المتدربون» وحدها
       rows=uniqSt.map(s=>`<tr data-g="${escAttr(String(s.grp||''))}" data-sp="${escAttr(String(s.spec||'').trim())}">
         <td style="color:var(--muted)">${esc(s.id.toString())}</td>
-        <td><button class="lnk-cell" onclick="showStudentDetail('${jsq(String(s.id))}')" title="افتح ملف المتدرب">${esc(s.name)}</button></td>
+        <td><button class="lnk-cell lnk-av" onclick="showStudentDetail('${jsq(String(s.id))}')" title="افتح ملف المتدرب">${avatarHTML(s,26)}<span class="lnk-nm">${esc(s.name)}</span></button></td>
         <td>${esc(s.grp||'-')}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td>
         <td>${actBtns('student',s)}</td>
       </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد متدربون</td></tr>`;
@@ -11076,7 +11580,10 @@ const aPgs={
       ${podiumOrder.map((s,i)=>{
         const realRank=s.rank;const h=podiumH[i];const clr=podiumC[i];
         return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;max-width:180px">
-          <div style="font-size:32px;margin-bottom:4px">${realRank===1?'🥇':realRank===2?'🥈':'🥉'}</div>
+          <div style="position:relative;margin-bottom:4px">
+            ${avatarHTML({name:s.name,id:s.sid},realRank===1?64:54,'pod-av')}
+            <span style="position:absolute;bottom:-4px;inset-inline-start:-6px;font-size:22px;filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))">${realRank===1?'🥇':realRank===2?'🥈':'🥉'}</span>
+          </div>
           <div style="font-weight:700;font-size:13px;text-align:center;margin-bottom:2px;color:var(--text)">${esc(s.name.split(' ').slice(0,2).join(' '))}</div>
           <div style="font-size:11px;color:var(--muted);margin-bottom:6px">شعبة ${esc(s.grp)} · ${s.avg}%</div>
           <div style="width:100%;height:${h}px;background:linear-gradient(180deg,${clr},${clr}bb);border-radius:8px 8px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:8px;box-shadow:0 -2px 12px ${clr}55">
@@ -11091,7 +11598,7 @@ const aPgs={
       <thead><tr><th>الترتيب</th><th>الاسم</th><th>الشعبة</th><th>المعدّل %</th><th>GPA /5</th><th>المقررات</th><th>متوسط الغياب</th></tr></thead>
       <tbody>${ranked.map(s=>`<tr${s.rank<=3?' style="background:rgba(201,162,39,.06)"':''}>
         <td>${medal(s.rank)}</td>
-        <td style="font-weight:${s.rank<=3?'700':'500'}">${esc(s.name)}</td>
+        <td style="font-weight:${s.rank<=3?'700':'500'}"><span style="display:inline-flex;align-items:center;gap:8px">${avatarHTML({name:s.name,id:s.sid},28)}<span>${esc(s.name)}</span></span></td>
         <td>شعبة ${esc(s.grp)}</td>
         <td><span class="pill ${pillClass(s.avg)}">${s.avg}%</span></td>
         <td><span style="font-weight:700;color:${gpaColor(s.gpa)}">${s.gpa.toFixed(2)}</span></td>
@@ -13284,16 +13791,41 @@ function fmtJoinDate(v){
   }
 }
 // ===== ورقة التعريف (الإفادة الرسمية) — تطابق نموذج المعهد =====
-function introLetterFor(p){
-  p=p||{};
+/* 📄 إفادة الالتحاق — ولها صيغتان.
+   ⚠️ كانت صيغةً واحدة تقول «وهو مازال مستمر ويدرس بالمعهد حتى تاريخه»،
+   فتخرج للخرّيج وثيقةٌ تناقض تخرّجه. الآن: من حالته «خرّيج» تُبنى له
+   «إفادة تخرّج» بتاريخ التخرّج ومعدّله وتقديره. */
+function introLetterFor(p,opts){
+  p=p||{}; opts=opts||{};
   const name=p.name||'.....................';
   const id=p.id||p.sid||'.............';
   const spec=p.spec||'الألكترونيات الصناعية والتحكم';
   const joinDate=fmtJoinDate((p.join||'').trim());
   const joinHtml=joinDate?`<b>${joinDate}</b>`:`<span class="fillline">&nbsp;/&nbsp;&nbsp;/&nbsp;</span>`;
+  const grad=(opts.grad!=null)?!!opts.grad:(typeof isGradStatus==='function'&&isGradStatus(p.status));
+  if(grad){
+    const batch=batchTxt(p.gradBatch);
+    const list=opts.courses||((typeof user!=='undefined'&&user&&String(user.id)===String(id))?courses:null);
+    const gpa=list?gpaDisplay(list):'';
+    const avg=list?avgScored(list):null;
+    const honor=(avg==null)?'':honorOf(avg);
+    const statLine=(gpa&&gpa!=='—')
+      ? `<p>وقد أنهى متطلبات الدبلوم بمعدّل تراكمي <b>${esc(gpa)}</b> من <b>5</b>${honor?` وتقدير عام <b>${esc(honor)}</b>`:''}.</p>` : '';
+    const body=`
+    <div class="to">الى من يهمه الأمر :</div>
+    <p>يفيد معهد المعرفة والإبداع العالي للتدريب بأن المتدرب / <b>${esc(name)}</b> &nbsp; برقم تدريبي <b>${esc(String(id))}</b> &nbsp; قد التحق بالمعهد بتاريخ ${joinHtml} فى دبلوم تخصص <b>${esc(spec)}</b> مدته سنتان ونصف، <b>وقد أتمّ الدراسة وتخرّج من المعهد</b>${batch?` ضمن <b>${esc(batch)}</b>`:''} .</p>
+    ${statLine}
+    <div class="closing">وهذه افادة منا بذلك ،، ونتمنّى له التوفيق والسداد .</div>
+    <div class="signs">
+      <div class="sign"><div class="role">المشرف الأكاديمي</div><div class="stamp">التوقيع</div></div>
+      <div class="sign"><div class="role">ادارة المعهد</div><div class="stamp">التوقيع / الختم الرسمي</div></div>
+    </div>
+    <div class="clearfix"></div>`;
+    return officialLetterShell('افادة تخرّج',body);
+  }
   const body=`
     <div class="to">الى من يهمه الأمر :</div>
-    <p>يفيد معهد المعرفة والإبداع العالي للتدريب بأن الطالب / <b>${name}</b> &nbsp; برقم تدريبي <b>${id}</b> &nbsp; قد التحق بالمعهد بتاريخ ${joinHtml} فى دبلوم تخصص <b>${spec}</b> مدته سنتان ونصف وهو مازال مستمر ويدرس بالمعهد حتى تاريخه .</p>
+    <p>يفيد معهد المعرفة والإبداع العالي للتدريب بأن الطالب / <b>${esc(name)}</b> &nbsp; برقم تدريبي <b>${esc(String(id))}</b> &nbsp; قد التحق بالمعهد بتاريخ ${joinHtml} فى دبلوم تخصص <b>${esc(spec)}</b> مدته سنتان ونصف وهو مازال مستمر ويدرس بالمعهد حتى تاريخه .</p>
     <div class="closing">وهذه افادة منا بذلك ،،</div>
     <div class="signs">
       <div class="sign"><div class="role">المشرف الأكاديمي</div><div class="stamp">التوقيع</div></div>
@@ -13306,9 +13838,12 @@ function printIntroLetter(p){ openReport(introLetterFor(p)); }
 function printMyIntro(){ printIntroLetter(user); }
 function printStudentIntro(sid){
   if(!sid){showToast('اختر متدرب أولاً','w');return;}
-  const st=(students||[]).find(s=>String(s.id)===String(sid)||String(s.sid)===String(sid));
+  // الخرّيجون خارج قائمة النشطين — وهم أكثر من يطلب الإفادة
+  const st=(students||[]).concat(graduates||[])
+    .find(s=>String(s.id)===String(sid)||String(s.sid)===String(sid));
   if(!st){showToast('متدرب غير موجود','w');return;}
-  printIntroLetter(st);
+  const list=(allCourses||[]).filter(c=>String(c.sid)===String(st.id));
+  printIntroLetter(st,{courses:list.length?list:null});
 }
 window.printIntroLetter=printIntroLetter;window.printMyIntro=printMyIntro;window.printStudentIntro=printStudentIntro;
 // تقرير مجمّع بكل الطلاب المتجاوزين 10% (لكل مادة على حدة)
@@ -14008,7 +14543,7 @@ function showStudentDetail(sid){
     <div class="modal" style="max-width:560px;max-height:85vh;overflow-y:auto">
       <div class="modal-title">
         <div style="display:flex;align-items:center;gap:12px;min-width:0;flex:1">
-          <div class="av av-s" style="width:44px;height:44px;font-size:16px;flex-shrink:0">${esc(st.name.split(' ').slice(0,2).map(w=>w[0]).join(''))}</div>
+          ${avatarHTML(st,44)}
           <div style="min-width:0">
             <div style="font-size:15.5px;font-weight:700;line-height:1.45">${esc(st.name)}</div>
             <div style="font-size:12px;color:var(--muted);font-weight:400;line-height:1.5">الشعبة ${esc(st.grp)} · ${esc(st.spec)}</div>
@@ -14024,7 +14559,8 @@ function showStudentDetail(sid){
         <!-- «٠٪» توحي أنه حصل صفراً؛ الصحيح «—» حين لا توجد درجة محتسبة -->
         <div class="iitem"><div class="ilbl">متوسط الدرجات</div><div class="ival" style="color:${!scoredCount(stCourses)?'var(--muted)':avg>=70?'var(--green)':avg>=60?'var(--gold)':'var(--red)'}">${avgPctDisplay(stCourses)}</div></div>
       </div>
-      
+      ${achBadgesHTML(stCourses,st,true)}
+
       <div class="ccard ${st.cert&&st.cert.startsWith('http')?'cc-g':'cc-y'}" style="margin-bottom:16px;padding:18px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:${st.cert&&st.cert.startsWith('http')?'14px':'0'}">
           <span style="font-size:22px">🏅</span>
