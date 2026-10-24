@@ -1672,6 +1672,22 @@ body.light-mode .grad-acts .btn-out:hover{background:rgba(255,255,255,.26)!impor
 .tv-pod-av i{position:absolute;bottom:-6px;inset-inline-start:-8px;font-style:normal;font-size:30px;
   filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
 
+/* ===== 🔎 مختار النصف المجزأ ===== */
+.half-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.half-pick label{font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap}
+.half-pick select{flex:1;min-width:220px;max-width:520px;padding:11px 13px;font-size:13.5px;
+  border:1px solid var(--border);border-radius:11px;cursor:pointer;
+  background:var(--card,rgba(255,255,255,.04));color:var(--text);font-family:inherit}
+.half-pick select:focus{outline:2px solid color-mix(in srgb,var(--brand-1) 45%,transparent);outline-offset:1px}
+.half-note{display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  font-size:12.5px;color:var(--text);margin:0 0 12px;padding:9px 13px;border-radius:11px;
+  background:color-mix(in srgb,var(--brand-1) 9%,transparent);
+  border:1px solid color-mix(in srgb,var(--brand-1) 26%,transparent)}
+.half-note .btn{margin-inline-start:auto}
+@media(max-width:640px){
+  .half-pick{gap:6px}.half-pick select{min-width:0;max-width:none;flex:1 1 100%}
+  .half-note .btn{margin-inline-start:0;flex:1 1 100%}}
+
 /* ===== 🏅 شارات الإنجاز ===== */
 .ach-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 .ach{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
@@ -2341,7 +2357,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyF_ZwpSUWeRuY3Ry9aXXKmeCmgev6U677-Oki1oEXp915U0S4LaboQ_CXw2lRm9f1f/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyjU3TSBvH7BcqBTzFUPonAbTn0vBFVY43WOqXdX6TzGJgr6PS6YLUadhZEG3DmZsjb/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2365,11 +2381,11 @@ const LP_SOURCES=['internet','الكتاب المدرسي','المكتبة','س�
 const LP_MEDIA=['موقع الكتروني','عمل لوحات','عمل أبحاث','قراءة مراجع','زيارة ميدانية','لقاءات ومؤتمرات','بريد الكتروني'];
 const LP_ACTS=['شفوية','تحريرية','متابعة أداء','اختبار','أخرى'];
 async function loadLessonPreps(){
-  const rows=await fetchSheet('تحضير الدروس!A:S').catch(()=>[]);
+  const rows=await fetchSheet('تحضير الدروس!A:T').catch(()=>[]);
   lessonPreps=[];
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; if(!n0(r[0]))continue;
-    lessonPreps.push({id:n0(r[0]),tid:n0(r[1]),tname:n0(r[2]),material:n0(r[3]),branch:n0(r[4]),grade:n0(r[5]),date:n0(r[6]),period:n0(r[7]),topic:n0(r[8]),outcomes:n0(r[9]),intro:n0(r[10]),present:n0(r[11]),eval:n0(r[12]),homework:n0(r[13]),methods:n0(r[14]),sources:n0(r[15]),media:n0(r[16]),activities:n0(r[17]),sentAt:n0(r[18])});
+    lessonPreps.push({id:n0(r[0]),tid:n0(r[1]),tname:n0(r[2]),material:n0(r[3]),branch:n0(r[4]),grade:n0(r[5]),date:n0(r[6]),period:n0(r[7]),topic:n0(r[8]),outcomes:n0(r[9]),intro:n0(r[10]),present:n0(r[11]),eval:n0(r[12]),homework:n0(r[13]),methods:n0(r[14]),sources:n0(r[15]),media:n0(r[16]),activities:n0(r[17]),sentAt:n0(r[18]),term:n0(r[19])});
   }
   lessonPreps.sort((a,b)=>String(b.sentAt||'').localeCompare(String(a.sentAt||'')));
 }
@@ -7500,6 +7516,13 @@ function atlDateBox(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{
 function atlDateText(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(!m)return String(date||'');const AR=['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];const yy=m[3].length===2?('20'+m[3]):m[3];return `${m[1]} ${AR[parseInt(m[2])]||''} ${yy}`;}
 // تاريخ باسم اليوم (لعرض «أي يوم» داخل مجموعة المادة)
 function atlDayFull(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);const base=atlDateText(date);if(!m)return base;const yy=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);const dt=new Date(yy,parseInt(m[2])-1,parseInt(m[1]));const wd=isNaN(dt.getTime())?'':dt.toLocaleDateString('ar-EG',{weekday:'long'});return (wd?wd+' · ':'')+base;}
+/* ترشيح بالنصف المختار — يطبّق على الغياب والتحاضير معاً */
+function trkHalf(){ return String(window._trkHalf||''); }
+function inTrkHalf(t){
+  const h=trkHalf(); if(!h)return true;
+  return termKeyOf(t||'')===termKeyOf(h);
+}
+window.inTrkHalf=inTrkHalf;window.trkHalf=trkHalf;
 function atlBuildSessions(scopeAll){
   const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
   const gk_=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
@@ -7516,7 +7539,9 @@ function atlBuildSessions(scopeAll){
     if(!sessions.has(key))sessions.set(key,{date,course:cname,code:codeR,grp,term,students:[]});
     sessions.get(key).students.push({name:r[1]||'',sid:String(r[0]||''),code:codeR,status:status==='متأخر'?'متأخر':status==='حاضر'?'حاضر':'غائب'});
   }
-  const list=[...sessions.values()];
+  let list=[...sessions.values()];
+  // 🔎 النصف المختار وحده — «أشوف غيابات هذا النصف»
+  if(trkHalf())list=list.filter(s=>inTrkHalf(s.term));
   list.sort((a,b)=>atlDnum(b.date).localeCompare(atlDnum(a.date)));
   return list;
 }
@@ -7789,9 +7814,10 @@ function lessonFormPage(){
   return `<style>${LP_CSS}</style>`+banner+form+list;
 }
 function adminLessonsPage(bare){
-  const list=lessonPreps.slice();
+  // 🔎 النصف المختار وحده — تحاضير هذا النصف لا كل ما في الورقة
+  const list=(lessonPreps||[]).filter(x=>inTrkHalf(x.term));
   const banner=bare?'':`<div class="banner"><div><div class="cc-name" style="font-size:19px">📚 تحاضير المدربين</div><div class="bsub">التحاضير التي أرسلها المدربون — استعراض وطباعة</div></div><span class="pill pb">${list.length} تحضير</span></div>`;
-  if(!list.length)return `<style>${LP_CSS}</style>`+banner+`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>ما وصل أي تحضير بعد</div>`;
+  if(!list.length)return `<style>${LP_CSS}</style>`+banner+`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>${trkHalf()?'ما فيه تحاضير في هذا النصف':'ما وصل أي تحضير بعد'}</div>`;
   const trainers=[...new Set(list.map(x=>x.tname).filter(Boolean))];
   const opts=['<option value="all">كل المدربين</option>'].concat(trainers.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`)).join('');
   const toolbar=`<div class="ctl-row">
@@ -7804,7 +7830,7 @@ function adminLessonsPage(bare){
 function admLessonsCards(){
   const q=String((document.getElementById('lpSearch')||{}).value||'').trim();
   const tf=String((document.getElementById('lpTrainer')||{}).value||'all');
-  let list=lessonPreps.slice();
+  let list=(lessonPreps||[]).filter(x=>inTrkHalf(x.term));
   if(tf&&tf!=='all')list=list.filter(x=>x.tname===tf);
   if(q)list=list.filter(x=>[x.material,x.topic,x.tname,x.grade].some(v=>String(v||'').includes(q)));
   if(!list.length)return `<div class="empty"><div class="empty-icon">🔍</div>ما فيه نتائج مطابقة</div>`;
@@ -9596,8 +9622,10 @@ window.openArchiveHalf=openArchiveHalf;window.arcPreview=arcPreview;window.runAr
  * 📦 الأرشيف — الرجوع لما أُرشف
  * ============================================================ */
 const ARC_VIEW=[
-  {k:'preps',   tab:'أرشيف التحاضير',           range:'أرشيف التحاضير!A:U',           lbl:'تحاضير المدربين', ico:'📚',
-   cols:[{i:2,h:'المدرب'},{i:3,h:'المادة'},{i:5,h:'الصف'},{i:6,h:'التاريخ'},{i:7,h:'الحصة'},{i:8,h:'الموضوع'}], termCol:19},
+  /* ⚠️ أضيف عمود «الترم» لتحضير الدروس، فصار «النصف المؤرشف» في العمود U (20)
+     لا T (19). صفوفٌ أُرشفت قبل ذلك ما زال نصفها في 19 — fb يقرأ الاثنين. */
+  {k:'preps',   tab:'أرشيف التحاضير',           range:'أرشيف التحاضير!A:V',           lbl:'تحاضير المدربين', ico:'📚',
+   cols:[{i:2,h:'المدرب'},{i:3,h:'المادة'},{i:5,h:'الصف'},{i:6,h:'التاريخ'},{i:7,h:'الحصة'},{i:8,h:'الموضوع'}], termCol:20, fb:19},
   {k:'absence', tab:'أرشيف الغياب',             range:'أرشيف الغياب!A:J',             lbl:'سجل الغياب',     ico:'🗂️',
    cols:[{i:0,h:'الرقم'},{i:1,h:'الاسم'},{i:2,h:'المادة'},{i:4,h:'الشعبة'},{i:5,h:'التاريخ'},{i:6,h:'الحالة'}], termCol:8},
   {k:'requests',tab:'أرشيف الطلبات',            range:'أرشيف الطلبات!A:V',            lbl:'الطلبات',        ico:'📋',
@@ -9615,12 +9643,26 @@ async function loadArchive(force){
   }
   ARCHIVE=out; return ARCHIVE;
 }
+/* نصف الصف المؤرشف — مع الرجوع للعمود القديم لصفوف أُرشفت قبل التحديث */
+function arcTermAt(r,v){
+  const at=i=>String(r[i]==null?'':r[i]).trim();
+  /* ⚠️ لا يكفي «إن كان فارغاً خذ السابق»: الصف المؤرشف بالشكل القديم
+     (١٩ عموداً) يضع «تاريخ الأرشفة» في موضع «النصف» الجديد — فيصير
+     النصف تاريخاً ولا يُطابق شيئاً. نميّز بالشكل لا بالفراغ. */
+  const looksTerm=t=>!!t&&(/ترم|نصف/.test(t)||/\d{4}\s*\/\s*\d{2,4}/.test(t));
+  const t=at(v.termCol);
+  if(looksTerm(t))return t;
+  if(v.fb!=null){ const f=at(v.fb); if(looksTerm(f))return f; }
+  return t||(v.fb!=null?at(v.fb):'');
+}
 function arcTermsOf(a){
   const m=new Map();
   ARC_VIEW.forEach(v=>{ (a[v.k]||[]).forEach(r=>{
-    const t=String(r[v.termCol]==null?'':r[v.termCol]).trim(); if(!t)return;
+    const t=arcTermAt(r,v); if(!t)return;
     const o=m.get(t)||{term:t,n:0}; o.n++; m.set(t,o); }); });
-  return [...m.values()].sort((x,y)=>String(y.term).localeCompare(String(x.term),'ar'));
+  /* ⚠️ الترتيب النصّي يضع «ترم ثاني-2025/2026» قبل «ترم أول-2026/2027»،
+     فيفتح الأرشيف على أقدم نصف لا أحدثه. الترتيب بالسنة ثم الترم ثم النصف. */
+  return [...m.values()].sort((x,y)=>termSortKey(y.term).localeCompare(termSortKey(x.term)));
 }
 async function openArchiveBrowser(preTerm){
   document.getElementById('arcViewModal')?.remove();
@@ -9648,7 +9690,7 @@ function arcRender(){
   const ov=document.getElementById('arcViewModal'); if(!ov)return;
   const terms=window._arcTerms||[], t=window._arcT, k=window._arcV||'preps';
   const v=ARC_VIEW.find(x=>x.k===k)||ARC_VIEW[0];
-  const rowsOf=vv=>(ARCHIVE[vv.k]||[]).filter(r=>String(r[vv.termCol]==null?'':r[vv.termCol]).trim()===t);
+  const rowsOf=vv=>(ARCHIVE[vv.k]||[]).filter(r=>arcTermAt(r,vv)===t);
   const rows=rowsOf(v);
   ov.querySelector('.modal').innerHTML=`<div class="modal-title"><span>📦 الأرشيف</span>
     <button class="modal-close" onclick="document.getElementById('arcViewModal').remove()">✕</button></div>
@@ -9667,6 +9709,158 @@ function arcRender(){
     <div style="font-size:11.5px;color:var(--muted);margin-top:10px">💡 الأرشيف للقراءة والطباعة — البيانات محفوظة في تبويبات «أرشيف …» داخل ملف Google Sheets نفسه، ويقدر شيت الكنترول يقرأ منها.</div>`;
 }
 window.openArchiveBrowser=openArchiveBrowser;window.arcRender=arcRender;window.loadArchive=loadArchive;
+window.arcTermAt=arcTermAt;window.arcTermsOf=arcTermsOf;
+
+/* ============================================================
+ * 🔎 مختار النصف — «أروح لأي نصف وأشوف كل ما يخصّه»
+ * ------------------------------------------------------------
+ * النصف يُكتب في الورقة نصّاً واحداً: «ترم أول-2026/2027 · النصف الأول».
+ * هنا نفكّه إلى سنة وترم ونصف ليُرتَّب ويُبحث فيه، ونجمع كل الأنصاف
+ * المعروفة: الجارية (المقررات والغياب والتحاضير) والمؤرشفة.
+ * ============================================================ */
+function termParts(t){
+  const raw=String(t==null?'':t).trim();
+  const flat=raw.replace(/-/g,' ').replace(/\s+/g,' ');
+  const year=(flat.match(/(\d{4}\s*\/\s*\d{2,4})/)||[])[1];
+  const ord=x=>/ثالث/.test(x)?'3':/ثان/.test(x)?'2':/أول|اول/.test(x)?'1':(x.match(/\d/)||[''])[0];
+  const half=(flat.match(/النصف\s*([^\s·]+)/)||[])[1]||'';
+  const term=(flat.match(/ترم\s*([^\s·]+)/)||[])[1]||'';
+  return {raw, year:(year||'').replace(/\s+/g,''), term:ord(term), half:ord(half),
+          lbl:fmtTerm(flat)};
+}
+/* ترتيب تنازلي: الأحدث سنةً ثم ترماً ثم نصفاً */
+function termSortKey(t){
+  const p=termParts(t);
+  const y=(p.year.match(/^(\d{4})/)||['','0000'])[1];
+  return y+'·'+(p.term||'0')+'·'+(p.half||'0');
+}
+/* كل الأنصاف المعروفة للنظام — جارية ومؤرشفة */
+function allHalves(){
+  const m=new Map();
+  const add=(t,k)=>{
+    const raw=String(t==null?'':t).trim();
+    if(!raw||raw==='غير محدد')return;
+    const key=termKeyOf(raw);
+    const o=m.get(key)||{raw,live:false,arc:false,n:0};
+    o[k]=true; o.n++; if(!o.raw)o.raw=raw; m.set(key,o);
+  };
+  (allCourses||[]).forEach(c=>add(c.half,'live'));
+  (typeof courses!=='undefined'?courses:[]).forEach(c=>add(c.half,'live'));
+  if(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))
+    for(let i=1;i<absenceRows.length;i++)add(absenceRows[i][7],'live');
+  (lessonPreps||[]).forEach(p=>add(p.term,'live'));
+  ARC_VIEW.forEach(v=>(ARCHIVE[v.k]||[]).forEach(r=>add(arcTermAt(r,v),'arc')));
+  return [...m.values()].sort((a,b)=>termSortKey(b.raw).localeCompare(termSortKey(a.raw)));
+}
+/* قائمة مجمّعة بالسنة — «من يوم ما اختاره أشوف كل شي يخص هذا النصف» */
+function halfPickerHTML(id,cur,onchange,allLbl){
+  const hs=allHalves();
+  if(!hs.length)return '';
+  const byYear=new Map();
+  hs.forEach(h=>{ const y=termParts(h.raw).year||'بلا سنة';
+    (byYear.get(y)||byYear.set(y,[]).get(y)).push(h); });
+  const opt=h=>`<option value="${escAttr(h.raw)}"${termKeyOf(h.raw)===termKeyOf(cur||'')?' selected':''}>`
+    +`${esc(termParts(h.raw).lbl)}${h.arc&&!h.live?' — 📦 مؤرشف':''}</option>`;
+  const groups=[...byYear.entries()].map(([y,list])=>
+    `<optgroup label="${escAttr(y)}">${list.map(opt).join('')}</optgroup>`).join('');
+  return `<div class="half-pick">
+    <label for="${escAttr(id)}">🔎 النصف المجزأ</label>
+    <select id="${escAttr(id)}" onchange="${onchange}">
+      <option value="">${esc(allLbl||'كل الأنصاف')}</option>${groups}
+    </select>
+  </div>`;
+}
+function trkHalfSet(v){
+  window._trkHalf=String(v||'');
+  showAPage('attlog',document.getElementById('sn-attlog'));
+}
+window.termParts=termParts;window.termSortKey=termSortKey;window.allHalves=allHalves;
+window.halfPickerHTML=halfPickerHTML;window.trkHalfSet=trkHalfSet;
+
+/* 📦 تبويب «المؤرشف» داخل متابعة التدريب — بدل نافذة الصيانة.
+   يُحمّل الأرشيف أول مرة فقط ثم يرسم نفسه. */
+function trkArchivePage(){
+  if(!ARCHIVE._at){
+    setTimeout(()=>{ loadArchive(true).then(()=>{
+      if((window._trkTab||'')==='arc')showAPage('attlog',document.getElementById('sn-attlog'));
+    }).catch(()=>{
+      const el=document.getElementById('trkArcBody');
+      if(el)el.innerHTML='<div class="empty"><div class="empty-icon">⚠️</div>تعذّر تحميل الأرشيف — تأكد من نشر الخادم</div>';
+    }); },30);
+    return `<div id="trkArcBody" class="empty"><div class="empty-icon">⏳</div>جاري تحميل الأرشيف…</div>`;
+  }
+  const h=trkHalf();
+  const terms=arcTermsOf(ARCHIVE);
+  if(!terms.length)
+    return `<div class="empty"><div class="empty-icon">📭</div>ما فيه شيء مؤرشف بعد
+      <div style="font-size:12px;color:var(--muted);margin-top:8px">بعد إنهاء النصف، أرشفه من «الصيانة ← 📦 أرشفة النصف» فتنتقل تحاضيره وغيابه وطلباته هنا</div></div>`;
+  // النصف المختار من فوق الصفحة، وإلا أحدث نصف مؤرشف
+  const t=(h&&terms.some(x=>termKeyOf(x.term)===termKeyOf(h)))?terms.find(x=>termKeyOf(x.term)===termKeyOf(h)).term
+         :(h?'':terms[0].term);
+  if(h&&!t)
+    return `<div class="alert ab"><span class="aicon">📭</span>«${esc(termParts(h).lbl)}» ما أُرشف بعد — بياناته ما زالت في التبويبين الآخرين</div>`;
+  const k=window._arcV||'preps';
+  const v=ARC_VIEW.find(x=>x.k===k)||ARC_VIEW[0];
+  const rowsOf=vv=>(ARCHIVE[vv.k]||[]).filter(r=>arcTermAt(r,vv)===t);
+  const rows=rowsOf(v);
+  return `<div class="alert as" style="margin-bottom:12px"><span class="aicon">📦</span>
+      <div><b>${esc(termParts(t).lbl)}</b> — مؤرشف
+      <div style="font-size:11.5px;color:var(--muted);margin-top:3px">للقراءة والطباعة · البيانات في تبويبات «أرشيف …» داخل ملف Google Sheets</div></div>
+      <button class="btn btn-out btn-sm" onclick="loadArchive(true).then(()=>showAPage('attlog',document.getElementById('sn-attlog')))">🔄 تحديث</button></div>
+    <div class="pg-tabs" role="tablist">${ARC_VIEW.map(x=>`<button class="pg-tab${x.k===k?' on':''}" role="tab" aria-selected="${x.k===k?'true':'false'}" onclick="window._arcV='${jsq(x.k)}';showAPage('attlog',document.getElementById('sn-attlog'))"><span>${x.ico}</span><span>${esc(x.lbl)}</span><span class="pg-tab-n">${rowsOf(x).length}</span></button>`).join('')}</div>
+    <div data-listwrap>
+      ${searchBoxHTML('ابحث في المؤرشف…')}
+      <div class="gtable"><table>
+        <thead><tr>${v.cols.map(c=>`<th>${esc(c.h)}</th>`).join('')}</tr></thead>
+        <tbody>${rows.length?rows.map(r=>`<tr>${v.cols.map(c=>`<td>${esc(String(r[c.i]==null?'':r[c.i]))}</td>`).join('')}</tr>`).join('')
+          :`<tr data-empty><td colspan="${v.cols.length}" style="text-align:center;color:var(--muted)">ما فيه صفوف في هذا الجزء لهذا النصف</td></tr>`}</tbody>
+      </table></div></div>`;
+}
+window.trkArchivePage=trkArchivePage;
+
+/* 🔗 ربط التحاضير القديمة بأنصافها — معاينة ثم تنفيذ.
+   التحاضير المكتوبة قبل وجود عمود «الترم» لا نصف لها، فلا تُؤرشف
+   ولا تظهر عند اختيار نصف. هذا يملأها من سجل المقررات. */
+async function linkPrepTerms(){
+  if(role!=='a'){showToast('هذا الإجراء للإدارة','w');return;}
+  showToast('جاري فحص التحاضير...','i');
+  let pv=null;
+  try{ pv=await callWrite('linkPrepTerms',{records:[{dry:true}]}); }catch(e){ pv=null; }
+  const rp=pv&&pv.report;
+  if(!pv||(pv.status&&pv.status!=='ok')||!rp){
+    showToast('تعذّر الفحص — تأكد من نشر نسخة الخادم الجديدة','e'); return;
+  }
+  if(rp.missing){ showToast('تبويب «تحضير الدروس» غير موجود','w'); return; }
+  if(!rp.total){ showToast('ما فيه تحاضير مسجّلة','w'); return; }
+  if(!rp.linked){
+    showToast(rp.already===rp.total
+      ? `✅ كل التحاضير (${rp.total}) مربوطة بأنصافها أصلاً`
+      : `ما قدرت أربط أياً من ${rp.failed} تحضيراً — أسماء موادها لا تطابق سجل المقررات`,
+      rp.already===rp.total?'s':'w');
+    return;
+  }
+  const lines=['🔗 ربط التحاضير بأنصافها','',
+    `• ${rp.linked} تحضيراً سيُربط بنصفه`,
+    rp.already?`• ${rp.already} مربوطة أصلاً — لن تتغيّر`:'',
+    rp.failed?`• ${rp.failed} تعذّر ربطها (المادة غير موجودة في سجل المقررات، أو موجودة في أكثر من نصف)`:'',
+    '',
+    ...(rp.terms||[]).slice(0,8).map(x=>`   ${termParts(x.term).lbl} — ${x.n}`),
+    rp.failed&&(rp.misses||[]).length?'\nتعذّر ربط مثل: '+rp.misses.join('، '):'',
+    '','يُكتب الترم في عمود جديد ولا يُمسّ شيء آخر. متابعة؟'
+  ].filter(Boolean);
+  if(!confirm(lines.join('\n')))return;
+  showToast('جاري الربط...','i');
+  let res=null;
+  try{ res=await callWrite('linkPrepTerms',{records:[{}]},{tries:2}); }catch(e){ res=null; }
+  const rr=res&&res.report;
+  if(!res||(res.status&&res.status!=='ok')||!rr){ showToast('تعذّر الربط — حاول مرة أخرى','e'); return; }
+  showToast(`✅ رُبط ${rr.linked} تحضيراً بأنصافه`+(rr.failed?` · ${rr.failed} تعذّر`:''),'s');
+  try{ await loadLessonPreps(); }catch(e){}
+  try{ saveDataSnapshot(); }catch(e){}
+  try{ const act=document.querySelector('#sidebar .sitem.active');
+    if(act&&act.id)showAPage(act.id.replace('sn-',''),act); }catch(e){}
+}
+window.linkPrepTerms=linkPrepTerms;
 
 async function endTerm(){
   const term=document.getElementById('endTermSel')?.value;
@@ -11172,11 +11366,22 @@ const aPgs={
      الاثنان متابعة يومية لعمل المدرب، وكانا بندين منفصلين في القائمة. */
   attlog:()=>{
     const tab=window._trkTab||'att';
-    const body=(tab==='lessons')?adminLessonsPage(true):renderAttLog(true,true,true);
+    const h=trkHalf();
+    const body=(tab==='arc')?trkArchivePage()
+             :(tab==='lessons')?adminLessonsPage(true)
+             :renderAttLog(true,true,true);
+    const nPrep=(lessonPreps||[]).filter(x=>inTrkHalf(x.term)).length;
+    /* 🔎 مختار النصف فوق الصفحة: الغياب والتحاضير يتبعانه معاً،
+       فيرى «كل ما يخصّ هذا النصف» من مكان واحد بلا نوافذ. */
+    const pick=halfPickerHTML('trkHalfSel',h,'trkHalfSet(this.value)','كل الأنصاف (الجارية والمؤرشفة)');
+    const note=h?`<div class="half-note">تعرض الآن <b>${esc(termParts(h).lbl)}</b> وحده
+      <button class="btn btn-out btn-sm" onclick="trkHalfSet('')">عرض الكل</button></div>`:'';
     return `<div class="banner"><div><div class="btitle">🗂️ متابعة التدريب</div><div class="bsub">جلسات التحضير اليومية وتحاضير المدربين — استعراض وتعديل وطباعة</div></div><span class="pill pb">وضع الإدارة</span></div>`
+      +pick+note
       +pgTabs('attlog','_trkTab',tab,[
         {id:'att',lbl:'سجل الغياب اليومي',icon:'🗂️'},
-        {id:'lessons',lbl:'تحاضير المدربين',icon:'📚',n:(lessonPreps||[]).length}])
+        {id:'lessons',lbl:'تحاضير المدربين',icon:'📚',n:nPrep},
+        {id:'arc',lbl:'المؤرشف',icon:'📦'}])
       +body;
   },
   manage_courses:()=>{
@@ -11237,9 +11442,10 @@ const aPgs={
         </div>`:'<div style="color:var(--muted);font-size:12px">لا توجد أنصاف مجزأة نشطة · الأنصاف المنتهية تُؤرشف من الزر أدناه</div>'}
         <!-- 📦 خطوة ثانية مستقلة: الإنهاء يحوّل الحالة، والأرشفة تنقل البيانات -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)">
+          <button class="btn btn-out btn-sm" onclick="linkPrepTerms()">🔗 ربط التحاضير بأنصافها</button>
           <button class="btn btn-out btn-sm" onclick="openArchiveHalf()">📦 أرشفة نصف منتهٍ</button>
-          <button class="btn btn-out btn-sm" onclick="openArchiveBrowser()">🗄️ استعرض الأرشيف</button>
-          <span style="font-size:11.5px;color:var(--muted);align-self:center">بعد الإنهاء: انقل التحاضير والغياب والطلبات والدرجات التفصيلية للأرشيف — تبقى للرجوع ويخفّ النظام</span>
+          <button class="btn btn-out btn-sm" onclick="goAdmin('attlog','_trkTab','arc')">🗄️ استعرض الأرشيف</button>
+          <span style="font-size:11.5px;color:var(--muted);align-self:center">الترتيب: اربط التحاضير بأنصافها أولاً (مرة واحدة للقديم)، ثم أنهِ النصف، ثم أرشفه — تنتقل بياناته للأرشيف وتبقى للرجوع</span>
         </div>
       </div>`;
     }else if(tab==='current'){
