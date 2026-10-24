@@ -13,6 +13,18 @@
 // XSS protection
 function esc(v){if(v==null)return '';var s=String(v),o='',c;for(var i=0;i<s.length;i++){c=s[i];if(c==='&')o+='&amp;';else if(c==='<')o+='&lt;';else if(c==='>')o+='&gt;';else if(c==='"')o+='&quot;';else if(c==="'")o+='&#x27;';else if(c==='`')o+='&#x60;';else if(c==='/')o+='&#x2F;';else o+=c;}return o;}
 function escUrl(v){var s=String(v==null?'':v).trim();return(/^(javascript|data|vbscript):/i.test(s))?'#':esc(s);}
+/* 🖼️ مصدر صورة آمن — يسمح بـdata: للصور النقطية وحدها.
+   ⚠️ escUrl يرفض data: كلّها (قاعدة صحيحة لروابط المستخدم)، لكن شعار
+   المعهد نفسه data:image/png مضمَّنٌ في الصفحة. تمريره على escUrl
+   يحوّله إلى '#' فتخرج أوراق الكنترول بشعارٍ مكسور.
+   وsvg+xml مستثنى: يحمل سكربتاً. */
+function imgSrc(v){
+  var s=String(v==null?'':v).trim();
+  if(/^data:image\/(png|jpe?g|gif|webp|bmp|x-icon|vnd\.microsoft\.icon);base64,[A-Za-z0-9+/=\s]*$/i.test(s))return esc(s);
+  if(/^https?:\/\//i.test(s))return esc(s);
+  return '';
+}
+window.imgSrc=imgSrc;
 function escAttr(v){var s=esc(v),o='',c;for(var i=0;i<s.length;i++){c=s[i];o+=(c==='\n'||c==='\r')?' ':c;}return o;}
 // ⭐ وسيط نصي آمن داخل onclick: يهرّب للـJS أولاً ثم للـHTML — يمنع كسر الزر
 //    عندما يحتوي اسم مادة/شخص على علامة اقتباس أو شرطة مائلة عكسية.
@@ -5743,7 +5755,7 @@ async function printScheduleReport(opts){
   const allTrainers=[...new Set(Object.values(schedule).flatMap(g=>Object.values(g).map(c=>c.trainer)).filter(t=>t&&t!=='—'))].sort();
   const trainerLegend=allTrainers.length?`<div class="tlegend">${allTrainers.map(t=>`<span class="tl-item"><span class="tl-dot" style="background:${trainerColor(t)}"></span>${esc(t)}</span>`).join('')}</div>`:'';
   // ترويسة صفحة متكررة
-  const pgHdr=`<div class="pg-hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div><div class="meta">تاريخ الإصدار: ${today}</div></div>`;
+  const pgHdr=`<div class="pg-hdr">${imgSrc(logo)?`<img src="${imgSrc(logo)}" alt="شعار المعهد">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div><div class="meta">تاريخ الإصدار: ${today}</div></div>`;
   // تجميع الأقسام المختارة — كل عنصر (شعبة/مدرب/قاعة) في صفحة مستقلة بترويسة كاملة
   const parts=[];
   if(opts.general)parts.push(`<div class="sec-title">📊 الجدول العام الشامل (كل الشعب)</div>${genHtml}`);
@@ -5806,7 +5818,7 @@ async function printScheduleReport(opts){
   <button class="closebtn" onclick="window.close()" title="إغلاق">✕</button>
   <div class="noprint" style="position:fixed;top:56px;left:10px;background:#c9a227;color:#000;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:700;max-width:220px;z-index:99">⚠️ اختر الاتجاه: <u>أفقي Landscape</u></div>
   <div class="hdr">
-    ${logo?`<img src="${logo}" alt="logo">`:''}
+    ${imgSrc(logo)?`<img src="${imgSrc(logo)}" alt="شعار المعهد">`:''}
     <div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">الجدول الدراسي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div>${term?`<div class="t3">📅 ${term}</div>`:''}</div>
     <div class="meta">تاريخ الإصدار: ${today}<br>الدوام: ${fmtTime(schedConfig.startHour)} · ${schedConfig.periodsPerDay} حصص</div>
   </div>
@@ -13884,7 +13896,7 @@ function printAcademicReport(){
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
   <button class="closebtn" onclick="window.close()" title="إغلاق">✕</button>
-  <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">تقرير الأداء الأكاديمي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
+  <div class="hdr">${imgSrc(logo)?`<img src="${imgSrc(logo)}" alt="شعار المعهد">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">تقرير الأداء الأكاديمي — دبلوم تقنية الإلكترونيات الصناعية والتحكم</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
   <div class="kpis">
     <div class="kpi"><div class="n">${students.length}</div><div class="l">متدرب</div></div>
     <div class="kpi"><div class="n">${avg}%</div><div class="l">متوسط عام</div></div>
@@ -13930,7 +13942,7 @@ function reportShell(title,subtitle,bodyHtml){
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
   <button class="closebtn" onclick="window.close()" title="إغلاق">✕</button>
-  <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">${subtitle}</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
+  <div class="hdr">${imgSrc(logo)?`<img src="${imgSrc(logo)}" alt="شعار المعهد">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div><div class="t2">${subtitle}</div></div><div class="meta">تاريخ الإصدار: ${today}</div></div>
   ${bodyHtml}
   </body></html>`;
 }
@@ -14408,7 +14420,7 @@ function csPageHead(hLbl){
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
   const today=new Date().toLocaleDateString('en-GB');
   return `<div class="cs-ph">
-    ${logo?`<img src="${escUrl(logo)}" alt="شعار المعهد">`:''}
+    ${imgSrc(logo)?`<img src="${imgSrc(logo)}" alt="شعار المعهد">`:''}
     <div class="cs-ph-t">
       <div class="cs-h1">معهد المعرفة والإبداع العالي للتدريب</div>
       <div class="cs-h2">شيت الكنترول · ${esc(hLbl||'')}</div>
@@ -14523,7 +14535,7 @@ function controlShell(bodyHtml,subtitle){
     <select id="csPick" onchange="csFilter(this.value)"></select>
     <span class="cs-hint">💡 اختر «أفقي / Landscape» في إعدادات الطباعة</span>
   </div>
-  <div class="hdr">${logo?`<img src="${logo}">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div>
+  <div class="hdr">${imgSrc(logo)?`<img src="${imgSrc(logo)}" alt="شعار المعهد">`:''}<div><div class="t1">معهد المعرفة والإبداع العالي للتدريب</div>
     <div class="t2">${esc(subtitle||'شيت الكنترول — كشف درجات مجمّع لكل شعبة')}</div></div>
     <div class="meta">تاريخ الإصدار: <b>${today}</b></div></div>
   ${bodyHtml}
