@@ -14401,6 +14401,22 @@ function csDetail(key,code,cat,term){
     const bare=hits.find(x=>!termKeyOf(x.term||'')); return bare?bare.grade:''; }
   return hits[0].grade;
 }
+/* 🏛️ ترويسة الصفحة الكاملة — بالشعار والتاريخ، تتكرّر فوق كل صفحة.
+   ⚠️ كانت تُرسم مرة واحدة قبل كل الشعب، وكل شعبة تبدأ صفحةً جديدة،
+   فتخرج الشعبة الأولى بالشعار وما بعدها بلا شعار ولا تاريخ إصدار. */
+function csPageHead(hLbl){
+  const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
+  const today=new Date().toLocaleDateString('en-GB');
+  return `<div class="cs-ph">
+    ${logo?`<img src="${escUrl(logo)}" alt="شعار المعهد">`:''}
+    <div class="cs-ph-t">
+      <div class="cs-h1">معهد المعرفة والإبداع العالي للتدريب</div>
+      <div class="cs-h2">شيت الكنترول · ${esc(hLbl||'')}</div>
+    </div>
+    <div class="cs-ph-m">تاريخ الإصدار: <b>${esc(today)}</b></div>
+  </div>`;
+}
+window.csPageHead=csPageHead;
 function controlShell(bodyHtml,subtitle){
   const logo=(document.querySelector('link[rel="icon"]')||{}).href||'';
   const today=new Date().toLocaleDateString('en-GB');
@@ -14424,6 +14440,23 @@ function controlShell(bodyHtml,subtitle){
     border-bottom:2px solid ${B.gold};padding-bottom:5px;margin-top:16px}
   .cs-h1{font-size:13px;font-weight:800;color:${B.deep}}
   .cs-h2{font-size:11px;color:#5a6b85;font-weight:600}
+  /* ترويسة كل صفحة: شعار + اسم المعهد + تاريخ الإصدار */
+  .cs-ph{display:flex;align-items:center;gap:12px;border-bottom:3px solid ${B.gold};
+    padding-bottom:8px;margin-bottom:8px}
+  .cs-ph img{width:44px;height:44px;border-radius:50%;flex-shrink:0}
+  .cs-ph-t{min-width:0;flex:1}
+  .cs-ph-m{margin-right:auto;text-align:left;font-size:10.5px;color:#5a6b85;white-space:nowrap}
+  .cs-ph-m b{color:${B.deep}}
+  .cs-part{font-size:10.5px;font-weight:700;background:${B.gold};color:${B.deep};
+    border-radius:9px;padding:2px 9px;margin-inline-start:6px}
+  /* كثافة الجدول بحسب عدد الأعمدة — بدل عرضٍ واحد يُقَصّ عند الكثرة */
+  .cs-block.d2 table.cs{font-size:9px}
+  .cs-block.d2 table.cs th,.cs-block.d2 table.cs td{padding:2px 2px}
+  .cs-block.d2 table.cs td.nm,.cs-block.d2 table.cs th.nm{width:150px;max-width:150px;padding-inline:5px}
+  .cs-block.d3 table.cs{font-size:8px}
+  .cs-block.d3 table.cs th,.cs-block.d3 table.cs td{padding:1.5px 1px;line-height:1.25}
+  .cs-block.d3 table.cs td.nm,.cs-block.d3 table.cs th.nm{width:128px;max-width:128px;padding-inline:4px}
+  .cs-block.d3 table.cs th.cgrp{font-size:9px}
   .cs-block{margin-bottom:20px;border:1px solid #dbe2ec;border-radius:10px;padding:10px 12px 14px}
   @media print{.cs-block{border:none;padding:0}}
   .cs-note{font-size:10px;color:#7a5a12;background:#fdf6e3;border:1px solid #e8d9a8;
@@ -14474,7 +14507,14 @@ function controlShell(bodyHtml,subtitle){
   .cs-sign u{display:block;margin-top:30px;border-top:1px solid ${B.line};text-decoration:none;padding-top:4px}
   .noprint{position:fixed;top:8px;left:8px;background:${B.deep};color:#fff;border:none;padding:9px 18px;border-radius:9px;cursor:pointer;font-weight:700}
   .closebtn{position:fixed;top:8px;right:8px;background:#cf1f2f;color:#fff;border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:20px;font-weight:700}
-  @media print{.noprint,.closebtn,.cs-bar{display:none}}
+  /* الترويسة العلوية للشاشة فقط — صارت تتكرّر داخل كل صفحة عند الطباعة */
+  @media print{.noprint,.closebtn,.cs-bar,.hdr{display:none}}
+  /* 🛡️ شبكة أمان: لو تجاوز جدولٌ عرضَ الورقة رغم التقسيم، يُصغَّر
+     بدل أن تُقَصّ أعمدته بصمت. */
+  @media print{
+    table.cs{table-layout:auto;max-width:100%}
+    .cs-block{overflow:hidden}
+  }
   </style></head><body>
   <button class="noprint" onclick="window.print()">🖨️ اطبع الآن</button>
   <button class="closebtn" onclick="window.close()">✕</button>
@@ -14602,6 +14642,54 @@ async function printControlSheet(half,onlyGrp){
       return {...co, cats: anyItem?cats:[], folded: cats.length&&!anyItem};
     }).sort((a,b)=>String(a.course||a.code).localeCompare(String(b.course||b.code),'ar'));
     if(!courses.length)return;
+    /* 📄 تقسيم الشعبة على صفحات حين تكثر الأعمدة.
+       ⚠️ كانت كل مواد الشعبة في جدول واحد عرضه 100%: شعبةٌ بأربع مواد
+       تتجاوز الثلاثين عموداً، فتخرج الأعمدة اليمنى خارج الورقة وتُقصّ
+       عند الطباعة بلا أي تنبيه. الآن تُقسَّم على صفحات تسع كلٌّ منها
+       مجموعةَ موادّ كاملةً — ولا تُقَصّ مادة في نصفين أبداً. */
+    const nAllCourses=courses.length;
+    const CS_MAX_COLS=24;                       // أعمدة بيانات تسعها A4 أفقي بخطٍّ مقروء
+    const spanOf=co=>((co.cats||[]).length||1)+1;
+    const chunks=[]; let cur=[], curN=0;
+    courses.forEach(co=>{
+      const n=spanOf(co);
+      if(cur.length && curN+n>CS_MAX_COLS){ chunks.push(cur); cur=[]; curN=0; }
+      cur.push(co); curN+=n;
+    });
+    if(cur.length)chunks.push(cur);
+    /* 📊 إحصاء الشعبة يُحسب على موادها كلها ويُطبع كما هو في كل صفحة —
+       لا على مواد الصفحة وحدها، وإلا صار لكل صفحة «متوسط شعبة» مختلف. */
+    const allStats=chunks.reduce((acc,ch)=>{
+      const st=csScan(ch);
+      acc.dep+=st.dep; acc.miss+=st.miss; acc.pass+=st.pass; acc.fail+=st.fail;
+      acc.sum+=st.sum; acc.cnt+=st.cnt; return acc;
+    },{dep:0,miss:0,pass:0,fail:0,sum:0,cnt:0});
+    chunks.forEach((chunk,ci)=>csEmit(chunk,ci,chunks.length,allStats));
+
+    /* مسحٌ للعدّ فقط — بلا رسم */
+    function csScan(courses){
+      const o={dep:0,miss:0,pass:0,fail:0,sum:0,cnt:0};
+      gs.forEach(st=>{
+        courses.forEach(co=>{
+          const c=gRecs.find(x=>String(x.sid)===st.id&&normCode(x.code)===normCode(co.code));
+          if(!c)return;
+          if(isDeprivedRec(c)){ o.dep++; o.fail++; o.cnt++; return; }
+          const cats=co.cats||[];
+          let total='';
+          if(cats.length){
+            let sum=0,any=false;
+            cats.forEach(ct=>{ const v=csDetail(c.key,co.code,ct.cat,c.half||c.term);
+              if(v!==''&&v!=null){ sum+=parseFloat(v)||0; any=true; } });
+            total=any?(Math.round(sum*10)/10):((parseFloat(c.pct)||0)?Math.round(c.pct):'');
+          }else total=(parseFloat(c.pct)||0)?Math.round(c.pct):'';
+          if(total===''){ o.miss++; return; }
+          const n=parseFloat(total)||0; o.sum+=n; o.cnt++; (n>=60?o.pass++:o.fail++);
+        });
+      });
+      return o;
+    }
+
+    function csEmit(courses,ci,nChunks,ST){
     let h1=`<th rowspan="2" style="width:26px">م</th><th rowspan="2" class="nm">اسم المتدرب</th><th rowspan="2" style="width:92px">الرقم التدريبي</th>`;
     let h2='', h3='';
     courses.forEach(co=>{
@@ -14648,24 +14736,26 @@ async function printControlSheet(half,onlyGrp){
     }).join('');
     const avgG=cntAll?Math.round(sumAll/cntAll):0;
     const folded=courses.filter(c=>c.folded).map(c=>c.course||c.code);
-    body+=`<div class="cs-block" data-grp="${esc(String(g))}">
-      <div class="cs-head">
-        <div class="cs-h1">معهد المعرفة والإبداع العالي للتدريب</div>
-        <div class="cs-h2">شيت الكنترول · ${esc(hLbl)}</div>
-      </div>
-      <div class="cs-title"><span>🎛️ الشعبة ${esc(String(g))}</span>
-        <span class="cs-k">${gs.length} متدرب · ${courses.length} مادة</span></div>
+    const nCols=courses.reduce((a,co)=>a+spanOf(co),0);
+    /* كثافة الخط بحسب عدد الأعمدة — الضيق يبقى مقروءاً والواسع يتّسع */
+    const dens=nCols<=12?'d1':nCols<=18?'d2':'d3';
+    const part=nChunks>1?` <span class="cs-part">الجزء ${ci+1} من ${nChunks}</span>`:'';
+    body+=`<div class="cs-block ${dens}" data-grp="${esc(String(g))}">
+      ${csPageHead(hLbl)}
+      <div class="cs-title"><span>🎛️ الشعبة ${esc(String(g))}${part}</span>
+        <span class="cs-k">${gs.length} متدرب · ${courses.length} مادة${nChunks>1?' في هذه الصفحة':''}</span></div>
       <table class="cs"><thead>
         <tr>${h1}</tr>
         <tr>${h2}</tr>
         <tr class="mxr"><th colspan="3" style="text-align:center">الدرجة العظمى ←</th>${h3}</tr>
       </thead><tbody>${rows}</tbody></table>
       <div class="cs-stats">
-        <span>متوسط الشعبة: <b>${avgG}%</b></span>
-        <span>ناجحون: <b>${nPass}</b></span>
-        <span>راسبون: <b>${nFail}</b></span>
-        <span>محرومون: <b>${nDep}</b></span>
-        <span>لم تُرصد: <b>${nMissing}</b></span>
+        <span>متوسط الشعبة: <b>${ST.cnt?Math.round(ST.sum/ST.cnt):0}%</b></span>
+        <span>نتائج ناجحة: <b>${ST.pass}</b></span>
+        <span>نتائج راسبة: <b>${ST.fail}</b></span>
+        <span>حالات حرمان: <b>${ST.dep}</b></span>
+        <span>لم تُرصد: <b>${ST.miss}</b></span>
+        <span style="color:#7a8aa0">من ${gs.length} متدرب × ${nAllCourses} مادة${nChunks>1?' (إحصاء الشعبة كاملةً)':''}</span>
       </div>
       <div class="cs-legend">
         <span><i class="lg-g">غ</i> مسجّل ولم تُرصد درجته</span>
@@ -14675,6 +14765,7 @@ async function printControlSheet(half,onlyGrp){
       ${folded.length?`<div class="cs-note">ℹ️ عُرضت بعمود «الدرجة» فقط لأنها لا تحمل درجات بنود في هذا النصف: ${esc(folded.join('، '))}</div>`:''}
       <div class="cs-sign"><div>مدرّب المادة<u></u></div><div>مشرف التخصص<u></u></div><div>مدير الأكاديمية<u></u></div></div>
       </div>`;
+    }
   });
   if(!body){showToast('لا توجد شعب أو درجات لعرضها','w');return;}
   openReport(controlShell(body, 'شيت الكنترول — '+hLbl));
