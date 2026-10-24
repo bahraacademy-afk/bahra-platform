@@ -1672,6 +1672,14 @@ body.light-mode .grad-acts .btn-out:hover{background:rgba(255,255,255,.26)!impor
 .tv-pod-av i{position:absolute;bottom:-6px;inset-inline-start:-8px;font-style:normal;font-size:30px;
   filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
 
+/* ===== 🔄 صف التنقل بين الحسابين ===== */
+.acct-sw{background:color-mix(in srgb,var(--brand-1) 12%,transparent)!important;
+  border:1px solid color-mix(in srgb,var(--brand-1) 32%,transparent)!important}
+.acct-sw .acct-ico{color:var(--acc-b)}
+.acct-sw-tag{margin-inline-start:auto;font-size:10.5px;font-weight:800;
+  background:var(--acc-b);color:#06203a;border-radius:10px;padding:2px 9px}
+body.light-mode .acct-sw-tag{color:#fff}
+
 /* ===== 🔎 مختار النصف المجزأ ===== */
 .half-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .half-pick label{font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap}
@@ -1922,6 +1930,15 @@ body.has-modal .mob-nav{transform:translateY(110%);pointer-events:none}
 .topbar .tb-ic:focus-visible,.topbar #themeBtn:focus-visible,.topbar #thmPickBtn:focus-visible,
 .topbar #txBtn:focus-visible,.topbar .notif-btn:focus-visible{
   outline:2px solid var(--acc-b);outline-offset:2px}
+/* 🔒 إخفاء بالدور — بعد قواعد الترويسة وبأولوية أعلى منها.
+   ⚠️ style.display='none' لا يكفي: القاعدة أعلاه تفرض
+   display:inline-flex!important فتغلبه. وحتى `.topbar .tb-off` وحده
+   لا يكفي — نفس الأولوية، والأسبق في الملف يخسر. فالصنف هنا مركّب
+   وموضعه بعدها. بهذا بالضبط كان المتدربُ يرى زر «التكليفات». */
+.tb-off,
+.topbar .notif-btn.tb-off,
+.topbar .tb-ic.tb-off,
+.topbar .out-btn.tb-off{display:none!important}
 /* زر الخروج نصّي لكنه يحاذي الأيقونات بنفس الارتفاع */
 .topbar .out-btn{height:40px;border-radius:12px;padding:0 14px;display:inline-flex;align-items:center}
 /* على الجوال يرتفع المقاس إلى 44px — الحدّ المريح للإصبع، لا ينزل دونه */
@@ -2304,9 +2321,9 @@ body.light-mode[data-thm]::before{
     <div class="tb-right">
       <button id="themeBtn" class="tb-ic tb-sm-hide" onclick="toggleTheme()" title="تبديل الوضع" aria-label="تبديل الوضع">🌙</button>
       <button id="thmPickBtn" class="tb-ic tb-sm-hide" onclick="openThemePick()" title="مظهر المنصة" aria-label="مظهر المنصة">🎨</button>
-      <div class="notif-btn tb-sm-hide" onclick="showReviewCases()" title="الحالات التي تحتاج مراجعة">⚠️<span class="notif-badge nb-y" id="reviewBadge" style="display:none"></span></div>
+      <div class="notif-btn tb-sm-hide tb-off" id="reviewBtn" onclick="showReviewCases()" title="الحالات التي تحتاج مراجعة">⚠️<span class="notif-badge nb-y" id="reviewBadge" style="display:none"></span></div>
       <div class="notif-btn" onclick="showNotifs()" title="الاشعارات">🔔<span class="notif-badge" id="notifBadge" style="display:none"></span></div>
-      <div class="notif-btn tb-sm-hide" id="delegBtn" onclick="showDelegations()" title="التكليفات" style="display:none">🧾<span class="notif-badge nb-y" id="delegBadge" style="display:none"></span></div>
+      <div class="notif-btn tb-sm-hide tb-off" id="delegBtn" onclick="showDelegations()" title="التكليفات">🧾<span class="notif-badge nb-y" id="delegBadge" style="display:none"></span></div>
       <span class="role-badge" id="rbadge"></span>
       <div class="av" id="topAv" onclick="openAccountSheet()" title="حسابي" role="button" tabindex="0"></div>
       <span class="uname tb-sm-hide" id="topName"></span>
@@ -2357,7 +2374,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyjU3TSBvH7BcqBTzFUPonAbTn0vBFVY43WOqXdX6TzGJgr6PS6YLUadhZEG3DmZsjb/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx5A21V1iudVqyKov5mViM6H1u54P6JtzKq3AL7cNBtOdYJJngzfeR2gPDmVruLzwcZ/exec';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -2368,6 +2385,7 @@ const ADMIN=[]; // التحقق صار في الخادم
 
 
 let role='s', user=null, currentUser=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[], graduates=[];
+let ROLE_ALT='';   // 🔄 'a' أو 't' أو '' — الدور الآخر لصاحب حسابين، يصل مع الإقلاع
 let news=[]; // 📰 الأخبار والإعلانات
 let attachments=[]; // 📎 مرفقات المقررات (محمّلة من التبويب لا من ذاكرة المتصفح)
 // جدول التوليد: {grp:{ 'يوم|حصة': {course,trainer,code} }}
@@ -3426,6 +3444,8 @@ function setBootPayload(bp){
   if(bp.theme)setThemeCfg(bp.theme);     // 🎉 إعداد المناسبات من الخادم → الجميع يراه
   if(bp.grel)setGradesRel(bp.grel);      // 🔒 موعد إظهار الدرجات من الخادم
   if(bp.staff&&bp.staff.length)applyStaffDir(bp.staff);
+  // 🔄 هل له حساب في الدور الآخر؟ يظهر زر التنقل في «حسابي»
+  if(typeof bp.alt!=='undefined')ROLE_ALT=String(bp.alt||'');
   /* 🎓 حالة المتدرب تُصحَّح في كل إقلاع — فمن دخل قبل تحديث الخادم
      بقيت نسخته بلا «الحالة» فلا يُهنَّأ بتخرّجه حتى يخرج ويدخل. */
   if(bp.me&&user&&user.role==='s'){
@@ -4662,9 +4682,13 @@ function showApp(){
   if(user.role==='s') buildStudentApp();
   else if(user.role==='t') buildTrainerApp();
   else buildAdminApp();
-  // زر التكليفات للمدرب والإداري فقط
-  const dBtn=document.getElementById('delegBtn');
-  if(dBtn){ dBtn.style.display=(user.role==='t'||user.role==='a')?'':'none'; updateDelegBadge(); }
+  /* 🔒 أزرار الترويسة بحسب الدور — بالصنف لا بالأسلوب السطري.
+     التكليفات للمدرب والإداري، ومراجعة الحالات للإداري وحده. */
+  const tbShow=(id,on)=>{ const el=document.getElementById(id);
+    if(el)el.classList.toggle('tb-off',!on); };
+  tbShow('delegBtn', user.role==='t'||user.role==='a');
+  tbShow('reviewBtn', user.role==='a');
+  updateDelegBadge();
   initParticles();
   updateNotifBadges();
   // 🎊 أول دخول بعد التخرّج — مرة واحدة لا تتكرّر
@@ -6282,7 +6306,7 @@ function showSPage(pg,el){
   const mc=document.getElementById('mcontent');
   mc.innerHTML='';
   mc.style.animation='none';
-  setTimeout(()=>{try{mc.style.animation='fadeIn .3s ease';mc.innerHTML=sPgs[pg]?sPgs[pg]():'';renderThemeRibbon();animCards();if(currentLang==='en')translateNode(mc);}catch(err){pageErr(mc,err,()=>showSPage(pg,null));}},10);
+  setTimeout(()=>{try{mc.style.animation='fadeIn .3s ease';mc.innerHTML=sPgs[pg]?sPgs[pg]():pageMissing(pg,"showSPage('home',null)");renderThemeRibbon();animCards();if(currentLang==='en')translateNode(mc);}catch(err){pageErr(mc,err,()=>showSPage(pg,null));}},10);
 }
 
 // ===== المكتبة العلمية (نظري + عملي لكل المقررات) =====
@@ -6328,18 +6352,53 @@ function allSpecs(activeOnly){
   (trainersDB||[]).forEach(x=>add(x.spec));
   return [...m.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar'));
 }
+/* ============================================================
+ * 📚 ترتيب المقررات — الفصل التدريبي ثم رقم الرمز
+ * ------------------------------------------------------------
+ * ⚠️ كانت كل القوائم تتبع ترتيب صفوف الورقة: مقرر الفصل الثالث قبل
+ * الأول، و«151 مصيم» قبل «101 منتج». الآن ترتيبٌ واحد في كل مكان:
+ * المكتبة والخطة والتسجيل وقوائم المقررات.
+ * ============================================================ */
+const TERM_ORD_={'الأول':1,'الاول':1,'الثاني':2,'الثانى':2,'الثالث':3,'الرابع':4,'الخامس':5,'السادس':6,
+                 'أول':1,'اول':1,'ثاني':2,'ثان':2,'ثالث':3,'رابع':4,'خامس':5,'سادس':6};
+function termOrd(v){
+  const t=String(v==null?'':v).replace(/\s+/g,' ').trim();
+  if(!t)return 99;
+  if(TERM_ORD_[t]!=null)return TERM_ORD_[t];
+  const k=arNorm(t);
+  for(const key in TERM_ORD_) if(arNorm(key)===k)return TERM_ORD_[key];
+  const d=t.match(/\d+/);
+  return d?parseInt(d[0],10):99;
+}
+/* رقم الرمز أولاً («101 منتج» → 101)، ثم نصّه لفضّ التعادل */
+function codeSortKey(code){
+  const t=String(code==null?'':code).trim();
+  const d=t.match(/\d+/);
+  return [d?parseInt(d[0],10):99999, t];
+}
+function catCmp(a,b){
+  const ta=termOrd(a&&a.term), tb=termOrd(b&&b.term);
+  if(ta!==tb)return ta-tb;
+  const [na,sa]=codeSortKey(a&&a.code), [nb,sb]=codeSortKey(b&&b.code);
+  if(na!==nb)return na-nb;
+  if(sa!==sb)return String(sa).localeCompare(String(sb),'ar');
+  return String((a&&a.name)||'').localeCompare(String((b&&b.name)||''),'ar');
+}
+function catSort(list){ return (list||[]).slice().sort(catCmp); }
+window.termOrd=termOrd;window.codeSortKey=codeSortKey;window.catCmp=catCmp;window.catSort=catSort;
+
 /* 🎓 خطة المتدرب = مقررات تخصصه + المقررات العامة.
    ⚠️ كانت «الخطة» كل الكتالوج بلا تمييز، فمتدرب إلكترونيات تُحسب عليه
    مواد الميكانيكا: «نسبة إكمال ٦٦٪» و«١٧ مادة لم تُؤخذ بعد» وهي ليست
    من خطته إطلاقاً. الآن تُقاس على تخصصه وحده. */
 function planForSpec(spec){
   const k=specKey(spec||'');
-  return (catalog||[]).filter(c=>{
+  return catSort((catalog||[]).filter(c=>{
     const L=libSpecList(c.specs);
     if(!L.length||L.indexOf('جميع الدبلومات')>-1)return true;   // مقرر عام
     if(!k)return true;                                          // متدرب بلا تخصص: الخطة كلها
     return L.some(x=>specKey(x)===k);
-  });
+  }));
 }
 function planForStudent(st){ return planForSpec(st&&st.spec); }
 /* هل هذه الحالة = خرّيج؟ (العمود J في قاعدة البيانات المركزية)
@@ -6568,6 +6627,7 @@ function buildLibrary(scope, canAdd){
   });
   // إزالة التكرار بالكود
   const seen=new Set();cats=cats.filter(c=>{const k=norm(c.code);if(seen.has(k))return false;seen.add(k);return true;});
+  cats=catSort(cats);          // 📚 الفصل التدريبي ثم الرمز — لا ترتيب الورقة
   // ── التخصصات المتاحة في هذا النطاق ──
   const {specs,gen}=libSpecsIn(cats);
   let pick=window._libSpec;
@@ -7490,9 +7550,19 @@ function showTPage(pg,el){
   const mc=document.getElementById('mcontent');
   mc.innerHTML='<div class="empty"><div class="empty-icon">⏳</div>جاري التحميل...</div>';
   setTimeout(()=>{try{
-    mc.innerHTML=tPgs[pg]?tPgs[pg]():'';renderThemeRibbon();animCards();if(currentLang==='en')translateNode(mc);
+    mc.innerHTML=tPgs[pg]?tPgs[pg]():pageMissing(pg,"showTPage('home',null)");renderThemeRibbon();animCards();if(currentLang==='en')translateNode(mc);
   }catch(err){pageErr(mc,err,()=>showTPage(pg,null));}},10);
 }
+/* صفحة غير معروفة: كانت تُخرج '' فتبقى الشاشة بيضاء بلا تفسير ولا
+   طريق للرجوع. الآن رسالة واضحة وزر يعيده لرئيسيته. */
+function pageMissing(pg,home){
+  return `<div class="empty"><div class="empty-icon">🧭</div>
+    <div>هذه الصفحة غير متاحة لدورك</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:8px">${esc(String(pg||''))}</div>
+    <div style="margin-top:14px"><button class="btn btn-b btn-sm" onclick="${home}">↩︎ الرجوع للرئيسية</button></div>
+  </div>`;
+}
+window.pageMissing=pageMissing;
 // عرض خطأ الصفحة بشكل واضح بدل ما تبقى فاضية «معلّقة»
 function pageErr(mc,err,retry){
   try{console.error('page render error',err);}catch(_){}
@@ -7609,7 +7679,7 @@ function renderAttLog(scopeAll,canEdit,bare){
   const opts=['<option value="all">كل المواد</option>'].concat(courses.map(c=>`<option value="${esc(cnk_(c))}">${esc(c)}</option>`)).join('');
   const toolbar=`<div class="atl-toolbar">
     <div class="atl-search"><span style="color:var(--muted)">🔍</span><input id="atlSearch" placeholder="ابحث باسم الطالب أو رقمه أو المادة..." oninput="attlogFilter()"></div>
-    <select id="atlCourse" class="atl-select" onchange="attlogFilter()">${opts}</select>
+    <select id="atlCourse" class="atl-select" aria-label="تصفية بالمادة" title="تصفية بالمادة" onchange="attlogFilter()">${opts}</select>
   </div>`;
   return atlCss()+`<div class="atl-wrap">${banner}${kpis}${toolbar}<div id="attlogBody">${attlogCards()}</div></div>`;
 }
@@ -7734,7 +7804,7 @@ function lpFld(lbl,inner){return `<div style="margin-bottom:12px"><label class="
 // صف تاريخ/حصة/فصل في نموذج التحضير (متعدد التواريخ)
 function lpSessionRowHtml(date,period,cls){
   return `<div class="lp-srow">
-    <input type="date" class="lp-in lp-sdate" value="${esc(date||'')}" style="color-scheme:light dark">
+    <input type="date" class="lp-in lp-sdate" aria-label="تاريخ الدرس" title="تاريخ الدرس" value="${esc(date||'')}" style="color-scheme:light dark">
     <input class="lp-in lp-speriod" placeholder="الحصة" value="${esc(period||'')}">
     <input class="lp-in lp-scls" placeholder="الفصل/الشعبة" value="${esc(cls||'')}">
     <button class="btn btn-sm" style="background:rgba(230,57,70,.12);color:var(--acc-r);border:1px solid rgba(230,57,70,.3)" title="حذف" onclick="const wrap=this.closest('.lp-srow').parentElement;if(wrap&&wrap.querySelectorAll('.lp-srow').length>1)this.closest('.lp-srow').remove();else showToast('لازم تاريخ واحد على الأقل','w')">🗑️</button>
@@ -7786,19 +7856,19 @@ function lessonFormPage(){
   const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">📝 تحضير الدروس</div><div class="bsub">عبّئ نموذج التحضير وأرسله للإدارة — وتقدر تطبعه</div></div><span class="pill pb">${mine.length} تحضير مُرسل</span></div>`;
   const form=`<div class="ccard" style="padding:18px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
-      ${lpFld('المادة',`<select id="lp_material" class="lp-in">${myCourses.map(c=>`<option>${esc(c)}</option>`).join('')||'<option></option>'}</select>`)}
+      ${lpFld('المادة',`<select id="lp_material" class="lp-in" aria-label="المادة" title="المادة">${myCourses.map(c=>`<option>${esc(c)}</option>`).join('')||'<option></option>'}</select>`)}
       ${lpFld('الفرع/التخصص',`<input id="lp_branch" class="lp-in" placeholder="اختياري">`)}
-      ${lpFld('الصف/الشعبة',`<select id="lp_grade" class="lp-in"><option value="">— اختر الشعبة —</option>${myGrps.map(g=>`<option>${esc(g)}</option>`).join('')}</select>`)}
+      ${lpFld('الصف/الشعبة',`<select id="lp_grade" class="lp-in" aria-label="الصف" title="الصف"><option value="">— اختر الشعبة —</option>${myGrps.map(g=>`<option>${esc(g)}</option>`).join('')}</select>`)}
     </div>
     ${lpFld('التواريخ والحصص <span style="font-weight:400;color:var(--muted)">(تقدر تضيف أكثر من تاريخ)</span>',
       `<div id="lp_sessions">${lpSessionRowHtml(dv,'','')}</div>
        <button class="btn btn-sm btn-out" onclick="lpAddSession()" style="margin-top:4px">➕ إضافة تاريخ</button>`)}
-    ${lpFld('موضوع الدرس',`<input id="lp_topic" class="lp-in">`)}
+    ${lpFld('موضوع الدرس',`<input id="lp_topic" class="lp-in" aria-label="موضوع الدرس" title="موضوع الدرس">`)}
     ${lpFld('نواتج التعلم (الأهداف الإجرائية)',`<textarea id="lp_outcomes" rows="3" class="lp-in" placeholder="اكتب كل هدف في سطر"></textarea>`)}
-    ${lpFld('التمهيد',`<textarea id="lp_intro" rows="2" class="lp-in"></textarea>`)}
-    ${lpFld('عرض الدرس',`<textarea id="lp_present" rows="6" class="lp-in"></textarea>`)}
-    ${lpFld('التقويم',`<textarea id="lp_eval" rows="2" class="lp-in"></textarea>`)}
-    ${lpFld('الواجب المنزلي',`<textarea id="lp_homework" rows="2" class="lp-in"></textarea>`)}
+    ${lpFld('التمهيد',`<textarea id="lp_intro" rows="2" class="lp-in" aria-label="التمهيد" title="التمهيد"></textarea>`)}
+    ${lpFld('عرض الدرس',`<textarea id="lp_present" rows="6" class="lp-in" aria-label="عرض الدرس" title="عرض الدرس"></textarea>`)}
+    ${lpFld('التقويم',`<textarea id="lp_eval" rows="2" class="lp-in" aria-label="التقويم" title="التقويم"></textarea>`)}
+    ${lpFld('الواجب المنزلي',`<textarea id="lp_homework" rows="2" class="lp-in" aria-label="الواجب المنزلي" title="الواجب المنزلي"></textarea>`)}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-top:6px">
       <div><div class="lp-gt">أساليب التعليم والتعلم</div><div class="lp-chips">${lpChk('lp-m',LP_METHODS)}</div></div>
       <div><div class="lp-gt">مصادر التعلم</div><div class="lp-chips">${lpChk('lp-s',LP_SOURCES)}</div></div>
@@ -7822,7 +7892,7 @@ function adminLessonsPage(bare){
   const opts=['<option value="all">كل المدربين</option>'].concat(trainers.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`)).join('');
   const toolbar=`<div class="ctl-row">
     <input id="lpSearch" class="lp-in" style="flex:1 1 220px" placeholder="🔍 ابحث بالمادة أو الموضوع أو المدرب..." oninput="admLessonsFilter()">
-    <select id="lpTrainer" class="lp-in" style="flex:0 1 220px" onchange="admLessonsFilter()">${opts}</select>
+    <select id="lpTrainer" class="lp-in" aria-label="تصفية بالمدرب" title="تصفية بالمدرب" style="flex:0 1 220px" onchange="admLessonsFilter()">${opts}</select>
     <button class="btn btn-out" id="lpAllBtn" data-open="0" onclick="lpToggleAll(this.dataset.open!=='1')">▾ افتح الكل</button>
   </div>`;
   return `<style>${LP_CSS}</style>`+banner+toolbar+`<div id="lessonsBody">${admLessonsCards()}</div>`;
@@ -8197,7 +8267,7 @@ const tPgs={
     const isToday=!selVal;
     const dateBar=`<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:12px 14px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--border);border-radius:12px">
       <span style="font-weight:700">📅 تاريخ التحضير:</span>
-      <input type="date" value="${inputVal}" onchange="window._attSelDate=this.value;showTPage('attendance',null)" style="padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card,rgba(255,255,255,.03));color:var(--text);font-family:inherit;font-size:14px;color-scheme:light dark">
+      <input type="date" aria-label="تاريخ التحضير" title="تاريخ التحضير" value="${inputVal}" onchange="window._attSelDate=this.value;showTPage('attendance',null)" style="padding:9px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card,rgba(255,255,255,.03));color:var(--text);font-family:inherit;font-size:14px;color-scheme:light dark">
       <span class="pill ${isToday?'pg':'py'}">${isToday?'اليوم':'تاريخ سابق'} · ${dayLabel}</span>
       ${!isToday?`<button class="btn btn-sm btn-out" onclick="window._attSelDate='';showTPage('attendance',null)">↩︎ رجوع لليوم</button>`:''}
     </div>`;
@@ -8934,7 +9004,7 @@ function showAPage(pg,el){
   if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active aa'}
   if(window._mobPages){window._mobPages.active=pg;} if(typeof setMobActive==='function')setMobActive(pg);
   const mc=document.getElementById('mcontent');
-  mc.innerHTML='';setTimeout(()=>{try{mc.innerHTML=aPgs[pg]?aPgs[pg]():'';renderThemeRibbon();animCards();if(currentLang==='en')translateNode(mc);if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);if(pg==='maintenance')setTimeout(refreshSystemHealth,60);}catch(err){pageErr(mc,err,()=>showAPage(pg,null));}},10);
+  mc.innerHTML='';setTimeout(()=>{try{mc.innerHTML=aPgs[pg]?aPgs[pg]():pageMissing(pg,"showAPage('overview',null)");renderThemeRibbon();animCards();if(currentLang==='en')translateNode(mc);if(pg==='overview')setTimeout(()=>renderKPI('all',null),60);if(pg==='maintenance')setTimeout(refreshSystemHealth,60);}catch(err){pageErr(mc,err,()=>showAPage(pg,null));}},10);
 }
 // معالج مباشر لزر شاشة العرض (event delegation — يعمل حتى لو onclick inline فشل)
 document.addEventListener('click',function(e){
@@ -9208,6 +9278,15 @@ function planSpecFilter(v){
   });
   const c=document.getElementById('planCount');
   if(c)c.textContent=v?('('+shown+' من '+real+' مقرر)'):('('+real+' مقرر)');
+  /* تخصّصٌ مسجّل بلا مقررات يُفرِغ الجدول — نقول له لماذا بدل جدول خاوٍ */
+  let note=document.getElementById('planSpecNote');
+  if(v&&!shown){
+    if(!note){ note=document.createElement('div'); note.id='planSpecNote';
+      note.className='alert ab'; note.style.margin='10px 0';
+      tb.closest('[data-listwrap]').insertBefore(note,tb.closest('.gtable')); }
+    note.innerHTML='<span class="aicon">🎓</span><div><b>ما فيه مقرر مرتبط بـ«'+esc(v==='__gen__'?'عامة':v)+'» بعد</b>'
+      +'<div style="font-size:12px;color:var(--muted);margin-top:4px">اربط المقررات بهذا التخصص من زر التعديل ✏️ في صف كل مقرر، أو احذفه من «🎓 التخصصات» إن ما عاد مستعملاً.</div></div>';
+  }else if(note){ note.remove(); }
 }
 window.planSpecFilter=planSpecFilter;
 function crsSyncSpecs(){
@@ -11394,7 +11473,7 @@ const aPgs={
       const matBadge=c=>{const n=parseMaterials(c.matTheory).length,p=parseMaterials(c.matPractical).length;const parts=[];if(n)parts.push('📘'+n);if(p)parts.push('🔧'+p);return parts.length?`<span style="background:rgba(46,204,113,.15);color:var(--acc-g);border-radius:10px;padding:2px 8px;font-size:10px">${parts.join(' ')}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>';};
       /* 🎓 تصفية الخطة بالتخصص — صفٌّ واحد لكل مقرر، وdata-sp تُستعمل
          في التصفية الفورية بلا إعادة رسم الصفحة. */
-      const rows=(catalog||[]).map(c=>`<tr data-sp="${escAttr(libSpecList(c.specs).join('|')||'__gen__')}">
+      const rows=catSort(catalog).map(c=>`<tr data-sp="${escAttr(libSpecList(c.specs).join('|')||'__gen__')}">
         <td style="font-weight:600">${esc(c.code)}</td><td>${esc(c.name)}</td><td>${esc(fmtTerm(c.term))||'-'}</td><td>${c.units||'-'}</td><td>${c.hours||'-'}</td><td>${c.prereq?`<span style="background:rgba(244,162,97,.15);color:var(--acc-y);border-radius:10px;padding:2px 8px;font-size:10px">📌 ${esc(c.prereq)}</span>`:'<span style="color:var(--muted);font-size:11px">—</span>'}</td><td>${specChip(c.specs)}</td><td>${matBadge(c)}</td>
         <td><button onclick='editCourse(${jsonAttr(c)})' class="btn btn-out btn-sm">✏️</button> <button onclick='deleteCourse("${jsq(c.code)}","${jsq(c.name)}")' class="btn btn-sm" style="background:#cf1f2f;color:#fff">🗑️</button></td>
       </tr>`).join('')||`<tr data-empty><td colspan="9" style="text-align:center;color:var(--muted)">لا توجد مقررات في الخطة</td></tr>`;
@@ -11415,11 +11494,17 @@ const aPgs={
         ${(function(){const L=(typeof allSpecs==='function')?allSpecs(false):[];
           if(!L.length)return '';
           const gen=(catalog||[]).filter(c=>!libSpecList(c.specs).length).length;
-          return `<select id="planSpec" aria-label="تصفية بالتخصص" title="تصفية بالتخصص" onchange="planSpecFilter(this.value)" style="padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:13px;max-width:280px">
+          const cnt=x=>(catalog||[]).filter(c=>libSpecList(c.specs).some(y=>specKey(y)===specKey(x.name))).length;
+          /* 🎓 المستعمل أولاً، وغير المستعمل في مجموعة مستقلة.
+             ⚠️ كانت التخصصات بـ(٠) مقرر مبعثرةً وسط القائمة فتبدو
+             خياراتٍ حقيقية، والضغط عليها يُفرِغ الجدول بلا تفسير. */
+          const used=L.filter(x=>cnt(x)>0), idle=L.filter(x=>cnt(x)===0);
+          const opt=x=>`<option value="${escAttr(x.name)}">${esc(x.name)} (${cnt(x)})</option>`;
+          return `<select id="planSpec" aria-label="تصفية بالتخصص" title="تصفية بالتخصص" onchange="planSpecFilter(this.value)" style="padding:9px 12px;border:1px solid var(--border);border-radius:9px;background:var(--card,rgba(255,255,255,.04));color:var(--text);font-size:13px;max-width:280px">
             <option value="">🎓 كل التخصصات (${(catalog||[]).length})</option>
-            ${L.map(x=>{const n=(catalog||[]).filter(c=>libSpecList(c.specs).some(y=>specKey(y)===specKey(x.name))).length;
-              return `<option value="${escAttr(x.name)}">${esc(x.name)} (${n})</option>`;}).join('')}
-            ${gen?`<option value="__gen__">🌐 عامة — لكل التخصصات (${gen})</option>`:''}
+            ${used.length?`<optgroup label="تخصصات لها مقررات">${used.map(opt).join('')}</optgroup>`:''}
+            ${gen?`<optgroup label="غير مرتبط بتخصص"><option value="__gen__">🌐 عامة — لكل التخصصات (${gen})</option></optgroup>`:''}
+            ${idle.length?`<optgroup label="مسجّلة بلا مقررات بعد">${idle.map(opt).join('')}</optgroup>`:''}
           </select>`;})()}
       </div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:12px">💡 كل مقرر يمكن ربطه بأكثر من تخصص من زر التعديل ✏️ — واتركه فارغاً ليصلح لكل التخصصات</div>
@@ -11486,7 +11571,7 @@ const aPgs={
         return {st: states.some(x=>x==='current')?'current':'done', need:0};
       };
       // تصنيف المقررات
-      const catCourses=(catalog||[]).map(c=>({...c,...courseInfo(c.code)}));
+      const catCourses=catSort(catalog).map(c=>({...c,...courseInfo(c.code)}));
       const done=catCourses.filter(c=>c.st==='done');
       const current=catCourses.filter(c=>c.st==='current');
       const remaining=catCourses.filter(c=>c.st==='remaining');
@@ -11907,7 +11992,7 @@ const aPgs={
             return L.length?L.map(esc).join('<br>'):'<span style="opacity:.6">— بلا مدرّب —</span>';})()}</div>
           <button class="sch-tr-btn" onclick="event.stopPropagation();openSchTrainers('${jsq(g)}','${jsq(slot)}')"
             title="مدربو هذه الحصة">👥 ${schTrainerList(c.trainer).length||0}</button>
-          <select class="sch-room" onclick="event.stopPropagation()" onchange="schSetRoom('${jsq(g)}','${jsq(slot)}',this.value)">
+          <select class="sch-room" aria-label="القاعة" title="القاعة" onclick="event.stopPropagation()" onchange="schSetRoom('${jsq(g)}','${jsq(slot)}',this.value)">
             ${LABS.map(l=>`<option value="${l}" ${c.room===l?'selected':''}>${l}</option>`).join('')}
           </select>
         </div>`:'<span class="sch-empty">+</span>'}
@@ -11973,7 +12058,7 @@ const aPgs={
           </select>
         </div>`
       : `<div class="sch-cfg"><label>الشعبة</label>
-          <select onchange="window._schedGrp=this.value;showAPage('schedule',null)">
+          <select aria-label="اختيار الشعبة" title="اختيار الشعبة" onchange="window._schedGrp=this.value;showAPage('schedule',null)">
             ${grps.map(g=>`<option value="${g}" ${g===cur?'selected':''}>الشعبة ${g}</option>`).join('')}
             <option value="all" ${isAll?'selected':''}>🏫 كل الشعب</option>
           </select>
@@ -11988,17 +12073,17 @@ const aPgs={
     <div class="sch-controls">
       ${selectorCfg}
       <div class="sch-cfg"><label>عدد الأيام</label>
-        <input type="number" min="1" max="5" value="${schedConfig.daysCount}" onchange="schedConfig.daysCount=parseInt(this.value)||5;showAPage('schedule',null)"></div>
+        <input type="number" aria-label="عدد أيام الأسبوع" title="عدد أيام الأسبوع" min="1" max="5" value="${schedConfig.daysCount}" onchange="schedConfig.daysCount=parseInt(this.value)||5;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>حصص باليوم</label>
-        <input type="number" min="1" max="8" value="${P}" onchange="schedConfig.periodsPerDay=parseInt(this.value)||5;showAPage('schedule',null)"></div>
+        <input type="number" aria-label="عدد الحصص في اليوم" title="عدد الحصص في اليوم" min="1" max="8" value="${P}" onchange="schedConfig.periodsPerDay=parseInt(this.value)||5;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>ساعة الحصة</label>
-        <input type="number" min="1" max="6" step="0.5" value="${schedConfig.periodHours}" onchange="schedConfig.periodHours=parseFloat(this.value)||2;showAPage('schedule',null)"></div>
+        <input type="number" aria-label="مدة الحصة بالساعات" title="مدة الحصة بالساعات" min="1" max="6" step="0.5" value="${schedConfig.periodHours}" onchange="schedConfig.periodHours=parseFloat(this.value)||2;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>بداية الدوام</label>
-        <input type="number" min="6" max="14" step="0.5" value="${schedConfig.startHour}" onchange="schedConfig.startHour=parseFloat(this.value)||8;showAPage('schedule',null)"></div>
+        <input type="number" aria-label="ساعة البداية" title="ساعة البداية" min="6" max="14" step="0.5" value="${schedConfig.startHour}" onchange="schedConfig.startHour=parseFloat(this.value)||8;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>بداية الاستراحة</label>
         <input type="number" min="9" max="15" step="0.5" value="${schedConfig.breakStart}" title="وقت بداية الاستراحة (12 = الظهر)" onchange="schedConfig.breakStart=parseFloat(this.value)||12;showAPage('schedule',null)"></div>
       <div class="sch-cfg"><label>مدة الاستراحة (ساعة)</label>
-        <input type="number" min="0.5" max="3" step="0.5" value="${schedConfig.breakHours}" onchange="schedConfig.breakHours=parseFloat(this.value)||1;showAPage('schedule',null)"></div>
+        <input type="number" aria-label="مدة الاستراحة بالساعات" title="مدة الاستراحة بالساعات" min="0.5" max="3" step="0.5" value="${schedConfig.breakHours}" onchange="schedConfig.breakHours=parseFloat(this.value)||1;showAPage('schedule',null)"></div>
       ${genBtn}
       <button class="btn btn-g" onclick="saveSchedule()">💾 حفظ الجدول</button>
       <button class="btn btn-out" onclick="openSchedPrintOptions()">🖨️ طباعة تقرير</button>
@@ -13173,6 +13258,7 @@ function searchBoxHTML(ph){ return `<div class="list-search"><span class="ls-ico
 function doLogout(){
   clearIdleGuard();
   clearDataSnapshot();
+  ROLE_ALT='';                      // 🔄 لا يبقى زر التنقل بعد الخروج
   localStorage.removeItem('bla_user');
   localStorage.removeItem('bla_role');
   localStorage.removeItem('bla_token');
@@ -13291,7 +13377,8 @@ async function restoreSession(){
     const lastAct=parseInt(localStorage.getItem('bla_last_activity')||'0',10);
     const idleLim=(IDLE_HOURS[role]||24)*3600*1000;
     if(lastAct && (Date.now()-lastAct>idleLim)){
-      localStorage.removeItem('bla_user');localStorage.removeItem('bla_role');
+      ROLE_ALT='';                      // 🔄 لا يبقى زر التنقل بعد الخروج
+  localStorage.removeItem('bla_user');localStorage.removeItem('bla_role');
       localStorage.removeItem('bla_token');localStorage.removeItem('bla_last_activity');
       clearDataSnapshot();
       SESSION.token='';user=null;currentUser=null;
@@ -15301,27 +15388,27 @@ function requestFormHtml(){
     </div>
     ${r==='s'?`<div id="excuse-fields" style="display:block">
       <div class="mform-group"><label>المادة (الغياب فيها)</label>
-        <select id="rq-course" onchange="renderExcuseDates()">
+        <select id="rq-course" aria-label="المقرر" title="المقرر" onchange="renderExcuseDates()">
           <option value="">— اختر المادة —</option>
           ${exCourses.map(cn=>{const c=(courses||[]).find(x=>x.course===cn);return `<option value="${esc(cn)}" data-code="${esc(c?c.code:'')}">${esc(cn)}</option>`;}).join('')}
         </select>
       </div>
       <div class="mform-group"><label>أيام الغياب (اختر التاريخ ثم أضف)</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <input type="date" id="rq-date" max="${new Date().toLocaleDateString('en-CA')}" style="flex:1;min-width:160px">
+          <input type="date" id="rq-date" aria-label="تاريخ الغياب" title="تاريخ الغياب" max="${new Date().toLocaleDateString('en-CA')}" style="flex:1;min-width:160px">
           <button type="button" class="btn btn-b" onclick="addExcuseDate()">➕ أضف اليوم</button>
         </div>
         <div id="rq-dates-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
         <div id="rq-dates-total" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       </div>
       <div class="mform-group"><label>ملف العذر (PDF)</label>
-        <input type="file" id="rq-file" accept="application/pdf,.pdf">
+        <input type="file" id="rq-file" aria-label="إرفاق ملف PDF" title="إرفاق ملف PDF" accept="application/pdf,.pdf">
         <div style="font-size:11px;color:var(--muted);margin-top:4px">ارفق مستند العذر بصيغة PDF — يُحفظ تلقائياً في أرشيف الأكاديمية</div>
       </div>
     </div>`:''}
     <div id="target-fields" style="display:none">
       <div class="mform-group"><label>الشخص الموجَّه له الطلب</label>
-        <select id="rq-target">
+        <select id="rq-target" aria-label="الجهة المستلِمة" title="الجهة المستلِمة">
           <option value="">— اختر الشخص —</option>
           ${staff.map(p=>`<option value="${esc(p.name)}" data-role="${p.role}" data-id="${esc(String(p.id||''))}">${esc(p.name)} · ${esc(p.sub)}</option>`).join('')}
         </select>
@@ -15518,6 +15605,55 @@ async function actOnRequest(rid,decision){
   }catch(e){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
 }
 // ===== 👤 لوحة الحساب (الجوال): تجمع الأدوات التي كانت تزحم الشريط العلوي =====
+/* ============================================================
+ * 🔄 التنقل بين حسابَي الإداري والمدرب — لمن له الحسابان بنفس الرقم
+ * ------------------------------------------------------------
+ * كان عليه أن يسجّل خروجاً ويدخل بالرمز في كل مرة. الخادم يُصدر رمز
+ * الدور الآخر من جلسته الحالية بعد أن يتأكد أن رقمه موجودٌ فعلاً في
+ * جدول ذاك الدور — بلا رمز سرّي، وبلا أي انتقال إلى دور المتدرب.
+ * ============================================================ */
+function roleAltLbl(r){ return r==='a'?'حساب الإداري':r==='t'?'حساب المدرب':''; }
+function roleSwitchRowHTML(){
+  if(!ROLE_ALT)return '';
+  const u=(typeof user!=='undefined'&&user)?user:{};
+  if(u.role!=='a'&&u.role!=='t')return '';
+  if(ROLE_ALT===u.role)return '';
+  return `<button class="acct-row acct-sw" onclick="closeAccountSheet();doRoleSwitch('${jsq(ROLE_ALT)}')">
+      <span class="acct-ico">🔄</span><span>الانتقال إلى ${esc(roleAltLbl(ROLE_ALT))}</span>
+      <span class="acct-sw-tag">${esc(ROLE_ALT==='a'?'إداري':'مدرب')}</span></button>`;
+}
+async function doRoleSwitch(to){
+  if(!to||(to!=='a'&&to!=='t')){showToast('وجهة غير صحيحة','w');return;}
+  if(user&&user.role===to){showToast('أنت في هذا الدور أصلاً','i');return;}
+  showToast('جاري الانتقال...','i');
+  let d=null;
+  try{ d=await jsonpTo(AUTH_URL,{action:'roleSwitch',to:to,token:SESSION.token},20000); }catch(e){ d=null; }
+  if(!d||!d.ok){
+    showToast((d&&d.msg)||'تعذّر الانتقال — تأكد من نشر نسخة الخادم الجديدة','e');
+    return;
+  }
+  /* نبدأ من نظيف: نسخة البيانات المحفوظة تخصّ الدور السابق،
+     ولو بقيت لعرضنا بياناتِ دورٍ على واجهة دورٍ آخر. */
+  try{ clearDataSnapshot(); }catch(e){}
+  SESSION.token=d.token;
+  role=to;
+  user=Object.assign({role:to},d.user);
+  currentUser=user;
+  try{
+    localStorage.setItem('bla_token',d.token);
+    localStorage.setItem('bla_user',JSON.stringify(user));
+    localStorage.setItem('bla_role',role);
+    localStorage.setItem('bla_last_activity',String(Date.now()));
+  }catch(e){}
+  if(d.boot&&typeof setBootPayload==='function')setBootPayload(d.boot);
+  try{ loadScheme(); }catch(e){}
+  try{ await loadUserData(); }
+  catch(e){ showToast('انتقلت، لكن تعذّر تحميل البيانات — حدّث الصفحة','w'); }
+  showApp();
+  showToast('✅ أنت الآن في '+roleAltLbl(to),'s');
+}
+window.doRoleSwitch=doRoleSwitch;window.roleSwitchRowHTML=roleSwitchRowHTML;
+
 function openAccountSheet(){
   document.getElementById('acctSheet')?.remove();
   const u=(typeof user!=='undefined'&&user)?user:{};
@@ -15540,13 +15676,14 @@ function openAccountSheet(){
       </div>
     </div>
     <div class="acct-list">
+      ${roleSwitchRowHTML()}
       ${row(isLight?'🌙':'☀️', isLight?'الوضع الداكن':'الوضع الفاتح','toggleTheme()')}
       ${row('🎨','مظهر المنصة','closeAccountSheet();openThemePick()',(SCHEMES[SCHEME_ME]||{}).emo||'')}
       ${row('🌐','تغيير اللغة','toggleTx()')}
       ${row('🔔','الاشعارات','showNotifs()',nf)}
       ${row('🔐','تغيير الرمز السري','openChangePassword(false)')}
       ${(u.role==='a')?row('⚠️','حالات تحتاج مراجعة','showReviewCases()',rv):''}
-      ${(u.role!=='s'&&document.getElementById('delegBtn')&&document.getElementById('delegBtn').style.display!=='none')?row('🧾','التكليفات','showDelegations()',dg2):''}
+      ${(u.role==='t'||u.role==='a')?row('🧾','التكليفات','showDelegations()',dg2):''}
     </div>
     <button class="acct-out" onclick="closeAccountSheet();doLogout()">🚪 تسجيل الخروج</button>
   </div>`;
@@ -15842,7 +15979,7 @@ function grelPanelHTML(){
     :hid?{t:'محجوبة الآن عن المتدربين',c:'var(--acc-r)',p:'pr'}
         :{t:'ظاهرة للمتدربين الآن',c:'var(--acc-g)',p:'pg'};
   return `<label style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;cursor:pointer;margin:0 0 12px">
-      <input type="checkbox" id="grelOn" ${g.on?'checked':''} onchange="grelPreview()"> تفعيل حجب الدرجات حتى موعد الإعلان
+      <input type="checkbox" id="grelOn" aria-label="تفعيل موعد إظهار الدرجات" title="تفعيل موعد إظهار الدرجات" ${g.on?'checked':''} onchange="grelPreview()"> تفعيل حجب الدرجات حتى موعد الإعلان
     </label>
     <div class="iitem" style="margin-bottom:12px"><div class="ilbl">الحالة الآن</div>
       <div class="ival" style="color:${state.c};font-weight:700">${state.p?`<span class="pill ${state.p}" style="font-size:11px">${esc(state.t)}</span>`:esc(state.t)}</div></div>
@@ -15919,7 +16056,7 @@ function themePanelHTML(){
       </div></div>`;
   };
   return `<label style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;cursor:pointer;margin:0 0 12px">
-      <input type="checkbox" id="thmMaster" ${c.on?'checked':''} onchange="themePanelPreview()"> تفعيل ثيمات المناسبات
+      <input type="checkbox" id="thmMaster" aria-label="تفعيل ثيمات المناسبات" title="تفعيل ثيمات المناسبات" ${c.on?'checked':''} onchange="themePanelPreview()"> تفعيل ثيمات المناسبات
     </label>
     ${c.force?`<div class="alert aw" style="margin-bottom:12px"><span class="aicon">👁️</span>معاينة يدوية مفعّلة: <b>${esc((THEMES[c.force]||{}).name||c.force)}</b> — تبقى ظاهرة للجميع حتى تلغيها.
       <button class="btn btn-out btn-sm" style="margin-top:8px" onclick="themeForce('')">↺ ارجع للتلقائي</button></div>`:''}
