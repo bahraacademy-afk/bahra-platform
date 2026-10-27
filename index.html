@@ -1692,6 +1692,17 @@ body.light-mode .grad-acts .btn-out:hover{background:rgba(255,255,255,.26)!impor
   background:var(--acc-b);color:#06203a;border-radius:10px;padding:2px 9px}
 body.light-mode .acct-sw-tag{color:#fff}
 
+/* ===== 🎓 شارة تخصص المقرر في التسجيل الجماعي ===== */
+.enr-sp{display:inline-block;font-size:9.5px;font-weight:700;border-radius:8px;padding:1px 7px;
+  margin-inline-start:4px;vertical-align:middle;
+  background:color-mix(in srgb,var(--acc-b) 14%,transparent);color:var(--acc-b);
+  border:1px solid color-mix(in srgb,var(--acc-b) 30%,transparent)}
+.enr-sp.gen{background:color-mix(in srgb,var(--acc-g) 12%,transparent);color:var(--acc-g);
+  border-color:color-mix(in srgb,var(--acc-g) 28%,transparent)}
+/* تخصّص ليس تخصّص الشعبة — تحذيرٌ بصري قبل التسجيل بالخطأ */
+.enr-sp.other{background:color-mix(in srgb,var(--acc-r) 12%,transparent);color:var(--acc-r);
+  border-color:color-mix(in srgb,var(--acc-r) 32%,transparent)}
+
 /* ===== 🔎 مختار النصف المجزأ ===== */
 .half-pick{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
 .half-pick label{font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap}
@@ -7599,7 +7610,33 @@ function atlDateText(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d
 // تاريخ باسم اليوم (لعرض «أي يوم» داخل مجموعة المادة)
 function atlDayFull(date){const m=String(date).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);const base=atlDateText(date);if(!m)return base;const yy=m[3].length===2?2000+parseInt(m[3]):parseInt(m[3]);const dt=new Date(yy,parseInt(m[2])-1,parseInt(m[1]));const wd=isNaN(dt.getTime())?'':dt.toLocaleDateString('ar-EG',{weekday:'long'});return (wd?wd+' · ':'')+base;}
 /* ترشيح بالنصف المختار — يطبّق على الغياب والتحاضير معاً */
-function trkHalf(){ return String(window._trkHalf||''); }
+/* 🔎 النصف الجاري = الذي فيه مواد حالتها «حالي»، وإلا أحدث نصف معروف.
+   ⚠️ كانت الصفحة تفتح على «كل الأنصاف» فتختلط أنصافُ سنواتٍ في بطاقة
+   واحدة: «مشروع · ١٥ يوم» تجمع غياب نصفين. الافتراضي الآن النصف الجاري،
+   والرجوع للسابق باختياره من القائمة. */
+function currentHalf(){
+  const live=new Map();
+  (allCourses||[]).forEach(c=>{
+    const h=String(c.half||'').trim(); if(!h||h==='غير محدد')return;
+    if(!isActive(c.status))return;
+    live.set(termKeyOf(h),h);
+  });
+  if(live.size){
+    return [...live.values()].sort((a,b)=>termSortKey(b).localeCompare(termSortKey(a)))[0];
+  }
+  const all=allHalves();
+  return all.length?all[0].raw:'';
+}
+window.currentHalf=currentHalf;
+/* '' = لم يُختَر شيء بعد ⇒ النصف الجاري · '__all__' = كل الأنصاف صراحةً */
+const TRK_ALL='__all__';
+function trkHalf(){
+  const v=window._trkHalf;
+  if(v===TRK_ALL)return '';
+  if(v===undefined||v===null||v==='')return currentHalf();
+  return String(v);
+}
+window.TRK_ALL=TRK_ALL;
 function inTrkHalf(t){
   const h=trkHalf(); if(!h)return true;
   return termKeyOf(t||'')===termKeyOf(h);
@@ -7659,7 +7696,19 @@ function atlCss(){return `<style>
 .atl-mat{margin-bottom:14px;padding:0;overflow:hidden}
 .atl-mat>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:15px 18px;background:linear-gradient(135deg,color-mix(in srgb,var(--brand-1) 12%,transparent),color-mix(in srgb,var(--brand-1) 3%,transparent))}
 .atl-mat>summary::-webkit-details-marker{display:none}
-.atl-mat-name{flex:1;min-width:0;font-size:16px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.atl-mat-name{flex:1;min-width:0;font-size:16px;font-weight:800;
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+/* ⚠️ min-width:auto على عنصر مرن يمنعه من الانكماش دون عرض محتواه،
+   فالاسم الطويل يفيض خارج البطاقة على الجوال. */
+.atl-mat-txt{min-width:0;overflow-wrap:anywhere;word-break:break-word}
+/* الشعبة والنصف جنب اسم المادة — لأن البطاقة صارت لشعبةٍ ونصفٍ بعينهما */
+.atl-mat-grp,.atl-mat-trm{font-size:10.5px;font-weight:700;border-radius:9px;padding:2px 9px;
+  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.atl-mat-grp{background:color-mix(in srgb,var(--acc-b) 15%,transparent);color:var(--acc-b);
+  border:1px solid color-mix(in srgb,var(--acc-b) 30%,transparent)}
+.atl-mat-trm{background:color-mix(in srgb,var(--acc-y) 13%,transparent);color:var(--acc-y);
+  border:1px solid color-mix(in srgb,var(--acc-y) 28%,transparent)}
+@media(max-width:640px){.atl-mat-name{font-size:14px;gap:5px}.atl-mat-grp,.atl-mat-trm{font-size:9.5px;padding:1px 7px}}
 .atl-mat-badges{display:flex;gap:6px;align-items:center;flex-shrink:0}
 .atl-mat[open]>summary .atl-chev{transform:rotate(180deg)}
 .atl-mat-body{padding:12px 14px}
@@ -7739,16 +7788,30 @@ function attlogCards(){
   };
   // ⭐ المستوى الأول: تجميع حسب المادة — كل مادة عنوان مستقل وبداخلها كل الأيام
   const parseD=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?new Date((m[3].length===2?2000+ +m[3]:+m[3]),+m[2]-1,+m[1]).getTime():0;};
+  /* 🔒 بطاقة لكل (مادة × شعبة × نصف).
+     ⚠️ كان المفتاح اسم المادة وحده، فتجتمع «مشروع» لشعبة ١ وشعبة ٤ ومن
+     نصفين مختلفين في بطاقة واحدة: «١٥ يوم» تخلط ما لا يُخلط، والغياب
+     المعروض لا يخصّ شعبةً بعينها. */
+  const gk2=g=>String(g||'').replace(/\.0$/,'').trim();
   const groups=new Map();
-  filtered.forEach(s=>{const k=cnk_(s.course);if(!groups.has(k))groups.set(k,{course:s.course,items:[]});groups.get(k).items.push(s);});
-  return [...groups.values()].map(g=>{
+  filtered.forEach(s=>{
+    const k=cnk_(s.course)+'|'+gk2(s.grp)+'|'+termKeyOf(s.term||'');
+    if(!groups.has(k))groups.set(k,{course:s.course,grp:gk2(s.grp),term:String(s.term||'').trim(),items:[]});
+    groups.get(k).items.push(s);
+  });
+  /* ترتيب: المادة ثم الشعبة ثم النصف الأحدث */
+  return [...groups.values()].sort((a,b)=>
+      String(a.course).localeCompare(String(b.course),'ar')
+      || String(a.grp).localeCompare(String(b.grp),'ar',{numeric:true})
+      || termSortKey(b.term).localeCompare(termSortKey(a.term))
+    ).map(g=>{
     const items=g.items.slice().sort((a,b)=>parseD(b.date)-parseD(a.date)); // الأحدث أولاً
     const totAbs=items.reduce((a,s)=>a+s.students.filter(x=>x.status==='غائب').length,0);
     const totLate=items.reduce((a,s)=>a+s.students.filter(x=>x.status==='متأخر').length,0);
     const openG=q?' open':'';
     return `<details class="ccard atl-mat"${openG}>
       <summary>
-        <div class="atl-mat-name">📘 ${esc(g.course)}</div>
+        <div class="atl-mat-name"><span class="atl-mat-txt">📘 ${esc(g.course)}</span>${g.grp?`<span class="atl-mat-grp">شعبة ${esc(g.grp)}</span>`:''}${g.term?`<span class="atl-mat-trm" title="${escAttr(termParts(g.term).lbl)}">${esc(termShort(g.term))}</span>`:''}</div>
         <div class="atl-mat-badges"><span class="pill pb">${items.length} يوم</span>${totAbs?`<span class="pill pr">${totAbs} غياب</span>`:''}${totLate?`<span class="pill py">${totLate} تأخير</span>`:''}<span class="atl-chev">▾</span></div>
       </summary>
       <div class="atl-mat-body">${items.map(dayCard).join('')}</div>
@@ -7916,16 +7979,29 @@ function admLessonsCards(){
   if(tf&&tf!=='all')list=list.filter(x=>x.tname===tf);
   if(q)list=list.filter(x=>[x.material,x.topic,x.tname,x.grade].some(v=>String(v||'').includes(q)));
   if(!list.length)return `<div class="empty"><div class="empty-icon">🔍</div>ما فيه نتائج مطابقة</div>`;
-  // تجميع حسب المادة — كل مادة وتحاضيرها تحتها (قابلة للطيّ)
-  const groups={};
-  list.forEach(lp=>{ const m=String(lp.material||'—').trim()||'—'; (groups[m]=groups[m]||[]).push(lp); });
-  const names=Object.keys(groups).sort((a,b)=>a.localeCompare(b,'ar'));
-  return names.map(m=>{
-    const items=groups[m];
+  /* 🔒 مجموعة لكل (مادة × صف × نصف) — كما في سجل الغياب.
+     ⚠️ كان التجميع باسم المادة وحده، فتحاضير شعبتين أو نصفين تُعدّ
+     مجموعةً واحدة: «الرياضيات · ١٠ تحضير» وهي لصفوف وأنصاف مختلفة. */
+  const gk3=g=>String(g||'').replace(/\.0$/,'').trim();
+  const groups=new Map();
+  list.forEach(lp=>{
+    const m=String(lp.material||'—').trim()||'—';
+    const k=m+'|'+gk3(lp.grade)+'|'+termKeyOf(lp.term||'');
+    if(!groups.has(k))groups.set(k,{mat:m,grp:gk3(lp.grade),term:String(lp.term||'').trim(),items:[]});
+    groups.get(k).items.push(lp);
+  });
+  return [...groups.values()].sort((a,b)=>
+      String(a.mat).localeCompare(String(b.mat),'ar')
+      || String(a.grp).localeCompare(String(b.grp),'ar',{numeric:true})
+      || termSortKey(b.term).localeCompare(termSortKey(a.term))
+    ).map(g=>{
+    const m=g.mat, items=g.items;
     return `<div style="margin-bottom:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--card,rgba(255,255,255,.02))">
       <div role="button" tabindex="0" aria-expanded="false" onclick="lpToggleGroup(this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();lpToggleGroup(this)}" style="display:flex;align-items:center;gap:10px;padding:13px 16px;cursor:pointer;background:rgba(106,184,247,.08);border-bottom:1px solid var(--border)">
         <span class="lp-chev" style="color:var(--acc-b);font-size:13px">▸</span>
         <span style="font-weight:700;font-size:15px;color:var(--acc-b)">📚 ${esc(m)}</span>
+        ${g.grp?`<span class="atl-mat-grp">صف ${esc(g.grp)}</span>`:''}
+        ${g.term?`<span class="atl-mat-trm" title="${escAttr(termParts(g.term).lbl)}">${esc(termShort(g.term))}</span>`:''}
         <span class="pill pb" style="margin-inline-start:auto;font-size:11px">${items.length} تحضير</span>
       </div>
       <div hidden style="padding:12px">${items.map(lp=>lessonCard(lp,true,true)).join('')}</div>
@@ -9820,6 +9896,20 @@ function termParts(t){
           lbl:fmtTerm(flat)};
 }
 /* ترتيب تنازلي: الأحدث سنةً ثم ترماً ثم نصفاً */
+/* تسمية مختصرة للنصف — «ف١ن١ 2026/2027».
+   ⚠️ التسمية الكاملة «الفصل التدريبي الأول 2026/2027 · النصف المجزأ الأول»
+   تتجاوز ٢٣٠px فتفيض من بطاقة المادة على الجوال. الكاملة تبقى في title. */
+const AR_D_=['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+function termShort(t){
+  const p=termParts(t);
+  const d=v=>String(v||'').replace(/\d/g,x=>AR_D_[+x]);
+  const bits=[];
+  if(p.term)bits.push('ف'+d(p.term));
+  if(p.half)bits.push('ن'+d(p.half));
+  const head=bits.join('');
+  return (head?head+' ':'')+(p.year||'')||p.lbl||String(t||'');
+}
+window.termShort=termShort;
 function termSortKey(t){
   const p=termParts(t);
   const y=(p.year.match(/^(\d{4})/)||['','0000'])[1];
@@ -9844,9 +9934,12 @@ function allHalves(){
   return [...m.values()].sort((a,b)=>termSortKey(b.raw).localeCompare(termSortKey(a.raw)));
 }
 /* قائمة مجمّعة بالسنة — «من يوم ما اختاره أشوف كل شي يخص هذا النصف» */
-function halfPickerHTML(id,cur,onchange,allLbl){
+function halfPickerHTML(id,cur,onchange,allLbl,allVal){
   const hs=allHalves();
   if(!hs.length)return '';
+  /* ⚠️ القيمة الفارغة صارت تعني «النصف الجاري» لا «الكل» — فخيار الكل
+     يحتاج قيمةً صريحة، وإلا عاد اختياره إلى الجاري بصمت. */
+  const AV=(allVal==null)?'':String(allVal);
   const byYear=new Map();
   hs.forEach(h=>{ const y=termParts(h.raw).year||'بلا سنة';
     (byYear.get(y)||byYear.set(y,[]).get(y)).push(h); });
@@ -9857,7 +9950,7 @@ function halfPickerHTML(id,cur,onchange,allLbl){
   return `<div class="half-pick">
     <label for="${escAttr(id)}">🔎 النصف المجزأ</label>
     <select id="${escAttr(id)}" onchange="${onchange}">
-      <option value="">${esc(allLbl||'كل الأنصاف')}</option>${groups}
+      <option value="${escAttr(AV)}"${String(cur||'')===AV?' selected':''}>${esc(allLbl||'كل الأنصاف')}</option>${groups}
     </select>
   </div>`;
 }
@@ -11464,9 +11557,16 @@ const aPgs={
     const nPrep=(lessonPreps||[]).filter(x=>inTrkHalf(x.term)).length;
     /* 🔎 مختار النصف فوق الصفحة: الغياب والتحاضير يتبعانه معاً،
        فيرى «كل ما يخصّ هذا النصف» من مكان واحد بلا نوافذ. */
-    const pick=halfPickerHTML('trkHalfSel',h,'trkHalfSet(this.value)','كل الأنصاف (الجارية والمؤرشفة)');
-    const note=h?`<div class="half-note">تعرض الآن <b>${esc(termParts(h).lbl)}</b> وحده
-      <button class="btn btn-out btn-sm" onclick="trkHalfSet('')">عرض الكل</button></div>`:'';
+    /* ما يُحدَّد في القائمة هو الاختيار الخام: «الكل» صراحةً أو النصف المحسوب */
+    const pickVal=(window._trkHalf===TRK_ALL)?TRK_ALL:h;
+    const pick=halfPickerHTML('trkHalfSel',pickVal,'trkHalfSet(this.value)','📚 كل الأنصاف (الجارية والمؤرشفة)',TRK_ALL);
+    const isCur=h&&termKeyOf(h)===termKeyOf(currentHalf());
+    const note=h
+      ?`<div class="half-note">تعرض الآن <b>${esc(termParts(h).lbl)}</b> وحده${isCur?' — النصف الجاري':' · نصفٌ سابق'}
+        ${isCur?'':`<button class="btn btn-b btn-sm" onclick="trkHalfSet('')">↩︎ الرجوع للنصف الجاري</button>`}
+        <button class="btn btn-out btn-sm" onclick="trkHalfSet('${TRK_ALL}')">عرض كل الأنصاف</button></div>`
+      :`<div class="half-note">تعرض الآن <b>كل الأنصاف معاً</b> — الجارية والسابقة مختلطة
+        <button class="btn btn-b btn-sm" onclick="trkHalfSet('')">↩︎ الرجوع للنصف الجاري</button></div>`;
     return `<div class="banner"><div><div class="btitle">🗂️ متابعة التدريب</div><div class="bsub">جلسات التحضير اليومية وتحاضير المدربين — استعراض وتعديل وطباعة</div></div><span class="pill pb">وضع الإدارة</span></div>`
       +pick+note
       +pgTabs('attlog','_trkTab',tab,[
@@ -11582,8 +11682,36 @@ const aPgs={
         // لا أحد يحتاجها: حالية إن كان أحدهم مسجّلاً فيها الآن، وإلا منتهية
         return {st: states.some(x=>x==='current')?'current':'done', need:0};
       };
-      // تصنيف المقررات
-      const catCourses=catSort(catalog).map(c=>({...c,...courseInfo(c.code)}));
+      /* 🎓 مواد تخصّص الشعبة وحدها.
+         ⚠️ كان يُعرض الكتالوج كاملاً، فشعبةُ إلكترونيات تُعرض عليها مواد
+         الكهرباء بأسماء متشابهة («التدريب التعاوني-1» و«التدريب التعاوني (1)»
+         برمزين مختلفين) فيسهل تسجيلها في مادة تخصّصٍ آخر. */
+      const gSpecs=[...new Set(gStudents.map(s=>String(s.spec||'').trim()).filter(Boolean))];
+      const enrSpecAll='__all__';
+      /* تخصصات هذه الشعبة فعلاً + «الكل» للحالات الاستثنائية (مادة من خارج التخصص) */
+      let enrSpec=window._enrSpec;
+      if(enrSpec===undefined||enrSpec===null||(enrSpec!==enrSpecAll&&!gSpecs.some(x=>specKey(x)===specKey(enrSpec))))
+        enrSpec=gSpecs.length?gSpecs[0]:enrSpecAll;
+      window._enrSpec=enrSpec;
+      const inEnrSpec=c=>{
+        if(enrSpec===enrSpecAll)return true;
+        const L=libSpecList(c.specs);
+        if(!L.length||L.indexOf('جميع الدبلومات')>-1)return true;     // مقرر عام
+        return L.some(x=>specKey(x)===specKey(enrSpec));
+      };
+      const specCount=sp=>catalog.filter(c=>{
+        if(sp===enrSpecAll)return true;
+        const L=libSpecList(c.specs);
+        if(!L.length||L.indexOf('جميع الدبلومات')>-1)return true;
+        return L.some(x=>specKey(x)===specKey(sp));
+      }).length;
+      const enrSpecTabs=(gSpecs.length>1||(gSpecs.length===1&&specCount(gSpecs[0])<catalog.length))
+        ? `<div class="pg-tabs" role="tablist" style="margin-bottom:12px">
+            ${gSpecs.map(sp=>`<button class="pg-tab${specKey(sp)===specKey(enrSpec)?' on':''}" role="tab" aria-selected="${specKey(sp)===specKey(enrSpec)}" onclick="window._enrSpec=${JSON.stringify(sp).replace(/"/g,'&quot;')};showAPage('manage_courses',document.getElementById('sn-manage_courses'))"><span>🎓</span><span>${esc(sp)}</span><span class="pg-tab-n">${specCount(sp)}</span></button>`).join('')}
+            <button class="pg-tab${enrSpec===enrSpecAll?' on':''}" role="tab" aria-selected="${enrSpec===enrSpecAll}" onclick="window._enrSpec='${enrSpecAll}';showAPage('manage_courses',document.getElementById('sn-manage_courses'))" title="يعرض الكتالوج كاملاً — للحالات الاستثنائية"><span>📚</span><span>كل المواد</span><span class="pg-tab-n">${catalog.length}</span></button>
+          </div>` : '';
+      // تصنيف المقررات — مواد التخصص المختار وحدها
+      const catCourses=catSort(catalog).filter(inEnrSpec).map(c=>({...c,...courseInfo(c.code)}));
       const done=catCourses.filter(c=>c.st==='done');
       const current=catCourses.filter(c=>c.st==='current');
       const remaining=catCourses.filter(c=>c.st==='remaining');
@@ -11592,9 +11720,18 @@ const aPgs={
       // صندوق مقرر (حسب الحالة)
       /* data-gst/data-gneed = حالة الشعبة المحفوظة، تُستعاد عند إلغاء التحديد
          لأن applyPrereqLocks تعيد بناء الشارة على المحددين. */
+      /* عند «كل المواد» نبيّن تخصّص كل مقرر — وإلا التبس «التدريب التعاوني (1)»
+         بـ«التدريب التعاوني-1» وهما مادتان لتخصّصين مختلفين */
+      const enrSpecChip=c=>{
+        const L=libSpecList(c.specs);
+        if(!L.length||L.indexOf('جميع الدبلومات')>-1)
+          return ' <span class="enr-sp gen">🌐 عام</span>';
+        const mine=L.some(x=>gSpecs.some(g=>specKey(g)===specKey(x)));
+        return ' '+L.map(x=>`<span class="enr-sp${mine?'':' other'}">${esc(x)}</span>`).join('');
+      };
       const crsBox=(c,selectable)=>{
         return `<label data-gst="${escAttr(String(c.st||'remaining'))}" data-gneed="${escAttr(String(c.need||0))}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;cursor:${selectable?'pointer':'default'};padding:8px;border:1px solid var(--border);border-radius:8px;${!selectable?'opacity:.6':''}">
-          <span style="display:flex;align-items:center;gap:8px">${selectable?`<input type="checkbox" class="enr-course-cb" value="${esc(c.code)}|${esc(c.name)}" style="cursor:pointer">`:''}<span><b>${esc(c.code)}</b> · ${esc(c.name)}</span></span>
+          <span style="display:flex;align-items:center;gap:8px">${selectable?`<input type="checkbox" class="enr-course-cb" value="${esc(c.code)}|${esc(c.name)}" style="cursor:pointer">`:''}<span><b>${esc(c.code)}</b> · ${esc(c.name)}${enrSpec===enrSpecAll?enrSpecChip(c):''}</span></span>
           ${enrBadgeHTML(c.st,c.need,0)}
         </label>`;
       };
@@ -11602,6 +11739,8 @@ const aPgs={
       <div class="stitle">🔗 تسجيل جماعي ذكي</div>
       <div style="font-size:12px;color:var(--muted);margin-bottom:14px">💡 اختر الشعبة لترى المواد المنتهية والحالية والباقية، ثم سجّل المتدربين في المواد الباقية · 🎯 عند تحديد متدرب تتحوّل الشارات إليه وحده: ما اجتازه يظهر «✓ اجتازها» وما هو مسجّل فيه «▶ مسجّل فيها» وتُقفل، وما بقي عليه يبقى متاحاً · 🔒 والمواد التي لم يجتز متطلبها السابق تُقفل كذلك</div>
       <div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">${grpTabs}</div>
+      ${enrSpecTabs}
+      ${enrSpec!==enrSpecAll?`<div style="font-size:11.5px;color:var(--muted);margin:-6px 0 12px">🎓 تُعرض مواد <b>${esc(enrSpec)}</b> والمواد العامة — مواد التخصصات الأخرى مخفيّة لئلا تُسجَّل بالخطأ</div>`:`<div class="alert aw" style="margin-bottom:12px"><span class="aicon">⚠️</span>تعرض الآن <b>كل مواد الكتالوج</b> بما فيها مواد تخصصات أخرى — تأكّد من الرمز قبل التسجيل</div>`}
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px" class="enr-grid">
         <div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px">
