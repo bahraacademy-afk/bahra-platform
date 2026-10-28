@@ -6154,10 +6154,32 @@ function getReviewCases(){
   const list=[];
   const src=user.role==='s'?courses:allCourses;
   const grpTxt=c=>(user.role!=='s'&&c.grp)?` · شعبة ${esc(c.grp)}`:'';
+  /* ⚠️ كانت القائمة تمرّ على كل الصفوف بلا نظر إلى ما بعدها، فمَن رسب في
+     مادة ثم أعادها ونجح يبقى في «حالات تحتاج مراجعة» إلى الأبد — وهذا
+     سبب تضخّمها إلى ٧٨ حالة. الحالة تسقط متى عولجت:
+       • الدرجة: له سجلٌ آخر في نفس المادة مرصودٌ وناجح (أو ما زال جارياً).
+       • الغياب: نفس الشيء — الإعادة تُلغي غياب المحاولة السابقة.
+     المقارنة بالرقم التدريبي + المادة، لأن الصف الواحد لا يعرف أخاه. */
+  const sidOf=c=>String(c.sid||c.id||(user.role==='s'?user.id:'')).replace(/[^0-9]/g,'');
+  const ckey=c=>normCode(c.code)||cnk_(c.course);
+  /* فهرس: رقم المتدرب|المادة → هل فيه محاولة لاحقة ناجحة أو جارية؟ */
+  const solved=new Map();
   src.forEach(c=>{
+    const k=sidOf(c)+'|'+ckey(c);
+    const ok=isActive(c.status)                                   // محاولة جارية الآن
+      || (!isDeprivedRec(c) && (parseFloat(c.pct)||0)>=60);       // محاولة ناجحة
+    if(ok)solved.set(k,true);
+  });
+  const done=new Set();
+  src.forEach(c=>{
+    const k=sidOf(c)+'|'+ckey(c);
+    if(solved.get(k))return;                 // عولجت — لا تُعرض
+    if(done.has(k))return;                   // محاولة واحدة تكفي لكل مادة
     const nm=user.role==='s'?c.course:c.sname;
-    if(isHighAbs(c))list.push({type:'aw',icon:'⚠️',msg:`${nm} — غياب ${Math.round(c.abs)}% في ${esc(c.course)}${grpTxt(c)}`});
-    if(isLowPerf(c))list.push({type:'ad',icon:'📉',msg:`${nm} — درجة ${Math.round(c.pct)}% في ${esc(c.course)}${grpTxt(c)}`});
+    let added=false;
+    if(isHighAbs(c)){list.push({type:'aw',icon:'⚠️',msg:`${nm} — غياب ${Math.round(c.abs)}% في ${esc(c.course)}${grpTxt(c)}`});added=true;}
+    if(isLowPerf(c)){list.push({type:'ad',icon:'📉',msg:`${nm} — درجة ${Math.round(c.pct)}% في ${esc(c.course)}${grpTxt(c)}`});added=true;}
+    if(added)done.add(k);
   });
   return list;
 }
@@ -11333,7 +11355,7 @@ function buildTVContent(){
     <div class="tv-stat"><div class="tv-snum">${totCourses}</div><div class="tv-slbl">📚 المقررات</div></div>
     <div class="tv-stat"><div class="tv-snum">${totTrainers}</div><div class="tv-slbl">👨‍🏫 المدربون</div></div>
     <div class="tv-stat"><div class="tv-snum">${grps}</div><div class="tv-slbl">🏫 الشعب</div></div>
-    <div class="tv-stat"><div class="tv-snum" style="color:${avgAll>=70?'var(--acc-g)':avgAll>=50?'#ffd700':'var(--acc-r)'}">${avgAll}%</div><div class="tv-slbl">📊 متوسط الإنجاز</div></div>
+    <div class="tv-stat"><div class="tv-snum" style="color:${avgAll>=80?'var(--acc-g)':avgAll>=60?'#ffd700':'var(--acc-r)'}">${avgAll}%</div><div class="tv-slbl">📊 متوسط الإنجاز</div></div>
     <div class="tv-stat"><div class="tv-snum" style="color:var(--acc-g)">${passRate}%</div><div class="tv-slbl">✅ نسبة النجاح</div></div>
     <div class="tv-stat"><div class="tv-snum" style="color:var(--acc-y)">${excellentCount}</div><div class="tv-slbl">⭐ المتفوقون</div></div>
   </div>
@@ -11960,7 +11982,7 @@ const aPgs={
       <div class="mcard mc-g" onclick="showOverallStat('courses')" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${totCourses}">${totCourses}</div><div class="mlbl">المقررات</div></div>
       <div class="mcard mc-y" onclick="showOverallStat('trainers')" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${totTrainers}">${totTrainers}</div><div class="mlbl">المدربون</div></div>
       <div class="mcard mc-b" onclick="showOverallStat('sections')" style="cursor:pointer"><div class="micon">🏫</div><div class="mnum cb" data-target="${grps.length}">${grps.length}</div><div class="mlbl">الشعب</div></div>
-      <div class="mcard ${avgAll>=70?'mc-g':avgAll>=50?'mc-y':'mc-r'}" onclick="showOverallStat('avg')" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avgAll>=70?'cg':avgAll>=50?'cy':'cr'}" data-target="${avgAll}" data-suffix="%">${avgAll}%</div><div class="mlbl">متوسط الإنجاز</div></div>
+      <div class="mcard ${avgAll>=80?'mc-g':avgAll>=60?'mc-y':'mc-r'}" onclick="showOverallStat('avg')" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avgAll>=80?'cg':avgAll>=60?'cy':'cr'}" data-target="${avgAll}" data-suffix="%">${avgAll}%</div><div class="mlbl">متوسط الإنجاز</div></div>
       <div class="mcard mc-g" onclick="showOverallStat('excellent')" style="cursor:pointer"><div class="micon">⭐</div><div class="mnum cg" data-target="${excellentCount}">${excellentCount}</div><div class="mlbl">متفوقون (90%+)</div></div>
       <div class="mcard ${passRate>=70?'mc-g':'mc-y'}" onclick="showOverallStat('pass')" style="cursor:pointer"><div class="micon">✅</div><div class="mnum ${passRate>=70?'cg':'cy'}" data-target="${passRate}" data-suffix="%">${passRate}%</div><div class="mlbl">نسبة النجاح</div></div>
       <div class="mcard ${bannedCount?'mc-r':'mc-g'}" onclick="showOverallStat('deprived')" style="cursor:pointer"><div class="micon">🚫</div><div class="mnum ${bannedCount?'cr':'cg'}" data-target="${bannedCount}">${bannedCount}</div><div class="mlbl">محرومون بالغياب</div></div>
@@ -12079,7 +12101,7 @@ const aPgs={
       <div class="mcard mc-b" data-nav="accounts" data-tab="student" style="cursor:pointer"><div class="micon">🎓</div><div class="mnum cb" data-target="${tot}">${tot}</div><div class="mlbl">المتدربون</div></div>
       <div class="mcard mc-g" data-nav="manage_courses" data-tab="current" style="cursor:pointer"><div class="micon">📚</div><div class="mnum cg" data-target="${crs}">${crs}</div><div class="mlbl">المقررات</div></div>
       <div class="mcard mc-y" data-nav="accounts" data-tab="trainer" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${trainers}">${trainers}</div><div class="mlbl">المدربون</div></div>
-      <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=70?'cg':avg>=50?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
+      <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=80?'cg':avg>=60?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
     </div>
     ${warns?`<div class="alert ad"><span class="aicon">🔴</span>${warns} حالة تحتاج متابعة فورية</div>`:''}
     <div class="stitle">📊 مؤشرات الأداء</div>
@@ -15125,9 +15147,9 @@ function showStudentDetail(sid){
           <div class="cc-top" style="margin-bottom:8px">
             <div><div class="cc-name" style="font-size:13px">${esc(c.course)}</div><div class="cc-meta">${esc(c.trainer||'—')}</div></div>
             ${dep?`<span class="pill pr" title="محروم — تُحتسب المادة صفراً في المتوسط والمعدّل">🚫 محروم · 0%</span>`
-                 :`<span class="pill ${p>=80?'pg':p>=50?'py':'pr'}">${p}%</span>`}
+                 :`<span class="pill ${pillClass(p)}">${p}%</span>`}
           </div>
-          ${dep?'':`<div class="prog"><div class="pfill ${p>=80?'pf-g':p>=50?'pf-y':'pf-r'}" style="width:${p}%"></div></div>`}
+          ${dep?'':`<div class="prog"><div class="pfill ${fillClass(p)}" style="width:${p}%"></div></div>`}
           <div style="display:flex;gap:12px;margin-top:6px;font-size:11px;color:var(--muted);flex-wrap:wrap">
             ${dep?`<span>الدرجة المسجّلة: <span style="text-decoration:line-through">${p}%</span></span>
                    <span style="color:var(--acc-r);font-weight:700">🚫 محروم — تُحتسب صفراً</span>`
