@@ -2975,7 +2975,7 @@ function assistStudent(has,q){
   if(has('طلباتي','طلبي','حاله طلب','طلباتى','وين طلبي')){
     const mine=(requests||[]).filter(r=>String(r.sid)===String(user.id));
     if(!mine.length)return 'ما عندك طلبات مقدّمة. لتقديم طلب افتح «الخدمات».'+assistActs(assistAct('📝 الخدمات','services'));
-    const last=mine.slice(-5).reverse().map(r=>'• '+esc(r.type||'طلب')+' — <b>'+esc(r.finalStatus||'قيد المراجعة')+'</b>'+(r.date?' · '+esc(r.date):''));
+    const last=mine.slice(-5).reverse().map(r=>'• '+esc(r.type||'طلب')+' — <b>'+esc(r.finalStatus||'قيد المراجعة')+'</b>'+(r.date?' · '+esc(fmtDateAr(r.date)):''));
     return '📋 طلباتك ('+mine.length+'):<br>'+last.join('<br>')+assistActs(assistAct('📝 الخدمات','services'));
   }
   if(has('طلب','خدمه','اطلب','افاده','عذر','كيف اسجل طلب','اقدم طلب')) return '📝 لتقديم طلب: افتح «الخدمات» → اختر نوع الطلب → املأ التفاصيل → إرسال، وتابع حالته من نفس الصفحة.'+assistActs(assistAct('📝 الخدمات','services'));
@@ -3077,7 +3077,7 @@ function assistTrainer(has,q){
   if(has('طلبات','الطلبات','موافقات','ينتظر ردي','معلقه')){
     const rq=(requests||[]).filter(r=>/معلق/.test(r.trnStatus||'')&&assistMineCourse(r));
     if(!rq.length)return '✅ ما فيه طلبات تنتظر ردّك.'+assistActs(assistAct('📋 الطلبات','requests'));
-    return '📋 طلبات تنتظر ردّك ('+rq.length+'):<br>'+assistList(rq.map(r=>'• '+esc(r.sname||'')+' — '+esc(r.type||'طلب')+(r.date?' · '+esc(r.date):'')),8)+
+    return '📋 طلبات تنتظر ردّك ('+rq.length+'):<br>'+assistList(rq.map(r=>'• '+esc(r.sname||'')+' — '+esc(r.type||'طلب')+(r.date?' · '+esc(fmtDateAr(r.date)):'')),8)+
       assistActs(assistAct('📋 الطلبات','requests'));
   }
   if(has('جدول','حصص','جلسات','جدولي')) return '📅 جدولك في صفحة «الجدول»، وحصص اليوم في «تسجيل الحضور».'+assistActs(assistAct('📅 الجدول','schedule'),assistAct('✅ الحضور','attendance'));
@@ -3556,7 +3556,7 @@ function loadDataSnapshot(){
     if(Date.now()-(s.t||0)>CACHE_TTL) return false;
     students=s.students||[]; allCourses=s.allCourses||[]; catalog=s.catalog||[];
     trainersDB=s.trainersDB||[]; adminsDB=s.adminsDB||[]; graduates=s.graduates||[];
-    if(s.absenceRows && typeof absenceRows!=='undefined')  absenceRows=s.absenceRows;
+    if(s.absenceRows && typeof absenceRows!=='undefined'){ absenceRows=s.absenceRows; window._chStartMs=undefined; }
     if(s.schedule    && typeof schedule    !=='undefined') schedule=s.schedule;
     if(s.rubrics     && typeof rubrics     !=='undefined') rubrics=s.rubrics;
     if(s.lessonPreps && typeof lessonPreps !=='undefined') lessonPreps=s.lessonPreps;
@@ -4434,12 +4434,25 @@ function depExceptionOf(sid,code,course,grp,term){
     return true;
   })||null;
 }
-/* الحرمان لسجلٍّ بعينه — يحترم الاستثناء. (isDeprived(abs) تبقى للأرقام المجرّدة) */
+/* الحرمان لسجلٍّ بعينه — يحترم الاستثناء. (isDeprived(abs) تبقى للأرقام المجرّدة)
+   ⚠️ غياب ٢٥٪ فأكثر = حرمان، ولو كانت الدرجة المرصودة ناجحة. هذه قاعدة
+      المعهد المعتمدة: متدرب غيابه ٩٤٪ ودرجته ٨٠٪ في «مشروع» ليس ناجحاً،
+      والعلاج الوحيد «استثناء الحرمان» من الإدارة.
+      وما دام الحرمان يُسقط المادة، فالواجب أن يُقال باسمه: انظر
+      failReason — صارت الشاشة تفرّق «راسب بالدرجة» عن «محروم بالغياب»
+      بدل أن تقول «راسب (٧٦٪)» فلا يفهم المتدرب لماذا. */
 function isDeprivedRec(c){
   if(!c)return false;
   if(!isDeprived(c.abs))return false;
   // الترم في سجل المقررات هو العمود K الذي يقرأه العميل باسم half
   return !isDepExempt(c.sid||c.id,c.code,c.course,c.grp,c.half||c.term);
+}
+/* سبب عدم الاجتياز — للعرض، حتى لا يقال «راسب» لمحروم ولا العكس */
+function failReason(c){
+  if(!c)return '';
+  if(typeof isDeprivedRec==='function'&&isDeprivedRec(c))return 'حرمان';
+  if(isFailed(c))return 'درجة';
+  return '';
 }
 /* منح الاستثناء أو إلغاؤه — إداري فقط (الخادم يتحقق أيضاً) */
 async function depExcept(sid,name,code,course,grp,term,remove){
@@ -4741,17 +4754,31 @@ function isLowPerf(c){return !isActive(c.status) && c.pct>0 && c.pct<60}
 // مادة حالية فيها بند أو أكثر تحت الحد
 function hasWeakItems(c){return typeof weakItemsOf==='function' && weakItemsOf(c).length>0;}
 // ===== رصد الرسوب (متطلبات) =====
-// راسب = درجة أقل من 60 (ومرصودة) أو الحرفي راسب (F/هـ/راسب/محروم)
+/* ⚠️ كان هنا تناقضٌ يُظهر للمتدرب «٣ مواد راسب فيها» وهو ناجح فيها:
+     • الحرف: ['F','f','هـ','ه','راسب','محروم','ر'] يُقارَن بـ L===x، فحرفٌ
+       قديم «هـ» بقي في عمود التقدير بعد تصحيح الدرجة إلى ٧٦٪ يجعلها راسبة —
+       بينما isPass تنظر للرقم وحده فتعدّها ناجحة. نفس المادة: ناجحة في
+       العدّاد، راسبة في التنبيه.
+     • الحرف محسوبٌ من الدرجة أصلاً (هـ = أقل من ٦٠)، فهو تابعٌ لا حَكَم.
+   القاعدة الآن: الرقم المرصود هو الحَكَم متى وُجد. ويغلبه شيءٌ واحد:
+   كلمةٌ كتبها إنسان صراحةً في عمود التقدير («راسب» أو «محروم») — لأنها
+   قرار لا حساب. والحروف الآلية تُستعمل فقط حين لا رقم. */
+function explicitFailMark(c){
+  const L=String((c&&c.letter)||'').replace(/\s+/g,'').trim();
+  const S=String((c&&c.status)||'').replace(/\s+/g,'').trim();
+  return /راسب|محروم/.test(L)||/محروم/.test(S);
+}
 function isFailed(c){
+  if(!c)return false;
   const g=parseFloat(c.pct)||0;
   const L=String(c.letter||'').replace(/\s+/g,'').trim();
-  const failLetters=['F','f','هـ','ه','راسب','محروم','ر'];
-  const letterFail=failLetters.some(x=>L===x||L.includes('راسب')||L.includes('محروم'));
+  if(explicitFailMark(c))return true;              // قرار مكتوب — يغلب كل حساب
   // 🚫 الحرمان رسوبٌ بذاته مهما كانت الدرجة — فلا يُسقط متطلباً سابقاً
   //    ولا يُعدّ اجتيازاً عند إعادة التسجيل.
   if(typeof isDeprivedRec==='function'&&isDeprivedRec(c))return true;
-  // نعتبره راسباً لو الدرجة مرصودة (>0) وأقل من 60، أو الحرفي راسب
-  return (g>0&&g<60)||letterFail;
+  if(g>0)return g<60;                               // رقمٌ مرصود ⇒ هو الحَكَم
+  // بلا رقم: الحرف الآلي وحده يقرر
+  return ['F','f','هـ','ه','ر'].indexOf(L)>-1;
 }
 // ===== مستويات الإنذار للغياب =====
 // 10% إنذار أول | 20% إنذار ثاني | 25% محروم
@@ -5001,6 +5028,7 @@ async function loadAbsenceBase(){
   try{
     const rows=await fetchSheet('قاعدة الغياب!A:H').catch(()=>[]);
     absenceRows=Array.isArray(rows)?rows:[]; // نحتفظ بالصفوف الخام لعرض التحضيرات السابقة
+    window._chStartMs=undefined;              // حدود النصف تُحسب من هذه الصفوف
     const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
     // توحيد الشعبة: "شعبة 2" و"2" يصيران "2" — للفصل بين تسجيلات نفس المقرر
     const gk=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
@@ -6206,12 +6234,18 @@ function avgPct(list){ return avgScoredNum(list); }
    والترتيب، فطالبٌ غاب ٩٤٪ من «مشروع» يتصدّر الأوائل بـ٧١٪. والاستبعاد
    الكامل يخفي الرسوب ويعرض «—» كأنه بلا بيانات. فالقاعدة: المحروم مادةٌ
    محتسبة بدرجة صفر، ومَن فُتح له استثناء تُحسب درجته المسجّلة كما هي. */
-function effPct(c){ return isDeprivedRec(c)?0:(parseFloat(c&&c.pct)||0); }
+/* ⚠️ كانت effPct تصفّر المحروم وحده، فمادةٌ كُتب في تقديرها «راسب» صراحةً
+   تبقى ٧٦٪ ⇒ isPass تقول ناجح وisFailed تقول راسب: نفس المادة في العدّاد
+   ناجحة وفي التنبيه راسبة. نوحّد المصدر: كل ما يُعدّ رسوباً يُحتسب صفراً. */
+function effPct(c){ return (isDeprivedRec(c)||explicitFailMark(c))?0:(parseFloat(c&&c.pct)||0); }
 const isScored=c=>isDeprivedRec(c)||(parseFloat(c&&c.pct)||0)>0;
 /* اختبار النجاح الوحيد في النظام — يحترم قاعدة الحرمان (صفر) والاستثناء.
    ⚠️ كانت عدّة شاشات تقول `c.pct>=60` مباشرة، فيظهر المحروم «ناجحاً»
    بدرجته المرصودة في عدّاد «ناجح» بينما معدّله محسوب بصفر. */
-function isPass(c){ return effPct(c)>=60; }
+/* ناجح = ليس راسباً أصلاً + درجته المحتسبة ٦٠ فأكثر.
+   ربطُها بـisFailed يمنع عودة التناقض: لا يمكن أن تكون المادة ناجحة
+   وراسبة في آنٍ مهما تغيّرت القواعد لاحقاً. */
+function isPass(c){ return !isFailed(c) && effPct(c)>=60; }
 window.effPct=effPct;window.isPass=isPass;
 function scoredOf(list){return (list||[]).filter(isScored);}
 function scoredCount(list){return scoredOf(list).length;}
@@ -6329,7 +6363,63 @@ function renderListModal(title,items,emptyMsg){
   document.body.appendChild(overlay);
 }
 
+/* ═══════════ 📅 تاريخ مقروء من أي شكل ═══════════
+   ⚠️ الشيت يرجّع التاريخ كائنَ Date فيُطبع «2026-09-12T21:00:00.000Z» في
+      وجه المتدرب. ودالة atlDateText تفهم dd/mm/yyyy فقط. هذه تفهم
+      الثلاثة: ISO، وdd/mm/yyyy، والنص كما هو. */
+const AR_MONTHS_=['','يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+function dateParts_(v){
+  const s=String(v==null?'':v).trim();
+  if(!s)return null;
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);                       // ISO
+  if(m)return {y:+m[1],mo:+m[2],d:+m[3]};
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);               // dd/mm/yyyy
+  if(m){const y=m[3].length===2?2000+(+m[3]):+m[3];return {y,mo:+m[2],d:+m[1]};}
+  return null;
+}
+function fmtDateAr(v){
+  const p=dateParts_(v);
+  if(!p)return String(v==null?'':v).trim();
+  return `${p.d} ${AR_MONTHS_[p.mo]||p.mo} ${p.y}`;
+}
+function dateMs_(v){
+  const p=dateParts_(v);
+  if(!p)return NaN;
+  const t=Date.UTC(p.y,p.mo-1,p.d);
+  return isNaN(t)?NaN:t;
+}
+/* بداية النصف الجاري — من تواريخ تحضير النصف نفسه (قاعدة الغياب:
+   F=التاريخ · H=الترم). هذه حدودٌ من بياناتك لا رقمٌ اخترعته. */
+function currentHalfStartMs(){
+  if(window._chStartMs!==undefined)return window._chStartMs;
+  let out=NaN;
+  try{
+    const cur=(typeof currentHalf==='function')?currentHalf():'';
+    const ck=cur?termKeyOf(cur):'';
+    if(ck&&Array.isArray(absenceRows)&&absenceRows.length>1){
+      for(let i=1;i<absenceRows.length;i++){
+        const r=absenceRows[i]||[];
+        if(termKeyOf(r[7])!==ck)continue;
+        const t=dateMs_(r[5]);
+        if(!isNaN(t)&&(isNaN(out)||t<out))out=t;
+      }
+    }
+  }catch(e){}
+  window._chStartMs=out;
+  return out;
+}
 // ===== الاشعارات: أشياء تحتاج إجراء الآن (طلبات وأعذار معلّقة حسب الصلاحية) =====
+/* ⚠️ كانت تعرض كل طلبات المتدرب منذ الأزل: «تم اعتماد طلبك · عذر غياب»
+   من سبتمبر تظل في الجرس بعد انتهاء نصفها. الطلب المُغلَق خبرٌ انتهى
+   مفعوله بانتهاء نصفه، والمعلّق وحده هو الذي ما زال ينتظر. */
+function reqIsClosed_(f){return f==='معتمد'||f==='مرفوض'||f==='ملغي'||f==='ملغى';}
+function reqInCurrentHalf_(r){
+  const start=currentHalfStartMs();
+  const t=dateMs_(r&&r.date);
+  if(isNaN(t))return true;                       // بلا تاريخ مقروء ⇒ لا نخفيه
+  if(!isNaN(start))return t>=start;              // حدٌّ من بياناتك
+  return (Date.now()-t)<=45*864e5;               // احتياطي: ٤٥ يوماً
+}
 function getNotifications(){
   const list=[];
   if(!requests||!requests.length)return list;
@@ -6337,15 +6427,17 @@ function getNotifications(){
     // المتدرب: تحديثات على طلباته
     requests.filter(r=>String(r.sid)===String(user.id)).forEach(r=>{
       const f=reqFinal(r), lbl=REQ_CATS[reqCat(r)].label;
-      if(f==='معتمد')list.push({type:'as',icon:'✅',msg:`تم اعتماد طلبك: ${esc(lbl)}${r.date?' · '+r.date:''}`});
-      else if(f==='مرفوض')list.push({type:'ad',icon:'❌',msg:`تم رفض طلبك: ${esc(lbl)}${r.notes?' — '+esc(r.notes):''}`});
-      else if(f==='بانتظار التعديل')list.push({type:'aw',icon:'✏️',msg:`طلبك يحتاج تعديل: ${esc(lbl)}${r.notes?' — '+esc(r.notes):''}`});
-      else list.push({type:'ab',icon:'⏳',msg:`طلبك قيد المراجعة (بانتظار ${esc(STAGE_LBL[reqActiveStage(r)]||'المراجعة')}): ${esc(lbl)}`});
+      const dt=r.date?' · '+esc(fmtDateAr(r.date)):'';
+      if(reqIsClosed_(f)&&!reqInCurrentHalf_(r))return;   // نصفٌ انتهى ⇒ انتهى خبره
+      if(f==='معتمد')list.push({type:'as',icon:'✅',msg:`تم اعتماد طلبك: ${esc(lbl)}${dt}`});
+      else if(f==='مرفوض')list.push({type:'ad',icon:'❌',msg:`تم رفض طلبك: ${esc(lbl)}${dt}${r.notes?' — '+esc(r.notes):''}`});
+      else if(f==='بانتظار التعديل')list.push({type:'aw',icon:'✏️',msg:`طلبك يحتاج تعديل: ${esc(lbl)}${dt}${r.notes?' — '+esc(r.notes):''}`});
+      else list.push({type:'ab',icon:'⏳',msg:`طلبك قيد المراجعة (بانتظار ${esc(STAGE_LBL[reqActiveStage(r)]||'المراجعة')}): ${esc(lbl)}${dt}`});
     });
   } else {
     // المدرب/الإداري: كل ما وصل مرحلته وينتظر إجراءه
     requests.filter(r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);}).forEach(r=>{
-      list.push({type:'aw',icon:'📩',msg:`${esc(REQ_CATS[reqCat(r)].label)} ينتظر إجراءك — ${esc(r.sname||'')}${r.grp?' · شعبة '+esc(r.grp):''}${r.date?' · '+r.date:''}`});
+      list.push({type:'aw',icon:'📩',msg:`${esc(REQ_CATS[reqCat(r)].label)} ينتظر إجراءك — ${esc(r.sname||'')}${r.grp?' · شعبة '+esc(r.grp):''}${r.date?' · '+esc(fmtDateAr(r.date)):''}`});
     });
   }
   return list;
@@ -7408,10 +7500,20 @@ const sPgs={
     const weakNow=courses.filter(c=>weakItemsOf(c).length>0);
     let failSection='';
     if(failedCourses.length){
+      /* ⚠️ كان النص واحداً: «راسب فيها» مع الدرجة — فيقرأ المتدرب «راسب
+         (76%)» ولا يفهم شيئاً. الرسوب بالدرجة والحرمان بالغياب سببان
+         مختلفان وعلاجهما مختلف، فنسمّي كلاً باسمه ونكتب سببه. */
+      const byGrade=failedCourses.filter(c=>failReason(c)==='درجة');
+      const byAbs=failedCourses.filter(c=>failReason(c)==='حرمان');
+      const nameOf=c=>esc(c.course);
+      const gList=byGrade.map(c=>nameOf(c)+((parseFloat(c.pct)||0)>0?` (${Math.round(c.pct)}%)`:'')).join(' · ');
+      const aList=byAbs.map(c=>nameOf(c)+` (غياب ${Math.round(parseFloat(c.abs)||0)}%)`).join(' · ');
       failSection=`<div class="alert ad" style="border:2px solid #e74c3c;margin-bottom:16px">
         <span class="aicon">📕</span>
-        <div><strong>تنبيه: لديك ${failedCourses.length} مادة راسب فيها (متطلب)</strong><br>
-        <span style="font-size:12px">يجب إعادة هذه المواد لأنها متطلبات: ${failedCourses.map(c=>esc(c.course)+((parseFloat(c.pct)||0)>0?` (${Math.round(c.pct)}%)`:'')).join(' · ')}</span></div>
+        <div><strong>تنبيه: ${failedCourses.length} مادة لم تُجتَز (متطلب)</strong>
+        ${byGrade.length?`<br><span style="font-size:12px">📉 راسب بالدرجة — يجب إعادتها: ${gList}</span>`:''}
+        ${byAbs.length?`<br><span style="font-size:12px">🚫 محروم بالغياب — يجب إعادتها: ${aList}</span>`:''}
+        </div>
       </div>`;
     }
     if(weakNow.length){
@@ -15350,7 +15452,7 @@ function printRequestsReport(){
   const rows=reqs.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(r=>{
     const days=((String(r.details||'').match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim();
     const hours=((String(r.details||'').match(/ساعات:\s*([\d.]+)/)||[])[1]||'');
-    return `<tr><td>${r.date||'—'}</td><td style="text-align:right">${esc(r.sname||'')}</td><td>${esc(r.grp||'')}</td><td>${esc(REQ_CATS[reqCat(r)].label)}</td><td style="font-size:10px">${days||'—'}</td><td>${hours||'—'}</td><td>${statusOf(r)}</td></tr>`;
+    return `<tr><td>${esc(fmtDateAr(r.date))||'—'}</td><td style="text-align:right">${esc(r.sname||'')}</td><td>${esc(r.grp||'')}</td><td>${esc(REQ_CATS[reqCat(r)].label)}</td><td style="font-size:10px">${days||'—'}</td><td>${hours||'—'}</td><td>${statusOf(r)}</td></tr>`;
   }).join('');
   const body=`<div class="kpis">
     <div class="kpi"><div class="n">${reqs.length}</div><div class="l">إجمالي الطلبات</div></div>
@@ -15905,7 +16007,7 @@ function reqCard(r,opts){
   const who=opts.showRequester?` — ${esc(r.sname||'')}`:'';
   return `<div class="ccard ${cls}" style="margin-bottom:12px">
     <div class="cc-top"><div><div class="cc-name">${meta.icon} ${esc(meta.label)}${who}</div>
-      <div class="cc-meta">رقم الطلب <b style="color:var(--acc-b)">${esc(String(r.rid||'—'))}</b>${r.grp?' · الشعبة '+esc(r.grp):''}${r.sid?' · '+esc(String(r.sid)):''}${r.date?' · '+r.date:''}</div></div>${reqStatusPill(r)}</div>
+      <div class="cc-meta">رقم الطلب <b style="color:var(--acc-b)">${esc(String(r.rid||'—'))}</b>${r.grp?' · الشعبة '+esc(r.grp):''}${r.sid?' · '+esc(String(r.sid)):''}${r.date?' · '+esc(fmtDateAr(r.date)):''}</div></div>${reqStatusPill(r)}</div>
     ${targetLine}
     ${body}
     ${reqTimeline(r)}
