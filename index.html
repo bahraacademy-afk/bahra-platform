@@ -619,6 +619,14 @@ body.lang-en,body.lang-en *{letter-spacing:.1px}
   border:1px solid color-mix(in srgb,var(--acc-b) 28%,transparent);
   border-radius:20px;padding:3px 10px;letter-spacing:0;text-transform:none;max-width:100%;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 🔎 «ما ظهر لك متدرب؟» — تشخيص مطويّ فوق قائمة التحضير */
+.att-miss{margin:0 0 12px;padding:8px 12px;background:color-mix(in srgb,var(--acc-y) 9%,transparent);
+  border:1px solid color-mix(in srgb,var(--acc-y) 26%,transparent);border-radius:10px}
+.att-miss>summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--acc-y);list-style:none}
+.att-miss>summary::-webkit-details-marker{display:none}
+.att-miss>summary::before{content:'▸ ';display:inline-block;transition:transform .15s}
+.att-miss[open]>summary::before{content:'▾ '}
+.att-miss .am-row{font-size:12px;color:var(--text);margin-top:7px;line-height:1.75}
 .sch-spec-row{margin:0 0 10px}
 /* ⚠️ overflow-anchor:none مهمّ: عند استبدال محتوى شعبة واحدة يعيد المتصفح
    «تثبيت التمرير» تلقائياً فيزحف بالصفحة ٨٠px مرتين بعد الاستبدال — بلا أي
@@ -2840,7 +2848,7 @@ function assistOrphans(){
 function assistDaysLeft(rec){
   try{
     if(typeof courseTotalDays!=='function')return null;
-    const tot=courseTotalDays(rec.course,rec.grp);
+    const tot=courseTotalDays(rec.course,rec.grp,rec.half||rec.term,isActive(rec.status));
     if(!tot)return null;
     const used=(parseFloat(rec.abs)||0)/100*tot;   // أيام مستهلكة
     return {left:Math.max(0,Math.round((tot*0.25-used)*10)/10),total:tot};
@@ -4226,7 +4234,7 @@ async function loadStudent(){
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:n0(r[4]),specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7]),prereq:(n0(r[8])||n0(r[9])),link:n0(r[10])});
   }
   await p2;
-  courses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
+  courses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half,isActive(s.status)); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
 
@@ -4254,7 +4262,7 @@ async function loadTrainer(){
     if(n0(r[0]))catalog.push({code:n0(r[0]),name:n0(r[1]),term:n0(r[2]),units:n0(r[3]),hours:parseFloat(r[4])||0,specs:n0(r[5]),matTheory:n0(r[6]),matPractical:n0(r[7]),prereq:(n0(r[8])||n0(r[9])),link:n0(r[10])});
   }
   await p2;
-  students.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
+  students.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half,isActive(s.status)); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
 
@@ -4300,7 +4308,7 @@ async function loadAdmin(){
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6]),spec:n0(r[7])});
   }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics(), loadLessonPreps(), loadCoTrainers(), loadDepExceptions(), loadSpecs()]);
-  allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
+  allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half,isActive(s.status)); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
 }
 // هل المدرب حالي (مسجّل في القاعدة)؟
@@ -4857,21 +4865,74 @@ function courseDaysPerWeek(course,grp){
   }
   return daysSet.size;
 }
-// إجمالي أيام المادة في الترم = أيام الأسبوع × عدد الأسابيع (افتراضي 8)
-function courseTotalDays(course,grp){
+/* ═══════════ 🚨 مقام نسبة الغياب ═══════════
+   كان المقام = (أيام المادة في الأسبوع من تبويب «الجدول» الحالي) × ٨،
+   بلا أي نظرٍ إلى ترم المادة. وفيه ثلاث علل تجتمع على رقمٍ غلط:
+     ① مادةٌ من نصفٍ انتهى ليست في جدول اليوم ⇒ courseDaysPerWeek تُرجع
+       صفراً ⇒ المقام يسقط إلى ٨ (يوم/أسبوع)، فغيابان = ٢٥٪ بالضبط —
+       أي حرمانٌ من العدم. (هذا ما ظهر لعلي أبو عروق في «ورشة الكترونية».)
+     ② لو لم تُطابق الشعبة بحث في «أي شعبة»، فيستعير مقام شعبةٍ أخرى.
+     ③ المقام يُقرأ من جدول اليوم، فكل تعديل على جدول هذا النصف يغيّر
+       نِسَب غياب أنصافٍ ماضية بأثر رجعي — والنصف المفروض أن ينتهي.
+   القاعدة الآن:
+     • نصفٌ جارٍ  → المخطَّط (أيام/أسبوع × أسابيع)، ولا يقلّ عمّا انعقد فعلاً.
+       (قاعدة المعهد: الحرمان ٢٥٪ من المقرر كاملاً، لا ممّا مضى منه.)
+     • نصفٌ انتهى → ما انعقد فعلاً من حصص في «قاعدة الغياب» لذلك الترم:
+       رقمٌ ثابت لا يتغيّر بعدها مهما تغيّر الجدول. */
+let absHeldMap_={};   // "اسم المادة|شعبة|ترم" → عدد الحصص المنعقدة فعلاً
+function heldSessions(course,grp,term){
+  const gk=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
+  const tk=t=>String(t||'').replace(/\s+/g,'');
+  const k=cnk_(course)+'|'+gk(grp)+'|'+tk(term);
+  const s=absHeldMap_[k];
+  return s?s.size:0;
+}
+function isCurrentTerm(term){
+  if(!term)return true;                       // بلا ترم ⇒ عاملها كالجارية
+  try{
+    const cur=(typeof currentHalf==='function')?currentHalf():'';
+    if(!cur)return true;
+    return termKeyOf(term)===termKeyOf(cur);
+  }catch(e){return true;}
+}
+// إجمالي حصص المادة التي تُقاس عليها النسبة
+/* isCurrent: حالة السجل نفسه («حالي» ⇒ جارٍ). نمرّرها صراحةً ولا نستنتج
+   النصف الجاري عالمياً: لو لم يبقَ في البيانات أي مادة «حالي» سقط
+   الاستنتاج على أقدم نصفٍ فعادت نِسَب الماضي تتبع جدول اليوم. حالة الصف
+   لا تلتبس، وهي نفسها ما يقرأه الخادم من العمود L. */
+function courseTotalDays(course,grp,term,isCurrent){
+  const held=heldSessions(course,grp,term);
+  const live=(isCurrent===undefined)?isCurrentTerm(term):!!isCurrent;
+  if(!live)return held||0;                    // انتهى ⇒ ما انعقد فعلاً، وإلا لا نخمّن
   const dpw=courseDaysPerWeek(course,grp);
-  return dpw*(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
+  const planned=dpw*(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
+  return Math.max(planned,held);              // جارٍ ⇒ المخطَّط، ولا يقلّ عمّا انعقد
 }
 // تحويل أيام الغياب إلى نسبة مئوية (غياب يوم=1 · متأخر=0.5)
-function absDaysToPct(absDays,course,grp){
-  const total=courseTotalDays(course,grp);
+function absDaysToPct(absDays,course,grp,term){
+  const total=courseTotalDays(course,grp,term);
   if(!total)return 0;
   return Math.min(Math.round(absDays/total*1000)/10,100);
 }
 // تحويل النسبة المئوية إلى أيام غياب (للعرض/التعديل)
-function pctToAbsDays(pct,course,grp){
-  const total=courseTotalDays(course,grp);
+function pctToAbsDays(pct,course,grp,term){
+  const total=courseTotalDays(course,grp,term);
   return Math.round(pct/100*total*2)/2; // تقريب لأقرب نص يوم
+}
+/* نصّ النسبة مع ما خلفها — «٢٥٪ (٢ من ٨ حصص)» — فالرقم يصير قابلاً
+   للمراجعة بالعين بدل أن يكون نسبةً مجهولة المصدر. */
+function absFrac(c){
+  if(!c)return '';
+  const total=courseTotalDays(c.course,c.grp,c.half||c.term,isActive(c.status));
+  if(!total)return '';
+  const days=Math.round((parseFloat(c.abs)||0)/100*total*2)/2;
+  const n=v=>Number.isInteger(v)?String(v):String(v);
+  return `${n(days)} من ${n(total)} حصة`;
+}
+function absPctTxt(c){
+  const p=Math.round(parseFloat(c&&c.abs)||0);
+  const f=absFrac(c);
+  return f?`${p}% (${f})`:`${p}%`;
 }
 // ما هي مواد اليوم (حسب الجدول) لمدرب معيّن — تُرجع المواد التي لها حصة اليوم
 /* ============================================================
@@ -5021,10 +5082,22 @@ function todayCoursesForTrainer(trainerName,dayName){
 let absenceDaysMap={};        // مفتاح بالرمز: "sid|codeDigits|grp|term" (للسجلات التي فيها رمز)
 let absenceDaysMapByName={};  // مفتاح بالاسم: "sid|nameKey|grp|term" (للسجلات القديمة بلا رمز)
 let absenceRows=[];           // الصفوف الخام لتبويب "قاعدة الغياب" (لصفحة سجل التحضير)
-const cnk_=c=>String(c||'').replace(/\s+/g,'').trim(); // توحيد اسم المادة (إزالة المسافات)
+/* 🚨 مفتاح اسم المادة. كان يزيل المسافات فقط، فـ«دوائر الكترونية» (بلا همزة)
+   و«دوائر إلكترونية» مادتان مختلفتان عند النظام وهما واحدة عند الناس:
+     • التحضير يطابق اسم «الجدول» باسم «سجل المقررات» ⇒ متدربٌ كُتبت مادته
+       بهمزة مختلفة لا يظهر في قائمة التحضير أصلاً («طالب مو طالع»).
+     • والغياب يُفهرس بنفس المفتاح ⇒ لو حُفظ التحضير باسمٍ ونُسب للمتدرب
+       باسمٍ آخر ظهر غيابه صفراً.
+   نوحّد الهمزات والتاء المربوطة والألف المقصورة والتشكيل والتطويل — وهو
+   نفس التوحيد المعتمد للتخصصات (arNorm). الاختلافات الإملائية تُدمج،
+   والمواد المختلفة فعلاً تبقى مختلفة. */
+const cnk_=c=>String(c==null?'':c)
+  .replace(/[ً-ْٰـ]/g,'')     // تشكيل وتطويل
+  .replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه')
+  .replace(/\s+/g,'').trim();
 // تحميل "قاعدة الغياب" وبناء خريطة أيام الغياب لكل طالب/مادة/ترم
 async function loadAbsenceBase(){
-  absenceDaysMap={}; absenceDaysMapByName={};
+  absenceDaysMap={}; absenceDaysMapByName={}; absHeldMap_={};
   try{
     const rows=await fetchSheet('قاعدة الغياب!A:H').catch(()=>[]);
     absenceRows=Array.isArray(rows)?rows:[]; // نحتفظ بالصفوف الخام لعرض التحضيرات السابقة
@@ -5039,6 +5112,14 @@ async function loadAbsenceBase(){
       const sid=onlyDigits(r[0]);
       if(!sid)continue;
       const status=String(r[6]||'').trim();
+      /* 📏 المقام: كل تاريخٍ سُجِّل فيه تحضيرٌ لهذه المادة+الشعبة+الترم
+         حصةٌ منعقدة — مهما كانت حالة المتدرب فيها (حاضر أو غائب أو معذور).
+         هذا عدٌّ لما جرى فعلاً، فيثبت بانتهاء الترم ولا يتبع جدول اليوم. */
+      const hcn=cnk_(r[2]), hdt=String(r[5]==null?'':r[5]).trim();
+      if(hcn&&hdt){
+        const hk=hcn+'|'+gk(r[4])+'|'+tk(r[7]);
+        (absHeldMap_[hk]||(absHeldMap_[hk]=new Set())).add(hdt.slice(0,10));
+      }
       // ⭐ الحاضر والمعذور لا يُحسبان. «معذور» تُكتب عند اعتماد عذر الغياب،
       //    فتنزل النسبة عند الجميع لأن الجميع يحسب من هنا.
       if(status==='حاضر'||status==='معذور')continue;
@@ -5090,11 +5171,11 @@ function excusePreviewDays(r,cc){
 function excusePreviewPct(r,cc){
   const {days,hit}=excusePreviewDays(r,cc);
   if(!hit)return null;                       // لا يوجد غياب مسجّل في تلك الأيام
-  const cur=absPctFromBase(cc.sid,cc.code,cc.course,cc.grp,cc.half);
-  const total=courseTotalDays(cc.course,cc.grp)||(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
+  const cur=absPctFromBase(cc.sid,cc.code,cc.course,cc.grp,cc.half,isActive(cc.status));
+  const total=courseTotalDays(cc.course,cc.grp,cc.half||cc.term,isActive(cc.status))||heldSessions(cc.course,cc.grp,cc.half||cc.term)||(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
   return Math.max(0,Math.round(Math.max(0,cur-days/total*100)*10)/10);
 }
-function absPctFromBase(sid,code,course,grp,term){
+function absPctFromBase(sid,code,course,grp,term,isCurrent){
   const onlyDigits=s=>String(s||'').replace(/[^0-9]/g,'');
   const gk=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
   const tk=t=>String(t||'').replace(/\s+/g,'');
@@ -5107,9 +5188,13 @@ function absPctFromBase(sid,code,course,grp,term){
     absDays=absenceDaysMap[key]||0;
   }
   if(!absDays)return 0; // ⭐ لا يوجد غياب لهذه المادة بالاسم = 0% دائماً
-  // احتياطي: لو المادة غير مجدولة بالكامل، افترض يوم/أسبوع (8 حصص) بدل ما نُخفي الغياب
-  let total=courseTotalDays(course,grp);
-  if(!total) total=(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
+  /* ⚠️ الاحتياطي القديم كان «لو المادة غير مجدولة افترض ٨ حصص» — وهو
+     الذي صنع حرماناً من العدم لمواد الأنصاف الماضية (ليست في جدول اليوم
+     ⇒ المقام ٨ ⇒ غيابان = ٢٥٪). المقام الآن مشدودٌ إلى ترم المادة نفسها،
+     والاحتياطي الأخير = ما انعقد فعلاً، فلا نقسم على رقمٍ متخيَّل. */
+  let total=courseTotalDays(course,grp,term,isCurrent);
+  if(!total) total=heldSessions(course,grp,term);
+  if(!total) return 0;   // لا جدول ولا حصص منعقدة ⇒ لا نخترع نسبة
   return Math.min(Math.round(absDays/total*1000)/10,100);
 }
 function excuseHoursFromDates(course,grp,dates){
@@ -8697,7 +8782,10 @@ const tPgs={
     // ⭐ المواد تُعرض حسب تسجيل المتدربين (سجل المقررات) لا الجدول فقط —
     //    يضمن ظهور المواد المشتركة بين عدة مدربين والمواد غير المجدولة.
     const myName=(currentUser&&(currentUser.name||currentUser.sname))||'';
-    const nrmC=c=>String(c||'').replace(/\s+/g,' ').trim();
+    /* ⚠️ كانت تُسوّي المسافات فقط، فاسم المادة في «الجدول» لا يطابق اسمها في
+       «سجل المقررات» إن اختلفت همزة أو تاء مربوطة — فيختفي المتدرب من
+       قائمة التحضير بلا رسالة. نستعمل نفس مفتاح المادة المعتمد. */
+    const nrmC=c=>cnk_(c);
     /* 📅 المصدر الوحيد للتحضير هو «الجدول»: مواد اليوم المُسندة لي، وكل مادة
        بشُعبها المُسندة لي وحدها. صاحب المادة لا يحضّر شعبة ليست في جدوله،
        والمُجدوَل لا يحضّر إلا شعبته. (الدرجات شيء آخر — لصاحب المادة.) */
@@ -8731,8 +8819,27 @@ const tPgs={
       /* 👥 قائمة المادة كاملة لكل مَن في جدولها — المُشارِك يرى ما يراه صاحبها
          حرفياً. «الشعبة» في الجدول تحدد الوقت والقاعة لا تقسيم القائمة: مادة
          كالمشروع يتقاسمها ثلاثة على كل الدفعة. */
-      const ssAll=uniqStudents(students.filter(s=>nrmC(s.course)===nrmC(course)));
+      const _matched=students.filter(s=>nrmC(s.course)===nrmC(course));
+      const ssAll=uniqStudents(_matched);
       const ssDedup=ssAll.filter(s=>isActive(s.status));
+      /* 🔎 «عندي طالب مو طالع» — الأسباب الثلاثة التي تُسقط متدرباً بصمت،
+         نكتبها بأسمائها بدل أن يبحث عنها بالتخمين:
+           ① حالته ليست «حالي» في سجل المقررات.
+           ② مُسجَّل في المادة مرتين (نسخة واحدة تُعرض).
+           ③ اسم المادة في صفّه لا يطابق اسمها في الجدول أصلاً. */
+      const _dropStatus=ssAll.filter(s=>!isActive(s.status));
+      const _dupCount=Math.max(0,_matched.length-ssAll.length);
+      const _shown=new Set(ssDedup.map(s=>String(s.sid||s.id)));
+      const _elsewhere=(students||[]).filter(s=>isActive(s.status)&&!_shown.has(String(s.sid||s.id))
+        &&String(s.course||'').trim()&&nrmC(s.course)!==nrmC(course)
+        &&(String(s.code||'')&&code&&normCode(s.code)===normCode(code)));
+      const missHTML=(_dropStatus.length||_dupCount||_elsewhere.length)?`
+        <details class="att-miss"><summary>🔎 ما ظهر لك متدرب؟ (${_dropStatus.length+_dupCount+_elsewhere.length})</summary>
+          ${_dropStatus.length?`<div class="am-row">⏸️ <b>${_dropStatus.length}</b> حالتهم ليست «حالي» في سجل المقررات — ${_dropStatus.slice(0,6).map(s=>esc(String(s.name||s.sname||s.sid))+' («'+esc(s.status||'فارغة')+'»)').join('، ')}${_dropStatus.length>6?' …':''}</div>`:''}
+          ${_dupCount?`<div class="am-row">👯 <b>${_dupCount}</b> صفّ مكرّر لنفس المتدرب في هذه المادة — يُعرض مرة واحدة</div>`:''}
+          ${_elsewhere.length?`<div class="am-row">✍️ <b>${_elsewhere.length}</b> رمزهم «${esc(code)}» لكن اسم المادة في صفّهم مكتوب مختلفاً: ${[...new Set(_elsewhere.map(s=>s.course))].slice(0,3).map(esc).join('، ')} — وحّد الاسم في «سجل المقررات»</div>`:''}
+          ${role==='a'?`<button class="btn btn-out btn-sm" style="margin-top:8px" onclick="openCourseProbe('${jsq(course)}')">🔍 افحص المادة بالتفصيل</button>`:''}
+        </details>`:'';
       if(!ssDedup.length){
         // 🔎 بدل صفحة فاضية بلا تفسير: نقول له أين الخلل بالضبط
         const past=ssAll.length-ssDedup.length;
@@ -8749,14 +8856,14 @@ const tPgs={
             ${(!past&&!similar.length)?`<div style="margin-top:6px">السبب أحد اثنين: <b>الشعبة التي أُسندت لك في الجدول ما فيها متدربون مسجّلون</b> في هذه المادة، أو هم مسجّلون باسم مدرّب آخر.</div>
             ${role==='a'?`<button class="btn btn-out btn-sm" style="margin-top:9px" onclick="openCourseProbe('${jsq(course)}')">🔍 افحص المادة — وين متدربوها</button>`
                         :`<div style="margin-top:6px">أرسل للإدارة: «${esc(course)}» مُسندة لي في الجدول بلا متدربين — تُفحص من «إدارة المقررات ← 🔍 فحص مادة».</div>`}`:''}
-          </div></div>`;
+          </div>${missHTML}</div>`;
       }
       const grp=ssDedup[0]?.grp||'';
       /* 👥 مادة مشتركة: صفوفها باسم مدرّب آخر (صاحب المادة) وأنا مُجدوَل
          عليها في «الجدول». نوضّح ذلك حتى لا يظن أحد أنه يحضّر مادة غيره. */
       const _prt=courseParticipation(ssDedup);
       const _owners=_prt.owners, _shared=_prt.participant;
-      const totalDays=courseTotalDays(course,grp);
+      const totalDays=courseTotalDays(course,grp,'',true);   // التحضير يجري الآن ⇒ المخطَّط
       const dpw=courseDaysPerWeek(course,grp);
       return `<div style="margin-bottom:24px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px;background:rgba(106,184,247,.1);border-radius:6px">
@@ -8764,10 +8871,11 @@ const tPgs={
           ${ssDedup.some(s=>attMarks[amKey(course,s.sid)])?`<span style="font-size:11px;background:#ffd700;padding:3px 8px;border-radius:4px;color:#000;font-weight:700">⚠️ ${ssDedup.filter(s=>attMarks[amKey(course,s.sid)]).length} علامة معلقة</span>`:''}
         </div>
         <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${totalDays?`📊 ${dpw} يوم/أسبوع × ${WEEKS_PER_HALF} أسابيع = <strong>${totalDays} يوم</strong> إجمالي · المحروم عند ${Math.ceil(totalDays*0.25)} أيام (25%)`:`ℹ️ المادة غير مجدولة بالكامل — ستُحسب بيوم/أسبوع (${WEEKS_PER_HALF} يوم) · المحروم عند ${Math.ceil(WEEKS_PER_HALF*0.25)} أيام`}</div>
+        ${missHTML}
         <div class="att-grid">
           ${ssDedup.map(s=>{const mk=attMarks[amKey(course,s.sid)];const idb=amId(course,s.sid);return `<div class="att-card">
             <div class="att-name">${esc(s.name.split(' ').slice(0,3).join(' '))}</div>
-            <div class="att-id">${s.sid} · شعبة ${esc(String(s.grp||'').replace(/\.0$/,''))} · غياب حالي <span style="color:${absLevel(s.abs).color}">${Math.round(s.abs)}%</span></div>
+            <div class="att-id">${s.sid} · شعبة ${esc(String(s.grp||'').replace(/\.0$/,''))} · غياب حالي <span style="color:${absLevel(s.abs).color}" title="${escAttr(absFrac(s)||'')}">${Math.round(s.abs)}%</span>${(()=>{const f=absFrac(s);return f?` <span style="opacity:.62">(${esc(f)})</span>`:'';})()}</div>
             <div class="att-marks">
               <button class="amk amk-p${mk==='present'?' on':''}" id="${idb}-present" onclick="setMark('${jsq(course)}','${jsq(s.sid)}','present')">✓ حاضر</button>
               <button class="amk amk-l${mk==='late'?' on':''}" id="${idb}-late" onclick="setMark('${jsq(course)}','${jsq(s.sid)}','late')">⏰ متأخر</button>
@@ -9004,7 +9112,7 @@ async function saveSession(course,code,sessionHrs){
 
 // ===== حفظ الغياب الجديد (بالأيام · مربوط بالجدول) =====
 async function saveSessionV2(course,code,grp,dateStr){
-  let totalDays=courseTotalDays(course,grp);
+  let totalDays=courseTotalDays(course,grp,'',true);   // حصّة تُسجَّل الآن ⇒ ترمٌ جارٍ
   // احتياطي: لو المادة مو موجودة بالجدول، نفترض يوم واحد بالأسبوع (8 أيام) بدل منع الحفظ
   if(!totalDays){
     totalDays=(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
@@ -11795,10 +11903,10 @@ console.log('%c✅ شاشة العرض جاهزة - النسخة الجديدة 
    مصدر واحد لكل الأدوار — لا نسخة محفوظة ولا حساب موازٍ. */
 function recomputeAbsPct(){
   try{
-    if(typeof allCourses!=='undefined')allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
-    if(typeof courses!=='undefined'&&Array.isArray(courses))courses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
+    if(typeof allCourses!=='undefined')allCourses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half,isActive(s.status));});
+    if(typeof courses!=='undefined'&&Array.isArray(courses))courses.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half,isActive(s.status));});
     // ⭐ للإداري، students = سجل المتدربين (بلا sid/code/course) فتصفيرها يفسد القوائم
-    if(user&&user.role!=='a'&&typeof students!=='undefined')students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half);});
+    if(user&&user.role!=='a'&&typeof students!=='undefined')students.forEach(s=>{s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half,isActive(s.status));});
   }catch(e){}
 }
 window.recomputeAbsPct=recomputeAbsPct;
