@@ -4248,13 +4248,15 @@ async function loadTrainer(){
   students=[];
   for(let i=1;i<cr.length;i++){
     const r=cr[i];
+    if(!n0(r[1]))continue;
     const mine=(n0(r[6])===user.name);
     const dl=mine?null:activeDelegToMeForRow(r); // مادة مكلَّف بها
-    if(mine||dl){
-      const obj={key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'};
-      obj.delegated=!mine; obj.origTrainer=n0(r[6]);
-      students.push(obj);
-    }
+    /* الخادم سبق أن حصر السجلات في مواد المدرب + تكليفاته + جدوله + مشاركاته.
+       لا نعيد فلترتها هنا بـmine||dl: تلك الفلترة كانت تحذف طلاب المواد
+       المسندة له في الجدول، فيختفون من التحضير رغم أن تسجيلهم موجود. */
+    const obj={key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),course:n0(r[5]),trainer:n0(r[6]),pct:num(r[7]),abs:num(r[8]),letter:n0(r[9]),half:n0(r[10])||'غير محدد',status:n0(r[11])||'سابق'};
+    obj.delegated=!mine&&!!dl; obj.origTrainer=n0(r[6]);
+    students.push(obj);
   }
   catalog=[];
   for(let i=1;i<cat.length;i++){
@@ -5314,12 +5316,17 @@ function isActive(status){
   const s=String(status||'').replace(/\s+/g,'').replace(/[ًٌٍَُِّْ]/g,'').trim();
   return s==='حالي'||s==='حالى'||s.startsWith('حالي');
 }
-// إزالة تكرار الطلاب في مادة: طالب واحد لكل رقم أكاديمي (يحتفظ بأول شعبة)
+// إزالة تكرار الطلاب في مادة: طالب واحد لكل رقم أكاديمي.
+// عند وجود تسجيل سابق وحالي لنفس المادة نختار «الحالي» أولاً؛ كان اختيار
+// أول صف ثم فلترة الحالة لاحقاً يُخفي الطالب من التحضير رغم تسجيله الحالي.
 function uniqStudents(arr){
   const map=new Map();
   arr.forEach(s=>{
-    const k=sidKey(s);
-    if(!map.has(k)||(s.grp&&map.get(k).grp&&String(s.grp)<String(map.get(k).grp)))map.set(k,s);
+    const k=sidKey(s), old=map.get(k);
+    if(!old){map.set(k,s);return;}
+    const curActive=isActive(s.status), oldActive=isActive(old.status);
+    if((curActive&&!oldActive)||
+       (curActive===oldActive&&s.grp&&old.grp&&String(s.grp)<String(old.grp)))map.set(k,s);
   });
   return [...map.values()];
 }
@@ -8811,17 +8818,13 @@ const tPgs={
     return header+`
     <div class="alert ab"><span class="aicon">✅</span>مواد اليوم للتحضير — سجّل لكل متدرب: <strong>حاضر / متأخر / غائب</strong> · <strong>غائب = يوم كامل · متأخر = نص يوم</strong></div>
     ${todayCourses.map(tc=>{
-      const course=tc.course, code=tc.code||'';
-      /* ⚠️ اسم المادة هنا يأتي من «الجدول»، وأسماء المتدربين من «سجل المقررات».
-         كانت المقارنة حرفية (===) — فمسافة زائدة أو اختلاف في كتابة الاسم بين
-         التبويبين يجعل المادة تظهر في القائمة ولا يُطابقها متدرب واحد، فتطلع
-         الصفحة فاضية بلا سبب. نطابق بنفس التوحيد الذي بنينا به القائمة. */
-      /* 👥 قائمة المادة كاملة لكل مَن في جدولها — المُشارِك يرى ما يراه صاحبها
-         حرفياً. «الشعبة» في الجدول تحدد الوقت والقاعة لا تقسيم القائمة: مادة
-         كالمشروع يتقاسمها ثلاثة على كل الدفعة. */
-      const _matched=students.filter(s=>nrmC(s.course)===nrmC(course));
+      const course=tc.course, code=attCourseCode(course,tc.code||'');
+      /* 👥 كل متدرب نُزّلت له المادة يظهر بالاسم الموحّد أو بالرمز.
+         والأهم: نزيل التكرار بعد اختيار «الحالي»، حتى لا يحجب سجلٌ سابق
+         قديم تسجيلَ الطالب الحالي عند وجود صفين له في المادة نفسها. */
+      const _matched=attCourseStudents(course,code,false);
       const ssAll=uniqStudents(_matched);
-      const ssDedup=ssAll.filter(s=>isActive(s.status));
+      const ssDedup=uniqStudents(_matched.filter(s=>isActive(s.status)));
       /* 🔎 «عندي طالب مو طالع» — الأسباب الثلاثة التي تُسقط متدرباً بصمت،
          نكتبها بأسمائها بدل أن يبحث عنها بالتخمين:
            ① حالته ليست «حالي» في سجل المقررات.
@@ -8884,7 +8887,7 @@ const tPgs={
           </div>`;}).join('')}
         </div>
         <div class="btn-row">
-          <button class="btn btn-out btn-sm" onclick="markAll('${jsq(course)}','present')">✓ تعليم الكل حاضر</button>
+          <button class="btn btn-out btn-sm" onclick="markAll('${jsq(course)}','present','${jsq(code)}')">✓ تعليم الكل حاضر</button>
           ${ssDedup.some(s=>attMarks[amKey(course,s.sid)])?`<button class="btn btn-sm" style="background:#f4c78a;color:#000;font-weight:700" onclick="if(confirm('🗑️ هل تريد مسح جميع العلامات للمادة: ${jsq(course)}؟')){clearMarks('${jsq(course)}')}">🔄 مسح</button>`:''}
           <button class="btn btn-b" onclick="saveSessionV2('${jsq(course)}','${jsq(code)}','${jsq(grp)}','${jsq(dateStr)}')">💾 حفظ غياب اليوم</button>
         </div>
@@ -9032,8 +9035,26 @@ function setMark(course,sid,mark){
    أو بهمزة. كل ما يصله اسم مادة من الخارج يطابق به لا بـ===. */
 function sameCourse(a,b){ return _nk(a)===_nk(b) || String(a||'').replace(/\s+/g,' ').trim()===String(b||'').replace(/\s+/g,' ').trim(); }
 window.sameCourse=sameCourse;
-function markAll(course,mark){
-  uniqStudents(students.filter(s=>sameCourse(s.course,course)&&isActive(s.status))).forEach(s=>setMark(course,s.sid,mark));
+/* 🔗 مصدر واحد لقائمة التحضير: الاسم الموحّد أو رمز المقرر.
+   الجدول لا يخزّن الرمز، لذلك نستكمله من قاعدة المقررات عند الحاجة.
+   بهذا يظهر كل متدرب نُزّلت له المادة حتى لو اختلف اسمها قليلاً بين
+   «الجدول» و«سجل المقررات»، وتستخدم القائمة نفسها العرض والتعليم والحفظ. */
+function attCourseCode(course,code){
+  if(normCode(code))return String(code);
+  const hit=(catalog||[]).find(c=>sameCourse(c.name,course));
+  return hit?String(hit.code||''):'';
+}
+function attCourseStudents(course,code,activeOnly){
+  const ck=normCode(attCourseCode(course,code));
+  return (students||[]).filter(s=>{
+    if(activeOnly&&!isActive(s.status))return false;
+    const byName=sameCourse(s.course,course);
+    const byCode=!!(ck&&normCode(s.code)===ck);
+    return byName||byCode;
+  });
+}
+function markAll(course,mark,code){
+  uniqStudents(attCourseStudents(course,code,true)).forEach(s=>setMark(course,s.sid,mark));
 }
 // مسح علامات مادة واحدة فقط (لا يمس علامات المواد الأخرى المعلّقة)
 function clearMarks(course){
@@ -9060,7 +9081,7 @@ async function saveSession(course,code,sessionHrs){
     showToast('⚠️ المادة مالها ساعات بالقاعدة — استُخدم تقدير افتراضي','w');
   }
   // كل سجلات الطلاب الحاليين بهذه المادة (تشمل الشعب المتعددة)
-  const allRecs=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
+  const allRecs=uniqStudents(attCourseStudents(course,code,true));
   // العلامة لكل طالب موحّد (بمفتاح الرقم الأكاديمي)
   const markByKey={};
   allRecs.forEach(s=>{const mk=attMarks[s.sid];if(mk)markByKey[sidKey(s)]=mk;});
@@ -9118,8 +9139,8 @@ async function saveSessionV2(course,code,grp,dateStr){
     totalDays=(typeof WEEKS_PER_HALF!=='undefined'?WEEKS_PER_HALF:8);
     showToast('ℹ️ المادة غير مجدولة — حُسبت بيوم/أسبوع افتراضياً','i');
   }
-  // طلاب هذه المادة (الحاليون)
-  const allRecs=students.filter(s=>sameCourse(s.course,course)&&isActive(s.status));
+  // طلاب هذه المادة (الحاليون) — نفس قائمة العرض بالاسم الموحّد أو الرمز
+  const allRecs=uniqStudents(attCourseStudents(course,code,true));
   const markByKey={};
   allRecs.forEach(s=>{const mk=attMarks[amKey(course,s.sid)];if(mk)markByKey[sidKey(s)]=mk;});
   const records=[];   // لتحديث نسبة الغياب في سجل المقررات
@@ -9916,6 +9937,30 @@ async function deleteCourse(code,name){
     loadAdmin().catch(()=>{}); // مزامنة صامتة
   }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
 }
+/* 🗑️ إلغاء مادة أُضيفت بالخطأ: حذف تسجيلاتها الحالية فقط.
+   تبقى المادة في الخطة الدراسية، وتبقى سجلاتها السابقة محفوظة. */
+async function deleteCurrentCourse(code,course){
+  if(window._deletingCurrentCourse)return;
+  const isTarget=c=>code&&normCode(c.code)===normCode(code)
+    ?true:(!code&&sameCourse(c.course,course));
+  const targets=(allCourses||[]).filter(c=>isActive(c.status)&&isTarget(c));
+  if(!confirm(`⚠️ حذف المادة الحالية «${course}»؟\n\nسيُحذف تسجيلها الحالي من ${targets.length} متدرب/سجل.\nلن تُحذف المادة من الخطة الدراسية، ولن تتأثر السجلات السابقة.\n\nلا يمكن التراجع بعد الحذف.`))return;
+  window._deletingCurrentCourse=true;
+  showToast('جاري حذف المادة الحالية...','i');
+  try{
+    const r=await callWrite('deleteCurrentCourse',{records:[{code:code||'',course:course||''}]});
+    if(!r||(r.status&&r.status!=='ok')){
+      showToast('❌ تعذّر الحذف: '+attErrMsg(r&&r.msg,r&&r.hint),'e');return;
+    }
+    if(!r.deleted){showToast('⚠️ لم تُوجد تسجيلات حالية لهذه المادة','w');return;}
+    allCourses=(allCourses||[]).filter(c=>!(isActive(c.status)&&isTarget(c)));
+    showToast(`✅ تم حذف المادة الحالية (${r.deleted} تسجيل)`,'s');
+    showAPage('manage_courses',document.getElementById('sn-manage_courses'));
+    loadAdmin().catch(()=>{});
+  }catch(e){showToast('تعذّر الحذف — جرب مرة أخرى','e');}
+  finally{window._deletingCurrentCourse=false;}
+}
+window.deleteCurrentCourse=deleteCurrentCourse;
 // تحديد/إلغاء كل طلاب شعبة
 function toggleGrpStudents(grp,checked){
   document.querySelectorAll('.grp-'+grp).forEach(cb=>cb.checked=checked);
@@ -11980,7 +12025,7 @@ function coursesCurrentBody(){
     <div data-listwrap>
     ${searchBoxHTML('ابحث عن مقرر أو رمز أو مدرب...')}
     <div class="gtable"><table>
-      <thead><tr><th>المقرر</th><th>الرمز</th><th>المدرب</th><th>الشعب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>متوسط الغياب</th><th>محرومون</th></tr></thead>
+      <thead><tr><th>المقرر</th><th>الرمز</th><th>المدرب</th><th>الشعب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>متوسط الغياب</th><th>محرومون</th><th>إجراءات</th></tr></thead>
       <tbody>${courses.map(c=>{
         const n=c.students.length;
         const avg=avgScoredNum(c.students);
@@ -11996,6 +12041,7 @@ function coursesCurrentBody(){
           <td><span class="pill ${pillClass(avg)}">${avg}%</span></td>
           <td><span style="color:${avgAbs>=25?'var(--red)':avgAbs>=15?'var(--gold)':'var(--muted)'}">${avgAbs}%</span></td>
           <td style="text-align:center">${banned?`<span style="color:var(--acc-r);font-weight:700">${banned}</span>`:'0'}</td>
+          <td><button type="button" class="btn btn-sm" style="background:#cf1f2f;color:#fff;white-space:nowrap" title="حذف تسجيلات هذه المادة الحالية، مع بقاء الخطة والسجلات السابقة" aria-label="حذف المادة الحالية ${escAttr(c.course)}" onclick="event.stopPropagation();deleteCurrentCourse('${jsq(c.code)}','${jsq(c.course)}')">🗑️ حذف المادة الحالية</button></td>
         </tr>`;
       }).join('')}</tbody>
     </table></div></div>
