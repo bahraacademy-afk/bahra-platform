@@ -2417,7 +2417,7 @@ const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخ
 const AKEY=''; // أُزيل مفتاح API نهائيًا
 // جلسة الدخول (توكن موقّع من الخادم)
 let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx5A21V1iudVqyKov5mViM6H1u54P6JtzKq3AL7cNBtOdYJJngzfeR2gPDmVruLzwcZ/exec';
+const SCRIPT_URL='<?= APP_URL ?>';
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
@@ -4345,7 +4345,7 @@ async function loadRequests(){
   for(let i=1;i<rq.length;i++){
     const r=rq[i];
     if(!n0(r[0]))continue;
-    const cat=n0(r[14]);
+    const cat=n0(r[14]), targetRaw=n0(r[17]), tgtRaw=n0(r[19]);
     requests.push({
       rid:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),type:n0(r[4]),details:n0(r[5]),date:n0(r[6]),
       supStatus:n0(r[7])||(cat==='عام'?'—':'معلق'),
@@ -4354,7 +4354,7 @@ async function loadRequests(){
       notes:n0(r[10]),trnStatus:n0(r[11])||'معلق',exDates:n0(r[12]),
       genStatus:n0(r[13])||(cat?'معلق':'معتمد'),
       cat:cat,reqRole:n0(r[15]),reqSpec:n0(r[16]),
-      targetName:n0(r[17]),targetRole:n0(r[18]),tgtStatus:n0(r[19])||'معلق',
+      targetName:targetRaw,targetRole:n0(r[18]),tgtStatus:(cat==='عام'&&targetRaw&&(!tgtRaw||tgtRaw==='—'))?'معلق':(tgtRaw||'معلق'),
       createdAt:n0(r[20]),slaDue:n0(r[21]),slaReminderAt:n0(r[22]),escalatedAt:n0(r[23]),
       escalation:n0(r[24]),priority:n0(r[25])||'عادية',effectBefore:n0(r[26]),effectAfter:n0(r[27]),
       audit:n0(r[28]),term:n0(r[29])
@@ -16016,9 +16016,7 @@ function reqCreatedDate(r){
   d=new Date(String(r.date||'')+'T00:00:00'); return isNaN(d.getTime())?null:d;
 }
 function reqIsLate(r){
-  if(['معتمد','مرفوض','ملغي','مغلق بنهاية النصف'].includes(reqFinal(r)))return false;
-  const due=new Date(r.slaDue||''); if(!isNaN(due.getTime()))return Date.now()>due.getTime();
-  const created=reqCreatedDate(r); return !!(created&&Date.now()-created.getTime()>=48*36e5);
+  return false; // أُلغيت مهلة 48 ساعة من الطلبات، بما فيها الطلبات القديمة.
 }
 function reqAuditEntries(r){
   return String(r.audit||'').split(/\r?\n/).map(x=>{try{return JSON.parse(x);}catch(_){return null;}}).filter(x=>x&&x.at);
@@ -16039,7 +16037,12 @@ function reqChain(r){
 }
 function reqChainLast(r){const ch=reqChain(r);return ch[ch.length-1];}
 const _STMAP={trn:'trnStatus',sup:'supStatus',gen:'genStatus',dir:'dirStatus',tgt:'tgtStatus'};
-function stageStatus(r,st){return (r[_STMAP[st]]||'معلق');}
+function stageStatus(r,st){
+  const raw=r[_STMAP[st]]||'معلق';
+  // طلبات عامة قديمة حُفظت خانة مستلمها «—»؛ نفتحها للمستلم بدلاً من ضياعها.
+  if(st==='tgt'&&r.targetName&&reqCat(r)==='عام'&&(raw==='—'||raw==='')&&!['معتمد','مرفوض','ملغي','مغلق بنهاية النصف'].includes(r.finalStatus))return 'معلق';
+  return raw;
+}
 function setStage(r,st,v){r[_STMAP[st]]=v;}
 function setStageObj(o,st,v){o[_STMAP[st]]=v;}
 function reqFinal(r){
@@ -16221,8 +16224,6 @@ function reqCard(r,opts){
   const targetLine=(cat==='عام'&&r.targetName)?`<div style="font-size:12px;margin-top:6px;color:var(--acc-b)">✉️ موجَّه إلى: <b>${esc(r.targetName)}</b></div>`:'';
   const flags=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
     ${r.priority&&r.priority!=='عادية'?`<span class="pill ${r.priority==='عاجلة'?'pr':'py'}">الأولوية: ${esc(r.priority)}</span>`:''}
-    ${reqIsLate(r)?'<span class="pill pr">تجاوز 48 ساعة</span>':''}
-    ${r.slaReminderAt?'<span class="pill py">أُرسل تذكير للمعتمد</span>':''}
     ${r.escalatedAt?`<span class="pill pr">صُعّد ${esc(fmtDateAr(r.escalatedAt))}</span>`:''}
     ${r.term?`<span class="pill pb">${esc(termShort(r.term))}</span>`:''}
   </div>`;
@@ -16268,7 +16269,7 @@ function requestFormHtml(){
   const courseOpts=exCourses.map(cn=>{const c=activeCourses.find(x=>x.course===cn);return `<option value="${escAttr(cn)}" data-code="${escAttr(c?c.code:'')}">${esc(cn)}</option>`;}).join('');
   return `<div class="ccard cc-b" style="margin-bottom:20px">
     <div class="cc-name" style="margin-bottom:6px">➕ تقديم طلب جديد</div>
-    <div class="cc-meta" style="margin-bottom:14px">يصل تنبيه للمعتمد، ثم تذكير بعد 48 ساعة، وتصعيد تلقائي بعد 5 أيام عمل${formTerm?' · '+esc(termShort(formTerm)):''}</div>
+    <div class="cc-meta" style="margin-bottom:14px">يصل تنبيه للمعتمد مباشرة، ويُصعَّد الطلب تلقائياً بعد 5 أيام عمل${formTerm?' · '+esc(termShort(formTerm)):''}</div>
     <div class="mform-group"><label>نوع الطلب</label>
       <select id="rq-type" aria-label="نوع الطلب" title="نوع الطلب" onchange="toggleExcuseFields()">${opts}</select>
     </div>
@@ -16278,7 +16279,7 @@ function requestFormHtml(){
         <div style="font-size:11px;color:var(--muted);margin-top:4px">الشعبة: ${esc(user.grp||'—')} · تُحسب الساعات من الجدول تلقائياً</div>
       </div>
       <div class="mform-group"><label>نوع العذر *</label><select id="rq-excuse-type" class="lp-in"><option value="مرضي">مرضي</option><option value="رسمي">رسمي</option><option value="طارئ">طارئ</option><option value="أخرى">أخرى</option></select></div>
-      <div class="mform-group"><label>أيام الغياب * <span style="font-weight:400">(خلال 48 ساعة من نهاية اليوم الدراسي)</span></label>
+      <div class="mform-group"><label>أيام الغياب * <span style="font-weight:400">(اختر اليوم أو الأيام المطلوبة)</span></label>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><input type="date" id="rq-date" aria-label="تاريخ الغياب" title="تاريخ الغياب" max="${todayISO()}" style="flex:1;min-width:160px"><button type="button" class="btn btn-b" onclick="addExcuseDate()">➕ أضف اليوم</button></div>
         <div id="rq-dates-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div><div id="rq-dates-total" style="font-size:12px;color:var(--muted);margin-top:6px"></div>
       </div>
@@ -16325,8 +16326,6 @@ async function submitRequest(){
     excuseType=(document.getElementById('rq-excuse-type')||{}).value||'';
     if(!excuseType){showToast('اختر نوع العذر','w');return}
     if(!excuseDates.length){showToast('أضف يوم غياب واحد على الأقل','w');return}
-    const expired=excuseDates.find(dt=>Date.now()>new Date(dt+'T23:59:59').getTime()+48*36e5);
-    if(expired){showToast('انتهت مهلة تقديم العذر ليوم '+expired+' — المهلة 48 ساعة','w');return}
     const {totalHrs,breakdown}=excuseHoursFromDates(exCourse,user.grp,excuseDates);
     if(totalHrs<=0){showToast('المادة ما عندها حصص في الأيام المختارة — تأكد من الجدول','w');return}
     exHours=totalHrs; exDates=excuseDates.join(', ');
@@ -16525,7 +16524,7 @@ function requestsDashboardHTML(){
   const list=requests||[], terminal=['معتمد','مرفوض','ملغي','مغلق بنهاية النصف'];
   const open=list.filter(r=>!terminal.includes(reqFinal(r)));
   const pending=open.filter(r=>!!reqActiveStage(r));
-  const late=open.filter(reqIsLate), approved=list.filter(r=>reqFinal(r)==='معتمد'), rejected=list.filter(r=>reqFinal(r)==='مرفوض');
+  const approved=list.filter(r=>reqFinal(r)==='معتمد'), rejected=list.filter(r=>reqFinal(r)==='مرفوض');
   const metric=(label,value,cls,sub)=>`<div class="ccard ${cls}" style="padding:14px;margin:0"><div style="font-size:24px;font-weight:900">${value}</div><div style="font-size:12px;font-weight:700;margin-top:3px">${label}</div>${sub?`<div style="font-size:10.5px;color:var(--muted);margin-top:3px">${sub}</div>`:''}</div>`;
   const byType={};
   list.forEach(r=>{const f=reqFinal(r);if(f!=='معتمد'&&f!=='مرفوض')return;const k=r.type||REQ_CATS[reqCat(r)].label;(byType[k]||(byType[k]={a:0,r:0}))[f==='معتمد'?'a':'r']++;});
@@ -16542,7 +16541,7 @@ function requestsDashboardHTML(){
   const timeRows=Object.keys(times).sort((a,b)=>times[a].length-times[b].length).map(k=>{const a=times[k],avg=a.reduce((s,x)=>s+x,0)/a.length;return `<tr><td>${esc(k)}</td><td>${a.length}</td><td>${avg<48?Math.round(avg*10)/10+' ساعة':Math.round(avg/24*10)/10+' يوم'}</td></tr>`;}).join('');
   return `<div class="stitle">📊 لوحة متابعة سير العمل</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:14px">
-      ${metric('المفتوحة',open.length,'cc-b','بما فيها بانتظار الاستكمال')}${metric('المعلقة',pending.length,'cc-y','بانتظار إجراء معتمد')}${metric('المتأخرة',late.length,late.length?'cc-r':'cc-g','تجاوزت 48 ساعة')}${metric('المعتمدة',approved.length,'cc-g')}${metric('المرفوضة',rejected.length,rejected.length?'cc-r':'cc-b')}
+      ${metric('المفتوحة',open.length,'cc-b','بما فيها بانتظار الاستكمال')}${metric('المعلقة',pending.length,'cc-y','بانتظار إجراء معتمد')}${metric('المعتمدة',approved.length,'cc-g')}${metric('المرفوضة',rejected.length,rejected.length?'cc-r':'cc-b')}
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-bottom:18px">
       <div class="ccard" style="padding:14px"><div class="cc-name" style="margin-bottom:8px">نسبة الاعتماد لكل نوع</div><div class="gtable"><table><thead><tr><th>النوع</th><th>معتمد</th><th>مرفوض</th><th>النسبة</th></tr></thead><tbody>${typeRows||'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا توجد قرارات نهائية بعد</td></tr>'}</tbody></table></div></div>
@@ -16585,7 +16584,7 @@ async function runWorkflowSLAUI(){
   const r=await callWrite('runWorkflowSLA',{});
   if(!r||r.status!=='ok'){showToast('تعذّر فحص المهل: '+attErrMsg(r&&r.msg,r&&r.hint),'e');return}
   await Promise.all([loadRequests(),loadLessonPreps()]);const x=r.report||{};
-  showToast(`✅ اكتمل الفحص · ${x.reminders||0} تذكير · ${x.escalated||0} طلب مصعّد · ${x.prepEscalated||0} تحضير مصعّد`,'s');reloadRequestsPage();
+  showToast(`✅ اكتمل الفحص · ${x.escalated||0} طلب مصعّد · ${x.prepEscalated||0} تحضير مصعّد`,'s');reloadRequestsPage();
 }
 window.saveTermClosureUI=saveTermClosureUI;window.closeTermItemsUI=closeTermItemsUI;window.runWorkflowSLAUI=runWorkflowSLAUI;
 // ===== 👤 لوحة الحساب (الجوال): تجمع الأدوات التي كانت تزحم الشريط العلوي =====
