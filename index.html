@@ -2413,12 +2413,58 @@ body.light-mode[data-thm]::before{
 </div>
 
 <script>
+/* ═══════════ 🗄️ تخزين لا يرمي ═══════════
+   داخل إطار HtmlService (وفي التصفّح الخاص، وحين تُحجب بيانات المواقع)
+   مجرّدُ لمس window.localStorage يرمي SecurityError. وكان في الصفحة ٦٢
+   استعمالاً مباشراً، سبعةَ عشرَ منها بلا try — فأول واحد يرمي عند الإقلاع
+   يُسقط السكربت كلّه، فتفتح الصفحة ولا يشتغل شيء. هذا بديلٌ يسقط إلى
+   ذاكرة الصفحة بدل أن يرمي: الجلسة تعمل، وما يضيع إلا بقاء التفضيلات
+   بعد إغلاق التبويب. */
+var LS=(function(){
+  try{
+    var t=window.localStorage;
+    var k='__bla_probe__'; t.setItem(k,'1'); t.removeItem(k);
+    return t;
+  }catch(e){
+    var m={};
+    return {
+      getItem:function(k){return Object.prototype.hasOwnProperty.call(m,k)?m[k]:null;},
+      setItem:function(k,v){m[k]=String(v);},
+      removeItem:function(k){delete m[k];},
+      clear:function(){m={};},
+      key:function(i){return Object.keys(m)[i]||null;},
+      get length(){return Object.keys(m).length;}
+    };
+  }
+})();
 const SID=''; // لم يعد يُستخدم (القراءة تمر عبر الخادم)
 const AKEY=''; // أُزيل مفتاح API نهائيًا
-// جلسة الدخول (توكن موقّع من الخادم)
-let SESSION={token: localStorage.getItem('bla_token')||''};
-const SCRIPT_URL='<?= APP_URL ?>';
+// جلسة الدخول (توكن موقّع من الخادم) — قد يُحجب التخزين في إطار Apps Script
+let SESSION={token: (function(){try{return LS.getItem('bla_token')||'';}catch(e){return '';}})()};
+/* ═══════════ 🔗 رابط الخادم ═══════════
+   🚨 كان هنا سطرٌ واحد: const SCRIPT_URL='<?= APP_URL ?>'.
+      هذا قالبُ Apps Script، لا تستبدله إلا Apps Script نفسها حين تقدّم
+      الصفحة عبر HtmlService.createTemplateFromFile('Index'). أما حين
+      تُقدَّم نفس الصفحة من GitHub Pages فالنصّ يبقى كما هو حرفياً، فيصير
+      رابط الخادم هو السلسلة «<?= APP_URL ?>» — وكل نداء يفشل بلا رسالة:
+      الصفحة تفتح، وشاشة الدخول تظهر، ولا شيء يتصل. وهذا ما رأيته.
+   الآن الملفّ الواحد يعمل على المضيفين معاً:
+     • قدّمتها Apps Script  ⇒ القالب استُبدل برابط /exec الحقيقي.
+     • قدّمتها GitHub Pages ⇒ نسقط على الرابط الثابت أدناه.
+   ولو فتحتَها من Apps Script فقناة google.script.run تعمل أصلاً بلا رابط. */
+const SCRIPT_URL_FALLBACK='https://script.google.com/macros/s/AKfycbyjHfWA5KeXz9QdvfYYZT9IJqez35dO3_4nnTihp94wwR70YUpEL47CHE8iru95Y23I/exec';
+const SCRIPT_URL=(function(){
+  var t='<?= APP_URL ?>';
+  return /^https?:\/\//i.test(t) ? t : SCRIPT_URL_FALLBACK;
+})();
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
+/* هل عندنا طريقٌ للخادم أصلاً؟ إمّا رابط صالح أو قناة google.script.run. */
+function serverReachable(){
+  try{
+    if(/^https?:\/\//i.test(String(SCRIPT_URL)))return true;
+    return typeof google!=='undefined'&&!!(google.script&&google.script.run);
+  }catch(e){ return false; }
+}
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
 // ⭐ فصل الغياب حسب الترم: يتم تلقائياً عبر عمود "الترم" في قاعدة الغياب (لا يحتاج ضبط).
@@ -3499,7 +3545,7 @@ function setBootPayload(bp){
     ['status','gradBatch','cert','photo'].forEach(k=>{
       if(bp.me[k]!=null&&String(bp.me[k])!==String(user[k]==null?'':user[k])){ user[k]=bp.me[k]; ch=true; }
     });
-    if(ch){ currentUser=user; try{localStorage.setItem('bla_user',JSON.stringify(user));}catch(e){} }
+    if(ch){ currentUser=user; try{LS.setItem('bla_user',JSON.stringify(user));}catch(e){} }
   }
   return true;
 }
@@ -3547,7 +3593,7 @@ function saveDataSnapshot(){
     // 🛡️ لا تستبدل نسخة جيدة بأخرى فارغة: لو فشلت القراءات ورجعت قوائم خاوية
     //    وحفظناها، لصار الدخول القادم يعرض شاشة فاضية.
     const anyData=(students&&students.length)||(allCourses&&allCourses.length)||(typeof courses!=='undefined'&&courses&&courses.length);
-    if(!anyData && localStorage.getItem(CACHE_KEY)) return;
+    if(!anyData && LS.getItem(CACHE_KEY)) return;
     const snap={t:Date.now(),role:role,uid:user&&user.id,
       students, allCourses, catalog, trainersDB, adminsDB, graduates,
       absenceRows: (typeof absenceRows!=='undefined'?absenceRows:null),
@@ -3560,12 +3606,12 @@ function saveDataSnapshot(){
       coTrainers:(typeof coTrainers!=='undefined'?coTrainers:null),
       depExceptions:(typeof depExceptions!=='undefined'?depExceptions:null)
     };
-    localStorage.setItem(CACHE_KEY, JSON.stringify(snap));
+    LS.setItem(CACHE_KEY, JSON.stringify(snap));
   }catch(e){/* التخزين ممتلئ أو غير متاح */}
 }
 function loadDataSnapshot(){
   try{
-    const raw=localStorage.getItem(CACHE_KEY); if(!raw) return false;
+    const raw=LS.getItem(CACHE_KEY); if(!raw) return false;
     const s=JSON.parse(raw);
     if(!s||s.role!==role||String(s.uid||'')!==String(user&&user.id||''))return false;
     if(Date.now()-(s.t||0)>CACHE_TTL) return false;
@@ -3583,7 +3629,7 @@ function loadDataSnapshot(){
     return true;
   }catch(e){ return false; }
 }
-function clearDataSnapshot(){ try{ localStorage.removeItem(CACHE_KEY); }catch(e){} }
+function clearDataSnapshot(){ try{ LS.removeItem(CACHE_KEY); }catch(e){} }
 /* 🔒 النسخة المحفوظة تحوي كشف المتدربين بأسمائهم وبُردهم ودرجاتهم وأعذارهم.
    وكانت تبقى في الجهاز متى أُغلق التبويب بلا «خروج» — فيقرؤها من يفتح
    المتصفح بعده بلا تسجيل دخول. الآن تُمسح عند إغلاق التبويب لحسابات
@@ -3599,7 +3645,7 @@ function clearDataSnapshot(){ try{ localStorage.removeItem(CACHE_KEY); }catch(e)
    والبيانات تُحدَّث بالخلفية. (نقرأ الترويسة فقط، لا نفكّ النسخة كلها.) */
 function snapshotFresh(r,uid){
   try{
-    const raw=localStorage.getItem(CACHE_KEY); if(!raw) return false;
+    const raw=LS.getItem(CACHE_KEY); if(!raw) return false;
     // الترويسة في أول ٢٠٠ حرف: {"t":…,"role":"a","uid":"1001",…
     const head=raw.slice(0,240);
     const mt=head.match(/"t":(\d+)/), mr=head.match(/"role":"([^"]*)"/), mu=head.match(/"uid":"?([^",}]*)"?/);
@@ -3618,7 +3664,7 @@ function enterFromSnapshot(){
     bootThenLoad({requireBoot:true})
       .then(()=>{ try{ if(role==='s')buildStudentApp(); else if(role==='t')buildTrainerApp(); else buildAdminApp(); }catch(e){} })
       .catch(e=>{
-        if(e&&e.message==='session'){ try{localStorage.removeItem('bla_token');}catch(_){} location.reload(); return; }
+        if(e&&e.message==='session'){ try{LS.removeItem('bla_token');}catch(_){} location.reload(); return; }
         // فشل التحديث: البيانات المعروضة من النسخة المحفوظة — قُل له بدل أن يظن أنها حيّة
         try{ showToast('⚠️ تعذّر تحديث البيانات — المعروض من آخر نسخة محفوظة','w'); }catch(_){}
       });
@@ -3773,23 +3819,23 @@ async function callServer(url,params){
 // ===== التحقق بخطوتين (2FA) — أول مرة لكل جهاز =====
 // مُعرّف فريد للجهاز (يُحفظ في المتصفح)
 function getDeviceId(){
-  let id=localStorage.getItem('bla_device_id');
-  if(!id){id='dev_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);localStorage.setItem('bla_device_id',id);}
+  let id=LS.getItem('bla_device_id');
+  if(!id){id='dev_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);LS.setItem('bla_device_id',id);}
   return id;
 }
 // هل هذا الجهاز موثوق لهذا المستخدم؟
 function isDeviceTrusted(userId){
   try{
-    const trusted=JSON.parse(localStorage.getItem('bla_trusted_devices')||'{}');
+    const trusted=JSON.parse(LS.getItem('bla_trusted_devices')||'{}');
     return trusted[String(userId)]===getDeviceId();
   }catch(e){return false;}
 }
 // حفظ الجهاز كموثوق لهذا المستخدم
 function trustDevice(userId){
   try{
-    const trusted=JSON.parse(localStorage.getItem('bla_trusted_devices')||'{}');
+    const trusted=JSON.parse(LS.getItem('bla_trusted_devices')||'{}');
     trusted[String(userId)]=getDeviceId();
-    localStorage.setItem('bla_trusted_devices',JSON.stringify(trusted));
+    LS.setItem('bla_trusted_devices',JSON.stringify(trusted));
   }catch(e){}
 }
 // إرسال رمز التحقق لإيميل المستخدم
@@ -3836,6 +3882,14 @@ function warmServer(){
 let LOGIN_BUSY=false;
 async function doLogin(){
   if(LOGIN_BUSY)return;                 // 🔒 يمنع الضغط المزدوج وإرسالين متزامنين
+  /* 🚨 بلا طريقٍ للخادم لا فائدة من المحاولة: كانت الصفحة تحاول وتفشل
+     بصمت فيظن المستخدم أن الرقم أو الرمز غلط. نقولها صريحة. */
+  if(!serverReachable()){
+    showErr('⚠️ الصفحة غير مربوطة بالخادم — رابط Apps Script ناقص. '+
+            'إن كنت ترفعها على GitHub Pages فضع رابط /exec في SCRIPT_URL_FALLBACK، '+
+            'وإن كنت تفتحها من Apps Script فتأكد أن الملف اسمه Index وأن النشر تمّ.');
+    return;
+  }
   const sid=document.getElementById('inpId').value.trim();
   const sph=norm(document.getElementById('inpPh').value.trim());
   if(!sid||!sph){showErr('يرجى إدخال البيانات');return}
@@ -3892,7 +3946,7 @@ async function doLogin(){
       throw new Error('auth');
     }
     SESSION.token=d.token;
-    localStorage.setItem('bla_token',d.token);
+    LS.setItem('bla_token',d.token);
     user=Object.assign({role:role},d.user);
     const hasBoot=setBootPayload(d.boot);    // ⚡ كل القراءات التالية من الذاكرة
     if(!OTP_ENABLED||isDeviceTrusted(user.id)){
@@ -3960,12 +4014,12 @@ function finishLogin(){
   // 💾 تذكّر الرقم والدور ليكون الدخول القادم أسرع (الرمز السري لا يُحفظ هنا أبداً)
   try{
     const rm=document.getElementById('rememberMe');
-    if(!rm||rm.checked){ localStorage.setItem('bla_last_id',String(user.id||'')); localStorage.setItem('bla_last_role',role); }
-    else { localStorage.removeItem('bla_last_id'); localStorage.removeItem('bla_last_role'); }
+    if(!rm||rm.checked){ LS.setItem('bla_last_id',String(user.id||'')); LS.setItem('bla_last_role',role); }
+    else { LS.removeItem('bla_last_id'); LS.removeItem('bla_last_role'); }
   }catch(e){}
-  localStorage.setItem('bla_user', JSON.stringify(user));
-  localStorage.setItem('bla_role', role);
-  if(SESSION.token) localStorage.setItem('bla_token', SESSION.token);
+  LS.setItem('bla_user', JSON.stringify(user));
+  LS.setItem('bla_role', role);
+  if(SESSION.token) LS.setItem('bla_token', SESSION.token);
   // ⭐ نظّف حالة تحميل نموذج الدخول حتى تكون الشاشة جاهزة عند الخروج لاحقاً
   LOGIN_BUSY=false;                    // 🔓 وإلا بقي مقفولاً بعد الخروج فمنع الدخول مجدداً
   const _lb=document.getElementById('lbtn'); if(_lb)_lb.disabled=false;
@@ -4007,7 +4061,7 @@ async function submitChangePassword(forced){
     if(res&&res.status==='ok'){
       showToast('✅ تم تغيير الرمز بنجاح','s');
       user.mustChange=false;
-      try{localStorage.setItem('bla_user',JSON.stringify(user));}catch(e){}
+      try{LS.setItem('bla_user',JSON.stringify(user));}catch(e){}
       const m=document.getElementById('pwModal'); if(m)m.remove();
     }else{showToast(res&&res.hint?res.hint:'تعذّر التغيير — تأكد من نشر الخادم (v15)','e');}
   }catch(e){showToast('تعذّر الاتصال — حاول مرة أخرى','e');}
@@ -7309,9 +7363,9 @@ function gradSeenKey(){
   return 'bla_grad_seen_'+String((user&&user.id)||'guest')+'_'+arNorm((user&&user.gradBatch)||'-');
 }
 function gradCelebrated(){
-  try{ return localStorage.getItem(gradSeenKey())==='1'; }catch(e){ return true; }
+  try{ return LS.getItem(gradSeenKey())==='1'; }catch(e){ return true; }
 }
-function markGradCelebrated(){ try{ localStorage.setItem(gradSeenKey(),'1'); }catch(e){} }
+function markGradCelebrated(){ try{ LS.setItem(gradSeenKey(),'1'); }catch(e){} }
 function maybeGradCelebrate(){
   if(!isGraduate()||gradCelebrated())return;
   markGradCelebrated();                       // قبل العرض: لو انكسر شيء لا يتكرّر كل مرة
@@ -10932,7 +10986,7 @@ async function accPhotoSave(sid,url){
   // حدّث الذاكرة المحلية فوراً — لا ننتظر إعادة تحميل كل القاعدة
   const dgp=x=>String(x==null?'':x).replace(/[^0-9]/g,'');
   (students||[]).concat(graduates||[]).forEach(s=>{ if(dgp(s.id)===dgp(sid))s.photo=saved; });
-  if(user&&dgp(user.id)===dgp(sid)){ user.photo=saved; try{localStorage.setItem('bla_user',JSON.stringify(user));}catch(e){} }
+  if(user&&dgp(user.id)===dgp(sid)){ user.photo=saved; try{LS.setItem('bla_user',JSON.stringify(user));}catch(e){} }
   const hid=document.getElementById('acc_photo'); if(hid)hid.value=saved;
   const prev=document.getElementById('acc_ph_prev');
   if(prev)prev.innerHTML=avatarHTML({name:(document.getElementById('acc_name')||{}).value||'',photo:saved,id:sid},56);
@@ -14049,10 +14103,10 @@ function doLogout(){
   clearIdleGuard();
   clearDataSnapshot();
   ROLE_ALT='';                      // 🔄 لا يبقى زر التنقل بعد الخروج
-  localStorage.removeItem('bla_user');
-  localStorage.removeItem('bla_role');
-  localStorage.removeItem('bla_token');
-  localStorage.removeItem('bla_last_activity');
+  LS.removeItem('bla_user');
+  LS.removeItem('bla_role');
+  LS.removeItem('bla_token');
+  LS.removeItem('bla_last_activity');
   SESSION.token='';
   user=null;courses=[];students=[];allCourses=[];files={};attendanceData={};gradesData={};
   document.getElementById('appShell').style.display='none';
@@ -14074,7 +14128,7 @@ let _idleTimer=null,_idleWarnTimer=null,_lastActStore=0;
 function idleLimitMs(){ return (IDLE_HOURS[role]||24)*3600*1000; }
 function markActivity(){
   const now=Date.now();
-  localStorage.setItem('bla_last_activity',now);
+  LS.setItem('bla_last_activity',now);
   const bar=document.getElementById('idleWarn'); if(bar) bar.style.display='none';
   clearTimeout(_idleTimer); clearTimeout(_idleWarnTimer);
   const limit=idleLimitMs();
@@ -14099,7 +14153,7 @@ function showIdleWarning(){
 function continueSession(){ markActivity(); }
 function idleLogout(){
   clearTimeout(_idleTimer); clearTimeout(_idleWarnTimer);
-  localStorage.removeItem('bla_last_activity');
+  LS.removeItem('bla_last_activity');
   doLogout();
   const eb=document.getElementById('errBox');
   if(eb){ eb.style.display='block'; eb.textContent='🔒 انتهت الجلسة بسبب عدم النشاط. الرجاء تسجيل الدخول مرة أخرى.'; }
@@ -14154,9 +14208,9 @@ function setSplashLogo(){
 // استرجاع الجلسة عند تحميل الصفحة — سريع: كاش فوري ثم تحديث بالخلفية
 async function restoreSession(){
   try{
-    const savedUser=localStorage.getItem('bla_user');
-    const savedRole=localStorage.getItem('bla_role');
-    const savedTok=localStorage.getItem('bla_token');
+    const savedUser=LS.getItem('bla_user');
+    const savedRole=LS.getItem('bla_role');
+    const savedTok=LS.getItem('bla_token');
     if(!savedUser||!savedRole||!savedTok){hideSplash();return;}
     SESSION.token=savedTok;
     const u=JSON.parse(savedUser);
@@ -14164,12 +14218,12 @@ async function restoreSession(){
     currentUser=u;
     user=u;
     // فحص الخمول
-    const lastAct=parseInt(localStorage.getItem('bla_last_activity')||'0',10);
+    const lastAct=parseInt(LS.getItem('bla_last_activity')||'0',10);
     const idleLim=(IDLE_HOURS[role]||24)*3600*1000;
     if(lastAct && (Date.now()-lastAct>idleLim)){
       ROLE_ALT='';                      // 🔄 لا يبقى زر التنقل بعد الخروج
-  localStorage.removeItem('bla_user');localStorage.removeItem('bla_role');
-      localStorage.removeItem('bla_token');localStorage.removeItem('bla_last_activity');
+  LS.removeItem('bla_user');LS.removeItem('bla_role');
+      LS.removeItem('bla_token');LS.removeItem('bla_last_activity');
       clearDataSnapshot();
       SESSION.token='';user=null;currentUser=null;
       hideSplash();
@@ -14186,7 +14240,7 @@ async function restoreSession(){
         // إعادة رسم اللوحة الحالية بالبيانات الجديدة (بدون قفزة مزعجة)
         try{ if(role==='s') buildStudentApp(); else if(role==='t') buildTrainerApp(); else buildAdminApp(); }catch(e){}
       }).catch(e=>{
-        if(e&&e.message==='session'){ localStorage.removeItem('bla_token'); location.reload(); return; }
+        if(e&&e.message==='session'){ LS.removeItem('bla_token'); location.reload(); return; }
         try{ showToast('⚠️ تعذّر تحديث البيانات — المعروض من آخر نسخة محفوظة','w'); }catch(_){}
       });
       return;
@@ -14201,8 +14255,8 @@ async function restoreSession(){
     hideSplash();
     initIdleGuard();
   }catch(e){
-    localStorage.removeItem('bla_user');
-    localStorage.removeItem('bla_role');
+    LS.removeItem('bla_user');
+    LS.removeItem('bla_role');
     user=null;currentUser=null;
     const st=document.getElementById('splashStatus');if(st)st.textContent='تعذّر تحميل البيانات — جاري فتح صفحة الدخول...';
     hideSplash();
@@ -14213,8 +14267,8 @@ async function restoreSession(){
    ونُبقي الحقل المُركَّز ظاهراً فوق لوحة مفاتيح الجوال. */
 function initQuickLogin(){
   try{
-    const lastRole=localStorage.getItem('bla_last_role');
-    const lastId=localStorage.getItem('bla_last_id');
+    const lastRole=LS.getItem('bla_last_role');
+    const lastId=LS.getItem('bla_last_id');
     if(lastRole&&['s','t','a'].includes(lastRole)){
       const idx={s:0,t:1,a:2}[lastRole];
       const tabs=document.querySelectorAll('.role-tabs .rtab');
@@ -14250,7 +14304,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   restoreSession();
   // ⚡ أيقظ الخادم مبكراً — إن كانت هناك جلسة محفوظة فـ restoreSession تتكفّل،
   //    وإلا فالمستخدم على شاشة الدخول وسيضغط «دخول» خلال ثوانٍ.
-  try{ if(!localStorage.getItem('bla_token')) setTimeout(warmServer,150); }catch(e){}
+  try{ if(!LS.getItem('bla_token')) setTimeout(warmServer,150); }catch(e){}
 });
 
 
@@ -16657,10 +16711,10 @@ async function doRoleSwitch(to){
   user=Object.assign({role:to},d.user);
   currentUser=user;
   try{
-    localStorage.setItem('bla_token',d.token);
-    localStorage.setItem('bla_user',JSON.stringify(user));
-    localStorage.setItem('bla_role',role);
-    localStorage.setItem('bla_last_activity',String(Date.now()));
+    LS.setItem('bla_token',d.token);
+    LS.setItem('bla_user',JSON.stringify(user));
+    LS.setItem('bla_role',role);
+    LS.setItem('bla_last_activity',String(Date.now()));
   }catch(e){}
   if(d.boot&&typeof setBootPayload==='function')setBootPayload(d.boot);
   try{ loadScheme(); }catch(e){}
@@ -16768,12 +16822,12 @@ function themeCfgNorm(c){
   return {on:c.on!==false, force:THEMES[c.force]?c.force:'', off:(c.off&&typeof c.off==='object')?c.off:{}};
 }
 function loadThemeCfg(){
-  try{ const raw=localStorage.getItem(THEME_KEY); if(raw)THEME_CFG=themeCfgNorm(JSON.parse(raw)); }catch(e){}
+  try{ const raw=LS.getItem(THEME_KEY); if(raw)THEME_CFG=themeCfgNorm(JSON.parse(raw)); }catch(e){}
   return THEME_CFG;
 }
 function setThemeCfg(c,persistLocal){
   THEME_CFG=themeCfgNorm(c);
-  if(persistLocal!==false){ try{ localStorage.setItem(THEME_KEY,JSON.stringify(THEME_CFG)); }catch(e){} }
+  if(persistLocal!==false){ try{ LS.setItem(THEME_KEY,JSON.stringify(THEME_CFG)); }catch(e){} }
   applySeasonTheme();
   return THEME_CFG;
 }
@@ -16806,7 +16860,7 @@ const SCHEME_KEY='bla_scheme';
 let SCHEME_ME='ocean';
 function schemeKeyOf(){ return SCHEME_KEY+'_'+String((typeof user!=='undefined'&&user&&user.id)||'guest'); }
 function loadScheme(){
-  try{ const v=localStorage.getItem(schemeKeyOf())||''; SCHEME_ME=SCHEMES[v]?v:'ocean'; }
+  try{ const v=LS.getItem(schemeKeyOf())||''; SCHEME_ME=SCHEMES[v]?v:'ocean'; }
   catch(e){ SCHEME_ME='ocean'; }
   applyScheme();
   return SCHEME_ME;
@@ -16814,7 +16868,7 @@ function loadScheme(){
 function applyScheme(){ document.body.setAttribute('data-scheme',SCHEMES[SCHEME_ME]?SCHEME_ME:'ocean'); }
 function setScheme(v){
   SCHEME_ME=SCHEMES[v]?v:'ocean';
-  try{ localStorage.setItem(schemeKeyOf(),SCHEME_ME); }catch(e){}
+  try{ LS.setItem(schemeKeyOf(),SCHEME_ME); }catch(e){}
   applyScheme();
   if(document.getElementById('thmPickWrap'))renderThemePick();
   return SCHEME_ME;
@@ -16919,7 +16973,7 @@ function renderThemeLogin(){
 /* شريط الترحيب داخل المنصة — يُسكت ليومه فقط إن أغلقه المستخدم */
 function themeRibbonHTML(){
   const t=THEMES[THEME_NOW]; if(!t)return '';
-  let hid=''; try{ hid=localStorage.getItem('bla_thm_hide')||''; }catch(e){}
+  let hid=''; try{ hid=LS.getItem('bla_thm_hide')||''; }catch(e){}
   const today=new Date().toISOString().slice(0,10);
   if(hid===THEME_NOW+'|'+today)return '';
   return `<div class="thm-ribbon" id="thmRibbon">
@@ -16935,7 +16989,7 @@ function renderThemeRibbon(){
   mc.insertAdjacentHTML('afterbegin',html);
 }
 function hideThemeRibbon(){
-  try{ localStorage.setItem('bla_thm_hide',THEME_NOW+'|'+new Date().toISOString().slice(0,10)); }catch(e){}
+  try{ LS.setItem('bla_thm_hide',THEME_NOW+'|'+new Date().toISOString().slice(0,10)); }catch(e){}
   document.getElementById('thmRibbon')?.remove();
 }
 window.applySeasonTheme=applySeasonTheme;window.hideThemeRibbon=hideThemeRibbon;
@@ -17115,18 +17169,18 @@ function toggleTheme(){
   const isLight = body.classList.contains('light-mode');
   if(isLight){
     body.classList.remove('light-mode');
-    localStorage.setItem('bla_theme','dark');
+    LS.setItem('bla_theme','dark');
     document.querySelectorAll('#themeBtn,#themeBtnLogin').forEach(b=>{if(b){b.innerHTML='🌙';b.title='الوضع الفاتح';}});
   } else {
     body.classList.add('light-mode');
-    localStorage.setItem('bla_theme','light');
+    LS.setItem('bla_theme','light');
     document.querySelectorAll('#themeBtn,#themeBtnLogin').forEach(b=>{if(b){b.innerHTML='☀️';b.title='الوضع الداكن';}});
   }
 }
 
 // استرجاع الثيم
 (function(){
-  const saved = localStorage.getItem('bla_theme');
+  const saved = LS.getItem('bla_theme');
   if(saved === 'light'){
     document.body.classList.add('light-mode');
     document.addEventListener('DOMContentLoaded',()=>{
@@ -17813,9 +17867,9 @@ let _txNodes=[];   // {node, orig}
 let _txAttrs=[];   // {el, attr, orig}
 /* ===== ترجمة آلية تلقائية: أي نص عربي لا يغطّيه القاموس يُترجم عبر خدمة ترجمة ويُخزّن ===== */
 const MT_CACHE={};
-try{Object.assign(MT_CACHE,JSON.parse(localStorage.getItem('bla_mt_cache')||'{}'));}catch(e){}
+try{Object.assign(MT_CACHE,JSON.parse(LS.getItem('bla_mt_cache')||'{}'));}catch(e){}
 let _mtSaveT=null;
-function mtSave(){ if(_mtSaveT)return; _mtSaveT=setTimeout(()=>{_mtSaveT=null;try{localStorage.setItem('bla_mt_cache',JSON.stringify(MT_CACHE));}catch(e){}},1200); }
+function mtSave(){ if(_mtSaveT)return; _mtSaveT=setTimeout(()=>{_mtSaveT=null;try{LS.setItem('bla_mt_cache',JSON.stringify(MT_CACHE));}catch(e){}},1200); }
 function isArabicText(s){ return /[؀-ۿ]/.test(s); }
 async function mtFetch(text){
   if(MT_CACHE[text]!==undefined)return MT_CACHE[text];
@@ -17921,7 +17975,7 @@ function translateTo(lang){
   document.documentElement.dir = lang==='en' ? 'ltr' : 'rtl';
   document.documentElement.lang = lang;
   document.body.classList.toggle('lang-en', lang==='en');
-  localStorage.setItem('bla_lang', lang);
+  LS.setItem('bla_lang', lang);
   const menu=document.getElementById('txMenu');if(menu)menu.style.display='none';
   const btn=document.getElementById('txBtn');
   if(btn){btn.innerHTML = lang==='en' ? '🇸🇦' : '🌐';btn.style.background='rgba(13,29,48,0.95)';btn.style.borderColor='rgba(100,160,220,0.25)';}
@@ -17936,7 +17990,7 @@ function translateTo(lang){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
-  const savedLang = localStorage.getItem('bla_lang');
+  const savedLang = LS.getItem('bla_lang');
   if(savedLang==='en') setTimeout(()=>translateTo('en'), 500);
 });
 
