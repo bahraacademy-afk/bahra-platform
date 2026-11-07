@@ -3515,11 +3515,15 @@ function bootTake(tab){
 /* نداء إقلاع واحد ثم تحميل الدور من الذاكرة — يُستعمل عند استرجاع الجلسة
    والتحديث بالخلفية، فيصير التحديث رحلة واحدة بدل خمس عشرة. */
 async function bootThenLoad(opts){
-  let bootOk=false;
+  let bootOk=false, bootErr='';
   try{
-    const d=await jsonpTo(AUTH_URL,{action:'boot',token:SESSION.token},25000);
+    // الإقلاع قد يوقظ الشيت ويقرأ تبويبات الدور كلها؛ 25 ثانية كانت تقطعه
+    // ثم تبدأ الواجهة طلبات منفصلة، فيتضاعف الانتظار وتظهر رسالة التحميل العامة.
+    const d=await jsonpTo(AUTH_URL,{action:'boot',token:SESSION.token},60000);
     if(d&&d.ok){ setBootPayload(d); bootOk=true; }
-  }catch(e){}
+    else bootErr=String((d&&(d.msg||d.error))||'boot-failed');
+  }catch(e){ bootErr=String(e&&e.message||'network'); }
+  if(bootErr)console.warn('[boot]',bootErr);
   /* ⚠️ إن فشل نداء الإقلاع ونحن نعرض نسخة محفوظة، فلا نُشغّل محمّلات الدور:
      ستقرأ من الشبكة ورقة ورقة، وغالباً تفشل كلها فتُرجع قوائم فارغة، ثم
      يحفظها saveDataSnapshot فوق النسخة الجيدة — فتبقى الشاشة فاضية حتى
@@ -3872,15 +3876,22 @@ async function doLogin(){
     SESSION.token=d.token;
     localStorage.setItem('bla_token',d.token);
     user=Object.assign({role:role},d.user);
-    setBootPayload(d.boot);                  // ⚡ كل القراءات التالية من الذاكرة
+    const hasBoot=setBootPayload(d.boot);    // ⚡ كل القراءات التالية من الذاكرة
     if(!OTP_ENABLED||isDeviceTrusted(user.id)){
       if(_fast){
         // النسخة المحفوظة فشلت لسبب ما → نداء إقلاع واحد (لا خمس عشرة قراءة)
-        if(!enterFromSnapshot()){ await bootThenLoad(); finishLogin(); }
-      }else{ await loadUserData(); finishLogin(); }
+        if(!enterFromSnapshot()){ await bootThenLoad({requireBoot:true}); finishLogin(); }
+      }else{
+        /* إن لم تصل حزمة الإقلاع مع التحقق، اطلبها صراحةً. السابق كان ينتقل
+           مباشرةً إلى قراءات منفصلة لكل تبويب ثم يقطعها بعد 25 ثانية. */
+        if(hasBoot)await loadUserData();
+        else await bootThenLoad({requireBoot:true});
+        finishLogin();
+      }
     }else{
       if(!user.email||!user.email.includes('@')){
-        await loadUserData();
+        if(hasBoot)await loadUserData();
+        else await bootThenLoad({requireBoot:true});
         finishLogin();
         setTimeout(()=>showToast('⚠️ ما عندك إيميل مسجّل — يُنصح بإضافته للأمان','w'),800);
       }else{
@@ -3893,12 +3904,17 @@ async function doLogin(){
     }
     return;
   }catch(e){
-    /* ⚠️ التعليق كان يقول «عُرض أعلاه» — وهذا صحيح لمسارات showErr وحدها.
-       أما انهيار تحميل البيانات بعد قبول كلمة السر فيصل هنا بلا أي رسالة:
-       تختفي الدوّارة ويبقى المستخدم أمام شاشة الدخول يظن أنه أخطأ. */
     const _m=String(e&&e.message||'');
-    if(_m!=='auth'&&_m!=='shown'&&typeof showErr==='function')
-      showErr('تم التحقق، لكن تعذّر تحميل بياناتك — أعد المحاولة');
+    if(!['auth','shown','net'].includes(_m))console.error('[login/load]',e);
+    /* لا نستبدل رسالة الشبكة أو الحساب برسالة «تم التحقق»؛ كان هذا يخفي
+       السبب الحقيقي ويجعل كل الأعطال تبدو كأنها فشل في بيانات المستخدم. */
+    if(_m==='session'){
+      showErr('انتهت الجلسة قبل اكتمال التحميل — سجّل الدخول مرة أخرى');
+    }else if(!['auth','shown','net'].includes(_m)&&typeof showErr==='function'){
+      if(_m==='timeout')showErr('تم التحقق، لكن تحميل البيانات تأخّر — أعد المحاولة ولا تغلق الصفحة');
+      else if(_m==='boot-failed')showErr('تم التحقق، لكن تعذّر جلب بيانات المنصة من الخادم — أعد المحاولة');
+      else showErr('تم التحقق، لكن ظهر خطأ أثناء تجهيز بياناتك — رمز السبب: '+(_m||'غير معروف').slice(0,90));
+    }
   }
   LOGIN_BUSY=false;
   if(typeof mascotReact==='function')mascotReact('oops');          // 😖 يوقف التفكير ويهتز
@@ -3910,7 +3926,7 @@ async function doLogin(){
 async function loadUserData(){
   const load=(role==='a')?loadAdmin():(role==='t')?loadTrainer():loadStudent();
   let _to2=null;
-  const to=new Promise((_,rej)=>{_to2=setTimeout(()=>rej(new Error('timeout')),25000);});
+  const to=new Promise((_,rej)=>{_to2=setTimeout(()=>rej(new Error('timeout')),60000);});
   try{ await Promise.race([load,to]); } finally { if(_to2)clearTimeout(_to2); }
 }
 // إتمام تسجيل الدخول (حفظ الجلسة وعرض التطبيق)
