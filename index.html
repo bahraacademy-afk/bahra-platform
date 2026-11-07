@@ -2827,7 +2827,7 @@ function assistBriefing(){
       const risky=cur.filter(s=>(parseFloat(s.abs)||0)>=20);
       if(risky.length)L.push('⚠️ <b>'+risky.length+'</b> متدرب يحتاج متابعة غياب');
       const miss=assistMissingGrading(); if(miss.total)L.push('📝 ناقص رصد في <b>'+miss.courses.length+'</b> مادة');
-      const rq=(requests||[]).filter(r=>/معلق/.test(r.trnStatus||'')&&assistMineCourse(r));
+      const rq=(requests||[]).filter(r=>normStageVal(r.trnStatus)==='معلق'&&assistMineCourse(r));
       if(rq.length)L.push('📋 <b>'+rq.length+'</b> طلب ينتظر ردّك');
     }else{
       const ac=(allCourses||[]).filter(c=>isActive(c.status));
@@ -3130,7 +3130,7 @@ function assistTrainer(has,q){
   }
   // 📋 الطلبات التي تنتظره
   if(has('طلبات','الطلبات','موافقات','ينتظر ردي','معلقه')){
-    const rq=(requests||[]).filter(r=>/معلق/.test(r.trnStatus||'')&&assistMineCourse(r));
+    const rq=(requests||[]).filter(r=>normStageVal(r.trnStatus)==='معلق'&&assistMineCourse(r));
     if(!rq.length)return '✅ ما فيه طلبات تنتظر ردّك.'+assistActs(assistAct('📋 الطلبات','requests'));
     return '📋 طلبات تنتظر ردّك ('+rq.length+'):<br>'+assistList(rq.map(r=>'• '+esc(r.sname||'')+' — '+esc(r.type||'طلب')+(r.date?' · '+esc(fmtDateAr(r.date)):'')),8)+
       assistActs(assistAct('📋 الطلبات','requests'));
@@ -16125,10 +16125,30 @@ function reqChain(r){
 }
 function reqChainLast(r){const ch=reqChain(r);return ch[ch.length-1];}
 const _STMAP={trn:'trnStatus',sup:'supStatus',gen:'genStatus',dir:'dirStatus',tgt:'tgtStatus'};
+/* ═══════════ 🚨 قيمة المرحلة: أي شيء غير معروف كان يقتل الطلب ═══════════
+   كانت المقارنة حرفية: 'معتمد' تمرّ، 'معلق' تفتح المرحلة، وأي شيء آخر
+   يُرجع null من reqActiveStage — فلا مرحلة نشطة أصلاً. والنتيجة طلبٌ حيّ
+   («قيد المراجعة») لا يصل أحداً: لا المدرب يراه في «بانتظار إجراءك»، ولا
+   المشرف، ويبقى عند الإداري «بانتظار المراجعة» إلى الأبد.
+   ويكفي لإحداث ذلك: مسافة زائدة «معلق » · شدّة «معلّق» · شرطة «—» ·
+   أو أي كلمة كُتبت باليد في الشيت.
+   الآن نوحّد القراءة: التشكيل والمسافات والهمزات تُزال، والقيمة المجهولة
+   تعني «ما زالت بانتظار الإجراء» لا «طلبٌ ميت». الكتابة لم تتغيّر. */
+function normStageVal(v){
+  const t=String(v==null?'':v)
+    .replace(/[ً-ْٰـ]/g,'')        // تشكيل وتطويل
+    .replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه')
+    .replace(/\s+/g,'').trim();
+  if(!t||t==='—'||t==='-'||t==='–')return 'معلق';
+  if(/^(معتمد|موافق|مقبول|تمالاعتماد)/.test(t))return 'معتمد';
+  if(/^(مرفوض|رفض|غيرموافق)/.test(t))return 'مرفوض';
+  if(/^(معاد|مرتجع|ارجاع|اعاده|للتعديل)/.test(t))return 'معاد';
+  return 'معلق';                                        // مجهولة ⇒ بانتظار الإجراء
+}
 function stageStatus(r,st){
-  const raw=r[_STMAP[st]]||'معلق';
+  const raw=normStageVal(r[_STMAP[st]]);
   // طلبات عامة قديمة حُفظت خانة مستلمها «—»؛ نفتحها للمستلم بدلاً من ضياعها.
-  if(st==='tgt'&&r.targetName&&reqCat(r)==='عام'&&(raw==='—'||raw==='')&&!['معتمد','مرفوض','ملغي','مغلق بنهاية النصف'].includes(r.finalStatus))return 'معلق';
+  if(st==='tgt'&&r.targetName&&reqCat(r)==='عام'&&raw==='معلق'&&!['معتمد','مرفوض','ملغي','مغلق بنهاية النصف'].includes(r.finalStatus))return 'معلق';
   return raw;
 }
 function setStage(r,st,v){r[_STMAP[st]]=v;}
