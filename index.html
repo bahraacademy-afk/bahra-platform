@@ -8442,8 +8442,10 @@ function lpSessionRowHtml(date,period,cls){
 function lpAddSession(){
   const c=document.getElementById('lp_sessions');
   const g=(document.getElementById('lp_grade')||{}).value||'';
-  const w=(document.getElementById('lp_weekStart')||{}).value||'';
-  if(c)c.insertAdjacentHTML('beforeend',lpSessionRowHtml(w,'',g));
+  // يرث تاريخ آخر صفّ (أو اليوم) بدل تاريخ أسبوعٍ لم يعد موجوداً
+  const rows=c?[...c.querySelectorAll('.lp-sdate')]:[];
+  const last=rows.length?(rows[rows.length-1].value||''):'';
+  if(c)c.insertAdjacentHTML('beforeend',lpSessionRowHtml(last||todayISO(),'',g));
 }
 // تفكيك التواريخ المخزّنة: "date~period~cls|date~period~cls" أو تاريخ مفرد قديم
 function lpSessions(lp){
@@ -8481,7 +8483,7 @@ function lessonCard(lp,showTrainer,canDelete){
       <div class="lp-card-info"><div class="cc-name">📚 ${esc(lp.material||'—')}${lp.topic?` — ${esc(lp.topic)}`:''}</div>
         ${(()=>{const ss=lpSessions(lp);const first=ss[0]?lpFmtDate(ss[0].date):'—';const more=ss.length>1?` (+${ss.length-1} تاريخ)`:'';return `<div class="cc-meta">${showTrainer?`👨‍🏫 ${esc(lp.tname||'')} · `:''}${lp.grade?`شعبة ${esc(lp.grade)} · `:''}📅 ${esc(first)}${more}</div>`;})()}
         ${lp.sentAt?`<div class="cc-meta lp-sent">أُرسل: ${esc(lpSentAt(lp.sentAt))}</div>`:''}
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">${prepStatusPill(lp)}${lp.weekStart?`<span class="pill pb">أسبوع ${esc(lpFmtDate(lp.weekStart))}</span>`:''}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">${prepStatusPill(lp)}</div>
         ${lp.reviewer?`<div class="cc-meta">المراجع: ${esc(lp.reviewer)}${lp.reviewedAt?' · '+esc(lpSentAt(lp.reviewedAt)):''}</div>`:''}
         ${lp.reviewNote?`<div style="font-size:12px;color:var(--acc-y);margin-top:5px">📌 ${esc(lp.reviewNote)}</div>`:''}
         ${lp.execution?`<div style="font-size:12px;color:${lp.prepStatus==='معتمد'?'var(--acc-g)':'var(--acc-y)'};margin-top:5px">✓ ${esc(lp.execution)}</div>`:''}
@@ -8494,10 +8496,7 @@ function lessonCard(lp,showTrainer,canDelete){
       </div>
     </div></div>`;
 }
-function lpNextWeekStart(){
-  const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()+(d.getDay()===0?7:7-d.getDay()));
-  const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
-}
+/* 🚫 أُزيلت lpNextWeekStart: ما عاد النموذج يسأل عن بداية أسبوع. */
 // شعب المادة المختارة فقط — لا تخلط شعب بقية المواد في تحضير المدرب.
 function myTaughtGroupsForCourse(material){
   const nrm=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -8520,17 +8519,14 @@ function lpCourseChanged(){
   grade.innerHTML='<option value="">— اختر الشعبة —</option>'+groups.map(g=>`<option value="${escAttr(g)}" ${g===selected?'selected':''}>${esc(g)}</option>`).join('');
   lpGradeChanged();
 }
-function lpDateInWeek(date,weekStart){
-  const dm=String(date||'').match(/^(\d{4})-(\d{2})-(\d{2})$/), wm=String(weekStart||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if(!dm||!wm)return false;
-  const d=Date.UTC(+dm[1],+dm[2]-1,+dm[3]), w=Date.UTC(+wm[1],+wm[2]-1,+wm[3]);
-  return d>=w&&d<=w+6*864e5;
-}
+/* 🚫 أُزيلت lpDateInWeek: ما عاد للتحضير أسبوعٌ تُقاس عليه الحصص. */
 function lessonFormPage(){
   const myCourses=myTaughtCourses().map(x=>x.course);
   const myGrps=myTaughtGroupsForCourse(myCourses[0]||'');
   const defaultGrp=myGrps.length===1?myGrps[0]:'';
-  const dv=lpNextWeekStart(), prepTerm=currentHalf()||'';
+  /* 🚫 أُزيل حقل «بداية الأسبوع»: ما عاد التحضير مقيّداً بأسبوع. أول
+     صفّ تاريخٍ يبدأ باليوم، والأسبوع يُشتق لاحقاً من أبكر حصة. */
+  const dv=todayISO(), prepTerm=currentHalf()||'';
   const mine=lessonPreps;
   const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">📝 تحضير الدروس</div><div class="bsub">عبّئ نموذج التحضير وأرسله للإدارة — وتقدر تطبعه</div></div><span class="pill pb">${mine.length} تحضير مُرسل</span></div>`;
   const form=termIsLocked(prepTerm)?`<div class="ccard cc-y" style="padding:18px"><div class="cc-name">🔒 التحضير مغلق لهذا النصف</div><div class="alert aw" style="margin-top:10px"><span class="aicon">🏁</span>انتهى النصف المجزأ ولا يمكن تقديم تحاضير؛ تفتح مع بداية النصف التالي</div></div>`:`<div class="ccard" style="padding:18px">
@@ -8539,9 +8535,8 @@ function lessonFormPage(){
       ${lpFld('المادة',`<select id="lp_material" class="lp-in" aria-label="المادة" title="المادة" onchange="lpCourseChanged()">${myCourses.map(c=>`<option>${esc(c)}</option>`).join('')||'<option></option>'}</select>`)}
       ${lpFld('الفرع/التخصص',`<input id="lp_branch" class="lp-in" placeholder="اختياري">`)}
       ${lpFld('الصف/الشعبة',`<select id="lp_grade" class="lp-in" aria-label="الصف" title="الصف" onchange="lpGradeChanged()"><option value="">— اختر الشعبة —</option>${myGrps.map(g=>`<option value="${escAttr(g)}" ${g===defaultGrp?'selected':''}>${esc(g)}</option>`).join('')}</select>`)}
-      ${lpFld('بداية الأسبوع *',`<input type="date" id="lp_weekStart" class="lp-in" value="${dv}" min="${todayISO()}">`)}
     </div>
-    ${lpFld('التواريخ والحصص <span style="font-weight:400;color:var(--muted)">(داخل الأسبوع المحدد، وتتبع الشعبة الأساسية)</span>',
+    ${lpFld('التواريخ والحصص <span style="font-weight:400;color:var(--muted)">(تتبع الشعبة الأساسية)</span>',
       `<div id="lp_sessions">${lpSessionRowHtml(dv,'',defaultGrp)}</div>
        <button class="btn btn-sm btn-out" onclick="lpAddSession()" style="margin-top:4px">➕ إضافة تاريخ</button>`)}
     ${lpFld('موضوع الدرس',`<input id="lp_topic" class="lp-in" aria-label="موضوع الدرس" title="موضوع الدرس">`)}
@@ -8642,10 +8637,12 @@ async function submitLessonPrep(){
     cls:((r.querySelector('.lp-scls')||{}).value||'').trim()
   })).filter(x=>x.date||x.period||x.cls);
   const serial=sess.map(x=>[x.date,x.period,x.cls].join('~')).join('|');
-  const obj={material:g('lp_material'),branch:g('lp_branch'),grade:g('lp_grade'),date:serial,period:'',weekStart:g('lp_weekStart'),term:currentHalf()||'',topic:g('lp_topic'),outcomes:g('lp_outcomes'),intro:g('lp_intro'),present:g('lp_present'),eval:g('lp_eval'),homework:g('lp_homework'),methods:chk('lp-m'),sources:chk('lp-s'),media:chk('lp-w'),activities:chk('lp-a')};
+  /* الأسبوع يُشتق من أبكر حصة — يبقى العمود مفيداً للتجميع والأرشفة
+     بلا أن يُطالَب المدرّب بإدخاله. */
+  const _wk=sess.map(x=>x.date).filter(Boolean).sort()[0]||'';
+  const obj={material:g('lp_material'),branch:g('lp_branch'),grade:g('lp_grade'),date:serial,period:'',weekStart:_wk,term:currentHalf()||'',topic:g('lp_topic'),outcomes:g('lp_outcomes'),intro:g('lp_intro'),present:g('lp_present'),eval:g('lp_eval'),homework:g('lp_homework'),methods:chk('lp-m'),sources:chk('lp-s'),media:chk('lp-w'),activities:chk('lp-a')};
   if(!obj.material||!obj.grade||!obj.date||!obj.topic||!obj.outcomes||!obj.present||!obj.eval){showToast('أكمل المادة والشعبة والتاريخ والموضوع والأهداف والمحتوى والتقويم','w');return;}
-  if(!obj.weekStart||Date.now()>=new Date(obj.weekStart+'T00:00:00').getTime()){showToast('يُسلَّم التحضير قبل بداية الأسبوع الدراسي','w');return;}
-  if(sess.some(x=>!lpDateInWeek(x.date,obj.weekStart))){showToast('كل حصة تحتاج تاريخاً صحيحاً داخل الأسبوع المحدد','w');return;}
+  if(sess.some(x=>!/^\d{4}-\d{2}-\d{2}$/.test(x.date))){showToast('كل حصة تحتاج تاريخاً صحيحاً','w');return;}
   if(sess.some(x=>x.cls&&grpKey(x.cls)!==grpKey(obj.grade))){showToast('شعبة الحصة يجب أن تطابق الشعبة الأساسية للتحضير','w');return;}
   if(termIsLocked(obj.term)){showToast('انتهى النصف المجزأ ولا يمكن تقديم تحاضير','w');return;}
   showToast('جاري الإرسال...','i');
@@ -8695,7 +8692,6 @@ function editLessonPrep(id){
       ${lpFld('المادة',`<input id="e_material" class="lp-in" value="${escAttr(lp.material)}">`)}
       ${lpFld('الفرع/التخصص',`<input id="e_branch" class="lp-in" value="${escAttr(lp.branch)}">`)}
       ${lpFld('الصف/الشعبة',`<input id="e_grade" class="lp-in" value="${escAttr(lp.grade)}">`)}
-      ${lpFld('بداية الأسبوع',`<input type="date" id="e_weekStart" class="lp-in" value="${escAttr(lp.weekStart||'')}">`)}
     </div>
     ${lpFld('التواريخ والحصص',`<div id="e_sessions">${sessRows}</div><button class="btn btn-sm btn-out" type="button" onclick="document.getElementById('e_sessions').insertAdjacentHTML('beforeend', lpSessionRowHtml('','',''))" style="margin-top:4px">➕ إضافة تاريخ</button>`)}
     ${lpFld('موضوع الدرس',`<input id="e_topic" class="lp-in" value="${escAttr(lp.topic)}">`)}
@@ -8727,7 +8723,8 @@ async function saveLessonEdit(){
     cls:((r.querySelector('.lp-scls')||{}).value||'').trim()
   })).filter(x=>x.date||x.period||x.cls);
   const serial=sess.map(x=>[x.date,x.period,x.cls].join('~')).join('|');
-  const obj={id:g('e_id'),material:g('e_material'),branch:g('e_branch'),grade:g('e_grade'),date:serial,period:'',weekStart:g('e_weekStart'),topic:g('e_topic'),outcomes:g('e_outcomes'),intro:g('e_intro'),present:g('e_present'),eval:g('e_eval'),homework:g('e_homework'),methods:chk('e-m'),sources:chk('e-s'),media:chk('e-w'),activities:chk('e-a')};
+  const _ewk=sess.map(x=>x.date).filter(Boolean).sort()[0]||'';
+  const obj={id:g('e_id'),material:g('e_material'),branch:g('e_branch'),grade:g('e_grade'),date:serial,period:'',weekStart:_ewk,topic:g('e_topic'),outcomes:g('e_outcomes'),intro:g('e_intro'),present:g('e_present'),eval:g('e_eval'),homework:g('e_homework'),methods:chk('e-m'),sources:chk('e-s'),media:chk('e-w'),activities:chk('e-a')};
   if(!obj.material||!obj.grade||!obj.date||!obj.topic||!obj.outcomes||!obj.present||!obj.eval){showToast('أكمل الحقول الأساسية قبل الحفظ','w');return;}
   showToast('جاري حفظ التعديلات...','i');
   try{
@@ -8839,7 +8836,7 @@ const tPgs={
     const mineAll=requests.filter(r=>String(r.sid)===String(user.id)).length;
     return `
     <div class="banner"><div><div class="btitle">📋 الطلبات والموافقات</div><div class="bsub">اعتماد أعذار طلابك والطلبات الموجَّهة لك — وتقديم طلباتك للإدارة</div></div><div class="bpill bp-b">مدرب</div></div>
-    <div class="alert ab"><span class="aicon">ℹ️</span>أنت أول من يعتمد عذر الغياب، ثم مشرف التخصص، ثم مدير الأكاديمية</div>
+    <div class="alert ab"><span class="aicon">ℹ️</span>أنت أول من يعتمد عذر الغياب، ثم مدير الأكاديمية</div>
     <div class="stitle">🔔 بانتظار إجراءك ${inbox.length?`(${inbox.length})`:''}</div>
     ${pendOut?`<div class="alert aw" style="margin-bottom:10px"><span class="aicon">⏳</span><b>${pendOut}</b> طلباً من أنصافٍ أخرى ما زال ينتظر إجراءك — اختر «🗂️ كل الأنصاف» من مختار النصف أدناه</div>`:''}
     ${inbox.length?inbox.map(r=>reqCard(r,{actionable:true,showRequester:true})).join(''):'<div class="alert as"><span class="aicon">✅</span>لا يوجد شيء بانتظار إجراءك في هذا النصف</div>'}
@@ -16136,16 +16133,15 @@ function renderExcuseDates(){
    ============================================================ */
 /* 🔀 مسار الطلبات يأتي من إعدادات الإداري (getReqFlow) — وهذه نسخة
    احتياطية مطابقة للافتراضي تعمل قبل وصوله أو إذا تعذّرت قراءته. */
+/* 🔀 أُزيلت مرحلة «مشرف التخصص»: الاعتماد لمدير الأكاديمية مباشرة،
+   وعذر الغياب يبقى عند مدرّب المادة أولاً ثم المدير. */
 const REQ_FLOW_DEFAULT={dirOverride:true,cats:{
   'عذر':  {label:'عذر غياب',  icon:'📄',on:true,stages:[
             {who:'trn',slot:'trn',reject:true,ret:true},
-            {who:'sup',slot:'sup',reject:true,ret:true},
             {who:'dir',slot:'dir',reject:true,ret:true}]},
   'إداري':{label:'طلب إداري', icon:'🏛️',on:true,stages:[
-            {who:'sup',slot:'sup',reject:true,ret:true},
             {who:'dir',slot:'dir',reject:true,ret:true}]},
   'تعريف':{label:'ورقة تعريف',icon:'📇',on:true,stages:[
-            {who:'sup',slot:'sup',reject:true,ret:true},
             {who:'dir',slot:'dir',reject:true,ret:true}]},
   'عام':  {label:'طلب عام',   icon:'✉️',on:true,stages:[
             {who:'tgt',slot:'tgt',reject:true,ret:true,escalate:true}]}
