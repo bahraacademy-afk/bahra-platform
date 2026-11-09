@@ -8466,23 +8466,31 @@ function lpSentAt(v){
   let h=d.getHours(); const am=h<12?'ص':'م'; h=h%12||12;
   return `${D} ${two(d.getDate())}/${two(d.getMonth()+1)}/${d.getFullYear()} · ${h}:${two(d.getMinutes())} ${am}`;
 }
+/* 🚫 المسودة ملكُ صاحبها وحده: لم تُرسَل، فلا تُعرض للإدارة ولا تُعدّ
+   ولا تُعتمد. كل قارئٍ إداريّ يمرّ من admPreps() وحده — كان ثلاثة
+   قُرّاءٍ يقرؤون lessonPreps مباشرةً (البطاقات، البحث، عدّاد التبويب)
+   فظهرت المسودة للإدارة وإن رشّحتها الصفحة في مكانٍ واحد. */
+function prepIsDraft(lp){return String((lp&&lp.prepStatus)||'').replace(/\s+/g,'').trim()==='مسودة';}
+function admPreps(){return (lessonPreps||[]).filter(x=>inTrkHalf(x.term)&&!prepIsDraft(x));}
+window.prepIsDraft=prepIsDraft; window.admPreps=admPreps;
 function prepStatusPill(lp){
   const st=lp.prepStatus||'بانتظار الاعتماد';
   if(st==='معتمد')return '<span class="pill pg">معتمد ✓</span>';
   if(st==='مغلق بنهاية النصف')return '<span class="pill py">مغلق ومؤرشف</span>';
   if(st==='مصعد للمدير')return '<span class="pill pr">مصعّد للمدير</span>';
   if(st==='يحتاج تعديل')return '<span class="pill py">يحتاج تعديل</span>';
+  if(st==='مسودة')return '<span class="pill" style="background:rgba(150,150,150,.16);color:var(--muted);border:1px solid var(--border)">💾 مسودة — لم تُرسل</span>';
   /* 🚫 أُلغيت مهلة الـ٤٨ ساعة، فلا «متأخر» على تحضيرٍ لم يُعتمد بعد. */
   return '<span class="pill pb">بانتظار الاعتماد</span>';
 }
 function lessonCard(lp,showTrainer,canDelete){
   const closed=['معتمد','مغلق بنهاية النصف'].includes(lp.prepStatus), editable=canDelete&&!closed;
-  const canReview=user&&user.role==='a'&&!closed;
+  const canReview=user&&user.role==='a'&&!closed&&!prepIsDraft(lp);
   return `<div class="ccard lp-card ${lp.prepStatus==='معتمد'?'cc-g':lp.prepStatus==='مصعد للمدير'?'cc-r':''}">
     <div class="lp-card-row">
       <div class="lp-card-info"><div class="cc-name">📚 ${esc(lp.material||'—')}${lp.topic?` — ${esc(lp.topic)}`:''}</div>
         ${(()=>{const ss=lpSessions(lp);const first=ss[0]?lpFmtDate(ss[0].date):'—';const more=ss.length>1?` (+${ss.length-1} تاريخ)`:'';return `<div class="cc-meta">${showTrainer?`👨‍🏫 ${esc(lp.tname||'')} · `:''}${lp.grade?`شعبة ${esc(lp.grade)} · `:''}📅 ${esc(first)}${more}</div>`;})()}
-        ${lp.sentAt?`<div class="cc-meta lp-sent">أُرسل: ${esc(lpSentAt(lp.sentAt))}</div>`:''}
+        ${lp.sentAt?`<div class="cc-meta lp-sent">${prepIsDraft(lp)?'حُفظ':'أُرسل'}: ${esc(lpSentAt(lp.sentAt))}</div>`:''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">${prepStatusPill(lp)}</div>
         ${lp.reviewer?`<div class="cc-meta">المراجع: ${esc(lp.reviewer)}${lp.reviewedAt?' · '+esc(lpSentAt(lp.reviewedAt)):''}</div>`:''}
         ${lp.reviewNote?`<div style="font-size:12px;color:var(--acc-y);margin-top:5px">📌 ${esc(lp.reviewNote)}</div>`:''}
@@ -8491,6 +8499,7 @@ function lessonCard(lp,showTrainer,canDelete){
       <div class="lp-card-acts">
         <button class="btn btn-sm btn-b" onclick="viewLessonPrep('${jsq(lp.id)}')">👁️ عرض/طباعة</button>
         ${canReview?`<button class="btn btn-sm btn-g" onclick="reviewLessonPrepUI('${jsq(lp.id)}','approve')">✓ اعتماد</button><button class="btn btn-sm btn-out" onclick="reviewLessonPrepUI('${jsq(lp.id)}','edit')">↩ يحتاج تعديل</button>`:''}
+        ${(editable&&prepIsDraft(lp))?`<button class="btn btn-sm btn-b" onclick="sendDraftPrep('${jsq(lp.id)}')" title="يرسلها للإدارة كما هي">📤 إرسال الآن</button>`:''}
         ${editable?`<button class="btn btn-sm btn-out" onclick="editLessonPrep('${jsq(lp.id)}')">✏️ تعديل</button>`:''}
         ${editable?`<button class="btn btn-sm lp-del" onclick="delLessonPrep('${jsq(lp.id)}')">🗑️</button>`:''}
       </div>
@@ -8527,8 +8536,11 @@ function lessonFormPage(){
   /* 🚫 أُزيل حقل «بداية الأسبوع»: ما عاد التحضير مقيّداً بأسبوع. أول
      صفّ تاريخٍ يبدأ باليوم، والأسبوع يُشتق لاحقاً من أبكر حصة. */
   const dv=todayISO(), prepTerm=currentHalf()||'';
-  const mine=lessonPreps;
-  const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">📝 تحضير الدروس</div><div class="bsub">عبّئ نموذج التحضير وأرسله للإدارة — وتقدر تطبعه</div></div><span class="pill pb">${mine.length} تحضير مُرسل</span></div>`;
+  const mine=lessonPreps||[];
+  /* المسودة ليست «مُرسلاً»: تُعدّ وتُعرض على حِدة في عدّاد الترويسة. */
+  const drafts=mine.filter(prepIsDraft);
+  const sentPreps=mine.filter(x=>!prepIsDraft(x));
+  const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">📝 تحضير الدروس</div><div class="bsub">عبّئ نموذج التحضير وأرسله للإدارة — وتقدر تطبعه</div></div><span class="pill pb">${sentPreps.length} تحضير مُرسل</span>${drafts.length?`<span class="pill" style="background:rgba(150,150,150,.16);color:var(--muted);border:1px solid var(--border)">💾 ${drafts.length} مسودة</span>`:''}</div>`;
   const form=termIsLocked(prepTerm)?`<div class="ccard cc-y" style="padding:18px"><div class="cc-name">🔒 التحضير مغلق لهذا النصف</div><div class="alert aw" style="margin-top:10px"><span class="aicon">🏁</span>انتهى النصف المجزأ ولا يمكن تقديم تحاضير؛ تفتح مع بداية النصف التالي</div></div>`:`<div class="ccard" style="padding:18px">
     <div class="alert ab" style="margin-bottom:12px"><span class="aicon">🗓️</span>تحضير أسبوعي موحد — يعتمده المشرف بعد ربطه بحضور الحصص.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
@@ -8553,15 +8565,19 @@ function lessonFormPage(){
     </div>
     <div class="btn-row" style="margin-top:16px">
       <button class="btn btn-b" onclick="submitLessonPrep()">📤 إرسال للإدارة</button>
+      <button class="btn btn-g" onclick="submitLessonPrep(true)" title="يحفظه باسمك بلا أن يصل الإدارة — ترجع له وتكمله وترسله متى شئت">💾 حفظ كمسودة</button>
       <button class="btn btn-out" onclick="printLessonPrepForm()">🖨️ نموذج فارغ للطباعة</button>
     </div>
   </div>`;
-  const list=mine.length?`<div class="stitle" style="margin-top:22px">تحاضيري المُرسلة (${mine.length})</div>`+mine.map(lp=>lessonCard(lp,false,true)).join(''):`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>ما أرسلت أي تحضير بعد</div>`;
+  const list=(drafts.length?`<div class="stitle" style="margin-top:22px">💾 مسودّاتي (${drafts.length}) <span style="font-weight:400;color:var(--muted);font-size:11px">— محفوظة عندك ولم تصل الإدارة</span></div>`+drafts.map(lp=>lessonCard(lp,false,true)).join(''):'')
+    +(sentPreps.length?`<div class="stitle" style="margin-top:22px">تحاضيري المُرسلة (${sentPreps.length})</div>`+sentPreps.map(lp=>lessonCard(lp,false,true)).join('')
+      :(drafts.length?'':`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>ما أرسلت أي تحضير بعد</div>`));
   return `<style>${LP_CSS}</style>`+banner+form+list;
 }
 function adminLessonsPage(bare){
   // 🔎 النصف المختار وحده — تحاضير هذا النصف لا كل ما في الورقة
-  const list=(lessonPreps||[]).filter(x=>inTrkHalf(x.term));
+  /* 🚫 المسودة لم تُرسَل — لا تظهر للإدارة إطلاقاً. */
+  const list=admPreps();
   const pending=list.filter(x=>!['معتمد','مغلق بنهاية النصف'].includes(x.prepStatus)).length;
   const banner=bare?'':`<div class="banner"><div><div class="cc-name" style="font-size:19px">📚 تحاضير المدربين</div><div class="bsub">الاعتماد مرتبط بتسجيل حضور الحصة · الإغلاق والأرشفة في نهاية النصف</div></div><span class="pill ${pending?'py':'pg'}">${pending} بانتظار المراجعة</span></div>`;
   if(!list.length)return `<style>${LP_CSS}</style>`+banner+`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>${trkHalf()?'ما فيه تحاضير في هذا النصف':'ما وصل أي تحضير بعد'}</div>`;
@@ -8577,7 +8593,7 @@ function adminLessonsPage(bare){
 function admLessonsCards(){
   const q=String((document.getElementById('lpSearch')||{}).value||'').trim();
   const tf=String((document.getElementById('lpTrainer')||{}).value||'all');
-  let list=(lessonPreps||[]).filter(x=>inTrkHalf(x.term));
+  let list=admPreps();
   if(tf&&tf!=='all')list=list.filter(x=>x.tname===tf);
   if(q)list=list.filter(x=>[x.material,x.topic,x.tname,x.grade].some(v=>String(v||'').includes(q)));
   if(!list.length)return `<div class="empty"><div class="empty-icon">🔍</div>ما فيه نتائج مطابقة</div>`;
@@ -8627,7 +8643,31 @@ function lpToggleAll(open){
 }
 window.lpToggleGroup=lpToggleGroup; window.lpToggleAll=lpToggleAll;
 function admLessonsFilter(){const h=document.getElementById('lessonsBody');if(h)h.innerHTML=admLessonsCards();const t=document.getElementById('lpAllBtn');if(t){t.dataset.open='0';t.textContent='▾ افتح الكل';}}
-async function submitLessonPrep(){
+/* 📤 إرسال مسودة محفوظة كما هي — بلا فتح النموذج من جديد. */
+async function sendDraftPrep(id){
+  const lp=(lessonPreps||[]).find(x=>String(x.id)===String(id));
+  if(!lp){showToast('ما لقيت المسودة','w');return;}
+  if(lp.prepStatus!=='مسودة'){showToast('هذا التحضير مُرسَل أصلاً','i');return;}
+  if(!confirm('إرسال المسودة للإدارة كما هي؟\n'+(lp.material||'')+(lp.grade?' · شعبة '+lp.grade:'')))return;
+  const sess=lpSessions(lp);
+  const obj={id:lp.id,material:lp.material,branch:lp.branch||'',grade:lp.grade,
+    date:sess.map(x=>[x.date,x.period||'',x.cls||''].join('~')).join('|'),period:'',
+    weekStart:lp.weekStart||'',term:lp.term||currentHalf()||'',
+    topic:lp.topic||'',outcomes:lp.outcomes||'',intro:lp.intro||'',present:lp.present||'',
+    eval:lp.eval||'',homework:lp.homework||'',methods:lp.methods||'',sources:lp.sources||'',
+    media:lp.media||'',activities:lp.activities||'',draft:false};
+  showToast('جاري الإرسال...','i');
+  try{
+    const res=await callWrite('saveLessonPrep',obj);
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الإرسال: '+attErrMsg(res.msg,res.hint),'e');return;}
+    showToast('✅ تم إرسال التحضير للإدارة','s');
+    await loadLessonPreps();
+    showTPage('lesson',document.getElementById('sn-lesson'));
+  }catch(e){showToast('تعذّر الإرسال — جرب مرة أخرى','e');}
+}
+window.sendDraftPrep=sendDraftPrep;
+/* draft=true ⇒ حفظٌ بلا إرسال: يبقى عند صاحبه ولا يصل الإدارة. */
+async function submitLessonPrep(draft){
   const g=id=>String((document.getElementById(id)||{}).value||'').trim();
   const chk=cls=>[...document.querySelectorAll('.'+cls+':checked')].map(x=>x.value).join('، ');
   // اجمع التواريخ المتعددة وسلسلها في حقل واحد: date~period~cls|...
@@ -8645,13 +8685,14 @@ async function submitLessonPrep(){
   if(!obj.material||!obj.grade||!obj.date){showToast('أكمل المادة والشعبة وتاريخاً واحداً على الأقل','w');return;}
   if(sess.some(x=>!/^\d{4}-\d{2}-\d{2}$/.test(x.date))){showToast('كل حصة تحتاج تاريخاً صحيحاً','w');return;}
   if(termIsLocked(obj.term)){showToast('انتهى النصف المجزأ ولا يمكن تقديم تحاضير','w');return;}
-  showToast('جاري الإرسال...','i');
+  obj.draft=!!draft;
+  showToast(draft?'جاري الحفظ...':'جاري الإرسال...','i');
   try{
     // 🔁 معرّف من العميل — إعادة المحاولة بعد تأخّر الرد لا ترفع التحضير مرتين
     if(!obj.id&&!obj.newId)obj.newId='LP-'+Date.now()+'-'+Math.floor(Math.random()*1000);
     const res=await callWrite('saveLessonPrep',obj);
-    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الإرسال: '+attErrMsg(res.msg,res.hint),'e');return;}
-    showToast('✅ تم إرسال التحضير للإدارة','s');
+    if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر '+(draft?'الحفظ':'الإرسال')+': '+attErrMsg(res.msg,res.hint),'e');return;}
+    showToast(draft?'💾 حُفظ كمسودة — ترجع له وتكمله وترسله متى شئت':'✅ تم إرسال التحضير للإدارة','s');
     await loadLessonPreps();
     showTPage('lesson',document.getElementById('sn-lesson'));
   }catch(e){showToast('تعذّر الإرسال — جرب مرة أخرى','e');}
@@ -8707,13 +8748,18 @@ function editLessonPrep(id){
       <div><div class="lp-gt">الأنشطة</div><div class="lp-chips">${lpChk('e-a',LP_ACTS,lp.activities)}</div></div>
     </div>
     <div class="btn-row" style="margin-top:16px">
-      <button class="btn btn-b" type="button" onclick="saveLessonEdit()">💾 حفظ التعديلات</button>
+      ${prepIsDraft(lp)
+        ? `<button class="btn btn-g" type="button" onclick="saveLessonEdit(true)">💾 حفظ كمسودة</button>
+           <button class="btn btn-b" type="button" onclick="saveLessonEdit(false)">📤 حفظ وإرسال</button>`
+        : `<button class="btn btn-b" type="button" onclick="saveLessonEdit()">💾 حفظ التعديلات</button>`}
       <button class="btn btn-out" type="button" onclick="this.closest('.modal-overlay').remove()">إلغاء</button>
     </div>
   </div>`;
   document.body.appendChild(ov);
 }
-async function saveLessonEdit(){
+/* draft: true ⇒ تبقى مسودة · false ⇒ تُرسل · undefined ⇒ تحضيرٌ مُرسَل
+   أصلاً يُعدَّل كما كان. تعديلُ مسودةٍ بلا تحديد كان يرسلها بلا قصد. */
+async function saveLessonEdit(draft){
   const box=document.getElementById('lpEditModal'); if(!box)return;
   const g=id=>String((box.querySelector('#'+id)||{}).value||'').trim();
   const chk=cls=>[...box.querySelectorAll('.'+cls+':checked')].map(x=>x.value).join('، ');
@@ -8726,11 +8772,12 @@ async function saveLessonEdit(){
   const _ewk=sess.map(x=>x.date).filter(Boolean).sort()[0]||'';
   const obj={id:g('e_id'),material:g('e_material'),branch:g('e_branch'),grade:g('e_grade'),date:serial,period:'',weekStart:_ewk,topic:g('e_topic'),outcomes:g('e_outcomes'),intro:g('e_intro'),present:g('e_present'),eval:g('e_eval'),homework:g('e_homework'),methods:chk('e-m'),sources:chk('e-s'),media:chk('e-w'),activities:chk('e-a')};
   if(!obj.material||!obj.grade||!obj.date){showToast('أكمل المادة والشعبة وتاريخاً واحداً على الأقل','w');return;}
-  showToast('جاري حفظ التعديلات...','i');
+  if(draft!==undefined)obj.draft=!!draft;
+  showToast(draft===true?'جاري الحفظ...':'جاري حفظ التعديلات...','i');
   try{
     const res=await callWrite('saveLessonPrep',obj);
     if(res&&res.status&&res.status!=='ok'){showToast('❌ تعذّر الحفظ: '+attErrMsg(res.msg,res.hint),'e');return;}
-    showToast('✅ تم حفظ التعديلات','s');
+    showToast(draft===true?'💾 حُفظت المسودة — ما زالت عندك ولم تصل الإدارة':'✅ تم حفظ التعديلات','s');
     box.remove();
     await loadLessonPreps();
     if(user&&user.role==='a')showAPage('lessons',document.getElementById('sn-lessons'));
@@ -8740,6 +8787,8 @@ async function saveLessonEdit(){
 window.editLessonPrep=editLessonPrep;window.saveLessonEdit=saveLessonEdit;
 async function reviewLessonPrepUI(id,decision){
   const lp=lessonPreps.find(x=>String(x.id)===String(id));if(!lp)return;
+  /* المسودة لم تُرسَل — لا تُعتمد ولا تُعاد. الخادم يرفضها أيضاً. */
+  if(prepIsDraft(lp)){showToast('هذا تحضيرٌ محفوظ كمسودة ولم يُرسَل بعد','i');return;}
   let note='';
   if(decision==='edit'){
     const answer=prompt('ما المطلوب تعديله في التحضير؟ (إلزامي):');
@@ -9277,6 +9326,7 @@ function attErrMsg(msg,hint){
     'prep-week':'حدّد تاريخ بداية الأسبوع',
     'attendance-required':'لا يُعتمد التحضير قبل تسجيل حضور الحصة',
     'prep-closed':'التحضير معتمد أو مغلق ولا يمكن تعديله أو حذفه',
+    'prep-draft':'هذا تحضيرٌ محفوظ كمسودة ولم يُرسَل بعد',
     'cutoff-not-reached':'تعذّر إغلاق النصف',
     'director-only':'هذا القرار لمدير الأكاديمية فقط'
   };
@@ -12299,7 +12349,7 @@ const aPgs={
     const body=(tab==='arc')?trkArchivePage()
              :(tab==='lessons')?adminLessonsPage(true)
              :renderAttLog(true,true,true);
-    const nPrep=(lessonPreps||[]).filter(x=>inTrkHalf(x.term)).length;
+    const nPrep=admPreps().length;
     /* 🔎 مختار النصف فوق الصفحة: الغياب والتحاضير يتبعانه معاً،
        فيرى «كل ما يخصّ هذا النصف» من مكان واحد بلا نوافذ. */
     /* ما يُحدَّد في القائمة هو الاختيار الخام: «الكل» صراحةً أو النصف المحسوب */
