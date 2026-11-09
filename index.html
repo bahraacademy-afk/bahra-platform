@@ -3198,7 +3198,9 @@ function assistAdmin(has,q){
       assistList(r.map(c=>'• '+esc(c.sname)+' — '+esc(c.course)+' · <b>'+assistPct(c.abs)+'%</b>'+(assistPct(c.abs)>=25?' ⛔':'')),10)+
       assistActs(assistAct('🎓 المتدربون','all_students'));
   }
-  if(has('ناقص رصد','ما رصد','لم يرصد','باقي رصد','ناقص درجات','المدربين المتاخرين')){
+  /* ⚠️ أُزيلت «المدربين المتاخرين» من مفاتيح السؤال: الجواب أصلاً عن
+     مواد ينقصها رصد لا عن أشخاص، والصيغة وحدها كانت تُلمّح بالتأخير. */
+  if(has('ناقص رصد','ما رصد','لم يرصد','باقي رصد','ناقص درجات','مواد ناقصة الرصد')){
     const m=assistMissingGrading();
     if(!m.total)return '✅ كل البنود مرصودة في جميع المواد.';
     return '📝 مواد ناقصة الرصد ('+m.courses.length+'):<br>'+
@@ -7826,13 +7828,16 @@ const sPgs={
     </table></div>`:emptyMsg}`;
   },
   services:()=>{
-    const myReqs=requests.filter(r=>String(r.sid)===String(user.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const allMine=requests.filter(r=>String(r.sid)===String(user.id));
+    const myReqs=allMine.filter(inReqHalf).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     return `
     <div class="stitle">📝 الخدمات والطلبات</div>
     <div class="alert ab"><span class="aicon">ℹ️</span>قدّم طلبك وتابع مساره خطوة بخطوة حتى الاعتماد النهائي</div>
     ${requestFormHtml()}
-    <div class="stitle">طلباتي ${myReqs.length?`(${myReqs.length})`:''}</div>
-    ${myReqs.length?myReqs.map(r=>reqCard(r,{actionable:false,showRequester:false})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات سابقة</div>'}`;
+    <div class="stitle">طلباتي في ${esc(reqHalf()||'كل الأنصاف')} ${myReqs.length?`(${myReqs.length})`:''}</div>
+    ${reqHalfPickerHTML("showSPage('services',null)")}
+    ${allMine.length>myReqs.length?`<div class="alert ab" style="margin-bottom:10px"><span class="aicon">🗂️</span>${allMine.length-myReqs.length} من أنصافٍ سابقة — بدّل النصف من الأعلى لرؤيتها</div>`:''}
+    ${myReqs.length?myReqs.map(r=>reqCard(r,{actionable:false,showRequester:false})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا طلبات في هذا النصف</div>'}`;
   },
   attachments:()=>`
     <div class="stitle">المرفقات والمواد العلمية</div>
@@ -8151,6 +8156,46 @@ function inTrkHalf(t){
   return termKeyOf(t||'')===termKeyOf(h);
 }
 window.inTrkHalf=inTrkHalf;window.trkHalf=trkHalf;
+
+/* ═══════════ 📋 الطلبات بالنصف المجزأ ═══════════
+   الطلب يُكتب وفيه ترمه (العمود AD) منذ إنشائه، لكن الصفحة كانت تعرض
+   كل الطلبات منذ أول يوم — فتتراكم طلبات أنصافٍ انتهت فوق طلبات اليوم.
+   الافتراضي الآن النصف الجاري، ومختارٌ فوق الصفحة للرجوع لما مضى.
+   ⚠️ طلبٌ بلا ترم (أُنشئ قبل العمود) يظهر دائماً حتى لا يختفي عمل قائم —
+   و«🔗 ربط الطلبات بأنصافها» في الصيانة يملأ ترمه مرة واحدة. */
+function reqHalf(){
+  const v=window._reqHalf;
+  if(v===TRK_ALL)return '';
+  if(v===undefined||v===null||v==='')return currentHalf();
+  return String(v);
+}
+function inReqHalf(r){
+  const h=reqHalf(); if(!h)return true;
+  const t=String((r&&r.term)||'').trim();
+  if(!t)return true;                       // بلا ترم ⇒ لا نُخفيه
+  return termKeyOf(t)===termKeyOf(h);
+}
+function reqNoTermCount(){
+  return (requests||[]).filter(r=>!String(r.term||'').trim()).length;
+}
+/* مختار النصف فوق صفحة الطلبات */
+function reqHalfPickerHTML(onchange){
+  const halves=allHalves();
+  if(halves.length<2&&!reqNoTermCount())return '';
+  const cur=window._reqHalf, live=currentHalf();
+  const sel=(cur===undefined||cur===null||cur==='')?termKeyOf(live):(cur===TRK_ALL?TRK_ALL:termKeyOf(cur));
+  const n=reqNoTermCount();
+  const opt=(val,lbl,on)=>`<option value="${esc(val)}" ${on?'selected':''}>${esc(lbl)}</option>`;
+  return `<div class="half-pick" style="margin-bottom:12px">
+    <label for="reqHalfSel">🗓️ النصف المجزأ</label>
+    <select id="reqHalfSel" aria-label="اختيار النصف المجزأ للطلبات" onchange="window._reqHalf=this.value;${onchange}">
+      ${halves.map(h=>opt(termKeyOf(h.raw),(termKeyOf(h.raw)===termKeyOf(live)?'🟢 ':'')+h.raw+(h.arc&&!h.live?' · مؤرشف':''),sel===termKeyOf(h.raw))).join('')}
+      ${opt(TRK_ALL,'🗂️ كل الأنصاف',sel===TRK_ALL)}
+    </select>
+    ${n?`<span class="pill py" style="font-size:11px;align-self:center" title="طلبات أُنشئت قبل إضافة عمود الترم — تظهر في كل الأنصاف حتى تُربط">⚠️ ${n} بلا ترم</span>`:''}
+  </div>`;
+}
+window.reqHalf=reqHalf;window.inReqHalf=inReqHalf;
 function atlBuildSessions(scopeAll){
   const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
   const gk_=g=>{const d=String(g||'').replace(/[^0-9]/g,'');return d||String(g||'').replace(/\s+/g,' ').trim();};
@@ -8425,8 +8470,8 @@ function prepStatusPill(lp){
   if(st==='مغلق بنهاية النصف')return '<span class="pill py">مغلق ومؤرشف</span>';
   if(st==='مصعد للمدير')return '<span class="pill pr">مصعّد للمدير</span>';
   if(st==='يحتاج تعديل')return '<span class="pill py">يحتاج تعديل</span>';
-  const late=lp.prepSlaDue&&Date.now()>new Date(lp.prepSlaDue).getTime();
-  return `<span class="pill ${late?'pr':'pb'}">${late?'متأخر · ':''}بانتظار الاعتماد</span>`;
+  /* 🚫 أُلغيت مهلة الـ٤٨ ساعة، فلا «متأخر» على تحضيرٍ لم يُعتمد بعد. */
+  return '<span class="pill pb">بانتظار الاعتماد</span>';
 }
 function lessonCard(lp,showTrainer,canDelete){
   const closed=['معتمد','مغلق بنهاية النصف'].includes(lp.prepStatus), editable=canDelete&&!closed;
@@ -8489,7 +8534,7 @@ function lessonFormPage(){
   const mine=lessonPreps;
   const banner=`<div class="banner"><div><div class="cc-name" style="font-size:19px">📝 تحضير الدروس</div><div class="bsub">عبّئ نموذج التحضير وأرسله للإدارة — وتقدر تطبعه</div></div><span class="pill pb">${mine.length} تحضير مُرسل</span></div>`;
   const form=termIsLocked(prepTerm)?`<div class="ccard cc-y" style="padding:18px"><div class="cc-name">🔒 التحضير مغلق لهذا النصف</div><div class="alert aw" style="margin-top:10px"><span class="aicon">🏁</span>انتهى النصف المجزأ ولا يمكن تقديم تحاضير؛ تفتح مع بداية النصف التالي</div></div>`:`<div class="ccard" style="padding:18px">
-    <div class="alert ab" style="margin-bottom:12px"><span class="aicon">🗓️</span>تحضير أسبوعي موحد: يُسلّم قبل بداية الأسبوع، ويعتمده المشرف خلال 48 ساعة بعد ربطه بحضور الحصص.</div>
+    <div class="alert ab" style="margin-bottom:12px"><span class="aicon">🗓️</span>تحضير أسبوعي موحد — يعتمده المشرف بعد ربطه بحضور الحصص.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
       ${lpFld('المادة',`<select id="lp_material" class="lp-in" aria-label="المادة" title="المادة" onchange="lpCourseChanged()">${myCourses.map(c=>`<option>${esc(c)}</option>`).join('')||'<option></option>'}</select>`)}
       ${lpFld('الفرع/التخصص',`<input id="lp_branch" class="lp-in" placeholder="اختياري">`)}
@@ -8523,7 +8568,7 @@ function adminLessonsPage(bare){
   // 🔎 النصف المختار وحده — تحاضير هذا النصف لا كل ما في الورقة
   const list=(lessonPreps||[]).filter(x=>inTrkHalf(x.term));
   const pending=list.filter(x=>!['معتمد','مغلق بنهاية النصف'].includes(x.prepStatus)).length;
-  const banner=bare?'':`<div class="banner"><div><div class="cc-name" style="font-size:19px">📚 تحاضير المدربين</div><div class="bsub">مراجعة خلال 48 ساعة · الاعتماد مرتبط بتسجيل حضور الحصة · الإغلاق والأرشفة في نهاية النصف</div></div><span class="pill ${pending?'py':'pg'}">${pending} بانتظار المراجعة</span></div>`;
+  const banner=bare?'':`<div class="banner"><div><div class="cc-name" style="font-size:19px">📚 تحاضير المدربين</div><div class="bsub">الاعتماد مرتبط بتسجيل حضور الحصة · الإغلاق والأرشفة في نهاية النصف</div></div><span class="pill ${pending?'py':'pg'}">${pending} بانتظار المراجعة</span></div>`;
   if(!list.length)return `<style>${LP_CSS}</style>`+banner+`<div class="empty" style="margin-top:20px"><div class="empty-icon">📭</div>${trkHalf()?'ما فيه تحاضير في هذا النصف':'ما وصل أي تحضير بعد'}</div>`;
   const trainers=[...new Set(list.map(x=>x.tname).filter(Boolean))];
   const opts=['<option value="all">كل المدربين</option>'].concat(trainers.map(t=>`<option value="${esc(t)}">${esc(t)}</option>`)).join('');
@@ -8786,17 +8831,24 @@ const tPgs={
   // ===== سجل التحضير (المدرب) — عرض فقط =====
   attlog:()=>renderAttLog(false,true),   // مواده فقط — ويقدر يعدّل ويحذف فيها
   requests:()=>{
-    const inbox=requests.filter(r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);}).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    const mine=requests.filter(r=>String(r.sid)===String(user.id)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const _pend=r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);};
+    const inbox=requests.filter(r=>_pend(r)&&inReqHalf(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const pendOut=requests.filter(r=>_pend(r)&&!inReqHalf(r)).length;
+    // 🗓️ كل الصفحة تتبع النصف المختار — وما ينتظر خارجه يُنبَّه عليه ولا يضيع
+    const mine=requests.filter(r=>String(r.sid)===String(user.id)&&inReqHalf(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const mineAll=requests.filter(r=>String(r.sid)===String(user.id)).length;
     return `
     <div class="banner"><div><div class="btitle">📋 الطلبات والموافقات</div><div class="bsub">اعتماد أعذار طلابك والطلبات الموجَّهة لك — وتقديم طلباتك للإدارة</div></div><div class="bpill bp-b">مدرب</div></div>
     <div class="alert ab"><span class="aicon">ℹ️</span>أنت أول من يعتمد عذر الغياب، ثم مشرف التخصص، ثم مدير الأكاديمية</div>
     <div class="stitle">🔔 بانتظار إجراءك ${inbox.length?`(${inbox.length})`:''}</div>
-    ${inbox.length?inbox.map(r=>reqCard(r,{actionable:true,showRequester:true})).join(''):'<div class="alert as"><span class="aicon">✅</span>لا يوجد شيء بانتظار إجراءك</div>'}
+    ${pendOut?`<div class="alert aw" style="margin-bottom:10px"><span class="aicon">⏳</span><b>${pendOut}</b> طلباً من أنصافٍ أخرى ما زال ينتظر إجراءك — اختر «🗂️ كل الأنصاف» من مختار النصف أدناه</div>`:''}
+    ${inbox.length?inbox.map(r=>reqCard(r,{actionable:true,showRequester:true})).join(''):'<div class="alert as"><span class="aicon">✅</span>لا يوجد شيء بانتظار إجراءك في هذا النصف</div>'}
     <div class="stitle" style="margin-top:24px">➕ تقديم طلب للإدارة</div>
     ${requestFormHtml()}
-    <div class="stitle" style="margin-top:8px">طلباتي المرفوعة ${mine.length?`(${mine.length})`:''}</div>
-    ${mine.length?mine.map(r=>reqCard(r,{actionable:false,showRequester:false})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لم ترفع طلبات بعد</div>'}`;
+    <div class="stitle" style="margin-top:8px">طلباتي في ${esc(reqHalf()||'كل الأنصاف')} ${mine.length?`(${mine.length})`:''}</div>
+    ${reqHalfPickerHTML("showTPage('requests',null)")}
+    ${mineAll>mine.length?`<div class="alert ab" style="margin-bottom:10px"><span class="aicon">🗂️</span>${mineAll-mine.length} من أنصافٍ أخرى مخفيّة</div>`:''}
+    ${mine.length?mine.map(r=>reqCard(r,{actionable:false,showRequester:false})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا طلبات لك في هذا النصف</div>'}`;
   },
   schedule:()=>{
     // جدول المدرب: نجمع كل حصصه من كل الشعب — مع دمج الشعب المشتركة
@@ -9222,13 +9274,13 @@ function attErrMsg(msg,hint){
   if(m==='forbidden') return 'لا تملك صلاحية هذه العملية.';
   if(m==='unauthorized') return 'انتهت صلاحية جلسة الدخول — سجّل خروج ثم دخول من جديد.';
   const known={
-    'request-validation':'تحقق من الحقول الإلزامية ومهلة العذر وحد إعادة الساعات وإغلاق النصف',
+    'request-validation':'تحقق من الحقول الإلزامية وحد إعادة الساعات وإغلاق النصف',
     'reason-required':'سبب الرفض أو الإرجاع إلزامي',
-    'term-locked':'انتهى النصف المجزأ ولا يمكن تقديم طلبات؛ تفتح الطلبات مع بداية النصف التالي',
-    'prep-week':'يُسلَّم التحضير الأسبوعي قبل بداية الأسبوع الدراسي',
+    'term-locked':'أُغلق هذا النصف بقرار الإدارة؛ تفتح الطلبات مع بداية النصف التالي',
+    'prep-week':'حدّد تاريخ بداية الأسبوع',
     'attendance-required':'لا يُعتمد التحضير قبل تسجيل حضور الحصة',
     'prep-closed':'التحضير معتمد أو مغلق ولا يمكن تعديله أو حذفه',
-    'cutoff-not-reached':'لم يحل موعد إغلاق النصف بعد',
+    'cutoff-not-reached':'تعذّر إغلاق النصف',
     'director-only':'هذا القرار لمدير الأكاديمية فقط'
   };
   return hint||known[m]||m||'خطأ غير معروف من الخادم';
@@ -10444,8 +10496,12 @@ const ARC_VIEW=[
    cols:[{i:2,h:'المدرب'},{i:3,h:'المادة'},{i:5,h:'الصف'},{i:6,h:'التاريخ'},{i:7,h:'الحصة'},{i:8,h:'الموضوع'}], termCol:20, fb:19},
   {k:'absence', tab:'أرشيف الغياب',             range:'أرشيف الغياب!A:J',             lbl:'سجل الغياب',     ico:'🗂️',
    cols:[{i:0,h:'الرقم'},{i:1,h:'الاسم'},{i:2,h:'المادة'},{i:4,h:'الشعبة'},{i:5,h:'التاريخ'},{i:6,h:'الحالة'}], termCol:8},
-  {k:'requests',tab:'أرشيف الطلبات',            range:'أرشيف الطلبات!A:V',            lbl:'الطلبات',        ico:'📋',
-   cols:[{i:0,h:'رقم الطلب'},{i:2,h:'الاسم'},{i:4,h:'النوع'},{i:6,h:'التاريخ'},{i:9,h:'الحالة'}], termCol:20},
+  /* ⚠️ «طلبات الخدمات» اتسعت إلى ٣٠ عموداً (A:AD)، والأرشفة تُلحق عمودَي
+     «النصف المؤرشف» و«تاريخ الأرشفة» بعد آخر عمود — فصار النصف في AE (30)
+     لا U (20). والصفوف التي أُرشفت قبل الاتساع ما زال نصفها في 20، فـfb
+     يقرأ الاثنين (arcTermAt تختار ما يشبه الترم). */
+  {k:'requests',tab:'أرشيف الطلبات',            range:'أرشيف الطلبات!A:AH',           lbl:'الطلبات',        ico:'📋',
+   cols:[{i:0,h:'رقم الطلب'},{i:2,h:'الاسم'},{i:4,h:'النوع'},{i:6,h:'التاريخ'},{i:9,h:'الحالة'}], termCol:30, fb:20},
   {k:'details', tab:'أرشيف الدرجات التفصيلية',  range:'أرشيف الدرجات التفصيلية!A:G',  lbl:'الدرجات التفصيلية', ico:'📝',
    cols:[{i:0,h:'مفتاح الطالب'},{i:1,h:'رمز المادة'},{i:2,h:'البند'},{i:3,h:'الدرجة'}], termCol:5}
 ];
@@ -10694,6 +10750,50 @@ async function linkPrepTerms(){
     if(act&&act.id)showAPage(act.id.replace('sn-',''),act); }catch(e){}
 }
 window.linkPrepTerms=linkPrepTerms;
+
+/* 🔗 ربط الطلبات القديمة بأنصافها — نفس فكرة التحاضير.
+   الطلب الجديد يحمل ترمه منذ إنشائه؛ أما ما سبق عمود الترم فبلا نصف،
+   فلا يُؤرشف مع نصفه ولا يرشّحه المختار. هذا يملأه مرة واحدة. */
+async function linkReqTerms(){
+  if(role!=='a'){showToast('هذا الإجراء للإدارة','w');return;}
+  showToast('جاري فحص الطلبات...','i');
+  let pv=null;
+  try{ pv=await callWrite('linkReqTerms',{records:[{dry:true}]}); }catch(e){ pv=null; }
+  const rp=pv&&pv.report;
+  if(!pv||(pv.status&&pv.status!=='ok')||!rp){
+    showToast('تعذّر الفحص — تأكد من نشر نسخة الخادم الجديدة','e'); return;
+  }
+  if(rp.missing){ showToast('تبويب «طلبات الخدمات» غير موجود','w'); return; }
+  if(!rp.total){ showToast('ما فيه طلبات مسجّلة','w'); return; }
+  if(!rp.linked){
+    showToast(rp.already===rp.total
+      ? `✅ كل الطلبات (${rp.total}) مربوطة بأنصافها أصلاً`
+      : `ما قدرت أربط أياً من ${rp.failed} طلباً — ما لقيت لأصحابها مواد في سجل المقررات`,
+      rp.already===rp.total?'s':'w');
+    return;
+  }
+  const lines=['🔗 ربط الطلبات بأنصافها','',
+    `• ${rp.linked} طلباً سيُربط بنصفه`,
+    rp.already?`• ${rp.already} مربوطة أصلاً — لن تتغيّر`:'',
+    rp.failed?`• ${rp.failed} تعذّر ربطها (صاحب الطلب بلا مواد، أو مواده في أكثر من نصف)`:'',
+    '',
+    ...(rp.terms||[]).slice(0,8).map(x=>`   ${termParts(x.term).lbl} — ${x.n}`),
+    rp.failed&&(rp.misses||[]).length?'\nتعذّر ربط مثل: '+rp.misses.join('، '):'',
+    '','يُكتب الترم في عمود جديد ولا يُمسّ شيء آخر. متابعة؟'
+  ].filter(Boolean);
+  if(!confirm(lines.join('\n')))return;
+  showToast('جاري الربط...','i');
+  let res=null;
+  try{ res=await callWrite('linkReqTerms',{records:[{}]},{tries:2}); }catch(e){ res=null; }
+  const rr=res&&res.report;
+  if(!res||(res.status&&res.status!=='ok')||!rr){ showToast('تعذّر الربط — حاول مرة أخرى','e'); return; }
+  showToast(`✅ رُبط ${rr.linked} طلباً بأنصافه`+(rr.failed?` · ${rr.failed} تعذّر`:''),'s');
+  try{ await loadRequests(); }catch(e){}
+  try{ saveDataSnapshot(); }catch(e){}
+  try{ const act=document.querySelector('#sidebar .sitem.active');
+    if(act&&act.id)showAPage(act.id.replace('sn-',''),act); }catch(e){}
+}
+window.linkReqTerms=linkReqTerms;
 
 async function endTerm(){
   const term=document.getElementById('endTermSel')?.value;
@@ -12288,6 +12388,7 @@ const aPgs={
         <!-- 📦 خطوة ثانية مستقلة: الإنهاء يحوّل الحالة، والأرشفة تنقل البيانات -->
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)">
           <button class="btn btn-out btn-sm" onclick="linkPrepTerms()">🔗 ربط التحاضير بأنصافها</button>
+          <button class="btn btn-out btn-sm" onclick="linkReqTerms()" title="يملأ عمود الترم للطلبات التي أُنشئت قبل إضافته، فتُؤرشف مع نصفها ويرشّحها المختار">🔗 ربط الطلبات بأنصافها</button>
           <button class="btn btn-out btn-sm" onclick="openArchiveHalf()">📦 أرشفة نصف منتهٍ</button>
           <button class="btn btn-out btn-sm" onclick="goAdmin('attlog','_trkTab','arc')">🗄️ استعرض الأرشيف</button>
           <span style="font-size:11.5px;color:var(--muted);align-self:center">الترتيب: اربط التحاضير بأنصافها أولاً (مرة واحدة للقديم)، ثم أنهِ النصف، ثم أرشفه — تنتقل بياناته للأرشيف وتبقى للرجوع</span>
@@ -12922,8 +13023,15 @@ const aPgs={
     <div style="font-size:12px;color:var(--muted);margin-top:10px">💡 اسحب مادة من القائمة الجانبية إلى أي حصة · اسحب حصة لخانة ثانية للنقل · اضغط على خانة معبّأة لحذفها · التعارض يظهر كتنبيه فقط ولا يمنعك</div>`;
   },
   requests:()=>{
-    const inbox=requests.filter(r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);}).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
-    const others=requests.filter(r=>!inbox.includes(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    /* 🗓️ كل الصفحة تتبع النصف المختار — بما فيها «بانتظار إجراءك»، لأن
+       طلبات أنصافٍ انتهت كانت تتراكم فوق طلبات اليوم. لكنها لا تضيع:
+       ما ينتظر إجراءً خارج النصف يُعدّ ويُعرض تنبيهه فوق الصندوق. */
+    const pend=r=>{const st=reqActiveStage(r);return st&&canActStage(st,r);};
+    const inbox=requests.filter(r=>pend(r)&&inReqHalf(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const pendOut=requests.filter(r=>pend(r)&&!inReqHalf(r)).length;
+    const scoped=requests.filter(inReqHalf);
+    const others=scoped.filter(r=>!inbox.includes(r)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    const hidden=requests.length-scoped.length;
     const roleLbl=isDirector(user)?'مدير الأكاديمية (المشرف العام) — إشراف واعتماد نهائي':(user.spec&&user.spec!=='جميع الدبلومات'?'مشرف تخصص · '+user.spec:'مشرف');
     return `
     <div class="banner"><div><div class="btitle">📋 الطلبات والموافقات</div><div class="bsub">${esc(roleLbl)}</div></div><div class="bpill ${isDirector(user)?'bp-y':'bp-b'}">${isDirector(user)?'مدير':'مشرف'}</div></div>
@@ -12931,11 +13039,14 @@ const aPgs={
     ${termClosurePanel()}
     <div class="alert ab"><span class="aicon">ℹ️</span>تظهر لك الطلبات التي وصلت مرحلتك في المسار — يمكنك الاعتماد أو الرفض النهائي أو الإرجاع للتعديل</div>
     <div class="stitle">🔔 بانتظار إجراءك ${inbox.length?`(${inbox.length})`:''}</div>
-    ${inbox.length?inbox.map(r=>reqCard(r,{actionable:true,showRequester:true})).join(''):'<div class="alert as"><span class="aicon">✅</span>لا توجد طلبات بانتظار إجراءك</div>'}
+    ${pendOut?`<div class="alert aw" style="margin-bottom:10px"><span class="aicon">⏳</span><b>${pendOut}</b> طلباً من أنصافٍ أخرى ما زال ينتظر إجراءك — اختر «🗂️ كل الأنصاف» من مختار النصف أدناه لتراه</div>`:''}
+    ${inbox.length?inbox.map(r=>reqCard(r,{actionable:true,showRequester:true})).join(''):'<div class="alert as"><span class="aicon">✅</span>لا توجد طلبات بانتظار إجراءك في هذا النصف</div>'}
     <div class="stitle" style="margin-top:24px">➕ تقديم طلب إداري / عام</div>
     ${requestFormHtml()}
-    <div class="stitle" style="margin-top:8px">📚 كل الطلبات (${requests.length})</div>
-    ${others.length?others.map(r=>reqCard(r,{actionable:false,showRequester:true})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات</div>'}`;
+    <div class="stitle" style="margin-top:8px">📚 طلبات ${esc(reqHalf()||'كل الأنصاف')} (${others.length})</div>
+    ${reqHalfPickerHTML("showAPage('requests',null)")}
+    ${hidden?`<div class="alert ab" style="margin-bottom:10px"><span class="aicon">🗂️</span>${hidden} طلباً من أنصافٍ أخرى مخفيّة — بدّل النصف من الأعلى أو اختر «كل الأنصاف»</div>`:''}
+    ${others.length?others.map(r=>reqCard(r,{actionable:false,showRequester:true})).join(''):'<div class="empty"><div class="empty-icon">📭</div>لا توجد طلبات في هذا النصف</div>'}`;
   },
   alerts:()=>{
     // كل المواد (بدون فلتر الحالة — لأن حالة الشيت قد لا تكون "حالي" بالضبط)
@@ -16103,9 +16214,7 @@ function reqCreatedDate(r){
   const ms=parseInt(String(r.rid||'').replace(/^REQ/,''),10); if(ms)return new Date(ms);
   d=new Date(String(r.date||'')+'T00:00:00'); return isNaN(d.getTime())?null:d;
 }
-function reqIsLate(r){
-  return false; // أُلغيت مهلة 48 ساعة من الطلبات، بما فيها الطلبات القديمة.
-}
+/* 🚫 أُزيلت reqIsLate: ما عاد في النظام مفهوم «طلب متأخر» أصلاً. */
 function reqAuditEntries(r){
   return String(r.audit||'').split(/\r?\n/).map(x=>{try{return JSON.parse(x);}catch(_){return null;}}).filter(x=>x&&x.at);
 }
@@ -16247,7 +16356,8 @@ function reqStatusPill(r){
   if(f==='ملغي')return '<span class="pill py">ملغي</span>';
   if(f==='قيد التصعيد')return '<span class="pill pr">قيد التصعيد لمدير الأكاديمية</span>';
   const st=reqActiveStage(r);
-  return '<span class="pill '+(reqIsLate(r)?'pr':'pb')+'">'+(reqIsLate(r)?'متأخر · ':'بانتظار ')+(st?stageLabelFor(r,st):'المراجعة')+'</span>';
+  /* 🚫 لا وسم «متأخر» على طلب: أُلغيت المهل، ولا نريد أحداً متأخراً. */
+  return '<span class="pill pb">بانتظار '+(st?stageLabelFor(r,st):'المراجعة')+'</span>';
 }
 function reqTimeline(r){
   const ch=reqChain(r),act=reqActiveStage(r);
@@ -16335,7 +16445,7 @@ function reqCard(r,opts){
     ${r.escalatedAt?`<span class="pill pr">صُعّد ${esc(fmtDateAr(r.escalatedAt))}</span>`:''}
     ${r.term?`<span class="pill pb">${esc(termShort(r.term))}</span>`:''}
   </div>`;
-  const appeal=(isOwner&&cat==='عذر'&&fin==='مرفوض')?'<div class="alert aw" style="margin-top:10px"><span class="aicon">⚖️</span>بقيت نسبة الغياب كما هي. يحق لك التظلم خلال <b>3 أيام عمل</b> من تاريخ الرفض.</div>':'';
+  const appeal=(isOwner&&cat==='عذر'&&fin==='مرفوض')?'<div class="alert aw" style="margin-top:10px"><span class="aicon">⚖️</span>بقيت نسبة الغياب كما هي. يحق لك التظلم بمراجعة الإدارة.</div>':'';
   let actions='';
   if(canAct){
     const isLast=reqChainLast(r)===active;
@@ -16377,7 +16487,7 @@ function requestFormHtml(){
   const courseOpts=exCourses.map(cn=>{const c=activeCourses.find(x=>x.course===cn);return `<option value="${escAttr(cn)}" data-code="${escAttr(c?c.code:'')}">${esc(cn)}</option>`;}).join('');
   return `<div class="ccard cc-b" style="margin-bottom:20px">
     <div class="cc-name" style="margin-bottom:6px">➕ تقديم طلب جديد</div>
-    <div class="cc-meta" style="margin-bottom:14px">يصل تنبيه للمعتمد مباشرة، ويُصعَّد الطلب تلقائياً بعد 5 أيام عمل${formTerm?' · '+esc(termShort(formTerm)):''}</div>
+    <div class="cc-meta" style="margin-bottom:14px">يصل تنبيه للمعتمد مباشرة${formTerm?' · '+esc(termShort(formTerm)):''}</div>
     <div class="mform-group"><label>نوع الطلب</label>
       <select id="rq-type" aria-label="نوع الطلب" title="نوع الطلب" onchange="toggleExcuseFields()">${opts}</select>
     </div>
@@ -16663,13 +16773,13 @@ function termClosurePanel(){
   const selected=window._closureTerm&&terms.includes(window._closureTerm)?window._closureTerm:(terms.includes(currentHalf())?currentHalf():terms[0]);
   window._closureTerm=selected;
   const info=termLockFor(selected)||{}, locked=termIsLocked(selected);
-  return `<div class="ccard cc-y" style="padding:16px;margin-bottom:18px"><div class="cc-name">🏁 إغلاق عمليات النصف المجزأ</div><div class="cc-meta" style="margin:5px 0 12px">يُحسب الموعد تلقائياً قبل النهاية بثلاثة أيام عمل، ويُوثق القرار باسم مدير الأكاديمية</div>
+  return `<div class="ccard cc-y" style="padding:16px;margin-bottom:18px"><div class="cc-name">🏁 إغلاق عمليات النصف المجزأ</div><div class="cc-meta" style="margin:5px 0 12px">الإغلاق بقرارك أنت متى شئت — ويُوثَّق باسم مدير الأكاديمية. لا يُقفل النصف من تلقائه.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;align-items:end">
       <div><label class="lp-lbl">النصف المجزأ</label><select id="termCloseTerm" class="lp-in" onchange="window._closureTerm=this.value;reloadRequestsPage()">${terms.map(t=>`<option value="${escAttr(t)}" ${t===selected?'selected':''}>${esc(fmtTerm(t))}</option>`).join('')}</select></div>
       <div><label class="lp-lbl">تاريخ نهاية النصف</label><input type="date" id="termCloseEnd" class="lp-in" value="${escAttr(info.end||'')}"></div>
-      <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-b btn-sm" onclick="saveTermClosureUI()">💾 حفظ التاريخ</button><button class="btn btn-out btn-sm" onclick="runWorkflowSLAUI()">⏱️ فحص المهل والتصعيد</button><button class="btn btn-r btn-sm" onclick="closeTermItemsUI()" ${!info.cutoffReached||info.closedAt?'disabled':''}>🔒 إغلاق العمليات</button></div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="btn btn-b btn-sm" onclick="saveTermClosureUI()">💾 حفظ التاريخ</button><button class="btn btn-r btn-sm" onclick="closeTermItemsUI()" ${info.closedAt?'disabled':''}>🔒 إغلاق العمليات</button></div>
     </div>
-    <div class="alert ${locked?'aw':'ab'}" style="margin-top:12px"><span class="aicon">${locked?'🔒':'ℹ️'}</span>${info.end?`النهاية: <b>${esc(info.end)}</b> · الإغلاق: <b>${esc(info.lockDate||'—')}</b>${info.closedAt?` · أُغلق بواسطة ${esc(info.closedBy||'مدير الأكاديمية')}`:''}`:'حدّد تاريخ النهاية واحفظه ليُحسب موعد الإغلاق تلقائياً.'}</div>
+    <div class="alert ${locked?'aw':'ab'}" style="margin-top:12px"><span class="aicon">${locked?'🔒':'ℹ️'}</span>${info.closedAt?`مُغلق بواسطة <b>${esc(info.closedBy||'مدير الأكاديمية')}</b>${info.end?` · نهاية النصف: ${esc(info.end)}`:''}`:(info.end?`نهاية النصف: <b>${esc(info.end)}</b> · مفتوح حتى تُغلقه`:'النصف مفتوح — تاريخ النهاية للتوثيق فقط.')}</div>
   </div>`;
 }
 async function saveTermClosureUI(){
@@ -16682,19 +16792,14 @@ async function saveTermClosureUI(){
 async function closeTermItemsUI(){
   const term=(document.getElementById('termCloseTerm')||{}).value||'';if(!term)return;
   if(!confirm('إغلاق جميع الطلبات والتحاضير المفتوحة في هذا النصف بقرار موثق؟\nلا يمكن تقديم عمليات جديدة عليه بعد الإغلاق.'))return;
-  const r=await callWrite('closeTermItems',{records:[{term,decision:'إغلاق العمليات المفتوحة قبل نهاية النصف بثلاثة أيام عمل'}]});
+  const r=await callWrite('closeTermItems',{records:[{term,decision:'إغلاق العمليات المفتوحة بقرار مدير الأكاديمية'}]});
   if(!r||r.status!=='ok'){showToast('تعذّر الإغلاق: '+attErrMsg(r&&r.msg,r&&r.hint),'e');return}
   TERM_LOCKS[term]=r.info;await Promise.all([loadRequests(),loadLessonPreps()]);
   showToast(`✅ أُغلق ${r.requestsClosed||0} طلب و${r.prepsClosed||0} تحضير`,'s');reloadRequestsPage();
 }
-async function runWorkflowSLAUI(){
-  showToast('جاري فحص المهل وإرسال التنبيهات...','i');
-  const r=await callWrite('runWorkflowSLA',{});
-  if(!r||r.status!=='ok'){showToast('تعذّر فحص المهل: '+attErrMsg(r&&r.msg,r&&r.hint),'e');return}
-  await Promise.all([loadRequests(),loadLessonPreps()]);const x=r.report||{};
-  showToast(`✅ اكتمل الفحص · ${x.escalated||0} طلب مصعّد · ${x.prepEscalated||0} تحضير مصعّد`,'s');reloadRequestsPage();
-}
-window.saveTermClosureUI=saveTermClosureUI;window.closeTermItemsUI=closeTermItemsUI;window.runWorkflowSLAUI=runWorkflowSLAUI;
+/* 🚫 أُزيل «فحص المهل والتصعيد»: ما عاد في النظام مهلة تُفحص ولا تصعيد
+   يجري وحده. التصعيد للمدير يبقى بزرٍّ في بطاقة الطلب يضغطه إنسان. */
+window.saveTermClosureUI=saveTermClosureUI;window.closeTermItemsUI=closeTermItemsUI;
 // ===== 👤 لوحة الحساب (الجوال): تجمع الأدوات التي كانت تزحم الشريط العلوي =====
 /* ============================================================
  * 🔄 التنقل بين حسابَي الإداري والمدرب — لمن له الحسابان بنفس الرقم
