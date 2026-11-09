@@ -8641,9 +8641,9 @@ async function submitLessonPrep(){
      بلا أن يُطالَب المدرّب بإدخاله. */
   const _wk=sess.map(x=>x.date).filter(Boolean).sort()[0]||'';
   const obj={material:g('lp_material'),branch:g('lp_branch'),grade:g('lp_grade'),date:serial,period:'',weekStart:_wk,term:currentHalf()||'',topic:g('lp_topic'),outcomes:g('lp_outcomes'),intro:g('lp_intro'),present:g('lp_present'),eval:g('lp_eval'),homework:g('lp_homework'),methods:chk('lp-m'),sources:chk('lp-s'),media:chk('lp-w'),activities:chk('lp-a')};
-  if(!obj.material||!obj.grade||!obj.date||!obj.topic||!obj.outcomes||!obj.present||!obj.eval){showToast('أكمل المادة والشعبة والتاريخ والموضوع والأهداف والمحتوى والتقويم','w');return;}
+  /* 🚫 المدرّب يرسل كما يشاء: الإلزامي ما يربط التحضير بشيء حقيقي فقط. */
+  if(!obj.material||!obj.grade||!obj.date){showToast('أكمل المادة والشعبة وتاريخاً واحداً على الأقل','w');return;}
   if(sess.some(x=>!/^\d{4}-\d{2}-\d{2}$/.test(x.date))){showToast('كل حصة تحتاج تاريخاً صحيحاً','w');return;}
-  if(sess.some(x=>x.cls&&grpKey(x.cls)!==grpKey(obj.grade))){showToast('شعبة الحصة يجب أن تطابق الشعبة الأساسية للتحضير','w');return;}
   if(termIsLocked(obj.term)){showToast('انتهى النصف المجزأ ولا يمكن تقديم تحاضير','w');return;}
   showToast('جاري الإرسال...','i');
   try{
@@ -8725,7 +8725,7 @@ async function saveLessonEdit(){
   const serial=sess.map(x=>[x.date,x.period,x.cls].join('~')).join('|');
   const _ewk=sess.map(x=>x.date).filter(Boolean).sort()[0]||'';
   const obj={id:g('e_id'),material:g('e_material'),branch:g('e_branch'),grade:g('e_grade'),date:serial,period:'',weekStart:_ewk,topic:g('e_topic'),outcomes:g('e_outcomes'),intro:g('e_intro'),present:g('e_present'),eval:g('e_eval'),homework:g('e_homework'),methods:chk('e-m'),sources:chk('e-s'),media:chk('e-w'),activities:chk('e-a')};
-  if(!obj.material||!obj.grade||!obj.date||!obj.topic||!obj.outcomes||!obj.present||!obj.eval){showToast('أكمل الحقول الأساسية قبل الحفظ','w');return;}
+  if(!obj.material||!obj.grade||!obj.date){showToast('أكمل المادة والشعبة وتاريخاً واحداً على الأقل','w');return;}
   showToast('جاري حفظ التعديلات...','i');
   try{
     const res=await callWrite('saveLessonPrep',obj);
