@@ -3878,9 +3878,55 @@ function warmServer(){
   if(WARM_PENDING)return;
   if(Date.now()-WARM_AT < 45000)return;      // صاحٍ أصلاً — لا تُزعجه
   WARM_PENDING=true;
-  const done=()=>{WARM_PENDING=false;WARM_AT=Date.now();};
+  const done=r=>{WARM_PENDING=false;WARM_AT=Date.now();buildSeen(r);};
   jsonpTo(AUTH_URL,{action:'ping'},9000).then(done).catch(()=>{WARM_PENDING=false;});
 }
+/* 🏷️ بصمة النشر — لماذا؟ لأن ملفّين يُنشران في مكانين: الصفحة على
+   GitHub Pages و Code.gs في Apps Script. حين يُنشر أحدهما دون الآخر
+   تبقى أعطالٌ مُصلَحةٌ ظاهرة، ولا شيء في الواجهة يقول السبب. الآن
+   يقارن العميل بصمته ببصمة الخادم ويقولها صراحةً.
+   ⚠️ ارفع الرقمين معاً عند كل تعديل جوهري. */
+const CLIENT_BUILD='2026-11-10';
+let SERVER_BUILD=null;
+function buildSeen(r){
+  try{
+    SERVER_BUILD=(r&&r.build)?String(r.build):'';
+    buildBanner();
+  }catch(e){}
+}
+function buildProbe(){
+  try{ jsonpTo(AUTH_URL,{action:'ping'},9000).then(buildSeen).catch(()=>{}); }catch(e){}
+}
+function buildBanner(){
+  if(SERVER_BUILD===null)return;                       // ما وصل ردّ بعد
+  if(SERVER_BUILD===CLIENT_BUILD){                      // متطابقان — أزل أي تنبيهٍ سابق
+    const old=document.getElementById('buildWarn'); if(old)old.remove(); return;
+  }
+  try{ if(LS.getItem('bla_build_hide')===CLIENT_BUILD+'|'+SERVER_BUILD)return; }catch(e){}
+  const serverOld=!SERVER_BUILD||SERVER_BUILD<CLIENT_BUILD;
+  const msg=serverOld
+    ? '⚠️ <b>الخادم ينفّذ نسخةً قديمة من Code.gs</b> — إصلاحاتٌ كثيرة عندك في الملف ولم تصل الخادم بعد. '+
+      'افتح Apps Script ← الصق Code.gs ← <b>Deploy ← Manage deployments ← ✏️ ← New version ← Deploy</b>.'
+    : '⚠️ <b>الصفحة التي تفتحها نسخةٌ قديمة</b> — ارفع index.html الجديد إلى GitHub Pages ثم حدّث الصفحة (Ctrl+Shift+R).';
+  const det=`نسخة الصفحة ${esc(CLIENT_BUILD)} · نسخة الخادم ${esc(SERVER_BUILD||'بلا بصمة (قديمة)')}`;
+  document.getElementById('buildWarn')?.remove();
+  const d=document.createElement('div');
+  d.id='buildWarn';
+  d.setAttribute('role','alert');
+  d.style.cssText='position:fixed;inset-inline:0;top:0;z-index:99999;background-color:#7a1d10;'+
+    'background-image:linear-gradient(135deg,#8a2416,#5e160c);color:#fff;padding:10px 14px;'+
+    'font-size:13px;line-height:1.7;box-shadow:0 2px 14px rgba(0,0,0,.45);display:flex;'+
+    'align-items:flex-start;gap:10px;flex-wrap:wrap';
+  d.innerHTML=`<div style="flex:1 1 260px">${msg}<div style="opacity:.8;font-size:11px;margin-top:3px">${det}</div></div>`+
+    `<button type="button" id="buildWarnX" style="background:rgba(255,255,255,.16);color:#fff;border:none;`+
+    `border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700">إخفاء</button>`;
+  document.body.appendChild(d);
+  d.querySelector('#buildWarnX').onclick=()=>{
+    try{LS.setItem('bla_build_hide',CLIENT_BUILD+'|'+SERVER_BUILD);}catch(e){}
+    d.remove();
+  };
+}
+window.buildProbe=buildProbe; window.buildBanner=buildBanner;
 let LOGIN_BUSY=false;
 async function doLogin(){
   if(LOGIN_BUSY)return;                 // 🔒 يمنع الضغط المزدوج وإرسالين متزامنين
@@ -9323,7 +9369,9 @@ function attErrMsg(msg,hint){
     'request-validation':'تحقق من الحقول الإلزامية وحد إعادة الساعات وإغلاق النصف',
     'reason-required':'سبب الرفض أو الإرجاع إلزامي',
     'term-locked':'أُغلق هذا النصف بقرار الإدارة؛ تفتح الطلبات مع بداية النصف التالي',
-    'prep-week':'حدّد تاريخ بداية الأسبوع',
+    /* 🚫 أُلغي قيد «قبل بداية الأسبوع» نهائياً. لو ردّ الخادم بهذا الرمز
+       فنسخته قديمة — نقول السبب الحقيقي بدل تكرار الموعد الملغى. */
+    'prep-week':'⚠️ الخادم عندك ينفّذ نسخة قديمة من Code.gs — انشرها (Deploy ← Manage deployments ← ✏️ ← New version)، فالموعد هذا أُلغي',
     'attendance-required':'لا يُعتمد التحضير قبل تسجيل حضور الحصة',
     'prep-closed':'التحضير معتمد أو مغلق ولا يمكن تعديله أو حذفه',
     'prep-draft':'هذا تحضيرٌ محفوظ كمسودة ولم يُرسَل بعد',
@@ -14462,7 +14510,9 @@ document.addEventListener('DOMContentLoaded',()=>{
   restoreSession();
   // ⚡ أيقظ الخادم مبكراً — إن كانت هناك جلسة محفوظة فـ restoreSession تتكفّل،
   //    وإلا فالمستخدم على شاشة الدخول وسيضغط «دخول» خلال ثوانٍ.
-  try{ if(!LS.getItem('bla_token')) setTimeout(warmServer,150); }catch(e){}
+  /* 🏷️ فحص البصمة يعمل في الحالتين: مع جلسةٍ محفوظة أو بدونها،
+     وإلا بقي المستخدم المُسجَّل لا يرى أن خادمه قديم. */
+  try{ if(!LS.getItem('bla_token')) setTimeout(warmServer,150); else setTimeout(buildProbe,1500); }catch(e){}
 });
 
 
