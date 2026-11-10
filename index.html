@@ -2351,6 +2351,12 @@ body.light-mode[data-thm]::before{
       </form>
       <div class="err-box" id="errBox">بيانات الدخول غير صحيحة</div>
       <div class="loading" id="ldg"><div class="sp"></div><div class="ldg-txt" id="ldgTxt">جاري التحقق...</div></div>
+      <!-- 🔧 متنفَّسٌ حين يموت رابط النشر: يُضبط يدوياً بلا رفع الملف من جديد -->
+      <div id="apiRow" style="margin-top:12px;text-align:center;font-size:11px;line-height:1.9">
+        <a href="javascript:void 0" id="apiLink" onclick="apiUrlPrompt()"
+           style="color:var(--muted,#8aa);text-decoration:none;border-bottom:1px dashed currentColor">⚙️ رابط الخادم</a>
+        <div id="apiNote" style="display:none;margin-top:5px;color:var(--acc-y,#d2a24c)"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2420,10 +2426,14 @@ body.light-mode[data-thm]::before{
    يُسقط السكربت كلّه، فتفتح الصفحة ولا يشتغل شيء. هذا بديلٌ يسقط إلى
    ذاكرة الصفحة بدل أن يرمي: الجلسة تعمل، وما يضيع إلا بقاء التفضيلات
    بعد إغلاق التبويب. */
+/* هل التخزين حقيقيٌّ يبقى بعد التحديث، أم ذاكرةُ صفحةٍ تزول؟ يحتاجه كل
+   ما يَعِد المستخدمَ بالبقاء (رابط الخادم مثلاً) حتى لا يقول «حُفظ»
+   ثم يضيع عند أول تحديث. */
+var LS_REAL=false;
 var LS=(function(){
   try{
     var t=window.localStorage;
-    var k='__bla_probe__'; t.setItem(k,'1'); t.removeItem(k);
+    var k='__bla_probe__'; t.setItem(k,'1'); t.removeItem(k); LS_REAL=true;
     return t;
   }catch(e){
     var m={};
@@ -2455,10 +2465,60 @@ let SESSION={token: (function(){try{return LS.getItem('bla_token')||'';}catch(e)
 /* ⚠️ رابط النشر الحالي. كل «New version» تحت نشرٍ قائم يُبقي الرابط كما
    هو؛ أما «New deployment» فيولّد رابطاً جديداً، وحينها يجب تحديث هذا
    السطر وإعادة رفع الصفحة، وإلا بقيت تخاطب النشر القديم. */
-const SCRIPT_URL_FALLBACK='https://script.google.com/macros/s/AKfycbzh_jINBi9fO8smeop9hJz351NB-2iZ0w4GSTBFRKZsRSvCM0uLx4wVywgEychGIVhp/exec';
+const SCRIPT_URL_FALLBACK='https://script.google.com/macros/s/AKfycbxSf9ADuM42OMdpD4nF8eIADQRXbEoIM1xXZ_LwuwX29__fRIFTHLpv8ZyeqzJdZYnE/exec';
+/* 🔐 الرابط المخصّص — متنفَّسٌ حين يموت الرابط الثابت (نشرٌ جديد) فتصير
+   الصفحة بلا خادم ولا سبيل لإصلاحها إلا برفع الملف من جديد.
+   يُقبل رابط Apps Script وحده بصيغته الدقيقة: الرمز يُرسل إلى هذا
+   العنوان، فأي عنوانٍ آخر يعني تسليم كلمات المرور لجهةٍ مجهولة.
+   ولا يُقرأ من الرابط ولا من أي مصدرٍ خارجي — يُكتب يدوياً فقط، حتى
+   لا يُعاد توجيه أحدٍ برابطٍ مُرسَل إليه. */
+const APPS_SCRIPT_RE=/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{20,}\/exec$/;
+function customApiUrl(){
+  try{
+    const v=String(LS.getItem('bla_api_url')||'').trim();
+    return APPS_SCRIPT_RE.test(v)?v:'';
+  }catch(e){ return ''; }
+}
+/* نافذة ضبط الرابط: الإدخال اليدوي وحده، مع عرض الرابط الفعّال الآن
+   ليعرف المستخدم إلى أين تذهب بياناته. */
+function apiUrlPrompt(){
+  const cur=customApiUrl();
+  const now=cur||SCRIPT_URL_FALLBACK;
+  const v=prompt('رابط النشر (/exec) الذي تخاطبه الصفحة:\n'+now+
+    '\n\nالصق الرابط الجديد، أو اتركه فارغاً للرجوع للرابط الأصلي.', cur);
+  if(v===null)return;
+  const r=setCustomApiUrl(v);
+  if(!r.ok){ alert('⚠️ '+r.msg); return; }
+  alert(r.cleared?'↩︎ رجعنا للرابط الأصلي — ستُحدَّث الصفحة الآن.'
+                 :'✅ حُفظ الرابط — ستُحدَّث الصفحة الآن.');
+  location.reload();
+}
+/* إشعارٌ ظاهر حين يكون الرابط مخصّصاً: لا يُعاد توجيه أحدٍ بصمت. */
+function apiNoteRender(){
+  try{
+    const c=customApiUrl(), n=document.getElementById('apiNote');
+    if(!n)return;
+    if(!c){ n.style.display='none'; return; }
+    n.style.display='block';
+    n.textContent='⚠️ تستعمل رابط خادمٍ مخصّصاً على هذا الجهاز: …'+c.slice(-14);
+  }catch(e){}
+}
+function setCustomApiUrl(v){
+  const u=String(v||'').trim();
+  if(!u){ try{LS.removeItem('bla_api_url');}catch(e){} return {ok:true,cleared:true}; }
+  if(!APPS_SCRIPT_RE.test(u))
+    return {ok:false,msg:'رابط غير صالح — يجب أن يبدأ بـ https://script.google.com/macros/s/ وينتهي بـ /exec'};
+  /* بلا تخزينٍ حقيقي لن يبقى الرابط بعد التحديث — نقولها بدل أن نَعِد زوراً */
+  if(!LS_REAL)return {ok:false,msg:'المتصفح يمنع الحفظ المحلي — الرابط لن يبقى بعد تحديث الصفحة'};
+  try{ LS.setItem('bla_api_url',u); }catch(e){ return {ok:false,msg:'المتصفح يمنع الحفظ المحلي'}; }
+  if(customApiUrl()!==u)return {ok:false,msg:'تعذّر حفظ الرابط في هذا المتصفح'};
+  return {ok:true};
+}
 const SCRIPT_URL=(function(){
   var t='<?= APP_URL ?>';
-  return /^https?:\/\//i.test(t) ? t : SCRIPT_URL_FALLBACK;
+  if(/^https?:\/\//i.test(t))return t;          // قدّمتها Apps Script نفسها
+  var c=customApiUrl(); if(c)return c;          // رابطٌ ضبطه المستخدم يدوياً
+  return SCRIPT_URL_FALLBACK;
 })();
 const AUTH_URL=SCRIPT_URL; // خادم واحد يخدم الأمان والكتابة (نفس /exec)
 /* هل عندنا طريقٌ للخادم أصلاً؟ إمّا رابط صالح أو قناة google.script.run. */
@@ -3717,23 +3777,80 @@ function nativeApiCall(method,params,ms){
    الترميز (حرف واحد = 9 بايت). تحضير درس مكتوب بجدّية يتجاوز حدّ الرابط
    (~8000 حرف) فيفشل الطلب ويظهر «تعذّر الحفظ» — بينما POST بلا حدّ. */
 const JSONP_MAX_DATA = 5500;
+/* ✂️ أفعالٌ تُجزَّأ بأمان: كلٌّ منها يُحدِّث صفاً بمفتاحه (رقم المتدرب +
+   المقرر + التاريخ + الترم)، فإعادة إرسال السجل نفسه تُحدِّثه ولا تُكرّره.
+   ⚠️ لا تُضف فعلاً هنا قبل التأكد أن الخادم يُحدِّث بالمفتاح لا يُلحق. */
+const CHUNKABLE_=['saveDailyAbsence','saveAttendance','saveGrades','saveDetailGrades'];
+let WRITE_POST_OK=false;      // هل نجحت كتابةٌ واحدة عبر POST في هذه الجلسة؟
+/* 🩺 لماذا فشلت الكتابة؟ كان الجواب دائماً «البيانات أطول من أن تُرسل»،
+   وهو عَرَضٌ لا سبب: الحمولة طالت فقط لأن POST سقط أولاً. السبب الأشيع
+   بعد «New deployment»: «Who has access» ليست Anyone، فيُحوَّل الطلب إلى
+   صفحة دخول جوجل ويسقط بسبب CORS — بينما القراءة عبر <script> تنجح لأن
+   المتصفح مسجَّلٌ أصلاً، فيبدو النظام سليماً والكتابة وحدها معطَّلة. */
+function writeFailHint(e){
+  const m=String((e&&e.message)||e||'').slice(0,60);
+  if(/fetch|network|cors|typeerror|parse|http-(30[12]|40[13])/i.test(m)){
+    if(!WRITE_POST_OK)writeBlockedBanner(m);
+    return 'الخادم لا يقبل الكتابة من هذه الصفحة — اضبط «Who has access» على Anyone في نشر Apps Script ('+m+')';
+  }
+  if(/timeout/i.test(m))return 'الخادم تأخّر عن الرد — أعد المحاولة بعد قليل ('+m+')';
+  return 'تحقّق من الشبكة وأعد المحاولة ('+(m||'سببٌ غير معروف')+')';
+}
+function writeBlockedBanner(det){
+  try{
+    if(LS.getItem('bla_wblock_hide')==='1')return;
+    topBanner('writeWarn',
+      '⛔ <b>الحفظ لا يصل الخادم</b> — القراءة تعمل والكتابة مرفوضة، وهذه علامة أن النشر غير متاحٍ للجميع. '+
+      'افتح Apps Script ← <b>Deploy ← Manage deployments ← ✏️</b> ← اضبط <b>Who has access = Anyone</b> ← Deploy.',
+      'تفصيل الخطأ: '+esc(String(det||'')),
+      ()=>{try{LS.setItem('bla_wblock_hide','1');}catch(e){}});
+  }catch(e){}
+}
 async function callWrite(action, payload, opts){
   opts = opts || {};
   const body = Object.assign({token:SESSION.token, action:action}, payload);
   let lastErr = null;
   try{
     const r = await withRetry(()=>postJSONRead(SCRIPT_URL, body), opts.tries || 2);
-    if (r) return r;                       // ردّ حقيقي من الخادم (نجاح أو خطأ)
+    if (r){ WRITE_POST_OK=true; document.getElementById('writeWarn')?.remove(); return r; }
   }catch(e){ lastErr = e; }
-  // الاحتياطي: الرابط محدود الطول، فلا نستعمله إلا إذا كانت الحمولة قصيرة
-  const data = JSON.stringify(payload && payload.records ? payload.records : payload);
-  if (encodeURIComponent(data).length > JSONP_MAX_DATA)
-    return {status:'error', msg:'تعذّر الاتصال بالخادم',
-            hint:'البيانات أطول من أن تُرسل بالطريقة الاحتياطية — تحقّق من الشبكة وأعد المحاولة'};
+  // الاحتياطي: الرابط محدود الطول، فالحمولة الطويلة تُرسَل على دفعات
+  const recs = payload && payload.records;
+  const data = JSON.stringify(recs || payload);
+  if (encodeURIComponent(data).length > JSONP_MAX_DATA){
+    if (Array.isArray(recs) && recs.length>1 && CHUNKABLE_.indexOf(action)>-1)
+      return await writeChunked(action, recs, lastErr);
+    return {status:'error', msg:'تعذّر الاتصال بالخادم', hint:writeFailHint(lastErr)};
+  }
   try{ return await jsonpCall({action:action, data:data}); }
-  catch(e2){ return {status:'error', msg:'تعذّر الاتصال بالخادم', hint:(lastErr&&lastErr.message)||'تحقّق من الشبكة'}; }
+  catch(e2){ return {status:'error', msg:'تعذّر الاتصال بالخادم', hint:writeFailHint(lastErr||e2)}; }
 }
-window.callWrite=callWrite;
+/* ✂️ تقسيم السجلات إلى دفعاتٍ يسعها الرابط. كانت الحمولة الطويلة تُرفض
+   كلياً فيضيع تحضير يومٍ كامل؛ الآن تصل على دفعات، وإن انقطعت في
+   المنتصف أخبرنا كم وصل حتى لا يُعاد كل شيء على عمياء. */
+async function writeChunked(action, recs, lastErr){
+  const enc=a=>encodeURIComponent(JSON.stringify(a)).length;
+  const parts=[]; let cur=[];
+  for(const r of recs){
+    if(enc([r])>JSONP_MAX_DATA)                  // سجلٌ مفردٌ أكبر من الحدّ
+      return {status:'error', msg:'تعذّر الاتصال بالخادم', hint:writeFailHint(lastErr)};
+    cur.push(r);
+    if(enc(cur)>JSONP_MAX_DATA){ cur.pop(); parts.push(cur); cur=[r]; }
+  }
+  if(cur.length)parts.push(cur);
+  let done=0, err=null;
+  for(const part of parts){
+    try{
+      const r=await jsonpCall({action:action, data:JSON.stringify(part)});
+      if(r&&r.status&&r.status!=='ok'){ err=r; break; }
+      done+=part.length;
+    }catch(e){ err={status:'error', msg:'تعذّر الاتصال بالخادم', hint:writeFailHint(lastErr||e)}; break; }
+  }
+  if(err)return Object.assign({},err,{hint:String(err.hint||'')+
+    (done?` — وصل ${done} من ${recs.length} سجلاً؛ أعد الحفظ ليكتمل الباقي (المحفوظ لا يتكرّر)`:'')});
+  return {status:'ok', chunked:parts.length, records:done};
+}
+window.callWrite=callWrite; window.writeChunked=writeChunked; window.writeFailHint=writeFailHint;
 
 // ===== قراءة عامة: القناة الداخلية أولاً، وJSONP للنسخة الخارجية =====
 function jsonpCall(params){ return withRetry(()=>jsonpCallOnce(params),2); }
@@ -3912,24 +4029,34 @@ function buildBanner(){
       'افتح Apps Script ← الصق Code.gs ← <b>Deploy ← Manage deployments ← ✏️ ← New version ← Deploy</b>.'
     : '⚠️ <b>الصفحة التي تفتحها نسخةٌ قديمة</b> — ارفع index.html الجديد إلى GitHub Pages ثم حدّث الصفحة (Ctrl+Shift+R).';
   const det=`نسخة الصفحة ${esc(CLIENT_BUILD)} · نسخة الخادم ${esc(SERVER_BUILD||'بلا بصمة (قديمة)')}`;
-  document.getElementById('buildWarn')?.remove();
-  const d=document.createElement('div');
-  d.id='buildWarn';
-  d.setAttribute('role','alert');
-  d.style.cssText='position:fixed;inset-inline:0;top:0;z-index:99999;background-color:#7a1d10;'+
-    'background-image:linear-gradient(135deg,#8a2416,#5e160c);color:#fff;padding:10px 14px;'+
-    'font-size:13px;line-height:1.7;box-shadow:0 2px 14px rgba(0,0,0,.45);display:flex;'+
-    'align-items:flex-start;gap:10px;flex-wrap:wrap';
-  d.innerHTML=`<div style="flex:1 1 260px">${msg}<div style="opacity:.8;font-size:11px;margin-top:3px">${det}</div></div>`+
-    `<button type="button" id="buildWarnX" style="background:rgba(255,255,255,.16);color:#fff;border:none;`+
-    `border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700">إخفاء</button>`;
-  document.body.appendChild(d);
-  d.querySelector('#buildWarnX').onclick=()=>{
-    try{LS.setItem('bla_build_hide',CLIENT_BUILD+'|'+SERVER_BUILD);}catch(e){}
-    d.remove();
-  };
+  topBanner('buildWarn',msg,det,()=>{try{LS.setItem('bla_build_hide',CLIENT_BUILD+'|'+SERVER_BUILD);}catch(e){}});
 }
-window.buildProbe=buildProbe; window.buildBanner=buildBanner;
+/* شريطٌ ثابت أعلى الصفحة: للأعطال التي تعطّل العمل ولا تكفيها رسالةٌ
+   عابرة تختفي بعد ثلاث ثوانٍ قبل أن يقرأها أحد. */
+function topBanner(id,msg,det,onHide){
+  let host=document.getElementById('topBanners');
+  if(!host){
+    host=document.createElement('div');
+    host.id='topBanners';
+    host.style.cssText='position:fixed;inset-inline:0;top:0;z-index:99999';
+    document.body.appendChild(host);
+  }
+  document.getElementById(id)?.remove();
+  const d=document.createElement('div');
+  d.id=id; d.setAttribute('role','alert');
+  d.style.cssText='background-color:#7a1d10;background-image:linear-gradient(135deg,#8a2416,#5e160c);'+
+    'color:#fff;padding:10px 14px;font-size:13px;line-height:1.7;box-shadow:0 2px 14px rgba(0,0,0,.45);'+
+    'display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;border-bottom:1px solid rgba(255,255,255,.14)';
+  d.innerHTML=`<div style="flex:1 1 260px">${msg}${det?`<div style="opacity:.8;font-size:11px;margin-top:3px">${det}</div>`:''}</div>`+
+    `<button type="button" id="${id}X" style="background:rgba(255,255,255,.16);color:#fff;border:none;`+
+    `border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px;font-weight:700">إخفاء</button>`;
+  host.appendChild(d);
+  d.querySelector('#'+id+'X').onclick=()=>{ try{onHide&&onHide();}catch(e){} d.remove(); };
+  return d;
+}
+window.buildProbe=buildProbe; window.buildBanner=buildBanner; window.topBanner=topBanner;
+window.apiUrlPrompt=apiUrlPrompt; window.apiNoteRender=apiNoteRender;
+window.customApiUrl=customApiUrl; window.setCustomApiUrl=setCustomApiUrl;
 let LOGIN_BUSY=false;
 async function doLogin(){
   if(LOGIN_BUSY)return;                 // 🔒 يمنع الضغط المزدوج وإرسالين متزامنين
@@ -14516,6 +14643,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   /* 🏷️ فحص البصمة يعمل في الحالتين: مع جلسةٍ محفوظة أو بدونها،
      وإلا بقي المستخدم المُسجَّل لا يرى أن خادمه قديم. */
   try{ if(!LS.getItem('bla_token')) setTimeout(warmServer,150); else setTimeout(buildProbe,1500); }catch(e){}
+  try{ apiNoteRender(); }catch(e){}
 });
 
 
