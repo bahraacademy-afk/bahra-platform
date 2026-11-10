@@ -2452,7 +2452,10 @@ let SESSION={token: (function(){try{return LS.getItem('bla_token')||'';}catch(e)
      • قدّمتها Apps Script  ⇒ القالب استُبدل برابط /exec الحقيقي.
      • قدّمتها GitHub Pages ⇒ نسقط على الرابط الثابت أدناه.
    ولو فتحتَها من Apps Script فقناة google.script.run تعمل أصلاً بلا رابط. */
-const SCRIPT_URL_FALLBACK='https://script.google.com/macros/s/AKfycbyjHfWA5KeXz9QdvfYYZT9IJqez35dO3_4nnTihp94wwR70YUpEL47CHE8iru95Y23I/exec';
+/* ⚠️ رابط النشر الحالي. كل «New version» تحت نشرٍ قائم يُبقي الرابط كما
+   هو؛ أما «New deployment» فيولّد رابطاً جديداً، وحينها يجب تحديث هذا
+   السطر وإعادة رفع الصفحة، وإلا بقيت تخاطب النشر القديم. */
+const SCRIPT_URL_FALLBACK='https://script.google.com/macros/s/AKfycbzh_jINBi9fO8smeop9hJz351NB-2iZ0w4GSTBFRKZsRSvCM0uLx4wVywgEychGIVhp/exec';
 const SCRIPT_URL=(function(){
   var t='<?= APP_URL ?>';
   return /^https?:\/\//i.test(t) ? t : SCRIPT_URL_FALLBACK;
