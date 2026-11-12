@@ -4006,7 +4006,7 @@ function warmServer(){
    تبقى أعطالٌ مُصلَحةٌ ظاهرة، ولا شيء في الواجهة يقول السبب. الآن
    يقارن العميل بصمته ببصمة الخادم ويقولها صراحةً.
    ⚠️ ارفع الرقمين معاً عند كل تعديل جوهري. */
-const CLIENT_BUILD='2026-11-10';
+const CLIENT_BUILD='2026-11-12';
 let SERVER_BUILD=null;
 function buildSeen(r){
   try{
@@ -6883,6 +6883,7 @@ function navHTML(r,pages){
     overview:{icon:'🏠',lbl:'لوحة المتابعة'},all_students:{icon:'🎓',lbl:'المتدربون'},
     dashboard:{icon:'📈',lbl:'لوحة المؤشرات والأوائل'},
     accounts:{icon:'👥',lbl:'المتدربون والمدربون'},
+    graduates:{icon:'🎓',lbl:'الخريجون'},
     manage_courses:{icon:'📖',lbl:'المقررات والتسجيل'},
     all_courses:{icon:'📚',lbl:'المقررات'},reports:{icon:'📊',lbl:'التقارير'},
     settings:{icon:'⚙️',lbl:'الإعدادات'},
@@ -6912,8 +6913,8 @@ const NAV_SECS={
 };
 
 function buildMobNav(r,pages){
-  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',lesson:'📝',lessons:'📚',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖',maintenance:'🧰',news:'📰'};
-  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:r==='a'?'متابعة التدريب':'سجل الغياب اليومي',lesson:'تحضير الدروس',lessons:'تحاضير المدربين',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الأشخاص',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'المقررات',maintenance:'الصيانة',news:'الأخبار'};
+  const map={home:'🏠',courses:'📚',performance:'📊',schedule:'📅',profile:'👤',students:'👥',attendance:'✅',attlog:'🗂️',lesson:'📝',lessons:'📚',grades:'📝',alerts:'🔔',attachments:'📎',overview:'🏠',graduates:'🎓',all_students:'🎓',all_courses:'📚',reports:'📊',services:'📝',requests:'📋',dashboard:'📈',accounts:'👥',settings:'⚙️',library:'📚',record:'🏅',manage_courses:'📖',maintenance:'🧰',news:'📰'};
+  const lbls={home:'الرئيسية',courses:'مقرراتي',performance:'أدائي',schedule:'جدولي',profile:'ملفي',students:'الفصول',attendance:'الحضور',attlog:r==='a'?'متابعة التدريب':'سجل الغياب اليومي',lesson:'تحضير الدروس',lessons:'تحاضير المدربين',graduates:'الخريجون',grades:'الدرجات',alerts:'اشعارات',attachments:'مرفقات',overview:'الرئيسية',all_students:'المتدربون',all_courses:'المقررات',reports:'تقارير',services:'الخدمات',requests:'الطلبات',dashboard:'الأوائل',accounts:'الأشخاص',settings:'الإعدادات',library:'المكتبة',record:'السجل',manage_courses:'المقررات',maintenance:'الصيانة',news:'الأخبار'};
   window._mobPages={pages,role:r,map,lbls,active:pages[0]};
   // ⭐ الصفحات الأربع الأكثر استخداماً لكل دور في الشريط السفلي، والباقي في «المزيد»
   const PRIMARY={s:['home','courses','schedule','services'],
@@ -9504,6 +9505,8 @@ function attErrMsg(msg,hint){
     'prep-week':'⚠️ الخادم عندك ينفّذ نسخة قديمة من Code.gs — انشرها (Deploy ← Manage deployments ← ✏️ ← New version)، فالموعد هذا أُلغي',
     'attendance-required':'لا يُعتمد التحضير قبل تسجيل حضور الحصة',
     'prep-closed':'التحضير معتمد أو مغلق ولا يمكن تعديله أو حذفه',
+    'upload-too-big':'الملف أكبر من الحدّ المسموح',
+    'upload-empty':'الملف فارغ أو لم يُقرأ',
     'prep-draft':'هذا تحضيرٌ محفوظ كمسودة ولم يُرسَل بعد',
     'cutoff-not-reached':'تعذّر إغلاق النصف',
     'director-only':'هذا القرار لمدير الأكاديمية فقط'
@@ -9929,7 +9932,7 @@ function refreshFileList(course){
 function buildAdminApp(){
   /* 🧭 ١٣ بنداً في ٦ أقسام بدل ١٦ مسطحة — و«المتدربون» اندمجت في «الحسابات»
      و«المقررات» في «إدارة المقررات» و«التحاضير» في «سجل الغياب». */
-  const APAGES=['overview','news','accounts','manage_courses','schedule','library',
+  const APAGES=['overview','news','accounts','graduates','manage_courses','schedule','library',
                 'attlog','requests','alerts','reports','dashboard','maintenance','settings'];
   document.getElementById('sidebar').innerHTML=navHTML('a',APAGES);
   buildMobNav('a',APAGES);
@@ -12149,11 +12152,19 @@ async function applyGraduateBatch(){
   try{
     const res=await jsonpCall({action:'graduateBatch',data:JSON.stringify({sids:sids,batch:batch})});
     if(res&&res.status==='ok'){
-      showToast(`✅ تم تخريج ${res.graduated} متدرب وأرشفة بياناتهم`,'s');
+      /* 🚨 كانت الأرشفة تفشل صامتةً فيُقال «تم التخريج وأرشفة بياناتهم»
+         ثم يُفتح كشف التخرّج فارغاً. الآن العدد الحقيقي والسبب يظهران. */
+      const arcN=parseInt(res.archived,10)||0;
+      if(res.archiveError)
+        showToast('⚠️ تم تخريج '+res.graduated+' لكن تعذّرت أرشفة سجلاتهم: '+res.archiveError,'e');
+      else if(!arcN)
+        showToast('⚠️ تم تخريج '+res.graduated+' ولم يُؤرشف أي سجلّ — كشف التخرّج سيظهر فارغاً','w');
+      else showToast('✅ تم تخريج '+res.graduated+' متدرب وأرشفة '+arcN+' سجلّاً','s');
       document.getElementById('gradModal')?.remove();
+      _gradArc=null;                       // الأرشيف تغيّر — أعد قراءته
       await loadAdmin().catch(()=>{});
-      showAPage('accounts',null);
-    }else{showToast('تعذّر التخريج — تأكد من نشر الخادم (v14)','e');}
+      showAPage('graduates',document.getElementById('sn-graduates'));
+    }else{showToast('تعذّر التخريج — تأكد من نشر الخادم','e');}
   }catch(e){showToast('تعذّر الاتصال — حاول مرة أخرى','e');}
 }
 // قائمة الخريجين + كشف التخرّج
@@ -12187,12 +12198,16 @@ async function printGraduateTranscript(sid){
     rows.push({sid:n0(r[1]),course:n0(r[5]),code:n0(r[4]),grp:n0(r[3]),pct:num(r[7]),abs:num(r[8]),letter:cleanLegacyLetter(r[9]),term:n0(r[10])});
   }
   if(!rows.length){showToast('لا توجد بيانات مؤرشفة لهذا الخرّيج بعد','w');return;}
-  /* 🚫 المحروم يدخل المعدّل بصفر ولا يُعدّ مجتازاً — كان الكشف يحتسب
-     درجته كاملةً فيتخرّج بمعدّل مبنيّ على مواد لم يحضرها. */
-  const done=rows.filter(c=>c.pct>0);
-  const avg=done.length?Math.round(done.reduce((a,c)=>a+c.pct,0)/done.length*10)/10:0;
-  const passed=rows.filter(c=>c.pct>=60).length;
-  const grade=n=>n>=90?'ممتاز':n>=80?'جيد جداً':n>=70?'جيد':n>=60?'مقبول':'راسب';
+  /* 🚨 ثلاثة أخطاءٍ كانت هنا، وكلها تُجمِّل الكشف:
+     • المعدّل كان يستبعد كل مقرر درجته صفر (c.pct>0)، فالراسب بصفر
+       يختفي من الحساب ويتخرّج بمعدّلٍ لا يعكس رسوبه.
+     • «المجتازة» كانت pct>=60 وحدها، فمقرّرٌ مرصودٌ «راسب» بدرجة ٧٠
+       يُعدّ مجتازاً — والمنصة كلها تحكم بـisFailed لا بالرقم وحده.
+     • الصفر كان يُطبع «—» فيبدو كأن الدرجة لم تُرصد.
+     الآن الحساب واحدٌ في الكشف والصفحة معاً عبر gxStats. */
+  const stt=gxStats(rows);
+  const avg=stt.avg, passed=stt.passed, done=rows.filter(c=>c.pct>0);
+  const grade=n=>gxGrade(n);
   const body=`
     <div style="text-align:center;margin-bottom:18px">
       <div style="font-size:22px;font-weight:800;color:#0a2348">كشف تخرّج المتدرّب</div>
@@ -12210,14 +12225,16 @@ async function printGraduateTranscript(sid){
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff;text-align:right">المقرر</th>
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الفصل التدريبي</th>
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الدرجة</th>
+        <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">الغياب</th>
         <th style="padding:8px;border:1px solid #0a2348;background:#0a2348;color:#fff">التقدير</th>
       </tr></thead>
       <tbody>${rows.map((c,i)=>`<tr>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${i+1}</td>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:right">${esc(c.course)}</td>
         <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${esc(fmtTerm(c.term)||'—')}</td>
-        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center;font-weight:700">${c.pct?c.pct:'—'}</td>
-        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${c.pct?grade(c.pct):'—'}</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center;font-weight:700${isFailed(c)?';color:#b3121f':''}">${esc(String(effPct(c)))}</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${esc(String(Math.round((parseFloat(c.abs)||0)*10)/10))}%</td>
+        <td style="padding:6px 8px;border:1px solid #c5cfdd;text-align:center">${isFailed(c)?'غير مجتاز':grade(effPct(c))}</td>
       </tr>`).join('')}</tbody>
     </table>
     <table style="width:100%;border-collapse:collapse;margin-top:14px;font-size:13px">
@@ -12227,7 +12244,7 @@ async function printGraduateTranscript(sid){
         <td style="padding:8px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;text-align:center">المجتازة</td>
         <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center">${passed}</td>
         <td style="padding:8px 10px;border:1px solid #c5cfdd;background:#f4f7fb;font-weight:700;text-align:center">المعدل العام</td>
-        <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center;font-weight:800;color:#0a2348">${done.length?avg+' — '+grade(avg):'—'}</td>
+        <td style="padding:8px 10px;border:1px solid #c5cfdd;text-align:center;font-weight:800;color:#0a2348">${stt.graded?avg+' — '+grade(avg):'—'}</td>
       </tr>
     </table>
     <div style="display:flex;justify-content:space-between;margin-top:44px;font-size:13px;color:#1a2942">
@@ -12242,6 +12259,324 @@ async function printGraduateTranscript(sid){
     w.document.close();
   }
 }
+
+/* ═══════════════ 🎓 الخريجون — سجلٌّ كامل، لا قائمة أسماء ═══════════════
+   كان الخريجون نافذةً صغيرة: اسمٌ ورقمٌ وزرُّ كشف. والبيانات كلها موجودة
+   في «أرشيف المقررات» ولا أحد يراها. هذه الصفحة تقرأ الأرشيف مرةً واحدة
+   وتبني منه كل شيء: الإحصاءات، والتصفية، وملفَّ كل خرّيج، والتصدير.
+
+   ⚠️ حسابُ المعدّل والاجتياز هنا هو نفسه المستعمل في كل المنصة
+   (isFailed/effPct) — لا نسخةٌ ثانية تختلف عنه بصمت. */
+const GRAD_ARC_RANGE='أرشيف المقررات!A:M';
+let _gradArc=null, _gradArcErr='', _gradArcBusy=false;
+async function gxLoad(force){
+  if(_gradArc&&!force)return _gradArc;
+  if(_gradArcBusy)return _gradArc||[];
+  _gradArcBusy=true; _gradArcErr='';
+  try{ _gradArc=await fetchSheet(GRAD_ARC_RANGE)||[]; }
+  catch(e){ _gradArc=null; _gradArcErr=String(e&&e.message||e||'تعذّرت القراءة'); }
+  _gradArcBusy=false;
+  return _gradArc||[];
+}
+/* صفوف خرّيجٍ واحد من الأرشيف — بلا تكرارٍ لنفس المفتاح */
+function gxRows(sid){
+  const arc=_gradArc||[], seen={}, out=[];
+  for(let i=1;i<arc.length;i++){
+    const r=arc[i]; if(!r||dg(r[1])!==dg(sid))continue;
+    const k=n0(r[0]); if(k){ if(seen[k])continue; seen[k]=1; }
+    out.push({key:n0(r[0]),sid:n0(r[1]),name:n0(r[2]),grp:n0(r[3]),code:n0(r[4]),
+      course:n0(r[5]),trainer:n0(r[6]),pct:num(r[7]),abs:num(r[8]),
+      letter:cleanLegacyLetter(r[9]),term:n0(r[10]),status:n0(r[11]),batch:n0(r[12])});
+  }
+  out.sort((a,b)=>termSortKey(a.term).localeCompare(termSortKey(b.term))
+    ||String(a.course).localeCompare(String(b.course),'ar'));
+  return out;
+}
+/* ساعات المقرر من الخطة الدراسية — للمعدّل الموزون حين تُعرف */
+function gxHours(c){
+  const k=cnk_(c&&c.course), code=String((c&&c.code)||'').trim();
+  const hit=(catalog||[]).find(x=>String(x.code||'').trim()===code)
+         ||(catalog||[]).find(x=>cnk_(x.name||x.course)===k);
+  const h=parseFloat(hit&&hit.hours)||0;
+  return h>0?h:0;
+}
+/* 🚨 الحساب الموحّد. ثلاثة أخطاءٍ كانت هنا في كشف التخرّج:
+   • المقرر بدرجة صفر كان يُستبعد من المعدّل، فيتخرّج بمعدّلٍ لا يراه رسوبه.
+   • «المجتازة» كانت pct>=60 وحدها، فمقرّرٌ مكتوبٌ «راسب» بدرجة ٧٠ يُعدّ مجتازاً.
+   • الصفر كان يُطبع «—» فيبدو كأن الدرجة لم تُرصد أصلاً. */
+function gxStats(rows){
+  const n=rows.length;
+  const passed=rows.filter(c=>isPass(c)).length;
+  const failed=rows.filter(c=>isFailed(c)).length;
+  const graded=rows.filter(c=>String(c.letter||'').trim()!==''||(parseFloat(c.pct)||0)>0||isFailed(c));
+  const sum=graded.reduce((a,c)=>a+effPct(c),0);
+  const avg=graded.length?Math.round(sum/graded.length*10)/10:0;
+  let wSum=0,wTot=0,anyH=false;
+  graded.forEach(c=>{const h=gxHours(c); if(h){anyH=true; wSum+=effPct(c)*h; wTot+=h;}});
+  const wavg=(anyH&&wTot)?Math.round(wSum/wTot*10)/10:null;
+  const absAvg=n?Math.round(rows.reduce((a,c)=>a+(parseFloat(c.abs)||0),0)/n*10)/10:0;
+  const terms=[...new Set(rows.map(c=>String(c.term||'').trim()).filter(Boolean))];
+  return {n,passed,failed,graded:graded.length,avg,wavg,absAvg,terms:terms.length,
+          grade:graded.length?gxGrade(avg):'—'};
+}
+function gxGrade(v){
+  const n=parseFloat(v)||0;
+  return n>=90?'ممتاز':n>=80?'جيد جداً':n>=70?'جيد':n>=60?'مقبول':'راسب';
+}
+function gxGradeCls(g){
+  return g==='ممتاز'?'pg':g==='جيد جداً'?'pb':g==='جيد'?'pb':g==='مقبول'?'py':'pr';
+}
+/* كل الخريجين مع إحصاءاتهم — يُعاد بناؤه بعد تحميل الأرشيف */
+function gxAll(){
+  return (graduates||[]).map(s=>{
+    const rows=_gradArc?gxRows(s.id):[];
+    return Object.assign({},s,{_rows:rows,_st:gxStats(rows)});
+  });
+}
+function gxBatches(){ return [...new Set((graduates||[]).map(s=>String(s.gradBatch||'').trim()).filter(Boolean))].sort().reverse(); }
+function gxSpecs(){ return [...new Set((graduates||[]).map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar')); }
+function gxVal(id){ return String((document.getElementById(id)||{}).value||'').trim(); }
+function gxFiltered(){
+  const q=gxVal('gxQ'), b=gxVal('gxBatch'), sp=gxVal('gxSpec'), gr=gxVal('gxGrade'), so=gxVal('gxSort')||'batch';
+  let list=gxAll();
+  /* ⚠️ كان البحث بالاسم يرجّع الجميع: أرقام الاستعلام تُستخرج بـreplace،
+     فكلمةٌ بلا أرقام تصير نصّاً فارغاً، و'801'.includes('') صحيحٌ دائماً. */
+  if(q){
+    const nq=q.replace(/\s+/g,''), dq=nq.replace(/[^0-9]/g,'');
+    list=list.filter(s=>String(s.name||'').replace(/\s+/g,'').includes(nq)
+                     || (!!dq && dg(s.id).includes(dq)));
+  }
+  if(b)list=list.filter(s=>String(s.gradBatch||'').trim()===b);
+  if(sp)list=list.filter(s=>String(s.spec||'').trim()===sp);
+  if(gr)list=list.filter(s=>s._st.grade===gr);
+  const cmp={
+    batch:(a,b2)=>String(b2.gradBatch||'').localeCompare(String(a.gradBatch||''))||String(a.name).localeCompare(b2.name,'ar'),
+    name:(a,b2)=>String(a.name).localeCompare(b2.name,'ar'),
+    avgD:(a,b2)=>b2._st.avg-a._st.avg,
+    avgA:(a,b2)=>a._st.avg-b2._st.avg,
+    id:(a,b2)=>String(a.id).localeCompare(String(b2.id),'en',{numeric:true})
+  }[so]||((a,b2)=>0);
+  return list.sort(cmp);
+}
+function gxBar(label,n,max,color){
+  const w=max?Math.max(2,Math.round(n/max*100)):0;
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:12px">
+    <div style="flex:0 0 110px;color:var(--muted);text-align:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escAttr(label)}">${esc(label)}</div>
+    <div style="flex:1;background:rgba(127,127,127,.14);border-radius:6px;height:14px;overflow:hidden">
+      <div style="width:${w}%;height:100%;background:${color};border-radius:6px"></div></div>
+    <div style="flex:0 0 34px;text-align:center;font-weight:700">${n}</div></div>`;
+}
+function gxCharts(list){
+  const by=(fn)=>{const m={};list.forEach(s=>{const k=fn(s)||'—';m[k]=(m[k]||0)+1;});return m;};
+  const mkBlock=(title,map,color,order)=>{
+    const ks=order||Object.keys(map).sort((a,b)=>map[b]-map[a]);
+    const max=Math.max(1,...ks.map(k=>map[k]||0));
+    return `<div style="flex:1 1 260px;min-width:240px;border:1px solid var(--border);border-radius:12px;padding:13px">
+      <div style="font-weight:700;font-size:13px;margin-bottom:9px">${title}</div>
+      ${ks.filter(k=>map[k]).map(k=>gxBar(k,map[k],max,color)).join('')||'<div style="color:var(--muted);font-size:12px">لا بيانات</div>'}</div>`;
+  };
+  const GR=['ممتاز','جيد جداً','جيد','مقبول','راسب','—'];
+  return `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    ${mkBlock('🏅 توزيع التقديرات',by(s=>s._st.grade),'linear-gradient(90deg,#2e9e5b,#6ab8f7)',GR)}
+    ${mkBlock('🎓 الخريجون لكل دفعة',by(s=>String(s.gradBatch||'').trim()),'linear-gradient(90deg,#6ab8f7,#1a3a6b)')}
+    ${mkBlock('🧭 الخريجون لكل تخصص',by(s=>String(s.spec||'').trim()),'linear-gradient(90deg,#c9a227,#f4a261)')}
+  </div>`;
+}
+function gxTiles(list){
+  const withD=list.filter(s=>s._st.graded>0);
+  const avg=withD.length?Math.round(withD.reduce((a,s)=>a+s._st.avg,0)/withD.length*10)/10:0;
+  const top=withD.slice().sort((a,b)=>b._st.avg-a._st.avg)[0];
+  const tile=(n,l,sub)=>`<div class="mcard" style="flex:1 1 150px;min-width:140px;text-align:center;padding:15px">
+    <div class="mnum" style="font-size:25px;font-weight:800;color:var(--acc-b)">${n}</div>
+    <div style="font-size:12px;color:var(--muted);margin-top:3px">${l}</div>
+    ${sub?`<div style="font-size:11px;color:var(--muted);opacity:.8;margin-top:2px">${sub}</div>`:''}</div>`;
+  return `<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:16px">
+    ${tile(list.length,'خرّيج معروض')}
+    ${tile(gxBatches().length,'دفعة')}
+    ${tile(gxSpecs().length,'تخصص')}
+    ${tile(avg||'—','متوسط المعدل العام',withD.length?`من ${withD.length} سجلّ مكتمل`:'لم يُقرأ الأرشيف بعد')}
+    ${top?tile(top._st.avg,'أعلى معدل',esc(top.name)):''}
+  </div>`;
+}
+function gxRowHtml(s){
+  const st=s._st, g=st.grade;
+  return `<tr>
+    <td style="text-align:start;padding:9px 10px">
+      <div style="display:flex;align-items:center;gap:9px">${avatarHTML(s,32)}
+        <div><div style="font-weight:700;font-size:13px">${esc(s.name)}</div>
+          <div style="font-size:11px;color:var(--muted)">${esc(String(s.id))}</div></div></div></td>
+    <td>${esc(s.spec||'—')}</td>
+    <td>${esc(s.gradBatch||'—')}</td>
+    <td>${st.n||'—'}</td>
+    <td>${st.n?`<span style="color:var(--acc-g);font-weight:700">${st.passed}</span>${st.failed?` · <span style="color:var(--acc-r);font-weight:700">${st.failed}</span>`:''}`:'—'}</td>
+    <td style="font-weight:800">${st.graded?st.avg:'—'}</td>
+    <td>${st.graded?`<span class="pill ${gxGradeCls(g)}">${esc(g)}</span>`:'<span style="color:var(--muted)">بلا سجلّ</span>'}</td>
+    <td style="white-space:nowrap">
+      <button class="btn btn-sm btn-b" onclick="gxProfile('${jsq(String(s.id))}')">📄 الملف</button>
+      <button class="btn btn-sm btn-out" onclick="printGraduateTranscript('${jsq(String(s.id))}')">🖨️ كشف</button></td></tr>`;
+}
+function gxTable(list){
+  if(!list.length)return `<div class="empty" style="margin-top:18px"><div class="empty-icon">🔍</div>ما فيه خرّيج مطابق</div>`;
+  return `<div style="overflow-x:auto;border:1px solid var(--border);border-radius:12px">
+  <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+    <thead><tr style="background:rgba(106,184,247,.10)">
+      <th style="padding:10px;text-align:start">الخرّيج</th><th style="padding:10px">التخصص</th>
+      <th style="padding:10px">الدفعة</th><th style="padding:10px">المقررات</th>
+      <th style="padding:10px" title="المجتازة · غير المجتازة">مجتاز · راسب</th>
+      <th style="padding:10px">المعدل</th><th style="padding:10px">التقدير</th><th style="padding:10px">إجراءات</th>
+    </tr></thead><tbody>${list.map(gxRowHtml).join('')}</tbody></table></div>`;
+}
+function gxBody(){
+  const list=gxFiltered();
+  return gxTiles(list)+gxCharts(list)
+    +`<div style="font-size:12px;color:var(--muted);margin:0 2px 7px">يُعرض ${list.length} من ${(graduates||[]).length} خرّيجاً</div>`
+    +gxTable(list);
+}
+function gxApply(){ const h=document.getElementById('gxBody'); if(h)h.innerHTML=gxBody(); }
+function gxReset(){ ['gxQ','gxBatch','gxSpec','gxGrade'].forEach(i=>{const e=document.getElementById(i);if(e)e.value='';}); gxApply(); }
+async function gxRefresh(){
+  const h=document.getElementById('gxBody'); if(h)h.innerHTML='<div class="empty" style="margin-top:18px"><div class="sp"></div>جاري قراءة أرشيف المقررات...</div>';
+  await gxLoad(true); gxApply(); gxWarn();
+  showToast(_gradArcErr?'تعذّرت قراءة الأرشيف':'تم تحديث سجلات الخريجين',_gradArcErr?'e':'s');
+}
+function gxWarn(){
+  const w=document.getElementById('gxWarn'); if(!w)return;
+  if(_gradArcErr){ w.style.display='block';
+    w.innerHTML=`<span class="aicon">⚠️</span>تعذّرت قراءة «أرشيف المقررات» — تُعرض الأسماء بلا درجات. (${esc(_gradArcErr)})`;
+    return; }
+  const noRec=(graduates||[]).length&&_gradArc&&gxAll().filter(s=>!s._st.n).length;
+  if(noRec){ w.style.display='block';
+    w.innerHTML=`<span class="aicon">📦</span>${noRec} خرّيجاً بلا سجلّ في الأرشيف — تخرّجوا قبل تفعيل الأرشفة، أو لم تُؤرشف أنصافهم بعد.`;
+    return; }
+  w.style.display='none';
+}
+/* 📄 ملف الخرّيج: سجلّه كاملاً بلا مغادرة الصفحة */
+function gxProfile(sid){
+  const s=(graduates||[]).find(x=>String(x.id)===String(sid))
+       ||(students||[]).find(x=>String(x.id)===String(sid));
+  if(!s){showToast('ما لقيت الخرّيج','w');return;}
+  const rows=_gradArc?gxRows(sid):[], st=gxStats(rows);
+  const byTerm={};
+  rows.forEach(c=>{const k=String(c.term||'—').trim()||'—';(byTerm[k]=byTerm[k]||[]).push(c);});
+  const terms=Object.keys(byTerm).sort((a,b)=>termSortKey(a).localeCompare(termSortKey(b)));
+  const kpi=(n,l)=>`<div style="flex:1 1 96px;min-width:92px;text-align:center;border:1px solid var(--border);border-radius:10px;padding:10px">
+    <div style="font-size:19px;font-weight:800;color:var(--acc-b)">${n}</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:2px">${l}</div></div>`;
+  const courseRow=c=>{
+    const f=isFailed(c), p=effPct(c);
+    return `<tr>
+      <td style="padding:6px 9px;text-align:start">${esc(c.course||'—')}${c.code?`<span style="color:var(--muted);font-size:11px"> · ${esc(c.code)}</span>`:''}</td>
+      <td style="padding:6px 9px;text-align:center;font-weight:700;color:${f?'var(--acc-r)':'inherit'}">${esc(String(p))}</td>
+      <td style="padding:6px 9px;text-align:center">${esc(c.letter||'—')}</td>
+      <td style="padding:6px 9px;text-align:center">${esc(String(Math.round((parseFloat(c.abs)||0)*10)/10))}%</td>
+      <td style="padding:6px 9px;text-align:center">${f?'<span class="pill pr">غير مجتاز</span>':'<span class="pill pg">مجتاز</span>'}</td></tr>`;
+  };
+  document.getElementById('gxProfModal')?.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='gxProfModal';
+  ov.innerHTML=`<div class="modal" style="max-width:760px;width:100%;max-height:92vh;overflow-y:auto">
+    <div class="modal-title"><span>📄 ملف الخرّيج</span>
+      <button class="modal-close" onclick="document.getElementById('gxProfModal').remove()">✕</button></div>
+    <div style="display:flex;gap:13px;align-items:center;margin-bottom:14px">${avatarHTML(s,58)}
+      <div><div style="font-weight:800;font-size:17px">${esc(s.name)}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">${esc(String(s.id))} · ${esc(s.spec||'—')}${s.gradBatch?' · دفعة '+esc(s.gradBatch):''}</div></div></div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px">
+      ${kpi(st.n||'—','مقرر')}${kpi(st.passed,'مجتاز')}${kpi(st.failed,'غير مجتاز')}
+      ${kpi(st.graded?st.avg:'—','المعدل العام')}
+      ${kpi(st.wavg!=null?st.wavg:'—','موزون بالساعات')}
+      ${kpi(st.absAvg+'%','متوسط الغياب')}</div>
+    ${st.n?terms.map(t=>`<div class="stitle" style="margin-top:12px">${esc(fmtTerm(t)||t)}</div>
+      <div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px">
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:rgba(106,184,247,.10)">
+          <th style="padding:8px;text-align:start">المقرر</th><th style="padding:8px">الدرجة</th>
+          <th style="padding:8px">الحرفية</th><th style="padding:8px">الغياب</th><th style="padding:8px">الحالة</th>
+        </tr></thead><tbody>${byTerm[t].map(courseRow).join('')}</tbody></table></div>`).join('')
+      :`<div class="alert aw"><span class="aicon">📦</span>ما فيه سجلّ مؤرشف لهذا الخرّيج${_gradArcErr?' (تعذّرت قراءة الأرشيف)':''}</div>`}
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-b" onclick="printGraduateTranscript('${jsq(String(s.id))}')">🖨️ كشف التخرّج</button>
+      <button class="btn btn-out" onclick="document.getElementById('gxProfModal').remove()">إغلاق</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+/* ⬇️ تصدير المعروض — CSV بترميز BOM حتى يفتح في Excel العربي سليماً */
+function gxExport(){
+  const list=gxFiltered();
+  if(!list.length){showToast('ما فيه صفوف للتصدير','w');return;}
+  const head=['الرقم التدريبي','الاسم','التخصص','الدفعة','عدد المقررات','المجتازة','غير المجتازة',
+              'المعدل العام','المعدل الموزون','التقدير','متوسط الغياب %','عدد الأنصاف'];
+  const esc2=v=>{const s=String(v==null?'':v);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const body=list.map(s=>[s.id,s.name,s.spec||'',s.gradBatch||'',s._st.n,s._st.passed,s._st.failed,
+    s._st.graded?s._st.avg:'',s._st.wavg!=null?s._st.wavg:'',s._st.graded?s._st.grade:'',
+    s._st.absAvg,s._st.terms].map(esc2).join(','));
+  const csv='﻿'+[head.map(esc2).join(',')].concat(body).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='الخريجون-'+new Date().toISOString().slice(0,10)+'.csv';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},800);
+  showToast('⬇️ نُزِّل ملف '+list.length+' خرّيجاً','s');
+}
+/* 🖨️ كشف الدفعة — بترويسة المعهد وشعاره */
+function gxPrintBatch(){
+  const list=gxFiltered();
+  if(!list.length){showToast('ما فيه خريجون للطباعة','w');return;}
+  const b=gxVal('gxBatch'), sp=gxVal('gxSpec');
+  const withD=list.filter(s=>s._st.graded>0);
+  const avg=withD.length?Math.round(withD.reduce((a,s)=>a+s._st.avg,0)/withD.length*10)/10:0;
+  const body=`<div class="kpis">
+      <div class="kpi"><div class="n">${list.length}</div><div class="l">خرّيج</div></div>
+      <div class="kpi"><div class="n">${avg||'—'}</div><div class="l">متوسط المعدل</div></div>
+      <div class="kpi"><div class="n">${[...new Set(list.map(s=>s.spec||'—'))].length}</div><div class="l">تخصص</div></div>
+      <div class="kpi"><div class="n">${[...new Set(list.map(s=>s.gradBatch||'—'))].length}</div><div class="l">دفعة</div></div></div>
+    <div class="sec-title">كشف الخريجين${b?' — دفعة '+esc(b):''}${sp?' — '+esc(sp):''}</div>
+    <table><thead><tr><th>#</th><th>الرقم التدريبي</th><th>الاسم</th><th>التخصص</th><th>الدفعة</th>
+      <th>المقررات</th><th>المجتازة</th><th>المعدل</th><th>التقدير</th></tr></thead>
+      <tbody>${list.map((s,i)=>`<tr><td>${i+1}</td><td>${esc(String(s.id))}</td>
+        <td style="text-align:right">${esc(s.name)}</td><td>${esc(s.spec||'—')}</td>
+        <td>${esc(s.gradBatch||'—')}</td><td>${s._st.n||'—'}</td><td>${s._st.n?s._st.passed:'—'}</td>
+        <td><b>${s._st.graded?s._st.avg:'—'}</b></td><td>${s._st.graded?esc(s._st.grade):'—'}</td></tr>`).join('')}</tbody></table>
+    <div style="display:flex;justify-content:space-between;margin-top:40px;font-size:13px">
+      <div style="text-align:center">مدير الأكاديمية<br><br>............................</div>
+      <div style="text-align:center">ختم المعهد<br><br>............................</div></div>`;
+  openReport(reportShell('كشف الخريجين','سجل الخريجين',body));
+}
+function gxPage(){
+  const bOpts=['<option value="">كل الدفعات</option>'].concat(gxBatches().map(x=>`<option value="${escAttr(x)}">${esc(x)}</option>`)).join('');
+  const sOpts=['<option value="">كل التخصصات</option>'].concat(gxSpecs().map(x=>`<option value="${escAttr(x)}">${esc(x)}</option>`)).join('');
+  const gOpts=['<option value="">كل التقديرات</option>'].concat(['ممتاز','جيد جداً','جيد','مقبول','راسب'].map(x=>`<option value="${escAttr(x)}">${esc(x)}</option>`)).join('');
+  const banner=`<div class="banner"><div><div class="btitle">🎓 الخريجون</div>
+    <div class="bsub">سجلّ كل خرّيج ودرجاته ومعدّله — من أرشيف المقررات</div></div>
+    <span class="pill pb">${(graduates||[]).length} خرّيج</span></div>`;
+  const tools=`<div class="ctl-row">
+      <input id="gxQ" class="lp-in" style="flex:1 1 200px" placeholder="🔍 ابحث بالاسم أو الرقم..." oninput="gxApply()">
+      <select id="gxBatch" class="lp-in" aria-label="الدفعة" title="الدفعة" style="flex:0 1 160px" onchange="gxApply()">${bOpts}</select>
+      <select id="gxSpec" class="lp-in" aria-label="التخصص" title="التخصص" style="flex:0 1 190px" onchange="gxApply()">${sOpts}</select>
+      <select id="gxGrade" class="lp-in" aria-label="التقدير" title="التقدير" style="flex:0 1 140px" onchange="gxApply()">${gOpts}</select>
+      <select id="gxSort" class="lp-in" aria-label="الترتيب" title="الترتيب" style="flex:0 1 160px" onchange="gxApply()">
+        <option value="batch">الأحدث دفعةً</option><option value="avgD">الأعلى معدلاً</option>
+        <option value="avgA">الأقل معدلاً</option><option value="name">الاسم</option>
+        <option value="id">الرقم التدريبي</option></select>
+      <button class="btn btn-out btn-sm" onclick="gxReset()">↺ تفريغ</button>
+    </div>
+    <div class="pg-acts"><span class="pg-acts-lbl">إجراءات</span>
+      <button class="btn btn-b btn-sm" onclick="gxExport()">⬇️ تصدير Excel</button>
+      <button class="btn btn-out btn-sm" onclick="gxPrintBatch()">🖨️ طباعة الكشف</button>
+      <button class="btn btn-out btn-sm" onclick="gxRefresh()">🔄 تحديث من الأرشيف</button>
+      <button class="btn btn-out btn-sm" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>
+    </div>
+    <div class="alert aw" id="gxWarn" style="display:none"></div>`;
+  if(!(graduates||[]).length)
+    return banner+`<div class="empty" style="margin-top:20px"><div class="empty-icon">🎓</div>لا يوجد خريجون بعد
+      <div style="margin-top:12px"><button class="btn btn-b btn-sm" onclick="openGraduateBatch()">🎓 تخريج دفعة</button></div></div>`;
+  /* الأرشيف يُقرأ مرة واحدة ثم تُملأ الصفحة — لا ننتظره قبل الرسم */
+  if(!_gradArc&&!_gradArcBusy)setTimeout(async()=>{await gxLoad();gxApply();gxWarn();},40);
+  return banner+tools+`<div id="gxBody">${_gradArc?gxBody()
+    :'<div class="empty" style="margin-top:18px"><div class="sp"></div>جاري قراءة أرشيف المقررات...</div>'}</div>`;
+}
+window.gxApply=gxApply;window.gxReset=gxReset;window.gxRefresh=gxRefresh;window.gxProfile=gxProfile;
+window.gxExport=gxExport;window.gxPrintBatch=gxPrintBatch;window.gxStats=gxStats;window.gxRows=gxRows;
+window.gxFiltered=gxFiltered;window.gxGrade=gxGrade;window.gxLoad=gxLoad;window.gxPage=gxPage;
 window.openGraduateBatch=openGraduateBatch;window.gradFilter=gradFilter;window.gradToggleAll=gradToggleAll;window.gradCount=gradCount;window.applyGraduateBatch=applyGraduateBatch;window.openGraduatesList=openGraduatesList;window.printGraduateTranscript=printGraduateTranscript;
 
 // ===== شاشة العرض (TV Mode) — ملء الشاشة للعرض على شاشة كبيرة =====
@@ -12516,6 +12851,8 @@ function pgActs(label,html){
   return `<div class="pg-acts"><span class="pg-acts-lbl">${esc(label||'إجراءات')}</span>${html}</div>`;
 }
 const aPgs={
+  // 🎓 الخريجون — صفحةٌ كاملة بدل نافذةٍ فيها أسماء
+  graduates:()=>gxPage(),
   news:()=>adminNewsPage(),
   library:()=>buildLibrary(null, true),
   // ===== سجل التحضير (أدمن) — عرض + تعديل + حذف =====
@@ -13476,7 +13813,7 @@ const aPgs={
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
     <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
-    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المعتمدة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="goAdmin('accounts','_accTab','student')" title="بيتها: الأشخاص › المتدربون">🔗 ربط بيانات منفصلة ↗</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
+    <div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="hashPasswords()" title="يحوّل الرموز المكتوبة نصّاً في الورقة إلى صيغةٍ مُجزَّأة — الدخول لا ينكسر">🔐 تأمين الرموز القديمة</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المعتمدة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="goAdmin('accounts','_accTab','student')" title="بيتها: الأشخاص › المتدربون">🔗 ربط بيانات منفصلة ↗</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
     <div class="alert ab" style="margin-top:8px;font-size:12.5px"><span class="aicon">💡</span>«إصلاح التبويبات» يوسّع أعمدة التبويبات الضيقة في Google Sheets · «فحص المفاتيح» يعرض السجلات التي مفتاحها لا يطابق الرقم الأكاديمي الحالي (يحدث بعد تحديث الأرقام) ويصلحها بضغطة.</div>
 
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
@@ -14111,6 +14448,64 @@ async function repairSheets(){
   }catch(e){ showToast('تعذّر الاتصال بالخادم','e'); }
 }
 window.repairSheets=repairSheets;
+/* ═══════ 🔐 تحويل الرموز الصريحة القديمة إلى مُجزَّأة ═══════
+   الحسابات التي أُنشئت قبل إصلاح التجزئة رمزُها مكتوبٌ نصّاً في الورقة،
+   وافتراضُه رقم الجوال المكتوب في العمود المجاور. هذه تعدّها أولاً ثم
+   تحوّلها بعد موافقتك. الدخول لا ينكسر — الخادم يقبل الشكلين. */
+async function hashPasswords(){
+  const call=async(dry)=>{
+    let r=null;
+    try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'hashPasswords',dryRun:dry?'1':''}); }
+    catch(_){ r=await jsonpCall({action:'hashPasswords',data:JSON.stringify({dryRun:dry?'1':''})}); }
+    return r;
+  };
+  showToast('جاري فحص الرموز...','i');
+  let r=null;
+  try{ r=await call(true); }catch(e){ showToast('تعذّر الاتصال بالخادم','e'); return; }
+  if(!r||r.status!=='ok'){ showToast('تعذّر الفحص — انشر نسخة جديدة من Code.gs','e'); return; }
+  const n=parseInt(r.hashed,10)||0, tot=parseInt(r.accounts,10)||0;
+  const per=(r.perTab||[]).map(x=>`<tr>
+    <td style="padding:7px 10px;border-bottom:1px solid var(--border)">${esc(x.tab||'')}</td>
+    <td style="padding:7px 10px;border-bottom:1px solid var(--border);text-align:center">${x.missing?'—':(x.rows||0)}</td>
+    <td style="padding:7px 10px;border-bottom:1px solid var(--border);text-align:center;font-weight:700;color:${x.hashed?'var(--acc-y)':'var(--acc-g)'}">${x.missing?'تبويب مفقود':(x.hashed||0)}</td>
+    <td style="padding:7px 10px;border-bottom:1px solid var(--border);text-align:center">${x.missing?'—':(x.empty||0)}</td></tr>`).join('');
+  document.getElementById('pwHashModal')?.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='pwHashModal'; ov.style.zIndex='99999';
+  ov.innerHTML=`<div class="modal mlist" style="max-width:600px">
+    <div class="modal-title"><span>🔐 تحويل الرموز القديمة</span>
+      <button class="modal-close" onclick="document.getElementById('pwHashModal').remove()">✕</button></div>
+    <div class="modal-body">
+      <div class="alert ${n?'aw':'as'}"><span class="aicon">${n?'⚠️':'✅'}</span>${n
+        ? n+' من '+tot+' حساباً رمزُه مكتوبٌ نصّاً صريحاً في الورقة — يراه كل من يفتحها.'
+        : 'كل الرموز مُجزَّأة أصلاً. ما فيه شيء يُحوَّل.'}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px">
+        <tr><th style="padding:8px 10px;text-align:right;border-bottom:2px solid var(--border)">التبويب</th>
+        <th style="padding:8px 10px;border-bottom:2px solid var(--border)">حسابات</th>
+        <th style="padding:8px 10px;border-bottom:2px solid var(--border)">صريحة</th>
+        <th style="padding:8px 10px;border-bottom:2px solid var(--border)">بلا رمز</th></tr>${per}
+      </table>
+      ${n?`<div class="alert ab" style="margin-top:10px"><span class="aicon">ℹ️</span>
+        الدخول لن ينكسر: كلٌّ يدخل برمزه نفسه، والفرق أن الرمز لن يبقى مقروءاً في الورقة.
+        خُذ نسخةً احتياطية قبل التحويل — فهو لا يُتراجَع عنه.</div>`:''}
+    </div>
+    <div class="btn-row" style="margin-top:14px">
+      ${n?`<button class="btn btn-b" id="pwHashGo">🔐 حوّل ${n} رمزاً الآن</button>`:''}
+      <button class="btn btn-out" onclick="document.getElementById('pwHashModal').remove()">إغلاق</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const go=document.getElementById('pwHashGo');
+  if(go)go.onclick=async()=>{
+    if(!confirm('تحويل '+n+' رمزاً إلى صيغةٍ مُجزَّأة؟\n\nلا يمكن التراجع. الدخول يبقى كما هو لكل مستخدم.'))return;
+    go.disabled=true; go.textContent='جاري التحويل...';
+    let r2=null;
+    try{ r2=await call(false); }catch(e){ showToast('تعذّر الاتصال — أعد المحاولة','e'); go.disabled=false; return; }
+    if(!r2||r2.status!=='ok'){ showToast('تعذّر التحويل','e'); go.disabled=false; return; }
+    document.getElementById('pwHashModal')?.remove();
+    showToast('✅ حُوِّل '+(r2.hashed||0)+' رمزاً — ما عاد أحدها مقروءاً في الورقة','s');
+  };
+}
+window.hashPasswords=hashPasswords;
+
 
 // ===== 🔑 فحص/إصلاح مفاتيح سجل المقررات =====
 // المفتاح = رمز المقرر + '-' + الرقم الأكاديمي. عند تحديث أرقام المتدربين كان
