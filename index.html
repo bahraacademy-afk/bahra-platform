@@ -2611,7 +2611,13 @@ function serverReachable(){
 const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · مدرب/أدمن: أسبوعي
 // ⭐ فصل الغياب حسب الترم: يتم تلقائياً عبر عمود "الترم" في قاعدة الغياب (لا يحتاج ضبط).
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
-const OTP_ENABLED=false; // معطّل مؤقتاً — لإعادة تفعيله غيّره إلى true
+/* 🔐 التحقق بخطوتين: للإداريين وحدهم، والخادم هو من يفرضه لا الواجهة.
+   حساب الإداري يفتح كل شيء، والمتدرب كثيرٌ منهم بلا بريد مسجَّل
+   فتعميمُه يقفل الباب على أصحابه. ومن لا بريد له من الإداريين يدخل
+   وينبَّه — لا يُقفَل أحدٌ خارج منصّته. */
+const OTP_ROLES=['a'];
+function otpRequired(r){ return OTP_ROLES.indexOf(String(r||''))>-1; }
+const OTP_ENABLED=true;   // الباقي للتوافق — القرار الفعليّ عند الخادم
 const ADMIN=[]; // التحقق صار في الخادم
 
 
@@ -2703,7 +2709,7 @@ function newsCardHTML(nw,isAdmin){
     else if(nw.endDate&&nw.endDate<today){st='⚪ منتهٍ';stc='#95a5a6';}
     admBadges=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
       <span class="bpill" style="font-size:11px;background:rgba(106,184,247,.12);color:var(--acc-b);border:1px solid rgba(106,184,247,.3)">${audLbl}${secLbl}</span>
-      <span class="bpill" style="font-size:11px;color:${stc};border:1px solid ${stc}55">${st}</span>
+      <span class="bpill" style="font-size:11px;color:${cssColor(stc)};border:1px solid ${cssColorFade(stc,34)}">${st}</span>
     </div>`;
     admBtns=`<div style="display:flex;gap:8px;margin-top:12px">
       <button class="btn btn-out btn-sm" onclick="openNewsForm('${jsq(nw.id)}')">✏️ تعديل</button>
@@ -4045,7 +4051,8 @@ async function sendOTP(userId,email,name){
 }
 // التحقق من الرمز
 async function verifyOTP(userId,code){
-  return jsonpCall({action:'verifyOTP',uid:userId,code:code});
+  /* التوكن المعلّق يُمرَّر ليُبدَّل بكاملٍ عند صحّة الرمز */
+  return jsonpTo(AUTH_URL,{action:'verifyOTP',uid:userId,code:code,token:SESSION.token},15000);
 }
 
 // ===== ROLE =====
@@ -4085,7 +4092,7 @@ function warmServer(){
    تبقى أعطالٌ مُصلَحةٌ ظاهرة، ولا شيء في الواجهة يقول السبب. الآن
    يقارن العميل بصمته ببصمة الخادم ويقولها صراحةً.
    ⚠️ ارفع الرقمين معاً عند كل تعديل جوهري. */
-const CLIENT_BUILD='2026-11-12';
+const CLIENT_BUILD='2026-11-13';
 let SERVER_BUILD=null;
 function buildSeen(r){
   try{
@@ -4168,6 +4175,42 @@ async function refreshNow(){
   }
 }
 window.refreshNow=refreshNow;
+/* 🎨 لونٌ حقيقيٌّ بدل var() داخل الأنماط السطرية.
+   الرسوم كانت ترسم أعمدتها بـ background:var(--acc-g) وتدرّجٍ فيه
+   color-mix. وهذا سلسلةٌ من نقاط الفشل: متغيّرٌ لم يُعرَّف بعد في سياق
+   العنصر، أو متصفّحٌ لا يعرف color-mix، أو وقفةُ تدرّجٍ فاسدة — وأيُّها
+   وقع خرج العمود شفافاً، فتبقى الأرقام والعناوين معلّقةً في الفراغ بلا
+   عمودٍ واحد، وهو عطبٌ صامت: الصفحة «تعمل» وتعطي رسماً فارغاً.
+   الآن يُقرأ اللون مرةً ويُحوَّل إلى hex صريح، ومعه بديلٌ ثابت. */
+const CSS_COLOR_FB_={'--acc-g':'#2e9e5b','--acc-b':'#2b7fc4','--acc-y':'#b57a12',
+  '--acc-r':'#c53b45','--gold':'#c9a227','--green':'#2e9e5b','--red':'#c53b45'};
+let _cssColorCache={};
+function cssColor(nameOrVal, fb){
+  const raw=String(nameOrVal==null?'':nameOrVal).trim();
+  const m=raw.match(/^var\(\s*(--[\w-]+)\s*\)$/);
+  const name=m?m[1]:(raw.indexOf('--')===0?raw:'');
+  if(!name)return raw||fb||'#888888';                       // لونٌ صريح أصلاً
+  if(_cssColorCache[name])return _cssColorCache[name];
+  let v='';
+  try{ v=String(getComputedStyle(document.body).getPropertyValue(name)||'').trim(); }catch(e){}
+  if(!/^#|^rgb|^hsl|^[a-z]+$/i.test(v)||!v) v=fb||CSS_COLOR_FB_[name]||'#888888';
+  _cssColorCache[name]=v;
+  return v;
+}
+/* نفس اللون بشفافيةٍ — بلا color-mix، فلا يسقط التدرّج على متصفّحٍ قديم */
+function cssColorFade(c, pct){
+  const v=cssColor(c);
+  const a=Math.max(0,Math.min(255,Math.round((pct==null?62:pct)/100*255)));
+  const hx=a.toString(16).padStart(2,'0');
+  if(/^#[0-9a-f]{6}$/i.test(v))return v+hx;
+  const m=v.match(/^rgba?\(([^)]+)\)$/i);
+  if(m){const p=m[1].split(',').map(x=>x.trim());
+    return `rgba(${p[0]},${p[1]},${p[2]},${(a/255).toFixed(3)})`;}
+  return v;
+}
+/* الذاكرة تُفرَّغ عند تبديل الوضع أو المظهر وإلا بقيت ألوان الوضع السابق */
+function cssColorReset(){ _cssColorCache={}; }
+window.cssColor=cssColor; window.cssColorFade=cssColorFade; window.cssColorReset=cssColorReset;
 window.buildProbe=buildProbe; window.buildBanner=buildBanner; window.topBanner=topBanner;
 window.apiUrlPanel=apiUrlPanel; window.apiSecretTap=apiSecretTap; window.apiNoteRender=apiNoteRender;
 window.apiUrlSave=apiUrlSave; window.apiUrlClear=apiUrlClear; window.apiUrlTest=apiUrlTest;
@@ -4243,7 +4286,9 @@ async function doLogin(){
     LS.setItem('bla_token',d.token);
     user=Object.assign({role:role},d.user);
     const hasBoot=setBootPayload(d.boot);    // ⚡ كل القراءات التالية من الذاكرة
-    if(!OTP_ENABLED||isDeviceTrusted(user.id)){
+    /* الخادم هو من يقول «هذا الحساب يحتاج رمزاً»، والتوكن الذي أعطاه
+       معلّقٌ لا يفتح شيئاً حتى يُتحقَّق — فتخطّي الشاشة لا ينفع. */
+    if(!(d.otpRequired||(otpRequired(role)&&!isDeviceTrusted(user.id)))){
       if(_fast){
         // النسخة المحفوظة فشلت لسبب ما → نداء إقلاع واحد (لا خمس عشرة قراءة)
         if(!enterFromSnapshot()){ await bootThenLoad({requireBoot:true}); finishLogin(); }
@@ -4413,7 +4458,8 @@ async function confirmOTP(){
   try{
     const res=await verifyOTP(pendingUser.user.id,code);
     if(res&&res.status==='ok'){
-      // ✅ رمز صحيح
+      /* 🔐 الرمز الكامل يصل الآن — قبله كان ما بيدنا معلّقاً لا يفتح شيئاً */
+      if(res.token){ SESSION.token=res.token; try{LS.setItem('bla_token',res.token);}catch(e){} }
       user=pendingUser.user;
       role=pendingUser.role;
       trustDevice(user.id); // احفظ الجهاز كموثوق
@@ -7518,7 +7564,7 @@ function libAddMat(info){
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';overlay.id='libMatModal';
   overlay.innerHTML=`<div class="modal" style="max-width:440px">
-    <div class="modal-title"><span>➕ مادة علمية — ${info.name||info.code}</span><button class="modal-close" onclick="document.getElementById('libMatModal').remove()">✕</button></div>
+    <div class="modal-title"><span>➕ مادة علمية — ${esc(info.name||info.code)}</span><button class="modal-close" onclick="document.getElementById('libMatModal').remove()">✕</button></div>
     <div style="padding:6px 0">
       <label style="display:block;font-size:12px;color:var(--muted);margin-bottom:4px">النوع</label>
       <select id="libMatType" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card2);color:var(--text);font-size:14px;margin-bottom:12px">
@@ -9623,6 +9669,7 @@ function attErrMsg(msg,hint){
     'prep-week':'⚠️ الخادم عندك ينفّذ نسخة قديمة من Code.gs — انشرها (Deploy ← Manage deployments ← ✏️ ← New version)، فالموعد هذا أُلغي',
     'attendance-required':'لا يُعتمد التحضير قبل تسجيل حضور الحصة',
     'prep-closed':'التحضير معتمد أو مغلق ولا يمكن تعديله أو حذفه',
+    'rate-limited':'عمليات كثيرة في وقتٍ قصير — انتظر دقائق ثم أعد المحاولة',
     'upload-too-big':'الملف أكبر من الحدّ المسموح',
     'upload-empty':'الملف فارغ أو لم يُقرأ',
     'prep-draft':'هذا تحضيرٌ محفوظ كمسودة ولم يُرسَل بعد',
@@ -12852,7 +12899,7 @@ function buildTVContent(){
     const h=Math.round(counts[i]/maxC*100);
     return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:.5vh">
       <div style="font-size:1.8vh;font-weight:800;color:${b.c}">${counts[i]}</div>
-      <div style="width:70%;height:${h}px;min-height:4px;background:linear-gradient(180deg,${b.c},${b.c}aa);border-radius:4px 4px 0 0"></div>
+      <div style="width:70%;height:${h}px;min-height:4px;background-color:${cssColor(b.c)};background-image:linear-gradient(180deg,${cssColor(b.c)},${cssColorFade(b.c,62)});border-radius:4px 4px 0 0"></div>
       <div style="font-size:1.1vh;color:#b8c5d8;text-align:center;line-height:1.2">${b.lbl}</div>
     </div>`;
   }).join('');
@@ -13517,11 +13564,18 @@ const aPgs={
         ];
         const counts=bands.map(b=>ranked.filter(s=>s.avg>=b.min&&s.avg<b.max).length);
         const maxC=Math.max(1,...counts);
+        /* 🚨 كانت الأعمدة غيرَ مرئية كلياً: التدرّج كان
+           linear-gradient(180deg, var(--acc-g), var(--acc-g)aa) — ولصق
+           «aa» على var() لا ينتج لوناً، ووقفةٌ واحدة فاسدة تُبطل التدرّج
+           كلّه فيسقط background ويبقى العمود شفافاً. فكانت الأرقام
+           والعناوين وحدها تظهر معلّقةً في الفراغ. الآن color-mix،
+           ومعها background-color وحدها حتى لا يُخلي العمودَ عجزُ
+           دالةٍ واحدة. */
         const bars=bands.map((b,i)=>{
           const h=Math.round(counts[i]/maxC*130);
           return `<div onclick="showBandStudents(${b.min},${b.max},'${jsq(b.lbl)}')" style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;cursor:pointer">
-            <div style="font-size:12px;font-weight:700;color:${b.c}">${counts[i]}</div>
-            <div style="width:70%;height:${h}px;min-height:4px;background:linear-gradient(180deg,${b.c},${b.c}aa);border-radius:5px 5px 0 0;transition:height .6s"></div>
+            <div style="font-size:12px;font-weight:700;color:${cssColor(b.c)}">${counts[i]}</div>
+            <div style="width:70%;height:${h}px;min-height:4px;background-color:${cssColor(b.c)};background-image:linear-gradient(180deg,${cssColor(b.c)},${cssColorFade(b.c,62)});border-radius:5px 5px 0 0;transition:height .6s"></div>
             <div style="font-size:9px;color:var(--muted);text-align:center;line-height:1.2">${b.lbl}</div>
           </div>`;
         }).join('');
@@ -13883,7 +13937,7 @@ const aPgs={
       return `<div onclick="showStudentDetail('${jsq(c.sid)}')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${cfg.bg};border-radius:8px;cursor:pointer;margin-bottom:5px">
         <span style="font-size:16px">${cfg.icon}</span>
         <span style="flex:1;font-size:13px;font-weight:600">${esc(c.sname.split(' ').slice(0,3).join(' '))}</span>
-        <span style="font-size:12px;color:${cfg.color}">${cfg.lbl}</span>
+        <span style="font-size:12px;color:${cfg.color}">${esc(cfg.lbl)}</span>
         ${cfg.badge?`<span style="font-size:9px;background:${cfg.bdg||"#cf1f2f"};color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">${cfg.badge}</span>`:''}
         <span style="font-size:11px;color:var(--acc-b)">←</span>
       </div>`;
@@ -14040,7 +14094,7 @@ const aPgs={
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
     <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
-    ${apiCustomBanner()}<div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="hashPasswords()" title="يحوّل الرموز المكتوبة نصّاً في الورقة إلى صيغةٍ مُجزَّأة — الدخول لا ينكسر">🔐 تأمين الرموز القديمة</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المعتمدة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="goAdmin('accounts','_accTab','student')" title="بيتها: الأشخاص › المتدربون">🔗 ربط بيانات منفصلة ↗</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="apiUrlPanel()" title="رابط نشر Apps Script الذي تخاطبه هذه الصفحة">🔧 إعداد الاتصال بالخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
+    ${apiCustomBanner()}<div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="showAuditLog()" title="من فعل ماذا ومتى — الإجراءات الحساسة">📜 سجل الإجراءات</button><button class="btn btn-out" onclick="hashPasswords()" title="يحوّل الرموز المكتوبة نصّاً في الورقة إلى صيغةٍ مُجزَّأة — الدخول لا ينكسر">🔐 تأمين الرموز القديمة</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المعتمدة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="goAdmin('accounts','_accTab','student')" title="بيتها: الأشخاص › المتدربون">🔗 ربط بيانات منفصلة ↗</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="apiUrlPanel()" title="رابط نشر Apps Script الذي تخاطبه هذه الصفحة">🔧 إعداد الاتصال بالخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
     <div class="alert ab" style="margin-top:8px;font-size:12.5px"><span class="aicon">💡</span>«إصلاح التبويبات» يوسّع أعمدة التبويبات الضيقة في Google Sheets · «فحص المفاتيح» يعرض السجلات التي مفتاحها لا يطابق الرقم الأكاديمي الحالي (يحدث بعد تحديث الأرقام) ويصلحها بضغطة.</div>
 
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
@@ -14732,6 +14786,65 @@ async function hashPasswords(){
   };
 }
 window.hashPasswords=hashPasswords;
+/* ═══════ 📜 سجل الإجراءات الحساسة ═══════
+   من حذف الحساب؟ من خرّج الدفعة؟ متى أُنهي النصف؟ ما كان لهذا أثرٌ في
+   المنصة. الخادم صار يسجّل كل إجراءٍ حسّاس، وهذه تعرضه. */
+const AUDIT_LBL_={deleteUser:'حذف حساب',addUser:'إضافة حساب',updateUser:'تعديل حساب',
+ deleteCourse:'حذف مقرر',deleteCurrentCourse:'حذف تسجيل',enrollStudent:'تسجيل متدرب',
+ unenrollStudent:'إلغاء تسجيل',graduateBatch:'تخريج دفعة',endTerm:'إنهاء نصف',
+ archiveHalf:'أرشفة نصف',saveTermClosure:'إغلاق نصف',closeTermItems:'إغلاق بنود',
+ updateTraineeNumbers:'تغيير أرقام تدريبية',repairKeys:'إصلاح مفاتيح',repairSheets:'إصلاح تبويبات',
+ trimGrid:'تقليم الفراغ',hashPasswords:'تأمين الرموز',setCertUrl:'رابط شهادة',
+ setUserPhoto:'صورة حساب',saveReqFlow:'تعديل مسار الطلبات',setSetting:'تغيير إعداد',
+ saveMailCfg:'إعدادات البريد',renameSpec:'إعادة تسمية تخصص',saveSpecs:'تعديل التخصصات',
+ excuseAbsence:'خصم غياب بعذر',reapplyExcuses:'إعادة تطبيق الأعذار',
+ deleteDailyAbsence:'حذف غياب',deleteLessonPrep:'حذف تحضير',deleteNews:'حذف خبر',
+ dedupeRequests:'حذف طلبات مكرّرة',changePassword:'تغيير رمز',addDelegation:'تكليف',
+ updateDelegation:'تعديل تكليف',notifyPerformance:'إرسال تنبيهات أداء'};
+async function showAuditLog(){
+  showToast('جاري قراءة السجل...','i');
+  let r=null;
+  try{
+    try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'auditTail',n:150}); }
+    catch(_){ r=await jsonpCall({action:'auditTail',data:JSON.stringify({n:150})}); }
+  }catch(e){ showToast('تعذّر الاتصال بالخادم','e'); return; }
+  if(!r||r.status!=='ok'){ showToast('تعذّرت القراءة — انشر نسخة جديدة من Code.gs','e'); return; }
+  const rows=r.rows||[];
+  const body=rows.length?`<div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+      <thead><tr style="background:rgba(106,184,247,.10)">
+        <th style="padding:8px 9px;text-align:start">متى</th>
+        <th style="padding:8px 9px;text-align:start">من</th>
+        <th style="padding:8px 9px;text-align:start">الإجراء</th>
+        <th style="padding:8px 9px;text-align:start">التفاصيل</th></tr></thead>
+      <tbody>${rows.map(x=>`<tr>
+        <td style="padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--muted);font-size:11.5px">${esc(x.at)}</td>
+        <td style="padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap">
+          <div style="font-weight:600">${esc(x.name||'—')}</div>
+          <div style="font-size:11px;color:var(--muted)">${esc(x.uid)} · ${esc(x.role)}</div></td>
+        <td style="padding:7px 9px;border-bottom:1px solid var(--border);white-space:nowrap">
+          <span class="pill pb" style="font-size:11px">${esc(AUDIT_LBL_[x.action]||x.action)}</span></td>
+        <td style="padding:7px 9px;border-bottom:1px solid var(--border);font-size:11.5px;color:var(--muted)">${esc(x.detail||'—')}</td>
+      </tr>`).join('')}</tbody></table></div>`
+    :`<div class="empty"><div class="empty-icon">📜</div>${r.missing
+        ?'ما فيه سجلٌّ بعد — يُنشأ تلقائياً عند أول إجراءٍ حسّاس'
+        :'السجل فارغ'}</div>`;
+  document.getElementById('auditModal')?.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='auditModal'; ov.style.zIndex='99999';
+  ov.innerHTML=`<div class="modal mlist" style="max-width:820px;width:100%">
+    <div class="modal-title"><span>📜 سجل الإجراءات (${rows.length}${r.total&&r.total>rows.length?` من ${r.total}`:''})</span>
+      <button class="modal-close" onclick="document.getElementById('auditModal').remove()">✕</button></div>
+    <div class="alert ab" style="margin-bottom:10px"><span class="aicon">ℹ️</span>
+      كل إجراءٍ حسّاس يُسجَّل: من فعله ومتى وعلى ماذا. السجل في تبويب «سجل الإجراءات» ولا يُحذف منه شيء من داخل المنصة.</div>
+    <div class="modal-body" style="max-height:60vh;overflow-y:auto">${body}</div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-out" onclick="showAuditLog()">🔄 تحديث</button>
+      <button class="btn btn-out" onclick="document.getElementById('auditModal').remove()">إغلاق</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+}
+window.showAuditLog=showAuditLog;
+
 
 
 // ===== 🔑 فحص/إصلاح مفاتيح سجل المقررات =====
@@ -17843,7 +17956,7 @@ function loadScheme(){
   applyScheme();
   return SCHEME_ME;
 }
-function applyScheme(){ document.body.setAttribute('data-scheme',SCHEMES[SCHEME_ME]?SCHEME_ME:'ocean'); }
+function applyScheme(){ document.body.setAttribute('data-scheme',SCHEMES[SCHEME_ME]?SCHEME_ME:'ocean'); try{cssColorReset();}catch(e){} }
 function setScheme(v){
   SCHEME_ME=SCHEMES[v]?v:'ocean';
   try{ LS.setItem(schemeKeyOf(),SCHEME_ME); }catch(e){}
@@ -17932,6 +18045,7 @@ function activeTheme(d){
   return '';
 }
 function applySeasonTheme(){
+  try{cssColorReset();}catch(e){}
   const k=activeTheme();
   THEME_NOW=k;
   if(k)document.body.setAttribute('data-thm',k); else document.body.removeAttribute('data-thm');
@@ -18143,6 +18257,7 @@ window.refreshThemePanel=refreshThemePanel;window.themeForce=themeForce;
 window.saveThemeCfg=saveThemeCfg;window.themeNextDate=themeNextDate;
 
 function toggleTheme(){
+  try{cssColorReset();}catch(e){}
   const body = document.body;
   const isLight = body.classList.contains('light-mode');
   if(isLight){
