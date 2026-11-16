@@ -457,7 +457,7 @@ body.light-mode .pw-eye:hover{background:color-mix(in srgb,var(--brand-deep-2) 8
    وظلّها أنعم بدل الهالة السوداء القاسية. */
 .glass{background:rgba(32,44,64,.82);backdrop-filter:blur(30px);border:1px solid rgba(130,175,230,.14);border-radius:24px;padding:32px 28px;position:relative;overflow:hidden;animation:fadeUp .8s .2s cubic-bezier(.16,1,.3,1) both;box-shadow:0 18px 44px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.07)}
 .glass::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent)}
-.role-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:20px;background:rgba(0,0,0,.2);border-radius:14px;padding:4px;border:1px solid rgba(255,255,255,.05)}
+.role-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:20px;background:rgba(0,0,0,.2);border-radius:14px;padding:4px;border:1px solid rgba(255,255,255,.05)}
 .rtab{padding:10px 6px;border-radius:10px;border:none;background:transparent;color:var(--muted);font-family:'Tajawal',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all .25s;text-align:center}
 .rtab:hover{background:rgba(255,255,255,.07);color:var(--text);transform:translateY(-1px)}
 .rtab.rs{background:linear-gradient(135deg,rgba(230,57,70,.25),rgba(193,18,31,.15));color:var(--acc-r);border:1px solid rgba(230,57,70,.3);box-shadow:0 4px 15px rgba(230,57,70,.15)}
@@ -1327,19 +1327,8 @@ body.light-mode .bg-grid{background-image:linear-gradient(color-mix(in srgb,var(
   #refreshBtn[disabled]{opacity:.6;cursor:progress}
   @media (prefers-reduced-motion:reduce){#refreshBtn.spin{animation:none;opacity:.55}}
 
-/* ===== Maintenance operations workspace ===== */
-.rtab.rm{background:linear-gradient(135deg,rgba(20,184,166,.22),rgba(13,148,136,.12));color:#5eead4;border:1px solid rgba(45,212,191,.35)}
-.rtab.rs,.rtab.rt,.rtab.ra,.rtab.rm{animation:rubberBand .6s!important}
-.av-m,.rb-m{background:rgba(20,184,166,.16);color:#5eead4;border:1px solid rgba(45,212,191,.28)}
-.maint-shell{--mt-teal:#2dd4bf;--mt-panel:rgba(255,255,255,.035);display:grid;gap:16px;margin-bottom:24px}
-.maint-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:22px;border:1px solid color-mix(in srgb,var(--mt-teal) 24%,var(--border));border-radius:18px;background:linear-gradient(125deg,color-mix(in srgb,var(--mt-teal) 10%,var(--card)),var(--card));box-shadow:0 16px 45px rgba(0,0,0,.12)}
-.maint-head h2{margin:3px 0 5px;font-size:23px}.maint-head p{margin:0;color:var(--muted);font-size:12px;line-height:1.8}.maint-kicker{font-size:10px;letter-spacing:1.6px;color:var(--mt-teal);font-weight:800;direction:ltr;text-align:right}
-.maint-metrics{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px}.maint-metric{border:1px solid var(--border);background:var(--mt-panel);color:var(--text);border-radius:14px;padding:14px;display:flex;gap:11px;align-items:center;text-align:right;cursor:pointer;transition:.2s}.maint-metric:hover{transform:translateY(-2px);border-color:color-mix(in srgb,var(--mt-teal) 45%,var(--border))}.maint-metric>span{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(45,212,191,.1);color:var(--mt-teal);font-size:18px}.maint-metric b{display:block;font-size:23px;line-height:1}.maint-metric small{display:block;color:var(--muted);margin-top:6px;font-size:10.5px}.maint-metric.is-late>span{background:rgba(244,63,94,.12);color:#fb7185}
-.maint-toolbar{display:grid;grid-template-columns:minmax(240px,1.8fr) repeat(4,minmax(125px,.8fr)) auto;gap:8px;padding:12px;background:var(--mt-panel);border:1px solid var(--border);border-radius:14px}.maint-toolbar input,.maint-toolbar select{min-width:0;padding:10px 11px;border:1px solid var(--border);border-radius:9px;background:var(--card);color:var(--text);font:inherit;font-size:11.5px}.maint-list-head{display:flex;justify-content:space-between;color:var(--muted);font-size:12px;padding:0 3px}.maint-list-head b{color:var(--text)}.maint-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
-.maint-ticket{text-align:right;border:1px solid var(--border);border-radius:14px;background:var(--mt-panel);color:var(--text);padding:15px;cursor:pointer;min-width:0;transition:.2s;font:inherit}.maint-ticket:hover{border-color:color-mix(in srgb,var(--mt-teal) 50%,var(--border));transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.14)}.maint-ticket.is-overdue{border-inline-start:3px solid #fb7185}.maint-ticket-top,.maint-ticket-foot,.maint-ticket-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.maint-ticket-top{justify-content:space-between}.maint-id{font:700 10px ui-monospace,monospace;color:var(--muted);direction:ltr}.maint-ticket>strong{display:block;margin:12px 0 6px;font-size:14px}.maint-ticket>p{margin:0 0 12px;color:var(--muted);font-size:11.5px;line-height:1.7;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.maint-ticket-meta{color:var(--muted);font-size:10px;margin-bottom:12px}.maint-ticket-foot{justify-content:space-between;border-top:1px solid var(--border);padding-top:10px;color:var(--muted);font-size:10px}.maint-ticket-foot>b{color:#fb7185}.maint-status,.priority{padding:3px 8px;border-radius:20px;font-size:9.5px;font-weight:800}.st-new{background:rgba(59,130,246,.13);color:#60a5fa}.st-progress{background:rgba(45,212,191,.12);color:var(--mt-teal)}.st-wait{background:rgba(245,158,11,.13);color:#fbbf24}.st-done{background:rgba(34,197,94,.13);color:#4ade80}.st-cancel{background:rgba(244,63,94,.12);color:#fb7185}.p-urgent{background:rgba(244,63,94,.13);color:#fb7185}.p-high{background:rgba(245,158,11,.13);color:#fbbf24}.p-normal{background:rgba(148,163,184,.12);color:var(--muted)}
-.maint-empty{grid-column:1/-1;text-align:center;padding:45px 20px;border:1px dashed var(--border);border-radius:14px;color:var(--muted)}.maint-empty>span{display:block;font-size:30px}.maint-empty>b{display:block;color:var(--text);margin:10px}.maint-empty>p{font-size:12px}.maint-detail-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(230px,.75fr);gap:22px}.maint-detail-grid aside{border-inline-start:1px solid var(--border);padding-inline-start:18px}.maint-section-title{font-size:12px;font-weight:800;margin:14px 0 10px;color:var(--mt-teal)}.maint-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px}.maint-log{display:grid;gap:0;max-height:420px;overflow:auto}.maint-log-item{display:grid;grid-template-columns:12px 1fr;gap:8px;position:relative;padding-bottom:17px}.maint-log-item:before{content:'';position:absolute;right:4px;top:10px;bottom:0;width:1px;background:var(--border)}.maint-log-item:last-child:before{display:none}.maint-log-item i{width:9px;height:9px;background:var(--mt-teal);border-radius:50%;margin-top:4px;z-index:1}.maint-log-item b{display:block;font-size:11px}.maint-log-item span{display:block;color:var(--muted);font-size:9.5px;margin-top:3px}.maint-log-item p{font-size:10.5px;color:var(--muted);margin:6px 0 0}.maint-audit-meta{font-size:10px;color:var(--muted);line-height:1.8;border-top:1px solid var(--border);padding-top:12px}.req-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.req-detail-grid>div{padding:9px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:8px}.req-detail-grid span{display:block;font-size:10px;color:var(--muted);margin-bottom:4px}.req-detail-grid b{display:block;font-size:11.5px;overflow-wrap:anywhere}.req-notes{font-size:12px;line-height:1.8;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border);white-space:pre-wrap;overflow-wrap:anywhere}
-@media(max-width:1200px){.maint-list{grid-template-columns:repeat(2,minmax(0,1fr))}.maint-toolbar{grid-template-columns:repeat(3,minmax(0,1fr))}.maint-search{grid-column:1/-1}.maint-metrics{grid-template-columns:repeat(3,minmax(120px,1fr))}}
-@media(max-width:700px){.role-tabs{grid-template-columns:repeat(2,1fr)}.maint-head{align-items:flex-start;flex-direction:column;padding:17px}.maint-head h2{font-size:20px}.maint-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.maint-metric{padding:11px}.maint-metric b{font-size:20px}.maint-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}.maint-list{grid-template-columns:1fr}.maint-detail-grid{grid-template-columns:1fr}.maint-detail-grid aside{border-inline-start:0;border-top:1px solid var(--border);padding-inline-start:0;padding-top:12px}.maint-form-grid,.req-detail-grid{grid-template-columns:1fr}.maint-modal{padding:14px!important}}
+.req-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.req-detail-grid>div{padding:9px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:8px}.req-detail-grid span{display:block;font-size:10px;color:var(--muted);margin-bottom:4px}.req-detail-grid b{display:block;font-size:11.5px;overflow-wrap:anywhere}.req-notes{font-size:12px;line-height:1.8;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border);white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:700px){.req-detail-grid{grid-template-columns:1fr}}
 </style>
 
 
@@ -2347,7 +2336,6 @@ body.light-mode[data-thm]::before{
         <button class="rtab rs" onclick="setRole('s',this)"><span style="font-size:18px;display:block;margin-bottom:4px">🎓</span>متدرب</button>
         <button class="rtab" onclick="setRole('t',this)"><span style="font-size:18px;display:block;margin-bottom:4px">👨‍🏫</span>مدرب</button>
         <button class="rtab" onclick="setRole('a',this)"><span style="font-size:18px;display:block;margin-bottom:4px">⚙️</span>إداري</button>
-        <button class="rtab" onclick="setRole('m',this)"><span style="font-size:18px;display:block;margin-bottom:4px">🔧</span>صيانة</button>
       </div>
       <!-- ⭐ نموذج حقيقي: يفعّل زر «اذهب» في لوحة مفاتيح الجوال،
            ويسمح للمتصفح بحفظ البيانات وتعبئتها تلقائياً لاحقاً -->
@@ -2623,7 +2611,7 @@ function serverReachable(){
   }catch(e){ return false; }
 }
 // ⏳ مدة الخمول قبل الخروج التلقائي (بالساعات) — قابلة للتعديل:
-const IDLE_HOURS={s:24, t:168, a:168, m:168}; // متدرب: يومي · بقية الحسابات: أسبوع
+const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · بقية الحسابات: أسبوع
 // ⭐ فصل الغياب حسب الترم: يتم تلقائياً عبر عمود "الترم" في قاعدة الغياب (لا يحتاج ضبط).
 // 🔐 التحقق بخطوتين (OTP): true = مُفعّل · false = مُعطّل مؤقتاً
 /* 🔐 التحقق بخطوتين: للإداريين وحدهم، والخادم هو من يفرضه لا الواجهة.
@@ -2636,7 +2624,7 @@ const OTP_ENABLED=true;   // الباقي للتوافق — القرار الف
 const ADMIN=[]; // التحقق صار في الخادم
 
 
-let role='s', user=null, currentUser=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[], maintenanceDB=[], graduates=[];
+let role='s', user=null, currentUser=null, courses=[], students=[], allCourses=[], files={}, catalog=[], requests=[], trainersDB=[], adminsDB=[], graduates=[];
 let ROLE_ALT='';   // 🔄 'a' أو 't' أو '' — الدور الآخر لصاحب حسابين، يصل مع الإقلاع
 let news=[]; // 📰 الأخبار والإعلانات
 let attachments=[]; // 📎 مرفقات المقررات (محمّلة من التبويب لا من ذاكرة المتصفح)
@@ -3693,7 +3681,7 @@ let REQ_FLOW_FROM_BOOT=false;
 function setBootPayload(bp){
   if(!bp||!bp.sheets){ BOOT_SHEETS=null; return false; }
   BOOT_SHEETS=bp.sheets; BOOT_AT=Date.now();
-  if(bp.flow&&bp.flow.cats)REQ_FLOW=bp.flow;
+  if(bp.flow&&bp.flow.cats)REQ_FLOW=cleanRequestFlow(bp.flow);
   if(bp.termLocks)TERM_LOCKS=bp.termLocks;
   if(typeof bp.makeupMax!=='undefined')MAKEUP_MAX_HOURS=Number(bp.makeupMax)||0;
   REQ_FLOW_FROM_BOOT=true;   // وصلت الحمولة → لا نداء إضافي للمسار
@@ -3740,7 +3728,7 @@ async function bootThenLoad(opts){
      يحفظها saveDataSnapshot فوق النسخة الجيدة — فتبقى الشاشة فاضية حتى
      بعد رجوع الشبكة. نتوقّف هنا ونُبقي المعروض كما هو. */
   if(!bootOk && opts && opts.requireBoot) throw new Error('boot-failed');
-  return (role==='s')?loadStudent():(role==='t')?loadTrainer():(role==='m')?loadMaintenance():loadAdmin();
+  return (role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
 }
 async function fetchSheet(range){
   const tab=String(range||'').split('!')[0].trim();
@@ -3757,10 +3745,10 @@ function saveDataSnapshot(){
   try{
     // 🛡️ لا تستبدل نسخة جيدة بأخرى فارغة: لو فشلت القراءات ورجعت قوائم خاوية
     //    وحفظناها، لصار الدخول القادم يعرض شاشة فاضية.
-    const anyData=(students&&students.length)||(allCourses&&allCourses.length)||(typeof courses!=='undefined'&&courses&&courses.length)||(role==='m'&&requests&&requests.length);
+    const anyData=(students&&students.length)||(allCourses&&allCourses.length)||(typeof courses!=='undefined'&&courses&&courses.length);
     if(!anyData && LS.getItem(CACHE_KEY)) return;
     const snap={t:Date.now(),role:role,uid:user&&user.id,
-      students, allCourses, catalog, trainersDB, adminsDB, maintenanceDB, graduates,
+      students, allCourses, catalog, trainersDB, adminsDB, graduates,
       absenceRows: (typeof absenceRows!=='undefined'?absenceRows:null),
       schedule:(typeof schedule!=='undefined'?schedule:null),
       rubrics:(typeof rubrics!=='undefined'?rubrics:null),
@@ -3781,7 +3769,7 @@ function loadDataSnapshot(){
     if(!s||s.role!==role||String(s.uid||'')!==String(user&&user.id||''))return false;
     if(Date.now()-(s.t||0)>CACHE_TTL) return false;
     students=s.students||[]; allCourses=s.allCourses||[]; catalog=s.catalog||[];
-    trainersDB=s.trainersDB||[]; adminsDB=s.adminsDB||[]; maintenanceDB=s.maintenanceDB||[]; graduates=s.graduates||[];
+    trainersDB=s.trainersDB||[]; adminsDB=s.adminsDB||[]; graduates=s.graduates||[];
     if(s.absenceRows && typeof absenceRows!=='undefined'){ absenceRows=s.absenceRows; window._chStartMs=undefined; }
     if(s.schedule    && typeof schedule    !=='undefined') schedule=s.schedule;
     if(s.rubrics     && typeof rubrics     !=='undefined') rubrics=s.rubrics;
@@ -3800,7 +3788,7 @@ function clearDataSnapshot(){ try{ LS.removeItem(CACHE_KEY); }catch(e){} }
    المتصفح بعده بلا تسجيل دخول. الآن تُمسح عند إغلاق التبويب لحسابات
    الإدارة والمدربين (حساب المتدرب يرى بياناته هو، فنُبقي له السرعة). */
 (function(){
-  const wipeOnLeave=()=>{ try{ if(typeof role!=='undefined'&&(role==='a'||role==='t'||role==='m'))clearDataSnapshot(); }catch(e){} };
+  const wipeOnLeave=()=>{ try{ if(typeof role!=='undefined'&&(role==='a'||role==='t'))clearDataSnapshot(); }catch(e){} };
   window.addEventListener('pagehide',wipeOnLeave);
   document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='hidden')wipeOnLeave(); });
 })();
@@ -3827,7 +3815,7 @@ function enterFromSnapshot(){
   finishLogin();
   setTimeout(()=>{
     bootThenLoad({requireBoot:true})
-      .then(()=>{ try{ if(role==='s')buildStudentApp(); else if(role==='t')buildTrainerApp(); else if(role==='m')buildMaintenanceApp(); else buildAdminApp(); }catch(e){} })
+      .then(()=>{ try{ if(role==='s')buildStudentApp(); else if(role==='t')buildTrainerApp(); else buildAdminApp(); }catch(e){} })
       .catch(e=>{
         if(e&&e.message==='session'){ try{LS.removeItem('bla_token');}catch(_){} location.reload(); return; }
         // فشل التحديث: البيانات المعروضة من النسخة المحفوظة — قُل له بدل أن يظن أنها حيّة
@@ -4072,6 +4060,7 @@ async function verifyOTP(userId,code){
 
 // ===== ROLE =====
 function setRole(r,btn){
+  if(['s','t','a'].indexOf(r)<0)return;
   role=r;
   document.querySelectorAll('.rtab').forEach(b=>b.className='rtab');
   btn.classList.add('r'+r);
@@ -4080,8 +4069,7 @@ function setRole(r,btn){
   const inp=document.getElementById('inpId');
   if(r==='s'){lb.textContent='الرقم الأكاديمي';inp.placeholder='أدخل رقمك الأكاديمي';lb2.className='lbtn bs'}
   else if(r==='t'){lb.textContent='الرقم الوظيفي';inp.placeholder='أدخل رقمك الوظيفي';lb2.className='lbtn bt'}
-  else if(r==='a'){lb.textContent='اسم المستخدم';inp.placeholder='أدخل اسم المستخدم';lb2.className='lbtn ba'}
-  else{lb.textContent='الرقم الوظيفي';inp.placeholder='أدخل رقم حساب الصيانة';lb2.className='lbtn ba'}
+  else{lb.textContent='اسم المستخدم';inp.placeholder='أدخل اسم المستخدم';lb2.className='lbtn ba'}
   // الرقم الأكاديمي/الوظيفي أرقام → لوحة مفاتيح رقمية · اسم المستخدم حروف
   if(r==='a'){ inp.setAttribute('inputmode','text'); inp.removeAttribute('pattern'); }
   else { inp.setAttribute('inputmode','numeric'); inp.setAttribute('pattern','[0-9]*'); }
@@ -4176,12 +4164,10 @@ async function refreshNow(){
     const r=(user&&user.role)||role;
     if(r==='a')await loadAdmin();
     else if(r==='t')await loadTrainer();
-    else if(r==='m')await loadMaintenance();
     else await loadStudent();
     const pg=cur.pg;
     if(r==='a')showAPage(pg||'overview',pg?document.getElementById('sn-'+pg):null,{quiet:true,keepScroll:true});
     else if(r==='t')showTPage(pg||'home',pg?document.getElementById('sn-'+pg):null);
-    else if(r==='m')showMPage('maintenance',pg?document.getElementById('sn-maintenance'):null);
     else showSPage(pg||'home',pg?document.getElementById('sn-'+pg):null);
     try{ updateNotifBadges(); }catch(e){}
     showToast('✅ حُدِّثت البيانات','s');
@@ -4353,7 +4339,7 @@ async function doLogin(){
 
 // تحميل بيانات المستخدم حسب الدور
 async function loadUserData(){
-  const load=(role==='a')?loadAdmin():(role==='t')?loadTrainer():(role==='m')?loadMaintenance():loadStudent();
+  const load=(role==='a')?loadAdmin():(role==='t')?loadTrainer():loadStudent();
   let _to2=null;
   const to=new Promise((_,rej)=>{_to2=setTimeout(()=>rej(new Error('timeout')),60000);});
   try{ await Promise.race([load,to]); } finally { if(_to2)clearTimeout(_to2); }
@@ -4718,13 +4704,12 @@ async function loadTrainer(){
 }
 
 async function loadAdmin(){
-  const [sr,cr,cat,td,ad,mt]=await Promise.all([
+  const [sr,cr,cat,td,ad]=await Promise.all([
     fetchSheet('قاعدة بيانات مركزي!A:L'),
     fetchSheet('سجل المقررات!A:L'),
     fetchSheet('قاعدة بيانات المقررات!A:K').catch(()=>[]),
     fetchSheet('قاعدة بيانات المدربين!A:F').catch(()=>[]),
     fetchSheet('قاعدة بيانات الاداريين!A:H').catch(()=>[]),
-    fetchSheet('قاعدة بيانات الصيانة!A:F').catch(()=>[]),
     loadNews(),
     loadAttachments()
   ]);
@@ -4759,11 +4744,6 @@ async function loadAdmin(){
     const r=ad[i];
     if(n0(r[1]))adminsDB.push({id:n0(r[0]),name:n0(r[1]),title:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5]),level:n0(r[6]),spec:n0(r[7])});
   }
-  maintenanceDB=[];
-  for(let i=1;i<mt.length;i++){
-    const r=mt[i];
-    if(n0(r[1]))maintenanceDB.push({id:n0(r[0]),name:n0(r[1]),spec:n0(r[2]),ph:n0(r[3]),email:n0(r[4]),pw:n0(r[5])});
-  }
   await Promise.all([loadSchedule(), loadAbsenceBase(), loadRequests(), loadDelegations(), loadRubrics(), loadLessonPreps(), loadCoTrainers(), loadDepExceptions(), loadSpecs()]);
   allCourses.forEach(s=>{ s.abs=absPctFromBase(s.sid,s.code,s.course,s.grp,s.half,isActive(s.status)); }); // ⭐ النسبة دائماً من "قاعدة الغياب" (تجاهل العمود I القديم)
   saveDataSnapshot();
@@ -4797,6 +4777,7 @@ async function loadRequests(){
   for(let i=1;i<rq.length;i++){
     const r=rq[i];
     if(!n0(r[0]))continue;
+    if(n0(r[14])==='صيانة'||n0(r[4])==='بلاغ صيانة')continue;
     const cat=n0(r[14]), targetRaw=n0(r[17]);
     requests.push({
       rid:n0(r[0]),sid:n0(r[1]),sname:n0(r[2]),grp:n0(r[3]),type:n0(r[4]),details:n0(r[5]),date:n0(r[6]),
@@ -4811,14 +4792,7 @@ async function loadRequests(){
       updatedBy:n0(r[37]),updatedAt:n0(r[38])
     });
   }
-  if(user&&user.role==='m')requests=requests.filter(r=>r.cat==='صيانة'||r.type==='بلاغ صيانة');
 }
-async function loadMaintenance(){
-  requests=[];
-  await loadRequests();
-  saveDataSnapshot();
-}
-
 /* ===================== نظام التكليفات ===================== */
 // المكلِّف (مدرب المادة أو إداري) يطلب → المشرف يعتمد → المدير يعتمد → التكليف نشط
 let delegations=[];      // كل التكليفات المرئية للمستخدم الحالي
@@ -5118,12 +5092,16 @@ async function revokeDeleg(id){
 }
 
 function showApp(){
+  if(!user||['s','t','a'].indexOf(user.role)<0){
+    try{localStorage.removeItem('bla_token');localStorage.removeItem('bla_user');localStorage.removeItem('bla_role');}catch(e){}
+    location.reload();return;
+  }
   document.getElementById('loginPage').style.display='none';
   document.getElementById('appShell').style.display='block';
-  if(user.role!=='m'&&typeof assistMountFaces==='function')assistMountFaces();
-  if(user.role!=='m'&&typeof assistCheckAI==='function')assistCheckAI();
-  if(user.role!=='m'&&typeof initAssistAutoHide==='function')initAssistAutoHide();
-  ['assistRoot','assistFab','assistPanel'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=user.role==='m'?'none':'';});
+  if(typeof assistMountFaces==='function')assistMountFaces();
+  if(typeof assistCheckAI==='function')assistCheckAI();
+  if(typeof initAssistAutoHide==='function')initAssistAutoHide();
+  ['assistRoot','assistFab','assistPanel'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='';});
   if(typeof initModalWatch==='function')initModalWatch();
   const init=user.name.split(' ').slice(0,2).map(w=>w[0]||'').join('');
   const tav=document.getElementById('topAv');
@@ -5138,13 +5116,12 @@ function showApp(){
     tav.appendChild(im);
   }else{ tav.textContent=init; }
   document.getElementById('topName').textContent=user.name.split(' ').slice(0,3).join(' ');
-  const labels={s:'متدرب',t:'مدرب',a:'إداري',m:'مسؤول صيانة'};
+  const labels={s:'متدرب',t:'مدرب',a:'إداري'};
   const rbadge=document.getElementById('rbadge');
   rbadge.textContent=labels[user.role];
   rbadge.className='role-badge rb-'+user.role;
   if(user.role==='s') buildStudentApp();
   else if(user.role==='t') buildTrainerApp();
-  else if(user.role==='m') buildMaintenanceApp();
   else buildAdminApp();
   /* 🔒 أزرار الترويسة بحسب الدور — بالصنف لا بالأسلوب السطري.
      التكليفات للمدرب والإداري، ومراجعة الحالات للإداري وحده. */
@@ -6913,7 +6890,7 @@ function reqInCurrentHalf_(r){
 }
 function getNotifications(){
   const list=[];if(!requests||!requests.length)return list;
-  if(user.role==='a'||user.role==='m'){
+  if(user.role==='a'){
     requests.filter(r=>reqFinal(r)==='جديد'&&(user.role==='a'||reqCat(r)==='صيانة')).slice(0,30).forEach(r=>list.push({type:'aw',icon:reqCat(r)==='صيانة'?'🔧':'📩',msg:`${esc(REQ_CATS[reqCat(r)].label)} جديد — ${esc(r.sname||'')}${r.location?' · '+esc(r.location):''}`}));
     return list;
   }
@@ -6922,7 +6899,7 @@ function getNotifications(){
     if(reqIsClosed_(f)&&!reqInCurrentHalf_(r))return;
     if(f==='مكتمل')list.push({type:'as',icon:'✅',msg:`اكتمل طلبك: ${esc(lbl)}${dt}`});
     else if(f==='مغلق'||f==='ملغي')list.push({type:'ab',icon:'✓',msg:`${f==='مغلق'?'أُغلق':'أُلغي'} طلبك: ${esc(lbl)}${dt}`});
-    else if(f==='قيد المعالجة'||f==='بانتظار قطعة غيار')list.push({type:'aw',icon:'🛠️',msg:`${esc(f)}: ${esc(lbl)}${dt}${r.notes?' — '+esc(r.notes):''}`});
+    else if(f==='قيد المعالجة')list.push({type:'aw',icon:'🛠️',msg:`${esc(f)}: ${esc(lbl)}${dt}${r.notes?' — '+esc(r.notes):''}`});
     else list.push({type:'ab',icon:'📨',msg:`تم استلام طلبك: ${esc(lbl)}${dt}`});
   });
   return list;
@@ -7042,8 +7019,7 @@ function buildMobNav(r,pages){
   // ⭐ الصفحات الأربع الأكثر استخداماً لكل دور في الشريط السفلي، والباقي في «المزيد»
   const PRIMARY={s:['home','courses','schedule','services'],
                  t:['home','attendance','grades','requests'],
-                 a:['overview','accounts','manage_courses','requests'],
-                 m:['maintenance']};
+                 a:['overview','accounts','manage_courses','requests']};
   const prim=(PRIMARY[r]||[]).filter(p=>pages.includes(p));
   while(prim.length<4){ const nxt=pages.find(p=>!prim.includes(p)); if(!nxt)break; prim.push(nxt); }
   const rest=pages.filter(p=>!prim.includes(p));
@@ -11311,7 +11287,6 @@ function accountFormFields(type,data,mode){
     return f('id','الرقم الأكاديمي *',data.id)+idHint+f('name','الاسم الكامل *',data.name)+f('grp','الشعبة',data.grp)+specField(data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال')+photoField(data);
   }
   if(type==='trainer')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+specField(data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال');
-  if(type==='maintenance')return f('id','الرقم الوظيفي *',data.id)+f('name','الاسم الكامل *',data.name)+f('spec','التخصص',data.spec)+f('ph','الجوال',data.ph)+f('email','البريد الإلكتروني',data.email)+f('pw','الرمز السري (للدخول)',data.pw,'يُترك فارغاً = الجوال')+`<div class="alert ab">يصل هذا الحساب إلى بلاغات الصيانة فقط، دون الدرجات أو الحضور أو التحاضير أو بقية الطلبات.</div>`;
   // admin — مشرف تخصص (لكل تخصص مشرفه يوافق على طلباته)، أو مدير الأكاديمية (المشرف العام) الذي يشرف على الكل ويعتمد نهائياً
   const specOpts=((typeof allSpecs==='function')?allSpecs(true):[]).map(x=>x.name);
   const selStyle="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--card,rgba(255,255,255,.03));color:var(--text);font-size:14px";
@@ -11405,7 +11380,7 @@ window.photoField=photoField;window.accPhotoPick=accPhotoPick;
 window.accPhotoClear=accPhotoClear;window.accPhotoSave=accPhotoSave;
 
 function accountModal(type,mode,data){
-  const tLbl=type==='student'?'متدرب':type==='trainer'?'مدرب':type==='maintenance'?'مسؤول صيانة':'إداري';
+  const tLbl=type==='student'?'المتدرب':type==='trainer'?'المدرب':'الإداري';
   const title=(mode==='edit'?'✏️ تعديل ':'➕ إضافة ')+tLbl;
   const overlay=document.createElement('div');
   overlay.className='modal-overlay';overlay.id='accModal';
@@ -11425,7 +11400,7 @@ async function saveAccount(type,mode){
   const g=id=>{const el=document.getElementById('acc_'+id);return el?el.value.trim():'';};
   const rec={type,id:g('id'),name:g('name'),ph:g('ph'),email:g('email'),oldId:g('oldid')||g('id')};
   if(type==='student'){rec.grp=g('grp');rec.spec=g('spec');rec.pw=g('pw');}
-  else if(type==='trainer'||type==='maintenance'){rec.spec=g('spec');rec.pw=g('pw');}
+  else if(type==='trainer'){rec.spec=g('spec');rec.pw=g('pw');}
   else{rec.title=g('title');rec.pw=g('pw');rec.level=g('level');rec.spec=[...document.querySelectorAll('.acc_spec_chk:checked')].map(c=>c.value).join('، ');}
   if(!rec.id||!rec.name){showToast('الرقم والاسم مطلوبان','w');return;}
   if(type==='admin'&&!rec.pw){showToast('الرمز السري مطلوب للإداري','w');return;}
@@ -11473,7 +11448,7 @@ async function saveAccount(type,mode){
   }catch(e){showToast('تعذّر الحفظ — جرب مرة أخرى'+(cascade?' (لكن الرقم تحدّث)':''),'e');}
 }
 async function deleteAccount(type,id,name){
-  const tLbl=type==='student'?'المتدرب':type==='trainer'?'المدرب':type==='maintenance'?'مسؤول الصيانة':'الإداري';
+  const tLbl=type==='student'?'المتدرب':type==='trainer'?'المدرب':'الإداري';
   if(!confirm(`⚠️ هل تريد حذف ${tLbl}: ${name}؟\nلا يمكن التراجع عن هذا الإجراء.`))return;
   showToast('جاري الحذف...','i');
   try{
@@ -11486,7 +11461,6 @@ async function deleteAccount(type,id,name){
     const od=x=>String(x||'').replace(/[^0-9]/g,'');
     if(type==='student'){students=students.filter(s=>od(s.id)!==od(id));allCourses=allCourses.filter(c=>od(c.sid)!==od(id));}
     else if(type==='trainer'){trainersDB=trainersDB.filter(s=>od(s.id)!==od(id));}
-    else if(type==='maintenance'){maintenanceDB=maintenanceDB.filter(s=>od(s.id)!==od(id));}
     else{adminsDB=adminsDB.filter(s=>od(s.id)!==od(id));}
     showToast('✅ تم الحذف','s');
     showAPage('accounts',document.getElementById('sn-accounts'));
@@ -13371,9 +13345,6 @@ const aPgs={
       </tr>`).join('')||`<tr data-empty><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد مدربون</td></tr>`;
       const specs=[...new Set((trainersDB||[]).map(s=>String(s.spec||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ar'));
       if(specs.length)filters=`<select data-filter="sp" aria-label="تصفية بالتخصص" title="التخصص" onchange="filterListSel(this)"><option value="">كل التخصصات</option>${specs.map(sp=>`<option value="${escAttr(sp)}">${esc(sp)}</option>`).join('')}</select>`;
-    }else if(t==='maintenance'){
-      cols=`<th>الرقم</th><th>الاسم</th><th>التخصص</th><th>الجوال</th><th>البريد</th><th>إجراءات</th>`;
-      rows=(maintenanceDB||[]).map(s=>`<tr><td style="color:var(--muted)">${esc(s.id.toString())}</td><td style="font-weight:600">${esc(s.name)}</td><td>${esc(s.spec||'-')}</td><td>${esc(s.ph||'-')}</td><td style="font-size:11px">${esc(s.email||'-')}</td><td>${actBtns('maintenance',s)}</td></tr>`).join('')||`<tr data-empty><td colspan="6" style="text-align:center;color:var(--muted)">لا يوجد فريق صيانة — أضف أول حساب</td></tr>`;
     }else{
       cols=`<th>الرقم</th><th>الاسم</th><th>المسمى</th><th>الصلاحية</th><th>التخصص</th><th>الجوال</th><th>إجراءات</th>`;
       rows=(adminsDB||[]).map(s=>`<tr>
@@ -13384,7 +13355,7 @@ const aPgs={
         <td>${actBtns('admin',s)}</td>
       </tr>`).join('')||`<tr data-empty><td colspan="7" style="text-align:center;color:var(--muted)">لا يوجد إداريون</td></tr>`;
     }
-    const tLbl=t==='student'?'متدرب':t==='trainer'?'مدرب':t==='maintenance'?'مسؤول صيانة':'إداري';
+    const tLbl=t==='student'?'المتدرب':t==='trainer'?'المدرب':'الإداري';
     const nRelink=(typeof relinkScan==='function')?relinkScan().length:0;
     /* أدوات المتدربين — بيتها هنا وحدها. «فحص مادة» انتقلت لصفحة المقررات. */
     const acts=(t==='student'?`
@@ -13395,11 +13366,10 @@ const aPgs={
         <button class="btn btn-g" onclick="openGraduateBatch()">🎓 تخريج دفعة</button>`:'')
       +`<button class="btn btn-b" onclick='addAccount("${jsq(t)}")'>➕ إضافة ${tLbl}</button>`;
     return `
-    <div class="banner"><div><div class="btitle">👥 الأشخاص</div><div class="bsub">المتدربون والمدربون والإداريون وفريق الصيانة — الإضافة والتعديل والحذف في مكان واحد</div></div></div>
+    <div class="banner"><div><div class="btitle">👥 الأشخاص</div><div class="bsub">المتدربون والمدربون والإداريون — الإضافة والتعديل والحذف في مكان واحد</div></div></div>
     ${pgTabs('accounts','_accTab',t,[
       {id:'student',lbl:'المتدربون',icon:'🎓',n:uniqSt.length},
       {id:'trainer',lbl:'المدربون',icon:'👨‍🏫',n:(trainersDB||[]).length},
-      {id:'maintenance',lbl:'فريق الصيانة',icon:'🔧',n:(maintenanceDB||[]).length},
       {id:'admin',lbl:'الإداريون',icon:'⚙️',n:(adminsDB||[]).length}])}
     ${pgActs('إجراءات',acts)}
     <div data-listwrap>
@@ -14295,7 +14265,6 @@ function reqFlowDefaults(){return {dirOverride:true,cats:{
   'تعريف':{label:'ورقة تعريف',icon:'📇',on:true,stages:[{who:'dir',slot:'dir',approve:true,reject:true}]},
   'عام':{label:'طلب عام',icon:'✉️',on:true,stages:[{who:'tgt',slot:'tgt',approve:true,reject:true}]},
   'ساعات':{label:'إعادة ساعات',icon:'🕒',on:true,stages:[{who:'trn',slot:'trn',approve:true,reject:true},{who:'dir',slot:'dir',approve:true,reject:true}]},
-  'صيانة':{label:'بلاغ صيانة',icon:'🔧',on:true,stages:[]}
 }};}
 function rqClone(x){return JSON.parse(JSON.stringify(x));}
 async function openReqFlow(){
@@ -14329,7 +14298,7 @@ async function openReqFlow(){
       @media(max-width:680px){#reqFlowModal .rf-dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0}#reqFlowModal .rf-top{align-items:flex-start;padding:14px;gap:8px}#reqFlowModal .rf-top h3{font-size:15px}#reqFlowModal .rf-top p{font-size:11px}#reqFlowModal .rf-scroll{padding:12px}#reqFlowModal .rf-card-head{grid-template-columns:25px 46px minmax(100px,1fr) auto;padding:11px;gap:7px}#reqFlowModal .rf-card-head .rf-mini-actions{grid-column:2/-1;justify-content:flex-end}#reqFlowModal .rf-stage{grid-template-columns:25px minmax(0,1fr) minmax(0,1fr);gap:7px}#reqFlowModal .rf-stage .rf-who{grid-column:2/-1}#reqFlowModal .rf-stage .rf-check:first-of-type{grid-column:2}#reqFlowModal .rf-stage .rf-check:nth-of-type(2){grid-column:3}#reqFlowModal .rf-stage .rf-check{justify-content:center;padding-inline:7px}#reqFlowModal .rf-stage .rf-mini-actions{grid-column:2/-1;justify-content:flex-end}#reqFlowModal .rf-footer{padding:11px 12px;align-items:stretch}#reqFlowModal .rf-footer>div{flex:1}#reqFlowModal .rf-footer .btn{padding-inline:12px}#reqFlowModal .rf-footer>div .btn{flex:1}}
     </style>`;
   document.body.appendChild(overlay);
-  try{const res=await jsonpCall({action:'getReqFlow'});if(!res||!res.ok||!res.flow||!res.flow.cats)throw new Error((res&&res.msg)||'flow-unavailable');RQF=rqClone(res.flow);RQF_ADMINS=res.admins||[];}
+  try{const res=await jsonpCall({action:'getReqFlow'});if(!res||!res.ok||!res.flow||!res.flow.cats)throw new Error((res&&res.msg)||'flow-unavailable');RQF=cleanRequestFlow(rqClone(res.flow));RQF_ADMINS=res.admins||[];}
   catch(e){RQF=reqFlowDefaults();showToast('تعذّر تحميل المحفوظ؛ تظهر الإعدادات الافتراضية ويمكنك حفظها','w');}
   rqRedraw();document.getElementById('rqAddCatBtn').disabled=false;document.getElementById('rqSaveBtn').disabled=false;document.getElementById('rqResetBtn').disabled=false;
 }
@@ -14342,7 +14311,7 @@ function reqFlowHTML(){
   if(!RQF||!RQF.cats)return '<div class="rf-loading">لا توجد إعدادات</div>';
   const keys=Object.keys(RQF.cats);
   const cards=keys.map((k,catIndex)=>{
-    const c=RQF.cats[k],stages=Array.isArray(c.stages)?c.stages:[],custom=k.indexOf('custom_')===0,isMaint=k==='صيانة';
+    const c=RQF.cats[k],stages=Array.isArray(c.stages)?c.stages:[],custom=k.indexOf('custom_')===0;
     const rows=stages.map((st,i)=>`<div class="rf-stage"><span class="rf-num">${i+1}</span><div class="rf-who"><select aria-label="جهة الإجراء" onchange="rqSet('${jsq(k)}',${i},'who',this.value)">${rqWhoOptions(st.who)}</select></div>
       <label class="rf-check" title="السماح لهذه الجهة بقبول الطلب"><input type="checkbox" ${st.approve!==false?'checked':''} onchange="rqSet('${jsq(k)}',${i},'approve',this.checked)">يقبل</label>
       <label class="rf-check" title="السماح لهذه الجهة برفض الطلب"><input type="checkbox" ${st.reject!==false?'checked':''} onchange="rqSet('${jsq(k)}',${i},'reject',this.checked)">يرفض</label>
@@ -14350,9 +14319,9 @@ function reqFlowHTML(){
     return `<section class="rf-card ${c.on===false?'is-off':''}" data-cat="${escAttr(k)}"><div class="rf-card-head"><span class="rf-order">${String(catIndex+1).padStart(2,'0')}</span><div class="rf-field"><label>الأيقونة</label><input class="rf-icon" value="${escAttr(c.icon||'📄')}" maxlength="8" onchange="rqSetCat('${jsq(k)}','icon',this.value)"></div>
       <div class="rf-field"><label>اسم نوع الطلب</label><input class="rf-label" value="${escAttr(c.label||k)}" maxlength="40" onchange="rqSetCat('${jsq(k)}','label',this.value)"></div><label class="rf-switch"><input type="checkbox" ${c.on!==false?'checked':''} onchange="rqSetCat('${jsq(k)}','on',this.checked)">مفعّل</label>
       <div class="rf-mini-actions"><button class="rf-icon-btn" title="تقديم النوع" ${catIndex===0?'disabled':''} onclick="rqMoveCat('${jsq(k)}',-1)">↑</button><button class="rf-icon-btn" title="تأخير النوع" ${catIndex===keys.length-1?'disabled':''} onclick="rqMoveCat('${jsq(k)}',1)">↓</button>${custom?`<button class="rf-icon-btn rf-danger" title="حذف النوع" onclick="rqDelCat('${jsq(k)}')">🗑</button>`:''}</div></div>
-      <div class="rf-stages"><div class="rf-stages-title">${isMaint?'التشغيل المباشر':'جهات القبول والرفض'}<span>${isMaint?'تبقى بلاغات الصيانة ضمن مركز العمليات':'تنتقل للجهة التالية بعد القبول'}</span></div>
-      ${isMaint?'<div class="rf-empty">لا تحتاج بلاغات الصيانة مراحل قبول؛ يتابعها حساب الصيانة والإدارة من الاستلام حتى الإغلاق.</div>':(rows||'<div class="rf-empty">بلا جهات محددة — تتابع الإدارة هذا النوع تشغيلياً من نافذة «متابعة الطلب».</div>')}
-      ${!isMaint&&stages.length<5?'<button class="btn btn-out btn-sm rf-add-stage" onclick="rqAdd(\''+jsq(k)+'\')">＋ إضافة جهة</button>':''}</div></section>`;
+      <div class="rf-stages"><div class="rf-stages-title">جهات القبول والرفض<span>تنتقل للجهة التالية بعد القبول</span></div>
+      ${rows||'<div class="rf-empty">بلا جهات محددة — تتابع الإدارة هذا النوع تشغيلياً من نافذة «متابعة الطلب».</div>'}
+      ${stages.length<5?'<button class="btn btn-out btn-sm rf-add-stage" onclick="rqAdd(\''+jsq(k)+'\')">＋ إضافة جهة</button>':''}</div></section>`;
   }).join('');
   return `<div class="rf-note">حدّد صلاحية <b>«يقبل»</b> أو <b>«يرفض»</b> لكل جهة. يظهر الطلب للجهة الحالية فقط، ويُكتمل بعد قبول آخر جهة. الأنواع الجديدة تظهر مباشرةً في نموذج تقديم الطلب بعد الحفظ.</div>${cards}<label class="rf-director"><input type="checkbox" ${RQF.dirOverride!==false?'checked':''} onchange="RQF.dirOverride=this.checked"><span><b>مدير الأكاديمية يستطيع القبول والرفض في أي مرحلة</b><small>عند إيقافه، تقتصر الإجراءات على الجهة المحددة للمرحلة الحالية. تبقى متابعة الإدارة التشغيلية متاحة.</small></span></label>`;
 }
@@ -14365,15 +14334,15 @@ function rqAdd(cat){const a=RQF.cats[cat].stages;if(a.length>=5)return;a.push({w
 function rqMoveCat(cat,d){const keys=Object.keys(RQF.cats),i=keys.indexOf(cat),j=i+d;if(j<0||j>=keys.length)return;[keys[i],keys[j]]=[keys[j],keys[i]];const next={};keys.forEach(k=>next[k]=RQF.cats[k]);RQF.cats=next;rqRedraw();}
 function rqAddCat(){if(!RQF)return;const k='custom_'+Date.now().toString(36);RQF.cats[k]={label:'طلب مخصص جديد',icon:'📝',on:true,stages:[{who:'dir',approve:true,reject:true}]};rqRedraw();const b=document.getElementById('reqFlowBody');if(b)b.scrollTop=b.scrollHeight;setTimeout(()=>{const inp=document.querySelector('#reqFlowBody [data-cat="'+k+'"] .rf-label');if(inp){inp.focus();inp.select();}},30);}
 function rqDelCat(cat){if(cat.indexOf('custom_')!==0||!RQF.cats[cat])return;if(!confirm('حذف نوع «'+RQF.cats[cat].label+'»؟\nلن تُحذف الطلبات السابقة، لكن لن يظهر النوع في الطلبات الجديدة.'))return;delete RQF.cats[cat];rqRedraw();}
-function rqReset(){if(!confirm('استعادة الأنواع والمسارات الافتراضية؟ لن يُحفظ التغيير حتى تضغط «حفظ الإعدادات».'))return;RQF=reqFlowDefaults();rqRedraw();}
+function rqReset(){if(!confirm('استعادة الأنواع والمسارات الافتراضية؟ لن يُحفظ التغيير حتى تضغط «حفظ الإعدادات».'))return;RQF=cleanRequestFlow(reqFlowDefaults());rqRedraw();}
 async function saveReqFlow(){
   if(!RQF)return;const labels=Object.keys(RQF.cats).map(k=>String(RQF.cats[k].label||'').trim());
   if(labels.some(x=>!x)){showToast('اكتب اسماً لكل نوع طلب','w');return;}
   if(new Set(labels.map(x=>x.replace(/\s+/g,' '))).size!==labels.length){showToast('لا تستخدم الاسم نفسه لنوعين مختلفين','w');return;}
-  const flow=rqClone(RQF);Object.keys(flow.cats).forEach(k=>{const c=flow.cats[k];c.label=String(c.label||k).trim();c.icon=String(c.icon||'📄').trim();c.on=c.on!==false;c.stages=k==='صيانة'?[]:(c.stages||[]).slice(0,5).map(st=>({who:st.who,approve:st.approve!==false,reject:st.reject!==false}));});
+  const flow=rqClone(RQF);Object.keys(flow.cats).forEach(k=>{const c=flow.cats[k];c.label=String(c.label||k).trim();c.icon=String(c.icon||'📄').trim();c.on=c.on!==false;c.stages=(c.stages||[]).slice(0,5).map(st=>({who:st.who,approve:st.approve!==false,reject:st.reject!==false}));});
   const btn=document.getElementById('rqSaveBtn');if(btn){btn.disabled=true;btn.textContent='جاري الحفظ…';}
   const res=await callWrite('saveReqFlow',{flow}).catch(()=>null);
-  if(res&&res.status==='ok'&&res.flow){REQ_FLOW=res.flow;REQ_FLOW._admins=RQF_ADMINS;REQ_FLOW_FROM_BOOT=true;showToast('✅ تم حفظ الأنواع ومسارات الإجراء','s');document.getElementById('reqFlowModal')?.remove();reloadRequestsPage();}
+  if(res&&res.status==='ok'&&res.flow){REQ_FLOW=cleanRequestFlow(res.flow);REQ_FLOW._admins=RQF_ADMINS;REQ_FLOW_FROM_BOOT=true;showToast('✅ تم حفظ الأنواع ومسارات الإجراء','s');document.getElementById('reqFlowModal')?.remove();reloadRequestsPage();}
   else{showToast('تعذّر الحفظ: '+((res&&(res.hint||res.msg))||'تحقق من الاتصال'),'e');if(btn){btn.disabled=false;btn.textContent='حفظ الإعدادات';}}
 }
 
@@ -15159,7 +15128,7 @@ async function restoreSession(){
       const refresh=bootThenLoad({requireBoot:true});
       refresh.then(()=>{
         // إعادة رسم اللوحة الحالية بالبيانات الجديدة (بدون قفزة مزعجة)
-        try{ if(role==='s') buildStudentApp(); else if(role==='t') buildTrainerApp(); else if(role==='m') buildMaintenanceApp(); else buildAdminApp(); }catch(e){}
+        try{ if(role==='s') buildStudentApp(); else if(role==='t') buildTrainerApp(); else buildAdminApp(); }catch(e){}
       }).catch(e=>{
         if(e&&e.message==='session'){ LS.removeItem('bla_token'); location.reload(); return; }
         try{ showToast('⚠️ تعذّر تحديث البيانات — المعروض من آخر نسخة محفوظة','w'); }catch(_){}
@@ -16649,7 +16618,7 @@ function printStudentReport(sid){
 
 // ===== 4) تقرير الأعذار والطلبات =====
 function printRequestsReport(){
-  const reqs=(requests||[]).slice(),done=reqs.filter(r=>reqFinal(r)==='مكتمل'),open=reqs.filter(r=>['جديد','قيد المعالجة','بانتظار قطعة غيار'].includes(reqFinal(r))),closed=reqs.filter(r=>['مغلق','ملغي'].includes(reqFinal(r)));
+  const reqs=(requests||[]).slice(),done=reqs.filter(r=>reqFinal(r)==='مكتمل'),open=reqs.filter(r=>['جديد','قيد المعالجة'].includes(reqFinal(r))),closed=reqs.filter(r=>['مغلق','ملغي'].includes(reqFinal(r)));
   const statusOf=r=>{const f=reqFinal(r),cls=f==='مكتمل'?'b-g':f==='ملغي'?'b-r':'b-y';return `<span class="badge ${cls}">${esc(f)}</span>`;};
   const rows=reqs.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(r=>`<tr><td>${esc(fmtDateAr(r.date))||'—'}</td><td style="text-align:right">${esc(r.sname||'')}</td><td>${esc(r.grp||r.location||'')}</td><td>${esc((REQ_CATS[reqCat(r)]||{}).label||r.type)}</td><td>${esc(r.priority||'عادية')}</td><td>${esc(r.assignedTo||'—')}</td><td>${statusOf(r)}</td></tr>`).join('');
   const body=`<div class="kpis"><div class="kpi"><div class="n">${reqs.length}</div><div class="l">إجمالي الطلبات</div></div><div class="kpi"><div class="n" style="color:var(--acc-g)">${done.length}</div><div class="l">مكتملة</div></div><div class="kpi"><div class="n" style="color:var(--acc-y)">${open.length}</div><div class="l">قيد المتابعة</div></div><div class="kpi"><div class="n">${closed.length}</div><div class="l">مغلقة أو ملغاة</div></div></div><div class="sec-title">سجل الطلبات وبلاغات الصيانة</div><table><thead><tr><th>التاريخ</th><th>مقدم الطلب</th><th>الشعبة / الموقع</th><th>النوع</th><th>الأولوية</th><th>المسند إليه</th><th>الحالة</th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="text-align:center">لا توجد طلبات</td></tr>'}</tbody></table>`;
@@ -16870,9 +16839,7 @@ function toggleExcuseFields(){
   const mf=document.getElementById('makeup-fields');
   if(mf)mf.style.display=(t==='إعادة ساعات')?'block':'none';
   const pf=document.getElementById('priority-fields');
-  if(pf)pf.style.display=(t==='عذر غياب'||t==='بلاغ صيانة')?'none':'block';
-  const sf=document.getElementById('maintenance-fields');
-  if(sf)sf.style.display=(t==='بلاغ صيانة')?'block':'none';
+  if(pf)pf.style.display=t==='عذر غياب'?'none':'block';
   const ga=document.getElementById('general-attachment');
   if(ga)ga.style.display=(t==='عذر غياب')?'none':'block';
 }
@@ -16925,10 +16892,15 @@ function renderExcuseDates(){
 }
 
 /* ============================================================
-   أنواع الطلبات ومسارات القبول والرفض + التشغيل المباشر للصيانة
+   أنواع الطلبات ومسارات القبول والرفض والمتابعة
    ============================================================ */
 const REQ_FLOW_DEFAULT=reqFlowDefaults();
-let REQ_FLOW=reqFlowDefaults();
+function isLegacyRequest(r){return !!r&&(String(r.cat||'')==='صيانة'||String(r.type||'')==='بلاغ صيانة');}
+function cleanRequestFlow(flow){
+  if(flow&&flow.cats)Object.keys(flow.cats).forEach(k=>{const c=flow.cats[k]||{};if(k==='صيانة'||String(c.label||'')==='بلاغ صيانة')delete flow.cats[k];});
+  return flow;
+}
+let REQ_FLOW=cleanRequestFlow(reqFlowDefaults());
 let TERM_LOCKS={}, MAKEUP_MAX_HOURS=0;
 const REQ_WHO_LBL={trn:'مدرب المادة',sup:'مشرف التخصص',dir:'مدير الأكاديمية',tgt:'المسؤول المحدد في الطلب'};
 const REQ_CATS=new Proxy({},{
@@ -16945,7 +16917,7 @@ function reqWhoLabel(who,short){
 }
 function stageLabelFor(r,slot){const st=reqStageOf(reqCat(r),slot);return st?reqWhoLabel(st.who,true):'جهة الإجراء';}
 async function loadReqFlow(){
-  try{const r=await jsonpCall({action:'getReqFlow'});if(r&&r.ok&&r.flow&&r.flow.cats){REQ_FLOW=r.flow;TERM_LOCKS=r.termLocks||{};MAKEUP_MAX_HOURS=Number(r.makeupMax)||0;if(r.admins){RQF_ADMINS=r.admins;REQ_FLOW._admins=r.admins;}REQ_FLOW_FROM_BOOT=true;}return REQ_FLOW;}
+  try{const r=await jsonpCall({action:'getReqFlow'});if(r&&r.ok&&r.flow&&r.flow.cats){REQ_FLOW=cleanRequestFlow(r.flow);TERM_LOCKS=r.termLocks||{};MAKEUP_MAX_HOURS=Number(r.makeupMax)||0;if(r.admins){RQF_ADMINS=r.admins;REQ_FLOW._admins=r.admins;}REQ_FLOW_FROM_BOOT=true;}return REQ_FLOW;}
   catch(e){REQ_FLOW=reqFlowDefaults();return REQ_FLOW;}
 }
 function termLockFor(term){
@@ -16969,7 +16941,7 @@ function reqAuditEntries(r){
   return String(r.audit||'').split(/\r?\n/).map(x=>{try{return JSON.parse(x);}catch(_){return null;}}).filter(x=>x&&x.at);
 }
 
-function reqCat(r){return (r&&(r.cat||r.type==='بلاغ صيانة'&&'صيانة'))||(r.type==='عذر غياب'?'عذر':r.type==='إعادة ساعات'?'ساعات':String(r.type||'').indexOf('تعريف')>-1?'تعريف':String(r.type||'').indexOf('عام')>-1?'عام':'إداري');}
+function reqCat(r){return (r&&r.cat)||(r.type==='عذر غياب'?'عذر':r.type==='إعادة ساعات'?'ساعات':String(r.type||'').indexOf('تعريف')>-1?'تعريف':String(r.type||'').indexOf('عام')>-1?'عام':'إداري');}
 function reqChain(r){const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[reqCat(r)];return c?(c.stages||[]).map(x=>x.slot):[];}
 function reqChainLast(r){const a=reqChain(r);return a.length?a[a.length-1]:null;}
 function normStageVal(v){const t=String(v==null?'':v).replace(/[ً-ْٰـ]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/\s+/g,'');if(!t||t==='—'||t==='-'||t==='–')return 'معلق';if(/^(معتمد|موافق|مقبول|تمالاعتماد)/.test(t))return 'معتمد';if(/^(مرفوض|رفض|غيرموافق)/.test(t))return 'مرفوض';return 'معلق';}
@@ -17044,7 +17016,7 @@ function canActStage(r,u){
   return false;
 }
 function reqStatusPill(r){
-  const st=reqFinal(r),cls=st==='مكتمل'?'pg':['ملغي','ملغى','مرفوض'].includes(st)?'pr':st==='مغلق'?'':st==='قيد المعالجة'?'pb':st==='بانتظار قطعة غيار'?'py':'pb';
+  const st=reqFinal(r),cls=st==='مكتمل'?'pg':['ملغي','ملغى','مرفوض'].includes(st)?'pr':st==='مغلق'?'':st==='قيد المعالجة'?'pb':'pb';
   return `<span class="pill ${cls}">${esc(st)}</span>`;
 }
 function reqTimeline(r){
@@ -17087,88 +17059,20 @@ function reqExcuseParse(r){
     excuseType:((d.match(/نوع العذر:\s*([^|]+)/)||[])[1]||'').trim(),
     file:((d.match(/الملف:\s*(\S+)/)||[])[1]||'').trim()};
 }
-function buildMaintenanceApp(){
-  const pages=['maintenance'];document.getElementById('sidebar').innerHTML=navHTML('m',pages);buildMobNav('m',pages);showMPage('maintenance',null);
-}
-function showMPage(pg,el){
-  window._curPg={r:'m',pg:'maintenance'};if(el){document.querySelectorAll('.sitem').forEach(i=>i.className='sitem');el.className='sitem active aa';}
-  const mc=document.getElementById('mcontent');mc.innerHTML=maintenanceWorkspaceHTML();renderThemeRibbon();if(currentLang==='en')translateNode(mc);
-}
-function maintRows(){return (requests||[]).filter(r=>reqCat(r)==='صيانة'||r.type==='بلاغ صيانة');}
-function maintOverdue(r){return !!r.dueDate&&r.dueDate<todayISO()&&!['مكتمل','مغلق','ملغي'].includes(reqFinal(r));}
-function maintenanceWorkspaceHTML(){
-  const rows=maintRows(),open=rows.filter(r=>!['مكتمل','مغلق','ملغي'].includes(reqFinal(r)));
-  const metric=(id,label,n,icon,status)=>`<button class="maint-metric ${id}" onclick="${id==='is-late'?"setMaintFilter('attention',!(window._maintFilters&&window._maintFilters.attention))":"setMaintFilter('status','"+jsq(status)+"')"}"><span>${icon}</span><div><b>${n}</b><small>${label}</small></div></button>`;
-  const locations=[...new Set(rows.map(r=>r.location).filter(Boolean))].sort(),assignees=[...new Set(rows.map(r=>r.assignedTo).filter(Boolean))].sort();
-  const f=window._maintFilters||{q:'',status:'',priority:'',location:'',assignedTo:''};window._maintFilters=f;
-  return `<section class="maint-shell"><div class="maint-head"><div><div class="maint-kicker">BAHRA · OPERATIONS</div><h2>مركز عمليات الصيانة</h2><p>متابعة البلاغات من الاستلام حتى الإكمال والإغلاق، مع سجل واضح لكل إجراء.</p></div><button class="btn btn-b" onclick="openNewMaintenance()">＋ بلاغ صيانة</button></div>
-    <div class="maint-metrics">${metric('is-new','بلاغات جديدة',rows.filter(r=>reqFinal(r)==='جديد').length,'●','جديد')}${metric('is-progress','قيد المعالجة',rows.filter(r=>reqFinal(r)==='قيد المعالجة').length,'◐','قيد المعالجة')}${metric('is-wait','بانتظار قطعة غيار',rows.filter(r=>reqFinal(r)==='بانتظار قطعة غيار').length,'◌','بانتظار قطعة غيار')}${metric('is-done','مكتملة',rows.filter(r=>reqFinal(r)==='مكتمل').length,'✓','مكتمل')}${metric('is-late','عاجلة أو متأخرة',open.filter(r=>r.priority==='عاجلة'||maintOverdue(r)).length,'!','')}</div>
-    <div class="maint-toolbar"><input class="maint-search" id="maintQ" value="${escAttr(f.q)}" oninput="setMaintFilter('q',this.value)" placeholder="ابحث برقم البلاغ، الموقع، المعدة أو الوصف..." aria-label="بحث في البلاغات">
-      <select onchange="setMaintFilter('status',this.value)" aria-label="تصفية بالحالة"><option value="">كل الحالات</option>${['جديد','قيد المعالجة','بانتظار قطعة غيار','مكتمل','مغلق','ملغي'].map(x=>`<option ${f.status===x?'selected':''}>${x}</option>`).join('')}</select>
-      <select onchange="setMaintFilter('priority',this.value)" aria-label="تصفية بالأولوية"><option value="">كل الأولويات</option>${['عاجلة','مهمة','عادية'].map(x=>`<option ${f.priority===x?'selected':''}>${x}</option>`).join('')}</select>
-      <select onchange="setMaintFilter('location',this.value)" aria-label="تصفية بالموقع"><option value="">كل المواقع</option>${locations.map(x=>`<option ${f.location===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
-      <select onchange="setMaintFilter('assignedTo',this.value)" aria-label="تصفية بالإسناد"><option value="">كل المسند إليهم</option>${assignees.map(x=>`<option ${f.assignedTo===x?'selected':''}>${esc(x)}</option>`).join('')}</select>
-      <button class="btn btn-out btn-sm" onclick="clearMaintFilters()">مسح التصفية</button></div>
-    <div class="maint-list-head"><b>البلاغات</b><span id="maintCount"></span></div><div id="maintList" class="maint-list">${maintenanceListHTML()}</div></section>`;
-}
-function setMaintFilter(k,v){window._maintFilters=window._maintFilters||{};window._maintFilters[k]=v;const list=document.getElementById('maintList');if(list)list.innerHTML=maintenanceListHTML();else reloadRequestsPage();}
-function clearMaintFilters(){window._maintFilters={q:'',status:'',priority:'',location:'',assignedTo:'',attention:false};reloadRequestsPage();}
-function maintenanceListHTML(){
-  const f=window._maintFilters||{},q=String(f.q||'').trim().toLowerCase();
-  const rows=maintRows().filter(r=>(!f.status||reqFinal(r)===f.status)&&(!f.priority||r.priority===f.priority)&&(!f.location||r.location===f.location)&&(!f.assignedTo||r.assignedTo===f.assignedTo)&&(!f.attention||r.priority==='عاجلة'||maintOverdue(r))&&(!q||[r.rid,r.sname,r.location,r.asset,r.details,r.assignedTo].join(' ').toLowerCase().includes(q))).sort((a,b)=>(maintOverdue(b)-maintOverdue(a))||((b.priority==='عاجلة')-(a.priority==='عاجلة'))||String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
-  setTimeout(()=>{const c=document.getElementById('maintCount');if(c)c.textContent=rows.length+' من '+maintRows().length;},0);
-  if(!rows.length)return '<div class="maint-empty"><span>🔧</span><b>لا توجد بلاغات مطابقة</b><p>جرّب تغيير التصفية أو أرسل بلاغ صيانة جديداً.</p></div>';
-  return rows.map(r=>{const st=reqFinal(r),late=maintOverdue(r);return `<button class="maint-ticket ${late?'is-overdue':''}" onclick="openMaintenanceTicket('${jsq(r.rid)}')"><div class="maint-ticket-top"><span class="maint-id">${esc(r.rid)}</span><span class="maint-status st-${st==='مكتمل'?'done':st==='قيد المعالجة'?'progress':st==='بانتظار قطعة غيار'?'wait':st==='ملغي'?'cancel':'new'}">${esc(st)}</span></div>
-    <strong>${esc(r.asset||'بلاغ صيانة')}</strong><p>${esc(r.details||'')}</p><div class="maint-ticket-meta"><span>📍 ${esc(r.location||'—')}</span><span>👤 ${esc(r.assignedTo||'غير مسند')}</span><span>📅 ${esc(r.dueDate||'بلا استحقاق')}</span></div>
-    <div class="maint-ticket-foot"><span class="priority p-${r.priority==='عاجلة'?'urgent':r.priority==='مهمة'?'high':'normal'}">${esc(r.priority||'عادية')}</span><span>${esc(r.sname||'')}</span>${late?'<b>متأخر</b>':''}</div></button>`;}).join('');
-}
-function openNewMaintenance(){
-  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='newMaintModal';ov.innerHTML=`<div class="modal-box" style="max-width:760px;width:100%;max-height:92vh;overflow:auto;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:18px;padding:18px"><div class="mh"><div class="mt">🔧 بلاغ صيانة</div><button class="mc" onclick="this.closest('.modal-overlay').remove()">✕</button></div>${requestFormHtml('صيانة')}</div>`;document.body.appendChild(ov);
-}
-function maintAuditHTML(r){
-  const entries=reqAuditEntries(r).slice().reverse();if(!entries.length)return '<div class="cc-meta">لا توجد تحديثات مسجلة بعد.</div>';
-  return entries.map(e=>`<div class="maint-log-item"><i></i><div><b>${esc(e.final||e.status||'تحديث')}</b><span>${esc(e.by||'النظام')} · ${esc(e.at?fmtDateAr(e.at):'')}</span>${e.notes?`<p>${esc(e.notes)}</p>`:''}</div></div>`).join('');
-}
-function openMaintenanceTicket(rid){
-  const r=maintRows().find(x=>String(x.rid)===String(rid));if(!r||(user.role!=='a'&&user.role!=='m'))return;
-  const statuses=['جديد','قيد المعالجة','بانتظار قطعة غيار','مكتمل','مغلق'],ov=document.createElement('div');ov.className='modal-overlay';ov.id='maintTicketModal';
-  ov.innerHTML=`<div class="modal-box maint-modal" style="max-width:900px;width:100%;max-height:92vh;overflow:auto;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:20px;padding:20px"><div class="mh"><div><div class="maint-kicker">${esc(r.rid)}</div><div class="mt">${esc(r.asset||'بلاغ صيانة')}</div></div><button class="mc" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="maint-detail-grid"><section><div class="maint-section-title">تفاصيل البلاغ</div><div class="req-notes">${esc(r.details||'')}</div><div class="req-detail-grid"><div><span>مقدم البلاغ</span><b>${esc(r.sname||'—')}</b></div><div><span>تاريخ البلاغ</span><b>${esc(fmtDateAr(r.createdAt||r.date))}</b></div><div><span>الموقع</span><b>${esc(r.location||'—')}</b></div><div><span>الأصل</span><b>${esc(r.asset||'—')}</b></div></div>
-      <div class="maint-section-title">التحديث التشغيلي</div><div class="maint-form-grid"><div class="mform-group"><label>الحالة</label><select id="mtStatus" class="lp-in">${statuses.map(x=>`<option ${x===reqFinal(r)?'selected':''}>${x}</option>`).join('')}</select></div><div class="mform-group"><label>الأولوية</label><select id="mtPriority" class="lp-in">${['عادية','مهمة','عاجلة'].map(x=>`<option ${x===r.priority?'selected':''}>${x}</option>`).join('')}</select></div>
-      <div class="mform-group"><label>المسند إليه</label><input id="mtAssigned" class="lp-in" list="maintTeam" value="${escAttr(r.assignedTo||'')}"><datalist id="maintTeam">${(maintenanceDB||[]).map(x=>`<option value="${escAttr(x.name)}">`).join('')}</datalist></div><div class="mform-group"><label>تاريخ الاستحقاق</label><input type="date" id="mtDue" class="lp-in" value="${escAttr(r.dueDate||'')}"></div>
-      <div class="mform-group"><label>الموقع</label><input id="mtLocation" class="lp-in" value="${escAttr(r.location||'')}"></div><div class="mform-group"><label>الأصل أو المعدة</label><input id="mtAsset" class="lp-in" value="${escAttr(r.asset||'')}"></div></div>
-      <div class="mform-group"><label>ملاحظات الصيانة</label><textarea id="mtNotes" class="lp-in" rows="4" placeholder="الإجراء المنفذ، القطع، ملاحظات التسليم...">${esc(r.maintenanceNotes||r.notes||'')}</textarea></div>
-      <div class="btn-row" style="flex-wrap:wrap;gap:8px"><button class="btn btn-b" onclick="saveMaintenanceTicket('${jsq(rid)}')">💾 حفظ التحديث</button><button class="btn btn-out" onclick="quickMaintenanceStatus('${jsq(rid)}','قيد المعالجة')">بدء المعالجة</button><button class="btn btn-g" onclick="quickMaintenanceStatus('${jsq(rid)}','مكتمل')">إكمال</button><button class="btn btn-out" onclick="quickMaintenanceStatus('${jsq(rid)}','مغلق')">إغلاق</button></div></section>
-      <aside><div class="maint-section-title">سجل الإجراءات</div><div class="maint-log">${maintAuditHTML(r)}</div><div class="maint-audit-meta">${r.startedAt?`بدأت المعالجة: ${esc(fmtDateAr(r.startedAt))}<br>`:''}${r.completedAt?`اكتمل: ${esc(fmtDateAr(r.completedAt))}<br>`:''}${r.updatedBy?`آخر تحديث: ${esc(r.updatedBy)}`:''}</div></aside></div></div>`;
-  document.body.appendChild(ov);
-}
-async function saveMaintenanceTicket(rid){
-  await updateRequestOperational({rid,finalStatus:document.getElementById('mtStatus').value,priority:document.getElementById('mtPriority').value,assignedTo:document.getElementById('mtAssigned').value.trim(),dueDate:document.getElementById('mtDue').value,location:document.getElementById('mtLocation').value.trim(),asset:document.getElementById('mtAsset').value.trim(),maintenanceNotes:document.getElementById('mtNotes').value.trim(),notes:document.getElementById('mtNotes').value.trim()},'maintTicketModal');
-}
-async function quickMaintenanceStatus(rid,status){
-  if(status==='مغلق'&&!confirm('إغلاق هذا البلاغ؟'))return;
-  document.getElementById('mtStatus').value=status;await saveMaintenanceTicket(rid);
-}
-window.buildMaintenanceApp=buildMaintenanceApp;window.showMPage=showMPage;window.maintenanceWorkspaceHTML=maintenanceWorkspaceHTML;
-window.openMaintenanceTicket=openMaintenanceTicket;window.openNewMaintenance=openNewMaintenance;window.setMaintFilter=setMaintFilter;window.clearMaintFilters=clearMaintFilters;
-window.saveMaintenanceTicket=saveMaintenanceTicket;window.quickMaintenanceStatus=quickMaintenanceStatus;
 function reqCard(r,opts){
   opts=opts||{};const cat=reqCat(r),meta=REQ_CATS[cat]||{label:r.type||cat,icon:'📄'},fin=reqFinal(r);
-  const isOwner=String(r.sid)===String(user.id),manager=user.role==='a'||(user.role==='m'&&cat==='صيانة');
-  const cls=fin==='مكتمل'?'cc-g':['ملغي','ملغى','مرفوض'].includes(fin)?'cc-r':fin==='قيد المعالجة'?'cc-b':fin==='بانتظار قطعة غيار'?'cc-y':'cc-b';
+  const isOwner=String(r.sid)===String(user.id),manager=user.role==='a';
+  const cls=fin==='مكتمل'?'cc-g':['ملغي','ملغى','مرفوض'].includes(fin)?'cc-r':fin==='قيد المعالجة'?'cc-b':'cc-b';
   let body='';
   if(cat==='عذر'){
     const ex=reqExcuseParse(r);
     body=`<div class="req-detail-grid"><div><span>المادة</span><b>${esc(ex.course||'—')}</b></div><div><span>أيام الغياب</span><b>${esc(ex.days||'—')}</b></div><div><span>الساعات</span><b>${esc(ex.hours||'0')} ساعة</b></div><div><span>نوع العذر</span><b>${esc(ex.excuseType||'—')}</b></div></div>
       ${ex.reason&&ex.reason!=='—'?`<div class="req-notes">السبب: ${esc(ex.reason)}</div>`:''}${ex.file?`<a class="btn btn-out btn-sm" href="${escUrl(ex.file)}" target="_blank" rel="noopener">📎 فتح المستند</a>`:''}
       <div class="cc-meta" style="margin-top:8px">إرسال العذر لا يحذف الغياب تلقائياً؛ تعالجه الإدارة عند إكمال الطلب.</div>`;
-  }else if(cat==='صيانة'){
-    body=`<div class="req-detail-grid"><div><span>الموقع</span><b>${esc(r.location||'—')}</b></div><div><span>الأصل أو المعدة</span><b>${esc(r.asset||'—')}</b></div><div><span>المسند إليه</span><b>${esc(r.assignedTo||'غير مسند')}</b></div><div><span>الاستحقاق</span><b>${esc(r.dueDate||'—')}</b></div></div>
-      <div class="req-notes">${esc(r.details||'')}</div>${r.maintenanceNotes?`<div class="req-notes">آخر ملاحظات الصيانة: ${esc(r.maintenanceNotes)}</div>`:''}`;
   }else body=r.details?`<div class="req-notes">${esc(r.details)}</div>`:'';
   const targetLine=(cat==='عام'&&r.targetName)?`<div class="cc-meta" style="color:var(--acc-b)">✉️ موجَّه إلى: <b>${esc(r.targetName)}</b></div>`:'';
   let actions='';
-  if(manager)actions+=`<button class="btn btn-b btn-sm" onclick="${cat==='صيانة'?'openMaintenanceTicket':'openRequestOperations'}('${jsq(r.rid)}')">🛠️ متابعة الطلب</button>`;
+  if(manager)actions+=`<button class="btn btn-b btn-sm" onclick="openRequestOperations('${jsq(r.rid)}')">🛠️ متابعة الطلب</button>`;
   const reviewStage=reqStageOf(cat,reqActiveStage(r));
   if(canActStage(r,user)&&reviewStage){
     if(reviewStage.approve!==false)actions+=`<button class="btn btn-g btn-sm" onclick="openRequestReview('${jsq(r.rid)}','approve')">✓ قبول الطلب</button>`;
@@ -17185,47 +17089,41 @@ function reqCard(r,opts){
     ${targetLine}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${r.priority&&r.priority!=='عادية'?`<span class="pill ${r.priority==='عاجلة'?'pr':'py'}">الأولوية: ${esc(r.priority)}</span>`:''}${r.term?`<span class="pill pb">${esc(termShort(r.term))}</span>`:''}</div>
     ${reqTimeline(r)}${body}${r.notes?`<div class="req-notes">📌 ${esc(r.notes)}</div>`:''}${actions?`<div class="btn-row" style="margin-top:10px;flex-wrap:wrap;gap:8px">${actions}</div>`:''}</article>`;
 }
-function reqTypeForCat(cat){return {'عذر':'عذر غياب','ساعات':'إعادة ساعات','تعريف':'ورقة تعريف','إداري':'طلب إداري','عام':'طلب عام','صيانة':'بلاغ صيانة'}[cat]||((REQ_FLOW.cats[cat]||{}).label||cat);}
-function requestFormHtml(forceCat){
-  const r=user.role,forced=forceCat||(r==='m'?'صيانة':''),formTerm=requestTermForForm(),lock=termLockFor(formTerm);
-  if(forced!=='صيانة'&&termIsLocked(formTerm))return `<div class="ccard cc-y"><div class="cc-name">🔒 الطلبات الأكاديمية مغلقة لهذا النصف</div><div class="alert aw">انتهى النصف المجزأ. بلاغات الصيانة تبقى متاحة دائماً.</div></div>${requestFormHtml('صيانة')}`;
-  const flow=REQ_FLOW&&REQ_FLOW.cats?REQ_FLOW:reqFlowDefaults();
-  const opts=Object.keys(flow.cats).filter(cat=>forced==='صيانة'?cat==='صيانة':(r!=='m'&&cat!=='صيانة'||cat==='صيانة')&&(r==='s'||!['عذر','تعريف'].includes(cat))&&flow.cats[cat].on!==false).map(cat=>{
+function reqTypeForCat(cat){return {'عذر':'عذر غياب','ساعات':'إعادة ساعات','تعريف':'ورقة تعريف','إداري':'طلب إداري','عام':'طلب عام'}[cat]||((REQ_FLOW.cats[cat]||{}).label||cat);}
+function requestFormHtml(){
+  const r=user.role,formTerm=requestTermForForm();
+  if(termIsLocked(formTerm))return `<div class="ccard cc-y"><div class="cc-name">🔒 الطلبات مغلقة لهذا النصف</div><div class="alert aw">انتهى النصف المجزأ، ولا يمكن تقديم طلبات جديدة عليه.</div></div>`;
+  const flow=cleanRequestFlow(REQ_FLOW&&REQ_FLOW.cats?REQ_FLOW:reqFlowDefaults());
+  const opts=Object.keys(flow.cats).filter(cat=>(r==='s'||!['عذر','تعريف'].includes(cat))&&flow.cats[cat].on!==false).map(cat=>{
     const type=reqTypeForCat(cat),label=(flow.cats[cat].label||type)+(cat==='عام'?' (أوجّهه لشخص)':'');return `<option value="${escAttr(type)}" data-cat="${escAttr(cat)}">${esc(label)}</option>`;
   }).join('');
   const staff=staffList().filter(p=>!p.id||String(p.id)!==String(user.id));
   const activeCourses=(courses||[]).filter(c=>isActive(c.status));
   const exCourses=(r==='s')?[...new Set(activeCourses.map(c=>c.course))]:[];
   const courseOpts=exCourses.map(cn=>{const c=activeCourses.find(x=>x.course===cn);return `<option value="${escAttr(cn)}" data-code="${escAttr(c?c.code:'')}">${esc(cn)}</option>`;}).join('');
-  return `<div class="ccard cc-b request-composer" style="margin-bottom:20px"><div class="cc-name">${forced==='صيانة'?'🔧 بلاغ صيانة جديد':'➕ تقديم طلب جديد'}</div>
-    <div class="cc-meta" style="margin-bottom:14px">${forced==='صيانة'?'يصل مباشرةً إلى حساب الصيانة، وتبقى الإدارة مطّلعة عليه.':'يصل مباشرةً للجهة المختصة، وتتابع حالته من هذه الصفحة.'}</div>
-    <div class="mform-group"><label>نوع الطلب</label><select id="rq-type" class="lp-in" onchange="toggleExcuseFields()" ${forced==='صيانة'?'disabled':''}>${opts}</select></div>
-    <div id="maintenance-fields" style="display:${forced==='صيانة'?'block':'none'}"><div class="maint-form-grid">
-      <div class="mform-group"><label>الموقع *</label><input id="rq-location" class="lp-in" placeholder="مثال: مبنى أ — قاعة 12"></div>
-      <div class="mform-group"><label>الأصل أو المعدة *</label><input id="rq-asset" class="lp-in" placeholder="مثال: جهاز العرض / التكييف"></div>
-      <div class="mform-group"><label>تاريخ الاستحقاق</label><input type="date" id="rq-due" class="lp-in"></div>
-      <div class="mform-group"><label>الأولوية</label><select id="rq-priority" class="lp-in"><option>عادية</option><option>مهمة</option><option>عاجلة</option></select></div>
-    </div></div>
-    ${r==='s'&&forced!=='صيانة'?`<div id="excuse-fields"><div class="mform-group"><label>المادة والشعبة</label><select id="rq-course" class="lp-in" onchange="renderExcuseDates()"><option value="">— اختر المادة —</option>${courseOpts}</select></div>
+  return `<div class="ccard cc-b request-composer" style="margin-bottom:20px"><div class="cc-name">➕ تقديم طلب جديد</div>
+    <div class="cc-meta" style="margin-bottom:14px">يصل مباشرةً للجهة المختصة، وتتابع حالته من هذه الصفحة.</div>
+    <div class="mform-group"><label>نوع الطلب</label><select id="rq-type" class="lp-in" onchange="toggleExcuseFields()">${opts}</select></div>
+    ${r==='s'?`<div id="excuse-fields"><div class="mform-group"><label>المادة والشعبة</label><select id="rq-course" class="lp-in" onchange="renderExcuseDates()"><option value="">— اختر المادة —</option>${courseOpts}</select></div>
       <div class="mform-group"><label>نوع العذر *</label><select id="rq-excuse-type" class="lp-in"><option>مرضي</option><option>رسمي</option><option>طارئ</option><option>أخرى</option></select></div>
       <div class="mform-group"><label>أيام الغياب *</label><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="date" id="rq-date" class="lp-in" max="${todayISO()}"><button type="button" class="btn btn-b" onclick="addExcuseDate()">➕ أضف اليوم</button></div><div id="rq-dates-list"></div><div id="rq-dates-total" class="cc-meta"></div></div>
       <div class="mform-group"><label>المستند الداعم (PDF) *</label><input type="file" id="rq-file" accept="application/pdf,.pdf"></div></div>`:'<div id="excuse-fields" style="display:none"></div>'}
     <div id="makeup-fields" style="display:none"><div class="mform-group"><label>المادة *</label>${r==='s'?`<select id="rq-makeup-course" class="lp-in"><option value="">— اختر المادة —</option>${courseOpts}</select>`:'<input id="rq-makeup-course" class="lp-in">'} </div><div class="mform-group"><label>عدد الساعات *</label><input type="number" id="rq-makeup-hours" class="lp-in" min="1"></div><div class="mform-group"><label>الجدول المقترح *</label><input id="rq-makeup-schedule" class="lp-in"></div></div>
     <div id="target-fields" style="display:none" class="mform-group"><label>توجيه الطلب إلى *</label><select id="rq-target" class="lp-in"><option value="">— اختر الشخص —</option>${staff.map(p=>`<option value="${escAttr(p.name)}" data-role="${escAttr(p.role)}" data-id="${escAttr(p.id||'')}">${esc(p.name)} — ${esc(p.roleLbl||'')}</option>`).join('')}</select></div>
-    <div id="priority-fields" class="mform-group" style="display:${forced==='صيانة'?'none':'block'}"><label>الأولوية</label><select id="rq-priority-general" class="lp-in"><option>عادية</option><option>مهمة</option><option>عاجلة</option></select></div>
-    <div class="mform-group"><label>${forced==='صيانة'?'وصف العطل والتفاصيل *':'تفاصيل الطلب *'}</label><textarea id="rq-details" class="lp-in" rows="4" placeholder="${forced==='صيانة'?'صف العطل وأثره وأي معلومات تساعد فريق الصيانة':'اكتب التفاصيل بوضوح'}"></textarea></div>
-    <div id="general-attachment" class="mform-group" style="display:${forced==='صيانة'?'block':'none'}"><label>مرفق اختياري (PDF أو صورة، حتى 5 ميجا)</label><input type="file" id="rq-general-file" accept="application/pdf,image/jpeg,image/png"></div>
-    <button class="btn btn-b" id="rq-submit" onclick="submitRequest()">📨 ${forced==='صيانة'?'إرسال بلاغ الصيانة':'إرسال الطلب'}</button>
+    <div id="priority-fields" class="mform-group"><label>الأولوية</label><select id="rq-priority-general" class="lp-in"><option>عادية</option><option>مهمة</option><option>عاجلة</option></select></div>
+    <div class="mform-group"><label>تفاصيل الطلب *</label><textarea id="rq-details" class="lp-in" rows="4" placeholder="اكتب التفاصيل بوضوح"></textarea></div>
+    <div id="general-attachment" class="mform-group"><label>مرفق اختياري (PDF أو صورة، حتى 5 ميجا)</label><input type="file" id="rq-general-file" accept="application/pdf,image/jpeg,image/png"></div>
+    <button class="btn btn-b" id="rq-submit" onclick="submitRequest()">📨 إرسال الطلب</button>
   </div>`;
 }
 let REQ_BUSY=false;
 async function submitRequest(){
   if(REQ_BUSY)return;const typeSel=document.getElementById('rq-type'),type=(typeSel||{}).value;if(!type)return;
   const selectedType=typeSel&&typeSel.options[typeSel.selectedIndex];
-  const cat=(selectedType&&selectedType.dataset.cat)||(type==='بلاغ صيانة'?'صيانة':type==='عذر غياب'?'عذر':type==='ورقة تعريف'?'تعريف':type==='طلب عام'?'عام':type==='إعادة ساعات'?'ساعات':'إداري');
+  const cat=(selectedType&&selectedType.dataset.cat)||(type==='عذر غياب'?'عذر':type==='ورقة تعريف'?'تعريف':type==='طلب عام'?'عام':type==='إعادة ساعات'?'ساعات':'إداري');
   let details=String((document.getElementById('rq-details')||{}).value||'').trim(),exCode='',exHours='',exDates='',fileData='',fileName='',fileMime='',excuseType='',effectBefore='';
   let makeupCourse='',makeupHours='',makeupSchedule='',targetName='',targetRole='',targetId='';
-  const priority=cat==='صيانة'?((document.getElementById('rq-priority')||{}).value||'عادية'):((document.getElementById('rq-priority-general')||{}).value||'عادية');
+  const priority=(document.getElementById('rq-priority-general')||{}).value||'عادية';
   if(cat==='عذر'){
     const sel=document.getElementById('rq-course'),exCourse=sel?sel.value:'';exCode=sel&&sel.options[sel.selectedIndex]?sel.options[sel.selectedIndex].dataset.code||'':'';
     excuseType=(document.getElementById('rq-excuse-type')||{}).value||'';
@@ -17250,10 +17148,6 @@ async function submitRequest(){
   }
   const rec={rid:'REQ'+Date.now(),sid:user.id,sname:user.name,grp:user.grp||'',type,details,date:todayISO(),cat,reqRole:user.role,reqSpec:user.spec||'',targetName,targetRole,targetId,
     supStatus:'—',genStatus:'—',dirStatus:'—',trnStatus:'—',tgtStatus:'—',finalStatus:'جديد',notes:'',exCode,exHours,exDates,fileData,fileName,fileMime,excuseType,effectBefore,effectAfter:'',priority,makeupCourse,makeupHours,makeupSchedule,term:requestTermForForm()};
-  if(cat==='صيانة'){
-    rec.location=String((document.getElementById('rq-location')||{}).value||'').trim();rec.asset=String((document.getElementById('rq-asset')||{}).value||'').trim();rec.dueDate=(document.getElementById('rq-due')||{}).value||'';
-    if(!rec.location||!rec.asset||!details){showToast('الموقع والمعدة ووصف العطل مطلوبة','w');return;}
-  }
   if(!details){showToast('اكتب تفاصيل الطلب','w');return;}
   if(cat!=='عذر'){
     const f=(document.getElementById('rq-general-file')||{}).files?.[0];
@@ -17264,7 +17158,7 @@ async function submitRequest(){
   try{
     const rr=await callWrite('addRequest',{records:[rec]});
     if(!rr||rr.status!=='ok'){showToast('تعذّر الإرسال: '+attErrMsg(rr&&rr.msg,rr&&rr.hint),'e');return;}
-    showToast(rr.duplicate?'✅ البلاغ مسجل مسبقاً':'✅ تم الإرسال بنجاح','s');delete rec.fileData;await loadRequests().catch(()=>{});if(!requests.some(x=>String(x.rid)===String(rec.rid)))requests.unshift(rec);excuseDates=[];reloadRequestsPage();
+    showToast(rr.duplicate?'✅ الطلب مسجل مسبقاً':'✅ تم الإرسال بنجاح','s');delete rec.fileData;await loadRequests().catch(()=>{});if(!requests.some(x=>String(x.rid)===String(rec.rid)))requests.unshift(rec);excuseDates=[];reloadRequestsPage();
   }catch(e){showToast('تعذّر الإرسال — تحقق من الاتصال','e');}
   finally{REQ_BUSY=false;if(btn){btn.disabled=false;btn.textContent='📨 إرسال';}}
 }
@@ -17301,18 +17195,14 @@ function openRequestOperations(rid){
 }
 async function saveRequestOperations(rid){await updateRequestOperational({rid,finalStatus:document.getElementById('opStatus').value,notes:document.getElementById('opNotes').value.trim()},'requestOpsModal');}
 function reloadRequestsPage(){
-  if(user.role==='m')showMPage('maintenance',document.getElementById('sn-maintenance'));
-  else if(user.role==='a')showAPage('requests',document.getElementById('sn-requests'));
+  if(user.role==='a')showAPage('requests',document.getElementById('sn-requests'));
   else if(user.role==='t')showTPage('requests',document.getElementById('sn-requests'));
   else showSPage('services',document.getElementById('sn-services'));
 }
 function requestsDashboardHTML(){
-  if(user.role==='m')return maintenanceWorkspaceHTML();
   if(user.role==='a'){
-    const others=requests.filter(r=>reqCat(r)!=='صيانة').sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
-    return `<div class="banner"><div><div class="btitle">📋 الطلبات والمتابعة</div><div class="bsub">متابعة تشغيلية مباشرة لجميع الطلبات وبلاغات الصيانة</div></div><button class="btn btn-out" onclick="openReqFlow()">⚙️ أنواع الطلبات</button></div>${maintenanceWorkspaceHTML()}<div class="stitle">📨 الطلبات الأخرى (${others.length})</div>${others.length?others.map(r=>reqCard(r,{showRequester:true})).join(''):'<div class="empty">لا توجد طلبات أخرى</div>'}${termClosurePanel()}`;
-  }
-  const visible=requests.filter(r=>String(r.sid)===String(user.id)||canActStage(r,user)||(reqCat(r)==='عام'&&reqTargetMatches(r,user))).sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
+    const visible=requests.filter(r=>!isLegacyRequest(r)).sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));    return `<div class="banner"><div><div class="btitle">📋 الطلبات والمتابعة</div><div class="bsub">متابعة الطلبات ومسارات القبول والرفض</div></div><button class="btn btn-out" onclick="openReqFlow()">⚙️ أنواع الطلبات</button></div><div class="stitle">📨 الطلبات (${visible.length})</div>${visible.length?visible.map(r=>reqCard(r,{showRequester:true})).join(''):'<div class="empty">لا توجد طلبات</div>'}${termClosurePanel()}`;  }
+  const visible=requests.filter(r=>!isLegacyRequest(r)&&(String(r.sid)===String(user.id)||canActStage(r,user)||(reqCat(r)==='عام'&&reqTargetMatches(r,user)))).sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
   return `<div class="stitle">📝 الطلبات والخدمات</div>${requestFormHtml()}<div class="stitle">طلباتي وما وُجّه إليّ (${visible.length})</div>${visible.length?visible.map(r=>reqCard(r)).join(''):'<div class="empty">لا توجد طلبات</div>'}`;
 }
 function termClosurePanel(){
@@ -17340,7 +17230,7 @@ async function saveTermClosureUI(){
 }
 async function closeTermItemsUI(){
   const term=(document.getElementById('termCloseTerm')||{}).value||'';if(!term)return;
-  if(!confirm('إغلاق الطلبات الأكاديمية والتحاضير المفتوحة في هذا النصف بقرار موثق؟\nبلاغات الصيانة لا تتأثر، ولا يمكن تقديم عمليات أكاديمية جديدة على النصف بعد الإغلاق.'))return;
+  if(!confirm('إغلاق الطلبات والتحاضير المفتوحة في هذا النصف بقرار موثق؟\nلا يمكن تقديم عمليات جديدة على النصف بعد الإغلاق.'))return;
   const r=await callWrite('closeTermItems',{records:[{term,decision:'إغلاق العمليات المفتوحة بقرار مدير الأكاديمية'}]});
   if(!r||r.status!=='ok'){showToast('تعذّر الإغلاق: '+attErrMsg(r&&r.msg,r&&r.hint),'e');return}
   TERM_LOCKS[term]=r.info;await Promise.all([loadRequests(),loadLessonPreps()]);
@@ -17401,7 +17291,7 @@ window.doRoleSwitch=doRoleSwitch;window.roleSwitchRowHTML=roleSwitchRowHTML;
 function openAccountSheet(){
   document.getElementById('acctSheet')?.remove();
   const u=(typeof user!=='undefined'&&user)?user:{};
-  const roleLbl=u.role==='a'?(isDirector(u)?'مدير الأكاديمية':'مشرف أكاديمي'):u.role==='t'?'مدرب':u.role==='m'?'مسؤول صيانة':'متدرب';
+  const roleLbl=u.role==='a'?(isDirector(u)?'مدير الأكاديمية':'مشرف أكاديمي'):u.role==='t'?'مدرب':'متدرب';
   const initials=String(u.name||'').trim().split(/\s+/).slice(0,2).map(x=>x[0]||'').join('');
   const nb=(id)=>{const e=document.getElementById(id);return (e&&e.style.display!=='none'&&e.textContent)?e.textContent:'';};
   const rv=nb('reviewBadge'), dg2=nb('delegBadge'), nf=nb('notifBadge');
