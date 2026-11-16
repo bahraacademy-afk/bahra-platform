@@ -1327,6 +1327,37 @@ body.light-mode .bg-grid{background-image:linear-gradient(color-mix(in srgb,var(
   #refreshBtn[disabled]{opacity:.6;cursor:progress}
   @media (prefers-reduced-motion:reduce){#refreshBtn.spin{animation:none;opacity:.55}}
 
+/* ===== قائمة الطلبات الإدارية: كثافة منظمة، بحث وفلاتر وصفحات ===== */
+.rq-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:0 0 14px;background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.rq-stat{appearance:none;border:0;border-inline-start:1px solid var(--border);background:transparent;color:var(--text);font-family:inherit;text-align:start;padding:13px 16px;cursor:pointer;min-width:0;transition:background .18s ease}
+.rq-stat:first-child{border-inline-start:0}.rq-stat:hover,.rq-stat.on{background:var(--brand-tint)}
+.rq-stat strong{display:block;font-size:22px;line-height:1.15;font-variant-numeric:tabular-nums}.rq-stat span{display:block;margin-top:4px;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rq-controls{position:sticky;top:70px;z-index:24;margin-bottom:14px;padding:14px;background:color-mix(in srgb,var(--card2) 94%,transparent);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 22px rgba(0,0,0,.08);backdrop-filter:blur(16px)}
+.rq-lookup{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:end;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--border)}
+.rq-lookup label,.rq-field label{display:block;color:var(--muted);font-size:11px;font-weight:700;margin:0 0 6px}.rq-lookup input,.rq-field input,.rq-field select{width:100%;height:40px;min-height:40px;background:var(--card);border:1px solid var(--border);border-radius:9px;color:var(--text);font-family:inherit;font-size:13px;padding:0 11px;outline:none}
+.rq-lookup input:focus,.rq-field input:focus,.rq-field select:focus{border-color:var(--brand-1);box-shadow:0 0 0 3px var(--brand-tint)}
+.rq-lookup-msg{grid-column:1/-1;min-height:0;color:var(--acc-r);font-size:11.5px}.rq-lookup-msg:empty{display:none}
+.rq-filter-row{display:grid;grid-template-columns:minmax(220px,1.7fr) repeat(4,minmax(120px,1fr));gap:9px;align-items:end}
+.rq-filter-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:11px;color:var(--muted);font-size:11.5px}.rq-filter-foot .btn{flex-shrink:0}
+.rq-list-shell{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+.rq-list-head,.rq-row{display:grid;grid-template-columns:minmax(190px,1.45fr) minmax(165px,1fr) minmax(145px,.9fr) 112px minmax(150px,auto);gap:13px;align-items:center}
+.rq-list-head{padding:10px 16px;background:color-mix(in srgb,var(--card2) 80%,transparent);border-bottom:1px solid var(--border);color:var(--muted);font-size:10.5px;font-weight:800}
+.rq-row{position:relative;padding:14px 16px;border-bottom:1px solid var(--border);transition:background .16s ease}.rq-row:last-child{border-bottom:0}.rq-row:hover{background:color-mix(in srgb,var(--brand-1) 4%,transparent)}.rq-row.is-ready{background:color-mix(in srgb,var(--gold) 5%,transparent)}
+.rq-cell{min-width:0}.rq-cell-label{display:none}.rq-title{display:block;font-size:13.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rq-sub{display:block;color:var(--muted);font-size:11px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rq-id{display:inline-block;direction:ltr;unicode-bidi:isolate;font-size:12px;font-weight:800;color:var(--acc-b);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.rq-date{display:block;color:var(--muted);font-size:10.5px;margin-top:5px}
+.rq-stage{font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rq-progress{display:flex;gap:3px;margin-top:8px;direction:rtl}.rq-progress i{display:block;flex:1;height:4px;border-radius:4px;background:var(--border)}.rq-progress i.done{background:var(--green)}.rq-progress i.active{background:var(--brand-1)}
+.rq-badge{display:inline-flex;align-items:center;justify-content:center;max-width:100%;padding:5px 8px;border-radius:7px;font-size:10.5px;font-weight:800;line-height:1.4;text-align:center}.rq-badge.pb{color:var(--acc-b);background:color-mix(in srgb,var(--brand-1) 12%,transparent)}.rq-badge.pg{color:var(--acc-g);background:rgba(46,204,113,.1)}.rq-badge.pr{color:var(--acc-r);background:rgba(230,57,70,.1)}.rq-badge.py{color:var(--acc-y);background:rgba(244,162,97,.12)}.rq-badge.pm{color:var(--muted);background:var(--card2)}
+.rq-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap}.rq-actions .btn{white-space:nowrap;font-size:11px;padding-inline:10px}.rq-empty{padding:42px 18px;text-align:center;color:var(--muted)}
+.rq-pager{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px;flex-wrap:wrap}.rq-pages{display:flex;align-items:center;gap:5px;direction:rtl}.rq-page{min-width:36px;height:36px;padding:0 8px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-family:inherit;font-size:12px;cursor:pointer}.rq-page:hover:not(:disabled),.rq-page.on{border-color:var(--brand-1);background:var(--brand-tint);color:var(--acc-b)}.rq-page:disabled{opacity:.4;cursor:not-allowed}.rq-ellipsis{color:var(--muted);padding:0 3px}.rq-page-meta{font-size:11.5px;color:var(--muted)}
+.rq-ready-note{padding:10px 12px;margin:9px 0;border:1px solid rgba(244,162,97,.28);border-radius:9px;background:rgba(244,162,97,.08);font-size:12px;line-height:1.8;color:var(--text)}
+@media(max-width:1120px){.rq-filter-row{grid-template-columns:minmax(210px,1.5fr) repeat(2,minmax(130px,1fr))}.rq-list-head,.rq-row{grid-template-columns:minmax(175px,1.3fr) minmax(155px,1fr) 125px 105px minmax(135px,auto);gap:9px}.rq-row{padding-inline:12px}}
+@media(max-width:900px){.rq-list-head{display:none}.rq-row{grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;padding:15px}.rq-primary{grid-column:1/-1}.rq-number{grid-column:1}.rq-status-cell{grid-column:2;grid-row:2;text-align:end}.rq-workflow{grid-column:1/-1}.rq-actions{grid-column:1/-1;justify-content:flex-start}.rq-cell-label{display:block;color:var(--muted);font-size:10px;margin-bottom:4px}.rq-filter-row{grid-template-columns:repeat(2,minmax(0,1fr))}.rq-search-field{grid-column:1/-1}.rq-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.rq-stat:nth-child(4){border-inline-start:0;border-top:1px solid var(--border)}.rq-stat:nth-child(5){border-top:1px solid var(--border)}.rq-stat{padding:11px 12px}.rq-stat strong{font-size:19px}}
+@media(max-width:700px){.rq-controls{position:static;padding:12px}.rq-lookup{grid-template-columns:1fr}.rq-lookup .btn{width:100%}.rq-filter-row{grid-template-columns:1fr 1fr}.rq-filter-foot{align-items:flex-start;flex-direction:column}.rq-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.rq-stat{border-top:1px solid var(--border)}.rq-stat:nth-child(-n+2){border-top:0}.rq-stat:nth-child(odd){border-inline-start:0}.rq-stat:nth-child(4){border-inline-start:1px solid var(--border)}.rq-stat strong{font-size:18px}.rq-stat span{font-size:10.5px}.rq-pager{justify-content:center}.rq-page-meta{width:100%;text-align:center}.rq-pages{max-width:100%;flex-wrap:wrap;justify-content:center}.rq-actions .btn{flex:1 1 auto}.rq-title{font-size:14px}}
+
+
+.rq-actions .btn-out{color:var(--text);border-color:color-mix(in srgb,var(--border) 75%,var(--muted));background:color-mix(in srgb,var(--card2) 65%,transparent)}
+body.light-mode .rq-controls input,body.light-mode .rq-controls select{background:#fff;color:#1a2a4a;border-color:color-mix(in srgb,var(--brand-deep-2) 18%,transparent)}
+body.light-mode .rq-controls input::placeholder{color:#6c7f98}body.light-mode .rq-actions .btn-out{color:#1a2a4a;background:#fff}
+@media(max-width:700px){.rq-stat:last-child{grid-column:1/-1}.rq-actions .btn-out{background:#f8fafc!important;color:#0f172a!important;border-color:#cbd5e1!important}.rq-controls input::placeholder{color:#64748b}}
 .req-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.req-detail-grid>div{padding:9px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:8px}.req-detail-grid span{display:block;font-size:10px;color:var(--muted);margin-bottom:4px}.req-detail-grid b{display:block;font-size:11.5px;overflow-wrap:anywhere}.req-notes{font-size:12px;line-height:1.8;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border);white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:700px){.req-detail-grid{grid-template-columns:1fr}}
 </style>
@@ -13943,7 +13974,14 @@ const aPgs={
       <div class="sbar"><span class="sbar-name">المتدربون</span><div class="sbar-track"><div class="sbar-fill" style="width:100%"></div></div><span class="sbar-val">${totSt}</span></div>
       <div class="sbar"><span class="sbar-name">المقررات النشطة</span><div class="sbar-track"><div class="sbar-fill" style="width:80%"></div></div><span class="sbar-val">${totCr}</span></div>
       <div class="sbar"><span class="sbar-name">المدربون</span><div class="sbar-track"><div class="sbar-fill" style="width:60%"></div></div><span class="sbar-val">${totTr}</span></div>
-    </div>`;
+    </div>
+    <div class="stitle" style="margin-top:26px">📋 أنواع الطلبات</div>
+    <div class="ccard cc-b">
+      <div class="cc-name">الأسماء والأيقونات والتفعيل</div>
+      <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">كل الطلبات تصل مباشرةً للجهة المختصة. يمكنك تعديل الاسم والأيقونة وترتيب الجهات وصلاحيات القبول والرفض أو إيقاف النوع.</div>
+      <button class="btn btn-b" onclick="openReqFlow()">⚙️ إدارة أنواع الطلبات</button>
+    </div>
+    `;
   },
   maintenance:()=>{
     const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>c.half).filter(t=>t&&t!=='غير محدد'))];
@@ -13988,13 +14026,6 @@ const aPgs={
           <button class="btn btn-out btn-sm" onclick="showArchiveSteps()">📋 نقل الأرشيف لملف منفصل (سنوياً)</button>
         </div>
       </div>
-    </div>
-
-    <div class="stitle" style="margin-top:26px">📋 أنواع الطلبات</div>
-    <div class="ccard cc-b">
-      <div class="cc-name">الأسماء والأيقونات والتفعيل</div>
-      <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">كل الطلبات تصل مباشرةً للجهة المختصة. يمكنك تعديل اسم النوع وأيقونته أو إيقافه، بما في ذلك بلاغات الصيانة.</div>
-      <button class="btn btn-b" onclick="openReqFlow()">⚙️ إدارة أنواع الطلبات</button>
     </div>
 
     <div class="stitle" style="margin-top:26px">📧 الإيميلات</div>
@@ -16948,6 +16979,12 @@ function normStageVal(v){const t=String(v==null?'':v).replace(/[ً-ْٰـ]/g,'')
 function stageStatus(r,slot){const key={sup:'supStatus',gen:'genStatus',dir:'dirStatus',trn:'trnStatus',tgt:'tgtStatus'}[slot];return key?normStageVal(r&&r[key]):'معلق';}
 function reqFinal(r){return String((r&&r.finalStatus)||'جديد');}
 function reqIsTerminalStatus(st){return ['مكتمل','مغلق','ملغي','ملغى','مرفوض','معتمد','مغلق بنهاية النصف'].includes(st);}
+// كل جهات المسار اعتمدت، لكن الحالة النهائية لم تُغلق.
+function reqReadyToComplete(r){
+  if(!r||reqIsTerminalStatus(reqFinal(r)))return false;
+  const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[reqCat(r)],stages=c&&(c.stages||[]);
+  return !!(stages&&stages.length&&stages.every(st=>stageStatus(r,st.slot)==='معتمد'));
+}
 function reqActiveStage(r){
   if(!r||reqCat(r)==='صيانة'||reqIsTerminalStatus(reqFinal(r)))return null;
   const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[reqCat(r)];if(!c)return null;
@@ -17016,6 +17053,7 @@ function canActStage(r,u){
   return false;
 }
 function reqStatusPill(r){
+  if(reqReadyToComplete(r))return '<span class="pill py">اكتملت المراحل · بانتظار الإكمال</span>';
   const st=reqFinal(r),cls=st==='مكتمل'?'pg':['ملغي','ملغى','مرفوض'].includes(st)?'pr':st==='مغلق'?'':st==='قيد المعالجة'?'pb':'pb';
   return `<span class="pill ${cls}">${esc(st)}</span>`;
 }
@@ -17062,7 +17100,7 @@ function reqExcuseParse(r){
 function reqCard(r,opts){
   opts=opts||{};const cat=reqCat(r),meta=REQ_CATS[cat]||{label:r.type||cat,icon:'📄'},fin=reqFinal(r);
   const isOwner=String(r.sid)===String(user.id),manager=user.role==='a';
-  const cls=fin==='مكتمل'?'cc-g':['ملغي','ملغى','مرفوض'].includes(fin)?'cc-r':fin==='قيد المعالجة'?'cc-b':'cc-b';
+  const cls=reqReadyToComplete(r)?'cc-y':fin==='مكتمل'?'cc-g':['ملغي','ملغى','مرفوض'].includes(fin)?'cc-r':fin==='قيد المعالجة'?'cc-b':'cc-b';
   let body='';
   if(cat==='عذر'){
     const ex=reqExcuseParse(r);
@@ -17072,6 +17110,7 @@ function reqCard(r,opts){
   }else body=r.details?`<div class="req-notes">${esc(r.details)}</div>`:'';
   const targetLine=(cat==='عام'&&r.targetName)?`<div class="cc-meta" style="color:var(--acc-b)">✉️ موجَّه إلى: <b>${esc(r.targetName)}</b></div>`:'';
   let actions='';
+  if(manager&&reqReadyToComplete(r))actions+=`<button class="btn btn-g btn-sm" onclick="openRequestCompletion('${jsq(r.rid)}')">✓ اعتماد وإكمال</button>`;
   if(manager)actions+=`<button class="btn btn-b btn-sm" onclick="openRequestOperations('${jsq(r.rid)}')">🛠️ متابعة الطلب</button>`;
   const reviewStage=reqStageOf(cat,reqActiveStage(r));
   if(canActStage(r,user)&&reviewStage){
@@ -17087,7 +17126,7 @@ function reqCard(r,opts){
   return `<article class="ccard ${cls}" style="margin-bottom:12px"><div class="cc-top"><div><div class="cc-name">${meta.icon} ${esc(meta.label)}${who}</div>
     <div class="cc-meta">رقم الطلب <b style="color:var(--acc-b)">${esc(String(r.rid||'—'))}</b>${r.grp?' · الشعبة '+esc(r.grp):''}${r.date?' · '+esc(fmtDateAr(r.date)):''}</div></div>${reqStatusPill(r)}</div>
     ${targetLine}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${r.priority&&r.priority!=='عادية'?`<span class="pill ${r.priority==='عاجلة'?'pr':'py'}">الأولوية: ${esc(r.priority)}</span>`:''}${r.term?`<span class="pill pb">${esc(termShort(r.term))}</span>`:''}</div>
-    ${reqTimeline(r)}${body}${r.notes?`<div class="req-notes">📌 ${esc(r.notes)}</div>`:''}${actions?`<div class="btn-row" style="margin-top:10px;flex-wrap:wrap;gap:8px">${actions}</div>`:''}</article>`;
+    ${reqTimeline(r)}${manager&&reqReadyToComplete(r)?'<div class="rq-ready-note"><b>اكتملت جميع مراحل الموافقة.</b><br>يمكن للإدارة الآن اعتماد الطلب وإكماله لتصبح حالته النهائية «مكتمل».</div>':''}${body}${r.notes?`<div class="req-notes">📌 ${esc(r.notes)}</div>`:''}${actions?`<div class="btn-row" style="margin-top:10px;flex-wrap:wrap;gap:8px">${actions}</div>`:''}</article>`;
 }
 function reqTypeForCat(cat){return {'عذر':'عذر غياب','ساعات':'إعادة ساعات','تعريف':'ورقة تعريف','إداري':'طلب إداري','عام':'طلب عام'}[cat]||((REQ_FLOW.cats[cat]||{}).label||cat);}
 function requestFormHtml(){
@@ -17168,10 +17207,33 @@ function resubmitRequest(rid){
 }
 async function saveRequestDetails(rid){const details=String(document.getElementById('reqEditDetails').value||'').trim();if(!details){showToast('التفاصيل مطلوبة','w');return;}await updateRequestOperational({rid,details,finalStatus:'جديد'},'reqEditModal');}
 async function cancelMyRequest(rid){if(!confirm('إلغاء هذا الطلب؟'))return;await updateRequestOperational({rid,finalStatus:'ملغي'});}
+function openRequestDetails(rid){
+  if(user.role!=='a')return;const r=requests.find(x=>String(x.rid)===String(rid));if(!r||isLegacyRequest(r))return;
+  document.getElementById('requestDetailsModal')?.remove();const ov=document.createElement('div');ov.className='modal-overlay';ov.id='requestDetailsModal';
+  ov.innerHTML=`<div class="modal-box" style="max-width:780px;width:100%;max-height:92vh;overflow:auto;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:16px;padding:20px"><div class="mh"><div><div class="cc-meta">رقم الطلب <b class="rq-id">${esc(r.rid||'—')}</b></div><div class="mt">تفاصيل الطلب والإجراءات</div></div><button class="mc" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">✕</button></div>${reqCard(r,{showRequester:true})}</div>`;
+  document.body.appendChild(ov);ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+}
+function openRequestCompletion(rid){
+  if(user.role!=='a')return;const r=requests.find(x=>String(x.rid)===String(rid));if(!r||!reqReadyToComplete(r))return;
+  document.getElementById('requestCompletionModal')?.remove();const ov=document.createElement('div');ov.className='modal-overlay';ov.id='requestCompletionModal';
+  ov.innerHTML=`<div class="modal-box" style="max-width:580px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:16px;padding:20px"><div class="mh"><div><div class="cc-meta">رقم الطلب <b class="rq-id">${esc(r.rid)}</b></div><div class="mt">✓ اعتماد وإكمال الطلب</div></div><button class="mc" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">✕</button></div>
+    <div class="alert ab">اكتملت جميع مراحل الموافقة لهذا الطلب. عند التأكيد تصبح حالته النهائية «مكتمل» ويُحفظ الإجراء بصلاحية الإدارة.</div>
+    <div class="req-notes"><b>${esc(r.type||'')}</b><br>${esc(r.sname||'')}<br>${esc(r.details||'')}</div>
+    ${reqCat(r)==='عذر'?'<div class="alert aw">تنبيه: إكمال عذر الغياب ينفذ معالجة العذر المسجلة في النظام. راجع المادة وأيام الغياب والمستند قبل التأكيد.</div>':''}
+    <div class="mform-group"><label>ملاحظة الاعتماد النهائي (اختياري)</label><textarea id="completionNotes" class="lp-in" rows="3" placeholder="ملاحظة تظهر في سجل متابعة الطلب"></textarea></div>
+    <div class="mft"><button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button><button class="btn btn-g" onclick="confirmRequestCompletion('${jsq(rid)}')">تأكيد الاعتماد والإكمال</button></div></div>`;
+  document.body.appendChild(ov);
+}
+async function confirmRequestCompletion(rid){
+  const r=requests.find(x=>String(x.rid)===String(rid));if(user.role!=='a'||!r||!reqReadyToComplete(r)){showToast('تغيّرت حالة الطلب؛ حدّث القائمة وحاول مجدداً','w');return;}
+  const notes=String(document.getElementById('completionNotes')?.value||'').trim();
+  await updateRequestOperational({rid,finalStatus:'مكتمل',notes},'requestCompletionModal');
+}
+window.openRequestDetails=openRequestDetails;window.openRequestCompletion=openRequestCompletion;window.confirmRequestCompletion=confirmRequestCompletion;
 async function updateRequestOperational(rec,modalId){
   showToast(rec.decision?'جاري تسجيل الإجراء...':'جاري حفظ المتابعة...','i');const res=await callWrite('updateRequest',{records:[rec]}).catch(()=>null);
   if(!res||res.status!=='ok'){showToast('تعذّر الحفظ: '+attErrMsg(res&&res.msg,res&&res.hint),'e');return false;}
-  if(modalId)document.getElementById(modalId)?.remove();await loadRequests().catch(()=>{});showToast(rec.decision==='approve'?'✅ تم قبول الطلب':rec.decision==='reject'?'✅ تم رفض الطلب':'✅ تم حفظ المتابعة','s');reloadRequestsPage();return true;
+  if(modalId)document.getElementById(modalId)?.remove();document.getElementById('requestDetailsModal')?.remove();await loadRequests().catch(()=>{});showToast(rec.decision==='approve'?'✅ تم قبول الطلب':rec.decision==='reject'?'✅ تم رفض الطلب':rec.finalStatus==='مكتمل'?'✅ تم اعتماد الطلب وإكماله':'✅ تم حفظ المتابعة','s');reloadRequestsPage();return true;
 }
 function openRequestReview(rid,decision){
   const r=requests.find(x=>String(x.rid)===String(rid));if(!r||!canActStage(r,user))return;
@@ -17199,12 +17261,99 @@ function reloadRequestsPage(){
   else if(user.role==='t')showTPage('requests',document.getElementById('sn-requests'));
   else showSPage('services',document.getElementById('sn-services'));
 }
+const ADMIN_REQ_VIEW={query:'',status:'all',cat:'all',term:'all',sort:'newest',page:1,perPage:10};
+function adminReqAll(){return requests.filter(r=>!isLegacyRequest(r));}
+function adminReqNorm(v){return String(v==null?'':v).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).trim().toLowerCase();}
+function adminReqLabel(r){const cat=reqCat(r),c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[cat];return String((c&&c.label)||(REQ_CATS[cat]&&REQ_CATS[cat].label)||r.type||cat||'طلب');}
+function adminReqMatchesStatus(r,st){
+  const fin=reqFinal(r),ready=reqReadyToComplete(r);
+  if(st==='all')return true;if(st==='action')return ready||canActStage(r,user);if(st==='ready')return ready;
+  if(st==='open')return !ready&&['جديد','قيد المعالجة'].includes(fin);
+  if(st==='completed')return ['مكتمل','معتمد'].includes(fin);if(st==='rejected')return fin==='مرفوض';
+  if(st==='closed')return reqIsTerminalStatus(fin)&&!['مكتمل','معتمد','مرفوض'].includes(fin);
+  return fin===st;
+}
+function adminReqFiltered(){
+  const q=adminReqNorm(ADMIN_REQ_VIEW.query),out=adminReqAll().filter(r=>{
+    if(ADMIN_REQ_VIEW.cat!=='all'&&reqCat(r)!==ADMIN_REQ_VIEW.cat)return false;
+    if(ADMIN_REQ_VIEW.term!=='all'&&String(r.term||'')!==ADMIN_REQ_VIEW.term)return false;
+    if(!adminReqMatchesStatus(r,ADMIN_REQ_VIEW.status))return false;
+    if(!q)return true;
+    const hay=adminReqNorm([r.rid,r.sid,r.sname,r.grp,r.type,adminReqLabel(r),r.details,r.targetName,r.finalStatus].join(' '));
+    return hay.includes(q);
+  });
+  const rank=r=>r.priority==='عاجلة'?0:r.priority&&r.priority!=='عادية'?1:2;
+  out.sort((a,b)=>ADMIN_REQ_VIEW.sort==='oldest'?String(a.createdAt||a.date).localeCompare(String(b.createdAt||b.date)):ADMIN_REQ_VIEW.sort==='priority'?(rank(a)-rank(b)||String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date))):String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
+  return out;
+}
+function adminReqBadge(r){
+  const fin=reqFinal(r);if(reqReadyToComplete(r))return '<span class="rq-badge py">جاهز للإكمال</span>';
+  const cls=['مكتمل','معتمد'].includes(fin)?'pg':fin==='مرفوض'?'pr':['جديد','قيد المعالجة'].includes(fin)?'pb':'pm';return `<span class="rq-badge ${cls}">${esc(fin)}</span>`;
+}
+function adminReqWorkflow(r){
+  const chain=reqChain(r),approved=chain.filter(slot=>stageStatus(r,slot)==='معتمد').length,active=reqActiveStage(r),ready=reqReadyToComplete(r);
+  const label=reqIsTerminalStatus(reqFinal(r))?'انتهى مسار الطلب':ready?`اكتملت المراحل ${approved}/${chain.length}`:active?`الحالية: ${reqWhoLabel((reqStageOf(reqCat(r),active)||{}).who,true)}`:'بانتظار بدء المسار';
+  const bars=chain.length?chain.map(slot=>`<i class="${stageStatus(r,slot)==='معتمد'?'done':active===slot?'active':''}"></i>`).join(''):'<i></i>';
+  return `<div class="rq-stage" title="${escAttr(label)}">${esc(label)}</div><div class="rq-progress" aria-label="تقدم مسار الطلب">${bars}</div>`;
+}
+function adminReqRow(r){
+  const ready=reqReadyToComplete(r),st=reqStageOf(reqCat(r),reqActiveStage(r));let primary='';
+  if(ready)primary=`<button class="btn btn-g btn-sm" onclick="openRequestCompletion('${jsq(r.rid)}')">✓ اعتماد وإكمال</button>`;
+  else if(canActStage(r,user)&&st&&st.approve!==false)primary=`<button class="btn btn-g btn-sm" onclick="openRequestReview('${jsq(r.rid)}','approve')">✓ قبول</button>`;
+  return `<div class="rq-row ${ready?'is-ready':''}" data-rid="${escAttr(r.rid)}"><div class="rq-cell rq-primary"><span class="rq-title">${esc(adminReqLabel(r))}</span><span class="rq-sub">${esc(r.sname||'—')}${r.grp?' · شعبة '+esc(r.grp):''}${r.priority&&r.priority!=='عادية'?' · أولوية '+esc(r.priority):''}</span></div>
+    <div class="rq-cell rq-number"><span class="rq-cell-label">رقم الطلب والتاريخ</span><span class="rq-id">${esc(r.rid||'—')}</span><span class="rq-date">${esc(fmtDateAr(r.createdAt||r.date)||'—')}</span></div>
+    <div class="rq-cell rq-workflow"><span class="rq-cell-label">المرحلة الحالية</span>${adminReqWorkflow(r)}</div>
+    <div class="rq-cell rq-status-cell"><span class="rq-cell-label">الحالة</span>${adminReqBadge(r)}</div>
+    <div class="rq-actions"><button class="btn btn-out btn-sm" onclick="openRequestDetails('${jsq(r.rid)}')">عرض التفاصيل</button>${primary}</div></div>`;
+}
+function adminReqListHTML(rows){return rows.length?`<div class="rq-list-shell"><div class="rq-list-head"><div>الطلب ومقدّمه</div><div>رقم الطلب والتاريخ</div><div>المرحلة الحالية</div><div>الحالة النهائية</div><div>الإجراءات</div></div>${rows.map(adminReqRow).join('')}</div>`:'<div class="rq-list-shell"><div class="rq-empty"><div class="empty-icon">🔎</div><b>لا توجد طلبات مطابقة</b><div style="margin-top:6px;font-size:12px">غيّر كلمات البحث أو الفلاتر، أو اختر «مسح الفلاتر».</div></div></div>';}
+function adminReqPagerHTML(total,totalPages){
+  if(!total)return '';const page=ADMIN_REQ_VIEW.page,pages=[];let start=Math.max(1,Math.min(page-2,totalPages-4)),end=Math.min(totalPages,start+4);start=Math.max(1,end-4);
+  if(start>1)pages.push(`<button class="rq-page" onclick="adminReqPage(1)" aria-label="الصفحة الأولى">1</button>${start>2?'<span class="rq-ellipsis">…</span>':''}`);
+  for(let i=start;i<=end;i++)pages.push(`<button class="rq-page ${i===page?'on':''}" onclick="adminReqPage(${i})" ${i===page?'aria-current="page"':''}>${i}</button>`);
+  if(end<totalPages)pages.push(`${end<totalPages-1?'<span class="rq-ellipsis">…</span>':''}<button class="rq-page" onclick="adminReqPage(${totalPages})" aria-label="الصفحة الأخيرة">${totalPages}</button>`);
+  return `<div class="rq-pager"><div class="rq-page-meta">صفحة ${page} من ${totalPages}</div><div class="rq-pages"><button class="rq-page" onclick="adminReqPage(${page-1})" ${page<=1?'disabled':''} aria-label="الصفحة السابقة">‹</button>${pages.join('')}<button class="rq-page" onclick="adminReqPage(${page+1})" ${page>=totalPages?'disabled':''} aria-label="الصفحة التالية">›</button></div></div>`;
+}
+function adminReqRender(){
+  if(!document.getElementById('adminReqList'))return;const filtered=adminReqFiltered(),total=filtered.length,per=Number(ADMIN_REQ_VIEW.perPage)||10,totalPages=Math.max(1,Math.ceil(total/per));ADMIN_REQ_VIEW.page=Math.min(Math.max(1,ADMIN_REQ_VIEW.page),totalPages);
+  const start=(ADMIN_REQ_VIEW.page-1)*per,rows=filtered.slice(start,start+per),meta=document.getElementById('adminReqResultMeta');
+  document.getElementById('adminReqList').innerHTML=adminReqListHTML(rows);document.getElementById('adminReqPager').innerHTML=adminReqPagerHTML(total,totalPages);
+  if(meta)meta.textContent=total?`عرض ${start+1}–${Math.min(start+per,total)} من ${total} طلب`:'لا توجد نتائج مطابقة';
+  document.querySelectorAll('[data-rq-stat]').forEach(el=>el.classList.toggle('on',el.dataset.rqStat===ADMIN_REQ_VIEW.status));
+}
+function adminReqSetFilter(key,value){if(!(key in ADMIN_REQ_VIEW))return;ADMIN_REQ_VIEW[key]=key==='perPage'?Number(value):value;if(key!=='page')ADMIN_REQ_VIEW.page=1;adminReqRender();}
+function adminReqPage(page){ADMIN_REQ_VIEW.page=Math.max(1,Number(page)||1);adminReqRender();const el=document.getElementById('adminReqList');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
+function resetAdminRequestFilters(){Object.assign(ADMIN_REQ_VIEW,{query:'',status:'all',cat:'all',term:'all',sort:'newest',page:1,perPage:10});['adminReqSearch','adminReqStatus','adminReqCat','adminReqTerm','adminReqSort','adminReqPerPage'].forEach(id=>{const el=document.getElementById(id);if(!el)return;const key={adminReqSearch:'query',adminReqStatus:'status',adminReqCat:'cat',adminReqTerm:'term',adminReqSort:'sort',adminReqPerPage:'perPage'}[id];el.value=ADMIN_REQ_VIEW[key];});adminReqRender();}
+function lookupRequestById(ev){
+  if(ev)ev.preventDefault();const input=document.getElementById('rqLookup'),msg=document.getElementById('rqLookupMsg'),raw=adminReqNorm(input&&input.value).replace(/\s+/g,'');if(!raw){if(msg)msg.textContent='أدخل رقم الطلب أولاً.';return;}
+  const digits=raw.replace(/\D/g,''),r=adminReqAll().find(x=>{const rid=adminReqNorm(x.rid).replace(/\s+/g,'');return rid===raw||(digits&&rid.replace(/\D/g,'')===digits);});
+  if(!r){if(msg)msg.textContent='لا يوجد طلب بهذا الرقم. تحقق من الرقم وحاول مرة أخرى.';showToast('لم يتم العثور على الطلب','e');return;}
+  if(msg)msg.textContent='';Object.assign(ADMIN_REQ_VIEW,{query:String(r.rid),status:'all',cat:'all',term:'all',sort:'newest',page:1});
+  const search=document.getElementById('adminReqSearch');if(search)search.value=r.rid;['adminReqStatus','adminReqCat','adminReqTerm'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='all';});adminReqRender();openRequestDetails(r.rid);
+}
+window.adminReqSetFilter=adminReqSetFilter;window.adminReqPage=adminReqPage;window.resetAdminRequestFilters=resetAdminRequestFilters;window.lookupRequestById=lookupRequestById;
+
 function requestsDashboardHTML(){
   if(user.role==='a'){
-    const visible=requests.filter(r=>!isLegacyRequest(r)).sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));    return `<div class="banner"><div><div class="btitle">📋 الطلبات والمتابعة</div><div class="bsub">متابعة الطلبات ومسارات القبول والرفض</div></div><button class="btn btn-out" onclick="openReqFlow()">⚙️ أنواع الطلبات</button></div><div class="stitle">📨 الطلبات (${visible.length})</div>${visible.length?visible.map(r=>reqCard(r,{showRequester:true})).join(''):'<div class="empty">لا توجد طلبات</div>'}${termClosurePanel()}`;  }
+    const all=adminReqAll(),counts={all:all.length,action:all.filter(r=>adminReqMatchesStatus(r,'action')).length,open:all.filter(r=>adminReqMatchesStatus(r,'open')).length,completed:all.filter(r=>adminReqMatchesStatus(r,'completed')).length,rejected:all.filter(r=>adminReqMatchesStatus(r,'rejected')).length};
+    const catMap={};all.forEach(r=>catMap[reqCat(r)]=adminReqLabel(r));const cats=Object.keys(catMap).sort((a,b)=>catMap[a].localeCompare(catMap[b],'ar')),terms=[...new Set(all.map(r=>String(r.term||'')).filter(Boolean))].sort();
+    const stats=[['all','إجمالي الطلبات'],['action','يتطلب إجراء'],['open','قيد المتابعة'],['completed','مكتمل'],['rejected','مرفوض']];
+    const filtered=adminReqFiltered(),per=Number(ADMIN_REQ_VIEW.perPage)||10,totalPages=Math.max(1,Math.ceil(filtered.length/per));ADMIN_REQ_VIEW.page=Math.min(Math.max(1,ADMIN_REQ_VIEW.page),totalPages);const start=(ADMIN_REQ_VIEW.page-1)*per,pageRows=filtered.slice(start,start+per);
+    return `<div class="banner"><div><div class="btitle">📋 الطلبات والمتابعة</div><div class="bsub">بحث سريع، متابعة واضحة، واتخاذ الإجراء دون ازدحام</div></div></div>
+      <div class="rq-stats">${stats.map(([key,label])=>`<button class="rq-stat ${ADMIN_REQ_VIEW.status===key?'on':''}" data-rq-stat="${key}" onclick="adminReqSetFilter('status','${key}');document.getElementById('adminReqStatus').value='${key}'"><strong>${counts[key]}</strong><span>${label}</span></button>`).join('')}</div>
+      <section class="rq-controls" aria-label="البحث وفلاتر الطلبات"><form class="rq-lookup" onsubmit="lookupRequestById(event)"><div><label for="rqLookup">تحقق من طلب برقمه</label><input id="rqLookup" dir="ltr" autocomplete="off" placeholder="مثال: REQ1794388938484"></div><button class="btn btn-b" type="submit">تحقق واعرض الطلب</button><div id="rqLookupMsg" class="rq-lookup-msg" role="status" aria-live="polite"></div></form>
+        <div class="rq-filter-row"><div class="rq-field rq-search-field"><label for="adminReqSearch">بحث في الطلبات</label><input id="adminReqSearch" value="${escAttr(ADMIN_REQ_VIEW.query)}" oninput="adminReqSetFilter('query',this.value)" placeholder="الرقم، اسم المتدرب، النوع أو التفاصيل" autocomplete="off"></div>
+          <div class="rq-field"><label for="adminReqStatus">الحالة</label><select id="adminReqStatus" onchange="adminReqSetFilter('status',this.value)">${[['all','كل الحالات'],['action','يتطلب إجرائي'],['open','قيد المتابعة'],['ready','جاهز للإكمال'],['جديد','جديد'],['قيد المعالجة','قيد المعالجة'],['completed','مكتمل'],['rejected','مرفوض'],['closed','مغلق أو ملغي']].map(([v,l])=>`<option value="${escAttr(v)}" ${ADMIN_REQ_VIEW.status===v?'selected':''}>${l}</option>`).join('')}</select></div>
+          <div class="rq-field"><label for="adminReqCat">نوع الطلب</label><select id="adminReqCat" onchange="adminReqSetFilter('cat',this.value)"><option value="all">كل الأنواع</option>${cats.map(c=>`<option value="${escAttr(c)}" ${ADMIN_REQ_VIEW.cat===c?'selected':''}>${esc(catMap[c])}</option>`).join('')}</select></div>
+          <div class="rq-field"><label for="adminReqTerm">النصف</label><select id="adminReqTerm" onchange="adminReqSetFilter('term',this.value)"><option value="all">كل الأنصاف</option>${terms.map(t=>`<option value="${escAttr(t)}" ${ADMIN_REQ_VIEW.term===t?'selected':''}>${esc(termShort(t))}</option>`).join('')}</select></div>
+          <div class="rq-field"><label for="adminReqSort">الترتيب</label><select id="adminReqSort" onchange="adminReqSetFilter('sort',this.value)"><option value="newest" ${ADMIN_REQ_VIEW.sort==='newest'?'selected':''}>الأحدث أولاً</option><option value="oldest" ${ADMIN_REQ_VIEW.sort==='oldest'?'selected':''}>الأقدم أولاً</option><option value="priority" ${ADMIN_REQ_VIEW.sort==='priority'?'selected':''}>الأولوية ثم الأحدث</option></select></div></div>
+        <div class="rq-filter-foot"><span id="adminReqResultMeta">${filtered.length?`عرض ${start+1}–${Math.min(start+per,filtered.length)} من ${filtered.length} طلب`:'لا توجد نتائج مطابقة'}</span><div style="display:flex;gap:8px;align-items:center"><label for="adminReqPerPage">لكل صفحة</label><select id="adminReqPerPage" class="lp-in" style="width:72px;min-height:34px;height:34px;padding:4px 8px" onchange="adminReqSetFilter('perPage',this.value)">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}</option>`).join('')}</select><button class="btn btn-out btn-sm" onclick="resetAdminRequestFilters()">مسح الفلاتر</button></div></div></section>
+      <div id="adminReqList">${adminReqListHTML(pageRows)}</div><div id="adminReqPager">${adminReqPagerHTML(filtered.length,totalPages)}</div>${termClosurePanel()}`;
+  }
   const visible=requests.filter(r=>!isLegacyRequest(r)&&(String(r.sid)===String(user.id)||canActStage(r,user)||(reqCat(r)==='عام'&&reqTargetMatches(r,user)))).sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
   return `<div class="stitle">📝 الطلبات والخدمات</div>${requestFormHtml()}<div class="stitle">طلباتي وما وُجّه إليّ (${visible.length})</div>${visible.length?visible.map(r=>reqCard(r)).join(''):'<div class="empty">لا توجد طلبات</div>'}`;
 }
+
 function termClosurePanel(){
   if(!isDirector(user))return '';
   const terms=[...new Set([...(allCourses||[]).map(c=>c.half),...(requests||[]).map(r=>r.term),...(lessonPreps||[]).map(p=>p.term),...Object.keys(TERM_LOCKS||{})].map(x=>String(x||'').trim()).filter(x=>x&&x!=='غير محدد'))];
