@@ -5124,7 +5124,7 @@ async function revokeDeleg(id){
 
 function showApp(){
   if(!user||['s','t','a'].indexOf(user.role)<0){
-    try{localStorage.removeItem('bla_token');localStorage.removeItem('bla_user');localStorage.removeItem('bla_role');}catch(e){}
+    try{LS.removeItem('bla_token');LS.removeItem('bla_user');LS.removeItem('bla_role');}catch(e){}
     location.reload();return;
   }
   document.getElementById('loginPage').style.display='none';
@@ -9715,45 +9715,12 @@ async function saveAttendance(course){
   if(!records.length){showToast('لم تُدخل أي ساعات غياب','w');return}
   showToast('جاري الحفظ...','i');
   try{
-    const url=SCRIPT_URL+'?action=saveAttendance&data='+encodeURIComponent(JSON.stringify(records))+'&token='+encodeURIComponent(SESSION.token);
-    await new Promise((resolve,reject)=>{
-      const cb='cb_'+Date.now();
-      window[cb]=(d)=>{
-        delete window[cb];
-        document.getElementById('jsonp_'+cb)?.remove();
-        if(d.status==='ok') resolve(d);
-        else reject(new Error(d.msg));
-      };
-      const s=document.createElement('script');
-      s.id='jsonp_'+cb;
-      s.src=url+'&callback='+cb;
-      /* ⏱️ كان النداء الوحيد في المنصة بلا مهلة. ولو ردّ الخادم صفحة خطأ
-         بدل دالة (تجاوز حصة · نشر جارٍ · شبكة مقيَّدة) فلا onerror ولا
-         callback — فيعلّق «جاري الحفظ...» للأبد، ويبقى وسم <script> في
-         الصفحة وفيه التوكن. الآن مهلة كبقية المسارات. */
-      const _tmo=setTimeout(()=>{
-        delete window[cb];
-        document.getElementById('jsonp_'+cb)?.remove();
-        reject(new Error('timeout'));
-      },15000);
-      const _done=window[cb];
-      window[cb]=(d)=>{ clearTimeout(_tmo); _done(d); };
-      s.onerror=()=>{clearTimeout(_tmo);delete window[cb];s.remove();reject(new Error('network'))};
-      document.head.appendChild(s);
-    });
-    showToast('✅ تم حفظ الحضور في الشيت','s');
+    const r=await callWrite('saveAttendance',{records});
+    if(r&&r.status==='ok') showToast('✅ تم حفظ الحضور في الشيت','s');
+    else showToast('❌ الخادم رفض الحفظ: '+attErrMsg((r&&(r.hint||r.msg))||''),'e');
   }catch(e){
-    // لو الخطأ رسالة صلاحية من الخادم نعرضها بوضوح (لا نُظهر نجاحاً وهمياً)
     const em=String(e&&e.message||'');
-    if(em && em!=='network' && em!=='timeout'){
-      showToast('❌ الخادم رفض الحفظ: '+attErrMsg(em),'e');
-      return;
-    }
-    // تعذّر الوصول فقط (شبكة) → مسار احتياطي بلا قراءة للرد
-    try{
-      await fetch(SCRIPT_URL,{method:'POST',mode:'no-cors',body:JSON.stringify({token:SESSION.token,action:'saveAttendance',records}),headers:{'Content-Type':'text/plain'}});
-      showToast('⚠️ أُرسل الحضور بدون تأكيد — تحقّق من الشيت','w');
-    }catch(e2){showToast('تعذر الحفظ — جرب مرة أخرى','e');}
+    showToast(em?'❌ تعذر حفظ الحضور: '+attErrMsg(em):'تعذر الحفظ — جرب مرة أخرى','e');
   }
 }
 
@@ -14265,7 +14232,7 @@ async function saveMailSettings(){
   try{
     let r=null;
     try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'saveMailCfg',cfg}); }
-    catch(_){ r=await jsonpCall({action:'saveMailCfg',cfg:JSON.stringify(cfg)}); }
+    catch(_){ r=await jsonpCall({action:'saveMailCfg',data:JSON.stringify({cfg})}); }
     if(r&&r.status==='ok'){
       MAILCFG=r.cfg;
       window._reqEmails=(r.cfg.on&&r.cfg.types.reqNew)?'on':'off';
@@ -14283,7 +14250,7 @@ async function sendMailTest(){
   try{
     let r=null;
     try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'sendTestMail',to}); }
-    catch(_){ r=await jsonpCall({action:'sendTestMail',to}); }
+    catch(_){ r=await jsonpCall({action:'sendTestMail',data:JSON.stringify({to})}); }
     if(r&&r.status==='ok'&&r.sent) showToast('✅ أُرسلت — راجع صندوق '+to+(r.cc?` (ونسخة إلى ${r.cc})`:''),'s');
     else showToast('لم تُرسل: '+((r&&r.msg)||'خطأ غير معروف'),'e');
   }catch(e){ showToast('تعذّر الاتصال — حاول مرة أخرى','e'); }
@@ -14386,7 +14353,7 @@ async function trimGrid(){
     do{
       pass++;
       try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'trimGrid'}); }
-      catch(_){ r=await jsonpCall({action:'trimGrid'}); }
+      catch(_){ r=await jsonpCall({action:'trimGrid',data:JSON.stringify({})}); }
       if(!r||r.status!=='ok'||!r.report)break;
       freed+=r.report.cellsFreed||0;
       (r.report.tabs||[]).forEach(x=>{
@@ -14419,7 +14386,7 @@ async function syncAbsence(){
   try{
     let r=null;
     try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'syncAbsence'}); }
-    catch(_){ r=await jsonpCall({action:'syncAbsence'}); }
+    catch(_){ r=await jsonpCall({action:'syncAbsence',data:JSON.stringify({})}); }
     if(r&&r.status==='ok'&&r.report){
       await loadAbsenceBase(); recomputeAbsPct();
       const rep=r.report, list=rep.rows||[];
@@ -14445,7 +14412,7 @@ async function dedupeRequests(){
   showToast('جاري الفحص...','i');
   const call=async(dry)=>{
     try{ return await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'dedupeRequests',dryRun:dry?'1':''}); }
-    catch(_){ return await jsonpCall({action:'dedupeRequests',dryRun:dry?'1':''}); }
+    catch(_){ return await jsonpCall({action:'dedupeRequests',data:JSON.stringify({dryRun:dry?'1':''})}); }
   };
   try{
     const prev=await call(true);
@@ -14504,7 +14471,7 @@ async function reapplyExcuses(){
   showToast('جاري فحص الأعذار المكتملة...','i');
   const call=async(dry)=>{
     try{ return await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'reapplyExcuses',dryRun:dry?'1':''}); }
-    catch(_){ return await jsonpCall({action:'reapplyExcuses',dryRun:dry?'1':''}); }
+    catch(_){ return await jsonpCall({action:'reapplyExcuses',data:JSON.stringify({dryRun:dry?'1':''})}); }
   };
   try{
     const prev=await call(true);
