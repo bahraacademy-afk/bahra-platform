@@ -1360,6 +1360,33 @@ body.light-mode .rq-controls input::placeholder{color:#6c7f98}body.light-mode .r
 @media(max-width:700px){.rq-stat:last-child{grid-column:1/-1}.rq-actions .btn-out{background:#f8fafc!important;color:#0f172a!important;border-color:#cbd5e1!important}.rq-controls input::placeholder{color:#64748b}}
 .req-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.req-detail-grid>div{padding:9px;background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:8px}.req-detail-grid span{display:block;font-size:10px;color:var(--muted);margin-bottom:4px}.req-detail-grid b{display:block;font-size:11.5px;overflow-wrap:anywhere}.req-notes{font-size:12px;line-height:1.8;color:var(--muted);margin:8px 0;padding:10px;background:rgba(255,255,255,.03);border-radius:8px;border:1px solid var(--border);white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:700px){.req-detail-grid{grid-template-columns:1fr}}
+
+/* ═══ مركز التقارير وسجل الإيميلات الإداري ═══ */
+.rep-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 16px}
+.rep-tab{padding:7px 14px;border-radius:999px;border:1px solid var(--border);background:var(--card2);color:var(--muted);font-size:12.5px;font-weight:700;cursor:pointer;transition:.18s}
+.rep-tab:hover{border-color:var(--acc-b);color:var(--text)}
+.rep-tab.on{background:var(--acc-b);border-color:var(--acc-b);color:#fff;box-shadow:0 4px 12px rgba(59,130,246,.25)}
+.rep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:12px;margin-bottom:18px}
+.rep-tile{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px;display:flex;flex-direction:column;justify-content:space-between;gap:12px;transition:transform .16s,border-color .16s,box-shadow .16s}
+.rep-tile:hover{transform:translateY(-2px);border-color:var(--acc-b);box-shadow:0 8px 22px rgba(0,0,0,.16)}
+.rep-tile-top{display:flex;align-items:flex-start;gap:11px}
+.rep-tile-ico{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.22)}
+.rep-tile-ico.g{background:rgba(16,185,129,.12);border-color:rgba(16,185,129,.22)}
+.rep-tile-ico.y{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.22)}
+.rep-tile-ico.r{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.22)}
+.rep-tile-ico.p{background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.22)}
+.rep-tile-title{font-weight:800;font-size:13.5px;color:var(--text);line-height:1.35}
+.rep-tile-desc{font-size:11.8px;color:var(--muted);margin-top:3px;line-height:1.5}
+.rep-tile-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:8px;border-top:1px solid var(--border)}
+.emlog-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:8px 0 14px}
+@media(max-width:680px){.emlog-kpis{grid-template-columns:repeat(2,1fr)}}
+.emlog-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.emlog-toolbar input{flex:1;min-width:200px}
+.emlog-table-wrap{border:1px solid var(--border);border-radius:12px;overflow:auto;max-height:54vh}
+.emlog-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.emlog-table th{position:sticky;top:0;background:var(--card2);padding:9px 10px;text-align:right;font-weight:800;border-bottom:1px solid var(--border);white-space:nowrap;z-index:1}
+.emlog-table td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.emlog-table tr:hover td{background:rgba(59,130,246,.05)}
 </style>
 
 
@@ -3772,18 +3799,40 @@ async function bootThenLoad(opts){
   if(!bootOk && opts && opts.requireBoot) throw new Error('boot-failed');
   return (role==='s')?loadStudent():(role==='t')?loadTrainer():loadAdmin();
 }
-async function fetchSheet(range){
-  const tab=String(range||'').split('!')[0].trim();
+const _sheetMemCache=new Map(), _sheetInFlight=new Map();
+const SHEET_MEM_TTL=45000;
+function clearSheetMemCache(prefix){
+  if(!prefix){_sheetMemCache.clear();return;}
+  for(const k of _sheetMemCache.keys()){if(k.startsWith(prefix))_sheetMemCache.delete(k);}
+}
+async function fetchSheet(range, opts){
+  opts=opts||{};
+  const key=String(range||'').trim();
+  const tab=key.split('!')[0].trim();
   const pre=bootTake(tab);
-  if(pre)return pre;
-  const d=await callServer(AUTH_URL,{action:'getSheet',range:range,token:SESSION.token});
-  if(d&&d.ok===false){ if(d.error==='invalid_token') throw new Error('session'); return []; }
-  return (d&&d.values)||[];
+  if(pre){_sheetMemCache.set(key,{t:Date.now(),v:pre});return pre;}
+  if(!opts.fresh){
+    const hit=_sheetMemCache.get(key);
+    if(hit&&(Date.now()-hit.t)<SHEET_MEM_TTL) return hit.v;
+    if(_sheetInFlight.has(key)) return _sheetInFlight.get(key);
+  }
+  const p=(async()=>{
+    try{
+      const d=await callServer(AUTH_URL,{action:'getSheet',range:range,token:SESSION.token});
+      if(d&&d.ok===false){ if(d.error==='invalid_token') throw new Error('session'); return []; }
+      const vals=(d&&d.values)||[];
+      _sheetMemCache.set(key,{t:Date.now(),v:vals});
+      return vals;
+    }finally{_sheetInFlight.delete(key);}
+  })();
+  _sheetInFlight.set(key,p);
+  return p;
 }
 // ⚡ نظام كاش سريع: حفظ نسخة من البيانات محلياً للدخول الفوري في المرات القادمة
 const CACHE_KEY='bla_data_snap_v1';
 const CACHE_TTL=6*3600*1000; // ٦ ساعات
 function saveDataSnapshot(){
+  if(typeof requestIdleCallback==='function'&&!window._snapImmediate){requestIdleCallback(()=>{window._snapImmediate=true;try{saveDataSnapshot();}finally{window._snapImmediate=false;}},{timeout:400});return;}
   try{
     // 🛡️ لا تستبدل نسخة جيدة بأخرى فارغة: لو فشلت القراءات ورجعت قوائم خاوية
     //    وحفظناها، لصار الدخول القادم يعرض شاشة فاضية.
@@ -3938,6 +3987,7 @@ function writeBlockedBanner(det){
 }
 async function callWrite(action, payload, opts){
   opts = opts || {};
+  clearSheetMemCache();
   const body = Object.assign({token:SESSION.token, action:action}, payload);
   let lastErr = null;
   try{
@@ -13880,17 +13930,27 @@ const aPgs={
     <div class="stitle" style="margin-top:24px;opacity:.7">⚪ مدربون سابقون (${old.length})</div>
     <div class="alert" style="background:rgba(150,150,150,.08);border:1px solid rgba(150,150,150,.2);color:var(--muted)"><span class="aicon">📋</span>مدربون من سجلات سابقة — غير نشطين حالياً (للأرشيف)</div>
     <div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>${old.map(t=>rowFor(t,true)).join('')}</tbody></table></div>`:''}
-    <div class="stitle" style="margin-top:24px">🖨️ التقارير القابلة للطباعة</div>
-    <div class="alert ab"><span class="aicon">📄</span>كل تقرير يفتح في نافذة جديدة جاهز للطباعة أو الحفظ PDF</div>
-    <div class="btn-grid">
-      <button class="btn btn-b" onclick="printAcademicReport()">📊 تقرير الأداء العام</button>
-      <button class="btn btn-b" onclick="printAbsenceReport()">📉 تقرير الغياب الشامل</button>
-      <button class="btn btn-b" onclick="printDailyAbsenceByCourse()">🗓️ سجل الغياب اليومي لكل مادة</button>
-      <button class="btn btn-b" onclick="printGradesReport()">📝 تقرير الدرجات المفصّل</button>
-      <button class="btn btn-b" onclick="printRequestsReport()">📋 تقرير الأعذار والطلبات</button>
-      <button class="btn btn-b" onclick="printSectionLists()">🧑‍🤝‍🧑 قوائم الشعب</button>
-      <button class="btn btn-b" onclick="openControlSheet()">🎛️ شيت الكنترول (لكل نصف)</button>
-      <button class="btn btn-b" onclick="printLessonPrepForm()">📝 نموذج تحضير الدروس</button>
+    <div class="stitle" style="margin-top:26px">🖨️ مركز التقارير والطباعة والسجلات</div>
+    <div class="alert ab"><span class="aicon">📄</span>جميع التقارير القابلة للطباعة والسجلات الإدارية في مكان واحد — اختر التصنيف أو افتح التقرير مباشرة</div>
+    <div class="rep-tabs" id="repCatTabs">
+      <button type="button" class="rep-tab on" onclick="filterRepTiles('all',this)">الكل (11)</button>
+      <button type="button" class="rep-tab" onclick="filterRepTiles('perf',this)">📊 الأداء والدرجات</button>
+      <button type="button" class="rep-tab" onclick="filterRepTiles('att',this)">📉 الحضور والغياب</button>
+      <button type="button" class="rep-tab" onclick="filterRepTiles('adm',this)">📋 الطلبات والإدارة</button>
+      <button type="button" class="rep-tab" onclick="filterRepTiles('logs',this)">📜 السجلات والتواصل</button>
+    </div>
+    <div class="rep-grid" id="repTilesGrid">
+      <div class="rep-tile" data-rcat="perf"><div class="rep-tile-top"><div class="rep-tile-ico">📊</div><div><div class="rep-tile-title">تقرير الأداء العام</div><div class="rep-tile-desc">ملخص نسب النجاح والمتوسطات وإحصاءات المقررات والمدربين.</div></div></div><div class="rep-tile-ft"><span class="pill pb">PDF / طباعة</span><button class="btn btn-b btn-sm" onclick="printAcademicReport()">🖨️ عرض التقرير</button></div></div>
+      <div class="rep-tile" data-rcat="perf"><div class="rep-tile-top"><div class="rep-tile-ico g">📝</div><div><div class="rep-tile-title">تقرير الدرجات المفصّل</div><div class="rep-tile-desc">توزيع درجات المتدربين في كل مقرر مع التقدير وحالة الاجتياز.</div></div></div><div class="rep-tile-ft"><span class="pill pg">PDF / طباعة</span><button class="btn btn-b btn-sm" onclick="printGradesReport()">🖨️ عرض التقرير</button></div></div>
+      <div class="rep-tile" data-rcat="perf"><div class="rep-tile-top"><div class="rep-tile-ico p">🎛️</div><div><div class="rep-tile-title">شيت الكنترول (لكل نصف)</div><div class="rep-tile-desc">كشف الدرجات النهائي الشامل لكل نصف مجزأ (جارٍ أو منتهٍ).</div></div></div><div class="rep-tile-ft"><span class="pill pp">تفاعلي / PDF</span><button class="btn btn-b btn-sm" onclick="openControlSheet()">🎛️ فتح الكنترول</button></div></div>
+      <div class="rep-tile" data-rcat="att"><div class="rep-tile-top"><div class="rep-tile-ico r">📉</div><div><div class="rep-tile-title">تقرير الغياب الشامل</div><div class="rep-tile-desc">كشف نسب الغياب لجميع المقررات والمتجاوزين للحدود النظامية.</div></div></div><div class="rep-tile-ft"><span class="pill pr">PDF / طباعة</span><button class="btn btn-b btn-sm" onclick="printAbsenceReport()">🖨️ عرض التقرير</button></div></div>
+      <div class="rep-tile" data-rcat="att"><div class="rep-tile-top"><div class="rep-tile-ico y">🗓️</div><div><div class="rep-tile-title">سجل الغياب اليومي لكل مادة</div><div class="rep-tile-desc">تفصيل أيام الحضور والغياب والتأخر والأعذار لكل مقرر وشعبة.</div></div></div><div class="rep-tile-ft"><span class="pill py">PDF / طباعة</span><button class="btn btn-b btn-sm" onclick="printDailyAbsenceByCourse()">🖨️ عرض السجل</button></div></div>
+      <div class="rep-tile" data-rcat="adm"><div class="rep-tile-top"><div class="rep-tile-ico">📋</div><div><div class="rep-tile-title">تقرير الأعذار والطلبات</div><div class="rep-tile-desc">حصر طلبات أعذار الغياب والطلبات الإدارية وحالة اعتمادها.</div></div></div><div class="rep-tile-ft"><span class="pill pb">PDF / طباعة</span><button class="btn btn-b btn-sm" onclick="printRequestsReport()">🖨️ عرض التقرير</button></div></div>
+      <div class="rep-tile" data-rcat="adm"><div class="rep-tile-top"><div class="rep-tile-ico g">🧑‍🤝‍🧑</div><div><div class="rep-tile-title">قوائم الشعب</div><div class="rep-tile-desc">كشوف أسماء وأرقام المتدربين مرتّبة حسب الشعبة والتخصص.</div></div></div><div class="rep-tile-ft"><span class="pill pg">PDF / طباعة</span><button class="btn btn-b btn-sm" onclick="printSectionLists()">🖨️ عرض القوائم</button></div></div>
+      <div class="rep-tile" data-rcat="adm"><div class="rep-tile-top"><div class="rep-tile-ico p">📝</div><div><div class="rep-tile-title">نموذج تحضير الدروس</div><div class="rep-tile-desc">نموذج رسمي مطبوع لمتابعة تحضير الحصص والتنفيذ التدريبي.</div></div></div><div class="rep-tile-ft"><span class="pill pp">PDF / طباعة</span><button class="btn btn-b btn-sm" onclick="printLessonPrepForm()">🖨️ عرض النموذج</button></div></div>
+      <div class="rep-tile" data-rcat="logs"><div class="rep-tile-top"><div class="rep-tile-ico">📧</div><div><div class="rep-tile-title">سجل الإيميلات الإداري</div><div class="rep-tile-desc">لوحة متابعة الرسائل المرسلة والفاشلة مع البحث والتصدير CSV.</div></div></div><div class="rep-tile-ft"><span class="pill pb">سجل حيّ</span><button class="btn btn-b btn-sm" onclick="showEmailLog()">📜 فتح السجل</button></div></div>
+      <div class="rep-tile" data-rcat="logs"><div class="rep-tile-top"><div class="rep-tile-ico y">📊</div><div><div class="rep-tile-title">تقرير تغطية الإيميلات</div><div class="rep-tile-desc">فحص المتدربين الذين لديهم بريد مسجّل ومن ينقصهم بريد للإنذارات.</div></div></div><div class="rep-tile-ft"><span class="pill py">فحص فوري</span><button class="btn btn-b btn-sm" onclick="showEmailCoverage()">👁️ فحص التغطية</button></div></div>
+      <div class="rep-tile" data-rcat="logs"><div class="rep-tile-top"><div class="rep-tile-ico r">📜</div><div><div class="rep-tile-title">سجل الإجراءات الحساسة</div><div class="rep-tile-desc">توثيق من قام بالإجراء ومتى على مستوى الإدارة والنظام.</div></div></div><div class="rep-tile-ft"><span class="pill pr">سجل التدقيق</span><button class="btn btn-b btn-sm" onclick="showAuditLog()">📜 فتح السجل</button></div></div>
     </div>
     <div class="stitle" style="margin-top:8px">👤 تقرير طالب فردي</div>
     <div class="ctl-row">
@@ -14061,22 +14121,94 @@ function showEmailCoverage(){
   </div>`;
   document.body.appendChild(ov);
 }
-async function showEmailLog(){
-  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='emLogModal';
-  ov.innerHTML=`<div class="modal" style="max-width:560px;max-height:88vh;overflow-y:auto"><div class="modal-title"><span>🗒️ سجل الإيميلات</span><button class="modal-close" onclick="document.getElementById('emLogModal').remove()">✕</button></div><div id="emLogBody" style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري التحميل...</div></div>`;
-  document.body.appendChild(ov);
-  let rows=[]; try{ rows=await fetchSheet('سجل التنبيهات!A:F'); }catch(e){}
-  const body=document.getElementById('emLogBody'); if(!body)return;
-  const data=rows.slice(1).filter(r=>r&&r[0]).reverse().slice(0,60);
-  if(!data.length){ body.innerHTML='<div class="alert ab"><span class="aicon">📭</span>لا توجد إيميلات مسجّلة بعد.</div>'; return; }
-  body.innerHTML=`<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">${data.map(r=>{
-    const ok=String(r[3]||'').indexOf('فشل')<0;
-    return `<div style="padding:9px 12px;border-top:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-weight:600;font-size:13px">${esc(n0(r[2]))}</span><span class="pill ${ok?'pg':'pr'}" style="font-size:10px">${ok?'مرسل':'فشل'}</span></div>
-      <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${esc(n0(r[1]))} · ${esc(n0(r[0]))}${String(r[3]||'').indexOf('CC')>-1?' · '+esc(String(r[3]).replace('مرسل · ','')):''}</div>
-    </div>`;
-  }).join('').replace('border-top:1px solid var(--border)','')}</div>`;
+function filterRepTiles(cat, btn){
+  document.querySelectorAll('#repCatTabs .rep-tab').forEach(b=>b.classList.toggle('on',b===btn));
+  document.querySelectorAll('#repTilesGrid .rep-tile').forEach(t=>{
+    t.style.display=(cat==='all'||t.dataset.rcat===cat)?'flex':'none';
+  });
 }
+window.filterRepTiles=filterRepTiles;
+async function showEmailLog(forceFresh){
+  document.getElementById('emLogModal')?.remove();
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='emLogModal';
+  ov.innerHTML=`<div class="modal" style="max-width:940px;width:96vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-title"><span>📧 سجل الإيميلات الإداري</span><button class="modal-close" onclick="document.getElementById('emLogModal').remove()">✕</button></div>
+    <div id="emLogBody" style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري تحميل سجل الإيميلات...</div>
+  </div>`;
+  document.body.appendChild(ov);
+  let rows=[]; try{ rows=await fetchSheet('سجل التنبيهات!A:F',{fresh:!!forceFresh}); }catch(e){}
+  const body=document.getElementById('emLogBody'); if(!body)return;
+  const all=rows.slice(1).filter(r=>r&&(r[0]||r[1]||r[2])).reverse().slice(0,300);
+  if(!all.length){ body.innerHTML='<div class="alert ab"><span class="aicon">📭</span>لا توجد إيميلات مسجّلة في السجل بعد.</div>'; return; }
+  const sentCount=all.filter(r=>String(r[3]||'').indexOf('فشل')<0).length;
+  const failCount=all.length-sentCount;
+  const uniqStu=new Set(all.map(r=>n0(r[0])).filter(Boolean)).size;
+  const rate=all.length?Math.round(sentCount/all.length*100):0;
+  window._emLogData=all;
+  window._emLogStatus='all';
+  body.innerHTML=`
+    <div class="emlog-kpis">
+      <div class="mcard" style="padding:12px;text-align:center"><div style="font-size:11.5px;color:var(--muted)">إجمالي السجل</div><div style="font-size:20px;font-weight:800;color:var(--acc-b)">${all.length}</div></div>
+      <div class="mcard" style="padding:12px;text-align:center"><div style="font-size:11.5px;color:var(--muted)">تم الإرسال (${rate}%)</div><div style="font-size:20px;font-weight:800;color:var(--acc-g)">${sentCount}</div></div>
+      <div class="mcard" style="padding:12px;text-align:center"><div style="font-size:11.5px;color:var(--muted)">فشل الإرسال</div><div style="font-size:20px;font-weight:800;color:${failCount?'var(--acc-r)':'var(--muted)'}">${failCount}</div></div>
+      <div class="mcard" style="padding:12px;text-align:center"><div style="font-size:11.5px;color:var(--muted)">متدربون مستلمون</div><div style="font-size:20px;font-weight:800">${uniqStu}</div></div>
+    </div>
+    <div class="emlog-toolbar">
+      <input id="emLogSearch" class="lp-in" placeholder="🔍 ابحث بالاسم، الرقم الأكاديمي، المادة، أو التفاصيل..." oninput="renderEmailLogTable()">
+      <button type="button" class="rep-tab on" onclick="setEmLogFilter('all',this)">الكل (${all.length})</button>
+      <button type="button" class="rep-tab" onclick="setEmLogFilter('ok',this)">✓ مرسل (${sentCount})</button>
+      <button type="button" class="rep-tab" onclick="setEmLogFilter('fail',this)">✕ فشل (${failCount})</button>
+      <button type="button" class="btn btn-out btn-sm" onclick="exportEmailLogCSV()">📥 تصدير CSV</button>
+      <button type="button" class="btn btn-out btn-sm" onclick="showEmailLog(true)">🔄 تحديث</button>
+    </div>
+    <div class="emlog-table-wrap"><table class="emlog-table"><thead><tr><th>#</th><th>المتدرب / الرقم</th><th>المادة / الموضوع</th><th>التفاصيل والنوع</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody id="emLogTbody"></tbody></table></div>`;
+  renderEmailLogTable();
+}
+function setEmLogFilter(st, btn){
+  window._emLogStatus=st;
+  document.querySelectorAll('#emLogModal .rep-tab').forEach(b=>b.classList.toggle('on',b===btn));
+  renderEmailLogTable();
+}
+function renderEmailLogTable(){
+  const tb=document.getElementById('emLogTbody'); if(!tb)return;
+  const q=String((document.getElementById('emLogSearch')||{}).value||'').trim().toLowerCase();
+  const st=window._emLogStatus||'all';
+  const rows=(window._emLogData||[]).filter(r=>{
+    const ok=String(r[3]||'').indexOf('فشل')<0;
+    if(st==='ok'&&!ok)return false;
+    if(st==='fail'&&ok)return false;
+    if(q){
+      const hay=[r[0],r[1],r[2],r[3],r[4],r[5]].map(x=>String(x||'')).join(' ').toLowerCase();
+      if(!hay.includes(q))return false;
+    }
+    return true;
+  });
+  if(!rows.length){ tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:18px;color:var(--muted)">لا توجد نتائج مطابقة للبحث</td></tr>'; return; }
+  tb.innerHTML=rows.map((r,idx)=>{
+    const statusRaw=String(r[3]||'');
+    const ok=statusRaw.indexOf('فشل')<0;
+    const dt=r[4]?fmtDateAr(r[4]):'—';
+    const note=[statusRaw.replace('مرسل · ','').replace('مرسل',''), n0(r[5])].filter(Boolean).join(' · ')||'بريد آلي';
+    return `<tr>
+      <td style="color:var(--muted)">${idx+1}</td>
+      <td><div style="font-weight:700">${esc(n0(r[1])||'—')}</div><div style="font-size:11px;color:var(--muted)">${esc(n0(r[0])||'')}</div></td>
+      <td style="font-weight:600">${esc(n0(r[2])||'—')}</td>
+      <td style="font-size:11.5px;color:var(--muted)">${esc(note)}</td>
+      <td style="font-size:11.5px;white-space:nowrap">${esc(dt)}</td>
+      <td><span class="pill ${ok?'pg':'pr'}" style="font-size:10.5px">${ok?'مرسل':'فشل'}</span></td>
+    </tr>`;
+  }).join('');
+}
+function exportEmailLogCSV(){
+  const rows=window._emLogData||[]; if(!rows.length)return;
+  const escCsv=v=>'"'+String(v||'').replace(/"/g,'""')+'"';
+  const lines=[['الرقم الأكاديمي','الاسم','المادة / الموضوع','الحالة','التاريخ','ملاحظات'].map(escCsv).join(',')];
+  rows.forEach(r=>lines.push([r[0],r[1],r[2],r[3],r[4],r[5]].map(escCsv).join(',')));
+  const blob=new Blob(['\uFEFF'+lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='email_log_'+todayISO()+'.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+window.setEmLogFilter=setEmLogFilter;window.renderEmailLogTable=renderEmailLogTable;window.exportEmailLogCSV=exportEmailLogCSV;
 async function toggleReqEmails(){
   const cur=(window._reqEmails==='off')?'off':'on';
   const nv=cur==='on'?'off':'on';
