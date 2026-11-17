@@ -5279,6 +5279,28 @@ function isDeprived(abs){return (parseFloat(abs)||0)>=25}
 function isHighAbs(c){return (parseFloat(c.abs)||0)>=10}
 // مشكلة عامة (للعدّ والتلوين)
 function hasIssue(c){return isHighAbs(c)||isLowPerf(c)}
+
+// ⭐ دوال توحيد العدّ بالشخص (متدرب فريد) وبالمادة الفعلية بدل ضرب السجلات (طالب × مادة)
+function uniqIssueStudentsCount(list){
+  return new Set((list||[]).filter(hasIssue).map(c=>String(c.sid||c.id||'')).filter(Boolean)).size;
+}
+function uniqDeprivedStudentsCount(list){
+  return new Set((list||[]).filter(c=>(parseFloat(c.abs)||0)>=25).map(c=>String(c.sid||c.id||'')).filter(Boolean)).size;
+}
+function completedCourseGroups(list){
+  // المقرر (مادة × شعبة × نصف) الذي تم رصد درجاته واكتمل
+  const map=new Map();
+  (list||[]).forEach(c=>{
+    const k=(normCode(c.code)||cnk_(c.course))+'|'+String(c.grp||'').replace(/\.0$/,'').trim()+'|'+termKeyOf(c.half||c.term||'');
+    if(!map.has(k))map.set(k,{course:c.course,code:c.code,grp:String(c.grp||'').replace(/\.0$/,'').trim(),half:c.half||c.term||'',recs:[]});
+    map.get(k).recs.push(c);
+  });
+  return [...map.values()].filter(g=>{
+    const scored=g.recs.filter(r=>(parseFloat(r.pct)||0)>0||!isActive(r.status));
+    return scored.length>0 && scored.length>=Math.ceil(g.recs.length*0.5);
+  });
+}
+
 // ===== حساب ساعات المادة في النصف المجزأ =====
 // ساعات الاتصال أسبوعية × 8 أسابيع = إجمالي ساعات النصف المجزأ
 const WEEKS_PER_HALF=8;
@@ -7004,33 +7026,51 @@ function showNotifs(){
 function getReviewCases(){
   const list=[];
   const src=user.role==='s'?courses:allCourses;
-  const grpTxt=c=>(user.role!=='s'&&c.grp)?` · شعبة ${esc(c.grp)}`:'';
-  /* ⚠️ كانت القائمة تمرّ على كل الصفوف بلا نظر إلى ما بعدها، فمَن رسب في
-     مادة ثم أعادها ونجح يبقى في «حالات تحتاج مراجعة» إلى الأبد — وهذا
-     سبب تضخّمها إلى ٧٨ حالة. الحالة تسقط متى عولجت:
-       • الدرجة: له سجلٌ آخر في نفس المادة مرصودٌ وناجح (أو ما زال جارياً).
-       • الغياب: نفس الشيء — الإعادة تُلغي غياب المحاولة السابقة.
-     المقارنة بالرقم التدريبي + المادة، لأن الصف الواحد لا يعرف أخاه. */
   const sidOf=c=>String(c.sid||c.id||(user.role==='s'?user.id:'')).replace(/[^0-9]/g,'');
   const ckey=c=>normCode(c.code)||cnk_(c.course);
-  /* فهرس: رقم المتدرب|المادة → هل فيه محاولة لاحقة ناجحة أو جارية؟ */
-  const solved=new Map();
+  if(user.role==='s'){
+    const done=new Set();
+    src.forEach(c=>{
+      const k=ckey(c); if(done.has(k))return;
+      const issues=[];
+      if(isHighAbs(c))issues.push(`غياب ${Math.round(c.abs)}%`);
+      if(isLowPerf(c))issues.push(`درجة ${Math.round(c.pct)}%`);
+      if(issues.length){
+        done.add(k);
+        list.push({type:isLowPerf(c)?'ad':'aw',icon:isLowPerf(c)?'📉':'⚠️',msg:`${esc(c.course)} — ${issues.join(' · ')}`});
+      }
+    });
+    return list;
+  }
+  // ⭐ للمدرب والإداري: تجميع الحالات بالشخص (المتدرب) بدل تكرار الاسم لكل مادة
+  const byStu=new Map();
+  const seenCourse=new Set();
   src.forEach(c=>{
-    const k=sidOf(c)+'|'+ckey(c);
-    const ok=isActive(c.status)                                   // محاولة جارية الآن
-      || (!isDeprivedRec(c) && (parseFloat(c.pct)||0)>=60);       // محاولة ناجحة
-    if(ok)solved.set(k,true);
+    const sid=sidOf(c); if(!sid)return;
+    const ck=sid+'|'+ckey(c);
+    if(seenCourse.has(ck))return;
+    const hi=isHighAbs(c), lo=isLowPerf(c);
+    if(!hi&&!lo)return;
+    seenCourse.add(ck);
+    if(!byStu.has(sid)){
+      const st=students.find(s=>String(s.id)===sid);
+      byStu.set(sid,{sid,name:(st&&st.name)||c.sname||c.name||sid,grp:String((st&&st.grp)||c.grp||'').replace(/\.0$/,''),items:[],severe:false});
+    }
+    const S=byStu.get(sid);
+    if(lo||(parseFloat(c.abs)||0)>=25)S.severe=true;
+    const tags=[];
+    if(hi)tags.push(`غياب ${Math.round(c.abs)}%`);
+    if(lo)tags.push(`درجة ${Math.round(c.pct)}%`);
+    S.items.push(`${esc(c.course)} (${tags.join('، ')})`);
   });
-  const done=new Set();
-  src.forEach(c=>{
-    const k=sidOf(c)+'|'+ckey(c);
-    if(solved.get(k))return;                 // عولجت — لا تُعرض
-    if(done.has(k))return;                   // محاولة واحدة تكفي لكل مادة
-    const nm=user.role==='s'?c.course:c.sname;
-    let added=false;
-    if(isHighAbs(c)){list.push({type:'aw',icon:'⚠️',msg:`${nm} — غياب ${Math.round(c.abs)}% في ${esc(c.course)}${grpTxt(c)}`});added=true;}
-    if(isLowPerf(c)){list.push({type:'ad',icon:'📉',msg:`${nm} — درجة ${Math.round(c.pct)}% في ${esc(c.course)}${grpTxt(c)}`});added=true;}
-    if(added)done.add(k);
+  [...byStu.values()].sort((a,b)=>b.items.length-a.items.length||String(a.name).localeCompare(String(b.name),'ar')).forEach(S=>{
+    const grpLbl=S.grp?` · شعبة ${esc(S.grp)}`:'';
+    list.push({
+      type:S.severe?'ad':'aw',
+      icon:S.severe?'🚨':'⚠️',
+      sid:S.sid,
+      msg:`<b>${esc(S.name)}</b>${grpLbl} <span class="pill ${S.severe?'pr':'py'}" style="font-size:10px;margin-inline:4px">${S.items.length} ${S.items.length===1?'مادة':'مواد'}</span><div style="font-size:11.5px;color:var(--muted);margin-top:3px">${S.items.join(' · ')}</div>`
+    });
   });
   return list;
 }
@@ -8636,33 +8676,39 @@ body.light-mode .pill.pb{background:color-mix(in srgb,var(--brand-1) 10%,transpa
 function renderAttLog(scopeAll,canEdit,bare){
   if(canEdit===undefined)canEdit=scopeAll;
   const list=atlBuildSessions(scopeAll);
-  window._attSessions=list; window._attEditable=canEdit; window._attScopeAll=scopeAll; window._attFilter={q:'',course:'all'};
+  window._attSessions=list; window._attEditable=canEdit; window._attScopeAll=scopeAll; window._attFilter={q:'',course:'all',grp:'all'};
   const editable=canEdit;
   const title=scopeAll?'إدارة سجل الغياب اليومي':'سجل الغياب اليومي';
   const subtitle=scopeAll?'استعرض وعدّل واحذف جلسات التحضير لكل المدربين':'كل جلسات التحضير التي سجّلتها — لموادك والمواد المكلَّف بها';
-  /* bare = مدموجة داخل «متابعة التدريب»، فالبانر للصفحة لا للتبويب */
   const banner=bare?'':`<div class="banner"><div><div class="cc-name" style="font-size:19px">🗂️ ${title}</div><div class="bsub">${subtitle}</div></div>${editable?'<span class="pill pb">وضع الإدارة</span>':'<span class="pill pg">عرض</span>'}</div>`;
   if(!list.length)
     return atlCss()+`<div class="atl-wrap">${banner}<div class="empty"><div class="empty-icon">📭</div>ما فيه تحضيرات مسجّلة بعد<br><span style="font-size:12px">تظهر هنا فور تسجيل أي حضور</span></div></div>`;
   const totalAbs=list.reduce((n,s)=>n+s.students.filter(x=>x.status==='غائب').length,0);
   const totalLate=list.reduce((n,s)=>n+s.students.filter(x=>x.status==='متأخر').length,0);
-  const courses=[...new Set(list.map(s=>s.course))];
+  const courses=[...new Set(list.map(s=>s.course))].sort((a,b)=>String(a).localeCompare(String(b),'ar'));
+  const gk2=g=>String(g||'').replace(/\.0$/,'').trim();
+  const grps=[...new Set(list.map(s=>gk2(s.grp)).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
   const kpi=(icon,num,lbl,cls)=>`<div class="mcard ${cls}"><div style="font-size:20px">${icon}</div><div class="mnum" style="font-size:26px;font-weight:800;margin-top:4px">${num}</div><div class="mlbl">${lbl}</div></div>`;
   const kpis=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:12px;margin-bottom:18px">
-    ${kpi('🗂️',list.length,'جلسة تحضير','mc-b')}${kpi('🚫',totalAbs,'إجمالي الغياب','mc-r')}${kpi('⏰',totalLate,'إجمالي التأخير','mc-y')}${kpi('📚',courses.length,'عدد المواد','mc-g')}
+    ${kpi('📘',courses.length,'المواد','mc-g')}${kpi('🏫',grps.length,'الشعب','mc-b')}${kpi('🗂️',list.length,'جلسة تحضير','mc-b')}${kpi('🚫',totalAbs,'إجمالي الغياب','mc-r')}${kpi('⏰',totalLate,'إجمالي التأخير','mc-y')}
   </div>`;
-  const opts=['<option value="all">كل المواد</option>'].concat(courses.map(c=>`<option value="${esc(cnk_(c))}">${esc(c)}</option>`)).join('');
+  const opts=['<option value="all">📘 كل المواد ('+courses.length+')</option>'].concat(courses.map(c=>`<option value="${esc(cnk_(c))}">${esc(c)}</option>`)).join('');
+  const grpOpts=['<option value="all">🏫 كل الشعب ('+grps.length+')</option>'].concat(grps.map(g=>`<option value="${escAttr(g)}">شعبة ${esc(g)}</option>`)).join('');
   const toolbar=`<div class="atl-toolbar">
-    <div class="atl-search"><span style="color:var(--muted)">🔍</span><input id="atlSearch" placeholder="ابحث باسم الطالب أو رقمه أو المادة..." oninput="attlogFilter()"></div>
+    <div class="atl-search"><span style="color:var(--muted)">🔍</span><input id="atlSearch" placeholder="ابحث باسم المتدرب أو رقمه أو المادة..." oninput="attlogFilter()"></div>
+    <select id="atlGrp" class="atl-select" aria-label="تصفية بالشعبة" title="تصفية بالشعبة" onchange="attlogFilter()">${grpOpts}</select>
     <select id="atlCourse" class="atl-select" aria-label="تصفية بالمادة" title="تصفية بالمادة" onchange="attlogFilter()">${opts}</select>
+    <button type="button" class="btn btn-b btn-sm" style="min-height:42px;padding:0 14px" onclick="printDailyAbsenceByCourse()">🖨️ طباعة كشف الغياب</button>
   </div>`;
   return atlCss()+`<div class="atl-wrap">${banner}${kpis}${toolbar}<div id="attlogBody">${attlogCards()}</div></div>`;
 }
 function attlogCards(){
   const list=window._attSessions||[]; const editable=window._attEditable;
   const f=window._attFilter||{q:'',course:'all'}; const q=String(f.q||'').trim();
+  const gkF=g=>String(g||'').replace(/\.0$/,'').trim();
   const filtered=list.filter(s=>{
     if(f.course&&f.course!=='all'&&cnk_(s.course)!==f.course)return false;
+    if(f.grp&&f.grp!=='all'&&gkF(s.grp)!==f.grp)return false;
     if(!q)return true;
     const qn=reqNrmName(q);
     if(reqNrmName(s.course).includes(qn))return true;
@@ -8707,35 +8753,58 @@ function attlogCards(){
      نصفين مختلفين في بطاقة واحدة: «١٥ يوم» تخلط ما لا يُخلط، والغياب
      المعروض لا يخصّ شعبةً بعينها. */
   const gk2=g=>String(g||'').replace(/\.0$/,'').trim();
-  const groups=new Map();
+  // ⭐ توحيد البطاقة حسب المادة (لكي لا تتكرر نفس المادة عدة مرات لكل شعبة)
+  const coursesMap=new Map();
   filtered.forEach(s=>{
-    const k=cnk_(s.course)+'|'+gk2(s.grp)+'|'+termKeyOf(s.term||'');
-    if(!groups.has(k))groups.set(k,{course:s.course,grp:gk2(s.grp),term:String(s.term||'').trim(),items:[]});
-    groups.get(k).items.push(s);
+    const ck=cnk_(s.course);
+    if(!coursesMap.has(ck))coursesMap.set(ck,{ck,course:s.course,grps:new Set(),terms:new Set(),items:[]});
+    const C=coursesMap.get(ck);
+    if(gk2(s.grp))C.grps.add(gk2(s.grp));
+    if(s.term)C.terms.add(String(s.term).trim());
+    C.items.push(s);
   });
-  /* ترتيب: المادة ثم الشعبة ثم النصف الأحدث */
-  return [...groups.values()].sort((a,b)=>
-      String(a.course).localeCompare(String(b.course),'ar')
-      || String(a.grp).localeCompare(String(b.grp),'ar',{numeric:true})
-      || termSortKey(b.term).localeCompare(termSortKey(a.term))
-    ).map(g=>{
-    const items=g.items.slice().sort((a,b)=>parseD(b.date)-parseD(a.date)); // الأحدث أولاً
+  window._atlSubGrp=window._atlSubGrp||{};
+  return [...coursesMap.values()].sort((a,b)=>String(a.course).localeCompare(String(b.course),'ar')).map(C=>{
+    const allItems=C.items.slice().sort((a,b)=>parseD(b.date)-parseD(a.date));
+    const grpList=[...C.grps].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+    const activeSub=window._atlSubGrp[C.ck]||'all';
+    const items=(activeSub==='all'||!C.grps.has(activeSub))?allItems:allItems.filter(s=>gk2(s.grp)===activeSub);
     const totAbs=items.reduce((a,s)=>a+s.students.filter(x=>x.status==='غائب').length,0);
     const totLate=items.reduce((a,s)=>a+s.students.filter(x=>x.status==='متأخر').length,0);
-    const openG=q?' open':'';
+    const openG=(q||window._atlOpenCk===C.ck)?' open':'';
+    const grpChips=grpList.map(g=>`<span class="atl-mat-grp">شعبة ${esc(g)}</span>`).join('');
+    const termChips=[...C.terms].slice(0,2).map(t=>`<span class="atl-mat-trm" title="${escAttr(termParts(t).lbl)}">${esc(termShort(t))}</span>`).join('');
+    const subTabs=grpList.length>1?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px dashed var(--border);align-items:center">
+      <span style="font-size:11.5px;color:var(--muted);font-weight:700">تصفية الشعبة داخل المادة:</span>
+      <button type="button" class="rep-tab ${activeSub==='all'?'on':''}" style="padding:4px 11px;font-size:11.5px" onclick="setAtlSubGrp('${jsq(C.ck)}','all')">الكل (${allItems.length} يوم)</button>
+      ${grpList.map(g=>{
+        const cnt=allItems.filter(s=>gk2(s.grp)===g).length;
+        return `<button type="button" class="rep-tab ${activeSub===g?'on':''}" style="padding:4px 11px;font-size:11.5px" onclick="setAtlSubGrp('${jsq(C.ck)}','${jsq(g)}')">شعبة ${esc(g)} (${cnt} يوم)</button>`;
+      }).join('')}
+      <button type="button" class="btn btn-out btn-sm" style="margin-right:auto;font-size:11px;padding:4px 10px" onclick="printDailyAbsenceByCourse(trkHalf()?termKeyOf(trkHalf()):'__ALL__','${activeSub==='all'?'':jsq(activeSub)}','${jsq(C.ck)}')">🖨️ طباعة هذه المادة</button>
+    </div>`:`<div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button type="button" class="btn btn-out btn-sm" style="font-size:11px;padding:4px 10px" onclick="printDailyAbsenceByCourse(trkHalf()?termKeyOf(trkHalf()):'__ALL__','${grpList[0]||''}','${jsq(C.ck)}')">🖨️ طباعة كشف هذه المادة</button></div>`;
     return `<details class="ccard atl-mat"${openG}>
       <summary>
-        <div class="atl-mat-name"><span class="atl-mat-txt">📘 ${esc(g.course)}</span>${g.grp?`<span class="atl-mat-grp">شعبة ${esc(g.grp)}</span>`:''}${g.term?`<span class="atl-mat-trm" title="${escAttr(termParts(g.term).lbl)}">${esc(termShort(g.term))}</span>`:''}</div>
-        <div class="atl-mat-badges"><span class="pill pb">${items.length} يوم</span>${totAbs?`<span class="pill pr">${totAbs} غياب</span>`:''}${totLate?`<span class="pill py">${totLate} تأخير</span>`:''}<span class="atl-chev">▾</span></div>
+        <div class="atl-mat-name"><span class="atl-mat-txt">📘 ${esc(C.course)}</span>${grpChips}${termChips}</div>
+        <div class="atl-mat-badges">${grpList.length>1?`<span class="pill pg">${grpList.length} شعب</span>`:''}<span class="pill pb">${items.length} يوم</span>${totAbs?`<span class="pill pr">${totAbs} غياب</span>`:''}${totLate?`<span class="pill py">${totLate} تأخير</span>`:''}<span class="atl-chev">▾</span></div>
       </summary>
-      <div class="atl-mat-body">${items.map(dayCard).join('')}</div>
+      <div class="atl-mat-body">${subTabs}${items.map(dayCard).join('')}</div>
     </details>`;
   }).join('');
 }
+function setAtlSubGrp(ck,grp){
+  window._atlSubGrp=window._atlSubGrp||{};
+  window._atlSubGrp[ck]=grp;
+  window._atlOpenCk=ck;
+  const host=document.getElementById('attlogBody');
+  if(host)host.innerHTML=attlogCards();
+}
+window.setAtlSubGrp=setAtlSubGrp;
 function attlogFilter(){
   const q=(document.getElementById('atlSearch')||{}).value||'';
   const c=(document.getElementById('atlCourse')||{}).value||'all';
-  window._attFilter={q:q,course:c};
+  const g=(document.getElementById('atlGrp')||{}).value||'all';
+  window._attFilter={q:q,course:c,grp:g};
   const host=document.getElementById('attlogBody');
   if(host)host.innerHTML=attlogCards();
 }
@@ -10148,7 +10217,7 @@ function computeKPI(grp){
   const excellenceRate = gc.length?Math.round(gc.filter(c=>c.pct>=80).length/gc.length*100):0;
   const passRate = gc.length?Math.round(gc.filter(isPass).length/gc.length*100):0;
   const avgAbs = gc.length?Math.round(gc.reduce((a,c)=>a+c.abs,0)/gc.length):0;
-  const alerts = gc.filter(hasIssue).length;
+  const alerts = uniqIssueStudentsCount(gc);
   const gpa = gpaFrom(gc);
   return {traineeCount,avg,completionRate,excellenceRate,passRate,avgAbs,alerts,courseCount:gc.length,gpa,planTotal};
 }
@@ -13609,7 +13678,7 @@ const aPgs={
     const tot=students.length,crs=[...new Set(allCourses.map(c=>c.course))].length;
     const trainers=activeTrainerNames().length;
     const avg=avgPct(allCourses);
-    const warns=allCourses.filter(hasIssue).length;
+    const warns=uniqIssueStudentsCount(allCourses);
     const grps=[...new Set(students.map(s=>s.grp))];
     return `
     <div class="banner"><div><div class="btitle">لوحة المتابعة المركزية ⚙️</div><div class="bsub">${esc(user.title)} — ${esc(user.name)}</div></div><div class="bpill bp-y" style="text-align:center">${user.level==='director'?'المشرف العام · إشراف كامل':(user.spec&&user.spec!=='جميع الدبلومات'?'مشرف تخصص · '+esc(user.spec):'مشرف')}</div></div>
@@ -13619,7 +13688,7 @@ const aPgs={
       <div class="mcard mc-y" data-nav="accounts" data-tab="trainer" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cy" data-target="${trainers}">${trainers}</div><div class="mlbl">المدربون</div></div>
       <div class="mcard mc-r" data-nav="reports" style="cursor:pointer"><div class="micon">📊</div><div class="mnum ${avg>=80?'cg':avg>=60?'cy':'cr'}" data-target="${avg}" data-suffix="%">${avg}%</div><div class="mlbl">متوسط الدرجات</div></div>
     </div>
-    ${warns?`<div class="alert ad"><span class="aicon">🔴</span>${warns} حالة تحتاج متابعة فورية</div>`:''}
+    ${warns?`<div class="alert ad"><span class="aicon">🔴</span>${warns} متدرب يحتاج متابعة فورية</div>`:''}
     <div class="stitle">📊 مؤشرات الأداء</div>
     <div class="term-tabs" id="kpiTabs">
       <button class="tterm active" onclick="renderKPI('all',this)">كل الشعب</button>
@@ -13636,7 +13705,7 @@ const aPgs={
       const rowFor=g=>{
         const gs=students.filter(s=>s.grp===g);
         const gc=allCourses.filter(c=>gs.some(s=>s.id===c.sid));
-        const ga=avgPct(gc), ggpa=gpaFrom(gc), gw=gc.filter(hasIssue).length;
+        const ga=avgPct(gc), ggpa=gpaFrom(gc), gw=uniqIssueStudentsCount(gc);
         return `<tr data-grp="${g}" onclick="showGroupDetail(this.dataset.grp)" style="cursor:pointer"><td>الشعبة ${esc(String(g))}</td><td>${gs.length}</td><td><span style="font-weight:700;color:${gpaColor(ggpa)}">${ggpa}</span></td><td><span class="pill ${pillClass(ga)}">${ga}%</span></td><td>${gw?`<span class="pill pr">${gw}</span>`:'<span class="pill pg">0</span>'}</td></tr>`;
       };
       return specNames.map(sp=>{
@@ -13813,116 +13882,104 @@ const aPgs={
   },
   requests:()=>requestsDashboardHTML(),
   alerts:()=>{
-    // كل المواد (بدون فلتر الحالة — لأن حالة الشيت قد لا تكون "حالي" بالضبط)
     const active=allCourses;
-    // ⭐ «راسب» لا تُطلق إلا بعد اكتمال رصد كل بنود المادة — قبل ذلك المجموع ناقص
-    //    والمتدرب يظهر راسباً وهو ما رُصدت له بقية البنود بعد.
     const stillFailed=c=>isConfirmedFail(c)&&!allCourses.some(o=>o.sid===c.sid&&normCode(o.code)===normCode(c.code)&&!isFailed(o)&&(parseFloat(o.pct)||0)>=60);
-    // كل نصف مجزأ مستقل: لا تختلط إنذارات المادة والشعبة بين نصفين.
-    const byCourse={};
+    // ⭐ تجميع الحالات بالشخص (المتدرب) حتى لا يتكرر نفس المتدرب في 5 مواد अलग-अलग
+    const stuMap=new Map();
+    const failSids=new Set(), weakSids=new Set(), absSids=new Set();
     active.forEach(c=>{
       const failed=stillFailed(c);
       const deprived=isDeprivedRec(c);
-      const wItems=failed?[]:weakItemsOf(c);            // بنود أقل من الحد (للمواد الحالية)
+      const wItems=failed?[]:weakItemsOf(c);
       const weak=!failed&&wItems.length>0;
-      const highAbs=!deprived&&isHighAbs(c);
-      if(!failed&&!deprived&&!weak&&!highAbs)return; // لا مشكلة
-      const half=c.half||c.term||'غير محدد';
-      const k=termKeyOf(half)+' ⟨'+c.course+'⟩ ⟨شعبة '+(c.grp||'—')+'⟩';
-      if(!byCourse[k])byCourse[k]={course:c.course,grp:c.grp||'—',half,trainer:c.trainer,failed:[],deprived:[],weak:[],highAbs:[]};
-      if(failed)byCourse[k].failed.push(c);
-      else if(deprived)byCourse[k].deprived.push(c);
-      else if(weak)byCourse[k].weak.push(c);
-      if(highAbs&&!deprived)byCourse[k].highAbs.push(c);
+      const highAbs=isHighAbs(c);
+      if(!failed&&!deprived&&!weak&&!highAbs)return;
+      const sid=String(c.sid||''); if(!sid)return;
+      if(failed)failSids.add(sid);
+      if(weak)weakSids.add(sid);
+      if(highAbs)absSids.add(sid);
+      if(!stuMap.has(sid)){
+        const st=students.find(s=>String(s.id)===sid);
+        stuMap.set(sid,{sid,name:(st&&st.name)||c.sname||c.name||sid,grp:String((st&&st.grp)||c.grp||'—').replace(/\.0$/,''),half:c.half||c.term||'غير محدد',items:[]});
+      }
+      const S=stuMap.get(sid);
+      S.items.push({course:c.course,trainer:c.trainer,half:c.half||c.term||'غير محدد',failed,weak,highAbs,pct:c.pct,abs:c.abs,weakTxt:weak?weakItemsText(c,' · '):''});
     });
-    const courses=Object.values(byCourse).sort((a,b)=>{
-      const byHalf=String(a.half).localeCompare(String(b.half),'ar',{numeric:true});
-      if(byHalf!==0)return byHalf;
-      const byGrp=String(a.grp).localeCompare(String(b.grp),'ar',{numeric:true});
-      if(byGrp!==0)return byGrp; // رتّب حسب الشعبة أولاً لتجميعها بصرياً
-      return (b.failed.length+b.deprived.length+b.weak.length+b.highAbs.length)-(a.failed.length+a.deprived.length+a.weak.length+a.highAbs.length);
-    });
-    // إحصائيات علوية
-    const totFail=courses.reduce((a,c)=>a+c.failed.length,0);
-    const totDep=courses.reduce((a,c)=>a+c.deprived.length,0);
-    const totWeak=courses.reduce((a,c)=>a+c.weak.length,0);
-    const totAbs=courses.reduce((a,c)=>a+c.highAbs.length,0);
-    // صف حالة
-    const caseRow=(c,type)=>{
-      const cfg={
-        failed:{icon:'❌',color:'var(--acc-r)',bdg:'#cf1f2f',bg:'rgba(231,76,60,.08)',lbl:`راسب${(parseFloat(c.pct)||0)>0?` (${Math.round(c.pct)}%)`:''}`,badge:'متطلب'},
-        deprived:{icon:'⚠️',color:'var(--acc-y)',bdg:'#a85f0c',bg:'rgba(244,199,138,.08)',lbl:`غياب مرتفع ${Math.round(c.abs)}% · الدرجة محسوبة`,badge:''},
-        weak:{icon:'📉',color:'var(--acc-y)',bdg:'#a85f0c',bg:'rgba(255,138,60,.08)',lbl:weakItemsText(c,' · ')||`ضعيف — درجة ${Math.round(c.pct)}%`,badge:'تحسين'},
-        highAbs:{icon:'⚠️',color:'#f4c78a',bg:'rgba(244,199,138,.08)',lbl:`غياب ${Math.round(c.abs)}% · ${absLevel(c.abs).label}`,badge:''}
-      }[type];
-      return `<div onclick="showStudentDetail('${jsq(c.sid)}')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:${cfg.bg};border-radius:8px;cursor:pointer;margin-bottom:5px">
-        <span style="font-size:16px">${cfg.icon}</span>
-        <span style="flex:1;font-size:13px;font-weight:600">${esc(c.sname.split(' ').slice(0,3).join(' '))}</span>
-        <span style="font-size:12px;color:${cfg.color}">${esc(cfg.lbl)}</span>
-        ${cfg.badge?`<span style="font-size:9px;background:${cfg.bdg||"#cf1f2f"};color:#fff;padding:2px 8px;border-radius:10px;font-weight:700">${cfg.badge}</span>`:''}
-        <span style="font-size:11px;color:var(--acc-b)">←</span>
-      </div>`;
-    };
-    const courseCard=c=>{
-      const total=c.failed.length+c.weak.length+c.highAbs.length;
-      return `<div style="background:var(--card,rgba(255,255,255,.03));border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)">
-          <div><span style="font-size:15px;font-weight:800;color:var(--acc-b)">📚 ${esc(c.course)}</span> <span style="font-size:12px;background:rgba(106,184,247,.15);color:var(--acc-b);padding:2px 10px;border-radius:10px;font-weight:700;margin-inline-start:6px">🏫 شعبة ${esc(c.grp)}</span> <span style="font-size:11px;color:var(--muted)">· ${esc(c.trainer||'—')}</span></div>
-          <span style="font-size:11px;background:rgba(231,76,60,.15);color:var(--acc-r);padding:3px 10px;border-radius:12px;font-weight:700">${total} حالة</span>
+    const stuList=[...stuMap.values()].sort((a,b)=>String(a.grp).localeCompare(String(b.grp),'ar',{numeric:true})||b.items.length-a.items.length||String(a.name).localeCompare(String(b.name),'ar'));
+    const filterGrp=window._alrtGrp||'all';
+    const grps=[...new Set(stuList.map(s=>s.grp).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+    const shown=filterGrp==='all'?stuList:stuList.filter(s=>s.grp===filterGrp);
+    const stuCard=s=>{
+      const fCnt=s.items.filter(x=>x.failed).length, wCnt=s.items.filter(x=>x.weak).length, aCnt=s.items.filter(x=>x.highAbs).length;
+      return `<div class="ccard" style="margin-bottom:12px;padding:14px 16px;border-right:4px solid ${fCnt?'var(--acc-r)':aCnt?'var(--acc-y)':'var(--acc-b)'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+          <div onclick="showStudentDetail('${jsq(s.sid)}')" style="cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="font-size:15px;font-weight:800;color:var(--text)">👤 ${esc(s.name)}</span>
+            <span class="pill pb" style="font-size:11px">شعبة ${esc(s.grp)}</span>
+            <span style="font-size:11.5px;color:var(--muted)">(${esc(s.sid)})</span>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+            ${fCnt?`<span class="pill pr">${fCnt} راسب</span>`:''}
+            ${wCnt?`<span class="pill py">${wCnt} تحسين</span>`:''}
+            ${aCnt?`<span class="pill py">${aCnt} غياب</span>`:''}
+            <button class="btn btn-out btn-sm" style="padding:3px 10px;font-size:11px" onclick="showStudentDetail('${jsq(s.sid)}')">بطاقة المتدرب ←</button>
+          </div>
         </div>
-        ${c.failed.length?`<div style="font-size:11px;font-weight:700;color:var(--acc-r);margin:8px 0 4px">❌ راسبون بالدرجة (${c.failed.length})</div>${c.failed.map(x=>caseRow(x,'failed')).join('')}`:''}
-        ${c.weak.length?`<div style="font-size:11px;font-weight:700;color:var(--acc-y);margin:8px 0 4px">📉 بنود تحتاج تحسين (${c.weak.length})</div>${c.weak.map(x=>caseRow(x,'weak')).join('')}`:''}
-        ${c.highAbs.length?`<div style="font-size:11px;font-weight:700;color:var(--acc-y);margin:8px 0 4px">⚠️ تنبيهات الغياب — للمتابعة فقط ولا تؤثر على الدرجة (${c.highAbs.length})</div>${c.highAbs.map(x=>caseRow(x,'highAbs')).join('')}`:''}
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px">
+          ${s.items.map(it=>{
+            const badges=[];
+            if(it.failed)badges.push(`<span style="color:var(--acc-r);font-weight:700">❌ راسب (${Math.round(it.pct||0)}%)</span>`);
+            if(it.weak)badges.push(`<span style="color:var(--acc-y);font-weight:700">📉 ${esc(it.weakTxt||'يحتاج تحسين')}</span>`);
+            if(it.highAbs)badges.push(`<span style="color:#f4c78a;font-weight:700">⚠️ غياب ${Math.round(it.abs||0)}% (${absLevel(it.abs).label})</span>`);
+            return `<div style="padding:8px 11px;border-radius:9px;background:rgba(255,255,255,.03);border:1px solid var(--border);font-size:12px">
+              <div style="font-weight:700;color:var(--acc-b);margin-bottom:3px">📘 ${esc(it.course)} <span style="font-weight:400;color:var(--muted);font-size:11px">· ${esc(it.trainer||'—')}</span></div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:11.5px">${badges.join(' · ')}</div>
+            </div>`;
+          }).join('')}
+        </div>
       </div>`;
     };
-    const byHalf={};
-    courses.forEach(c=>{const h=c.half||'غير محدد';(byHalf[h]||(byHalf[h]=[])).push(c);});
-    const halfNames=Object.keys(byHalf).sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
     return `
-    <div class="banner"><div><div class="btitle">🔔 الاشعارات الأكاديمية</div><div class="bsub">كل نصف مجزأ مستقل — والغياب للتنبيه فقط دون حرمان أو تصفير الدرجات</div></div></div>
+    <div class="banner"><div><div class="btitle">🔔 الاشعارات وحالات المتابعة (بالشخص)</div><div class="bsub">كل متدرب في بطاقة واحدة تجمع كل مواده وتنبيهاته — دون تكرار الاسم</div></div><span class="pill pb">${stuList.length} متدرب</span></div>
     <div class="metrics" style="margin-bottom:20px">
-      <div class="mcard mc-r" onclick="showNotifStat('fail')" style="cursor:pointer"><div class="micon">❌</div><div class="mnum cr">${totFail}</div><div class="mlbl">راسبون (متطلبات)</div></div>
-      <div class="mcard mc-y" onclick="showNotifStat('weak')" style="cursor:pointer"><div class="micon">📉</div><div class="mnum cy">${totWeak}</div><div class="mlbl">بنود تحتاج تحسين</div></div>
-      <div class="mcard mc-y" onclick="showNotifStat('abs')" style="cursor:pointer"><div class="micon">⚠️</div><div class="mnum cy">${totAbs}</div><div class="mlbl">إنذار غياب</div></div>
+      <div class="mcard mc-b" onclick="showNotifStat('all')" style="cursor:pointer"><div class="micon">👥</div><div class="mnum cb">${stuList.length}</div><div class="mlbl">إجمالي المتدربين للمتابعة</div></div>
+      <div class="mcard mc-r" onclick="showNotifStat('fail')" style="cursor:pointer"><div class="micon">❌</div><div class="mnum cr">${failSids.size}</div><div class="mlbl">متدرب راسب (متطلبات)</div></div>
+      <div class="mcard mc-y" onclick="showNotifStat('weak')" style="cursor:pointer"><div class="micon">📉</div><div class="mnum cy">${weakSids.size}</div><div class="mlbl">متدرب يحتاج تحسين</div></div>
+      <div class="mcard mc-y" onclick="showNotifStat('abs')" style="cursor:pointer"><div class="micon">⚠️</div><div class="mnum cy">${absSids.size}</div><div class="mlbl">متدرب بإنذار غياب</div></div>
     </div>
-    <div class="alert ab" style="margin-bottom:14px"><span class="aicon">ℹ️</span>«راسب» لا تظهر إلا بعد رصد <b>كل</b> بنود المادة. قبل ذلك يُقاس المتدرب على كل بند وحده — البند الذي أقل من <b>${gradeAlertPct()}%</b> من درجته يظهر كـ«يحتاج تحسين».</div>
-    <div class="btn-eq" style="margin-bottom:18px">
+    <div class="alert ab" style="margin-bottom:14px"><span class="aicon">ℹ️</span>الأرقام أعلاه تمثّل <b>عدد المتدربين (الأشخاص)</b> وليس عدد المواد المضروبة. اضغط على أي متدرب لفتح ملفه الكامل.</div>
+    <div class="btn-eq" style="margin-bottom:14px">
       <button class="btn btn-b" onclick="previewPerfNotices()">👁️ معاينة رسائل التحسين</button>
       <button class="btn btn-g" onclick="sendPerfNotices()">📧 أرسل رسائل التحسين للمتدربين</button>
       <button class="btn btn-out" onclick="clearPrematureAlerts(true)">🧹 تنبيهات «درجة منخفضة» أُرسلت بالخطأ</button>
     </div>
-    ${courses.length?halfNames.map(h=>{
-      const hc=byHalf[h], absN=hc.reduce((n,c)=>n+c.highAbs.length,0);
-      return `<section style="margin:22px 0 28px">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:13px 16px;margin-bottom:14px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--brand-1) 12%,var(--card))">
-          <div style="font-size:17px;font-weight:900;color:var(--acc-b)">🗓️ ${esc(h)}</div>
-          <div style="font-size:12px;color:var(--muted)">${hc.length} مقرر · ⚠️ ${absN} تنبيه غياب · الدرجات محسوبة للجميع</div>
-        </div>
-        ${hc.map(courseCard).join('')}
-      </section>`;
-    }).join(''):'<div class="alert as"><span class="aicon">✅</span>ممتاز! لا توجد حالات تحتاج متابعة</div>'}`;
+    <div class="rep-tabs" style="margin-bottom:14px">
+      <button type="button" class="rep-tab ${filterGrp==='all'?'on':''}" onclick="window._alrtGrp='all';showAPage('alerts',document.getElementById('sn-alerts'))">كل الشعب (${stuList.length} متدرب)</button>
+      ${grps.map(g=>`<button type="button" class="rep-tab ${filterGrp===g?'on':''}" onclick="window._alrtGrp='${jsq(g)}';showAPage('alerts',document.getElementById('sn-alerts'))">شعبة ${esc(g)} (${stuList.filter(s=>s.grp===g).length})</button>`).join('')}
+    </div>
+    ${shown.length?shown.map(stuCard).join(''):'<div class="alert as"><span class="aicon">✅</span>ممتاز! لا توجد حالات تحتاج متابعة</div>'}`;
   },
   reports:()=>{
     const tot=students.length;
     const avg=avgPct(allCourses);
-    const completed=allCourses.filter(c=>c.pct>=80).length;
-    const deprived=allCourses.filter(c=>c.abs>=25).length;
+    const completed=completedCourseGroups(allCourses).length;
+    const deprived=uniqDeprivedStudentsCount(allCourses);
     const allTrainers=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))];
     const current=allTrainers.filter(isCurrentTrainer);
     const old=allTrainers.filter(t=>!isCurrentTrainer(t));
     const rowFor=(t,faded)=>{
       const tc=allCourses.filter(c=>c.trainer===t);
       const ta=avgScored(tc), tn=scoredCount(tc);
-      const tw=tc.filter(hasIssue).length;
-      return `<tr onclick="showTrainerDetail('${jsq(t)}')" style="cursor:pointer${faded?';opacity:.6':''}"><td>${esc(t)}${faded?' <span style="font-size:10px;color:var(--muted)">(سابق)</span>':''}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td>${ta===null?'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)" title="ما رُصدت أي درجة بعد">—</span>':`<span class="pill ${pillClass(ta)}" title="محسوب من ${tn} مادة مرصودة من ${tc.length}">${ta}%</span>`}</td><td>${tw?'<span class="pill pr">'+tw+'</span>':'<span class="pill pg">0</span>'}</td></tr>`;
+      const tw=uniqIssueStudentsCount(tc);
+      return `<tr onclick="showTrainerDetail('${jsq(t)}')" style="cursor:pointer${faded?';opacity:.6':''}"><td>${esc(t)}${faded?' <span style="font-size:10px;color:var(--muted)">(سابق)</span>':''}</td><td>${[...new Set(tc.map(c=>c.sid))].length}</td><td>${ta===null?'<span class="pill" style="background:rgba(150,150,150,.15);color:var(--muted)" title="ما رُصدت أي درجة بعد">—</span>':`<span class="pill ${pillClass(ta)}" title="محسوب من ${tn} سجل مرصود من ${tc.length}">${ta}%</span>`}</td><td>${tw?'<span class="pill pr" title="عدد المتدربين الذين لديهم تنبيه">'+tw+' متدرب</span>':'<span class="pill pg">0</span>'}</td></tr>`;
     };
     return `<div class="stitle">تقارير الأداء الأكاديمي</div>
     <div class="alert ab"><span class="aicon">👆</span>اضغط على أي بطاقة أو صف لعرض التفاصيل الكاملة</div>
     <div class="metrics">
       <div class="mcard mc-y" onclick="showRepDetail('avg')" style="cursor:pointer"><div class="micon">📊</div><div class="mnum cy">${avg}%</div><div class="mlbl">متوسط عام</div></div>
-      <div class="mcard mc-g" onclick="showRepDetail('completed')" style="cursor:pointer"><div class="micon">✅</div><div class="mnum cg">${completed}</div><div class="mlbl">مقررات مكتملة</div></div>
+      <div class="mcard mc-g" onclick="showRepDetail('completed')" style="cursor:pointer"><div class="micon">✅</div><div class="mnum cg">${completed}</div><div class="mlbl">مقررات مكتملة الرصد</div></div>
       <div class="mcard mc-b" onclick="showRepDetail('trainers')" style="cursor:pointer"><div class="micon">👨‍🏫</div><div class="mnum cb">${current.length}</div><div class="mlbl">مدرب حالي</div></div>
-      <div class="mcard mc-r" onclick="showRepDetail('deprived')" style="cursor:pointer"><div class="micon">⚠️</div><div class="mnum cr">${deprived}</div><div class="mlbl">غياب مرتفع (25%+) — بلا حرمان</div></div>
+      <div class="mcard mc-r" onclick="showRepDetail('deprived')" style="cursor:pointer"><div class="micon">⚠️</div><div class="mnum cr">${deprived}</div><div class="mlbl">متدرب بغياب مرتفع (25%+)</div></div>
     </div>
     <div class="stitle">🟢 المدربون الحاليون (${current.length}) <span style="font-size:12px;color:var(--muted);font-weight:400">(اضغط للتفاصيل)</span></div>
     <div class="gtable"><table><thead><tr><th>المدرب</th><th>عدد المتدربين</th><th>متوسط الدرجات</th><th>اشعارات</th></tr></thead><tbody>${current.length?current.map(t=>rowFor(t,false)).join(''):'<tr><td colspan="4" style="text-align:center;color:var(--muted)">لا يوجد مدربون حاليون</td></tr>'}</tbody></table></div>
@@ -15432,12 +15489,22 @@ function showRepDetail(kind){
     });
     showDetail('متوسط الأداء العام','📊',html);
   }else if(kind==='completed'){
+    const comp=completedCourseGroups(allCourses);
     const byGrp={};
-    allCourses.filter(c=>c.pct>=80).forEach(c=>{byGrp[c.grp]=(byGrp[c.grp]||0)+1;});
-    let html='<div style="font-size:13px;color:var(--muted);margin-bottom:12px">المقررات المكتملة (درجة 80%+) لكل شعبة:</div>';
-    grps.forEach(g=>html+=detailRow('الشعبة '+g,(byGrp[g]||0)+' مقرر','var(--green)'));
-    html+=detailRow('الإجمالي',allCourses.filter(c=>c.pct>=80).length+' مقرر','var(--green)');
-    showDetail('المقررات المكتملة','✅',html);
+    comp.forEach(g=>{byGrp[g.grp]=(byGrp[g.grp]||0)+1;});
+    const passRecs=allCourses.filter(c=>(parseFloat(c.pct)||0)>=60).length;
+    const excStudents=studentRanking().filter(s=>s.avg>=80).length;
+    let html=`<div class="alert ab" style="margin-bottom:12px"><span class="aicon">ℹ️</span>يتم هنا حساب <b>المقررات الفعلية</b> المكتملة الرصد (${comp.length} مقرر/شعبة)، وليس ضرب عدد الطلاب في المواد (${passRecs} سجل طالب ناجح · ${excStudents} متدرب متفوق 80%+).</div>`;
+    grps.forEach(g=>html+=detailRow('الشعبة '+g,(byGrp[String(g).replace(/\.0$/,'').trim()]||0)+' مقرر مكتمل','var(--green)'));
+    html+=detailRow('إجمالي المقررات المكتملة',comp.length+' مقرر','var(--green)');
+    if(comp.length){
+      html+='<div style="font-size:12px;color:var(--muted);margin:12px 0 6px;font-weight:700">قائمة المقررات المكتملة:</div>';
+      comp.forEach(g=>{
+        const avgG=avgScoredNum(g.recs);
+        html+=detailRow(`${esc(g.course)} · شعبة ${esc(g.grp||'—')}`,`${g.recs.length} متدرب · متوسط ${avgG}%`,'var(--green)');
+      });
+    }
+    showDetail('المقررات المكتملة الرصد','✅',html);
   }else if(kind==='trainers'){
     const trainers=activeTrainerNames();
     const archived=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].filter(t=>!isCurrentTrainer(t));
@@ -15451,20 +15518,25 @@ function showRepDetail(kind){
     if(archived.length)html+=`<div style="font-size:12px;color:var(--muted);margin-top:14px">↩︎ ${archived.length} مدرب في السجلات بدون حساب دخول (أرشيف): ${archived.map(esc).join('، ')}</div>`;
     showDetail('المدربون','👨‍🏫',html);
   }else if(kind==='deprived'){
-    // قائمة متابعة فقط: الرصد مفتوح والدرجات محسوبة للجميع مهما بلغ الغياب.
+    // تجميع بالشخص: كل متدرب بطاقة واحدة وبداخلها المواد التي تجاوز فيها 25%
     const dep=allCourses.filter(c=>(parseFloat(c.abs)||0)>=25);
     const nm=c=>{const st=students.find(s=>s.id===c.sid);return (st?st.name:(c.sname||c.name||c.sid));};
-    const short=x=>String(x||'').split(' ').slice(0,3).join(' ');
-    let html=dep.length
-      ? '<div class="alert aw"><span class="aicon">⚠️</span>غياب 25% أو أكثر — للمتابعة فقط. لا يوجد حرمان، والدرجات تُرصد وتُحسب بصورة طبيعية.</div>'
-      : '<div class="alert as"><span class="aicon">✅</span>لا توجد سجلات غياب مرتفع</div>';
+    const byStu=new Map();
     dep.forEach(c=>{
-      html+=`<div class="ccard cc-y" style="margin-bottom:8px;cursor:pointer" onclick="document.getElementById('detailModal').remove();showStudentDetail('${jsq(String(c.sid))}')">
-        <div style="font-weight:700;font-size:13px">${esc(short(nm(c)))}</div>
-        <div style="font-size:11.5px;color:var(--muted);margin-top:2px">${esc(c.course)}${c.grp?' · شعبة '+esc(String(c.grp).replace(/\.0$/,'')):''} · ${esc(c.half||c.term||'غير محدد')} · غياب <b style="color:var(--acc-r)">${Math.round(c.abs*10)/10}%</b> · الدرجة ${Math.round(c.pct||0)}%</div>
+      const sid=String(c.sid||''); if(!sid)return;
+      if(!byStu.has(sid))byStu.set(sid,{sid,name:nm(c),grp:String(c.grp||'').replace(/\.0$/,''),items:[]});
+      byStu.get(sid).items.push(c);
+    });
+    let html=byStu.size
+      ? `<div class="alert aw"><span class="aicon">⚠️</span><b>${byStu.size} متدرب</b> لديهم غياب 25% أو أكثر (في ${dep.length} سجل مادة) — للمتابعة فقط ولا يوجد حرمان.</div>`
+      : '<div class="alert as"><span class="aicon">✅</span>لا يوجد متدربون بغياب مرتفع (25%+)</div>';
+    [...byStu.values()].forEach(S=>{
+      html+=`<div class="ccard cc-y" style="margin-bottom:8px;cursor:pointer" onclick="document.getElementById('detailModal').remove();showStudentDetail('${jsq(S.sid)}')">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:800;font-size:13.5px">👤 ${esc(S.name)}</span><span class="pill pr" style="font-size:10.5px">شعبة ${esc(S.grp||'—')} · ${S.items.length} ${S.items.length===1?'مادة':'مواد'}</span></div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:5px">${S.items.map(c=>`${esc(c.course)} (<b style="color:var(--acc-r)">${Math.round(c.abs*10)/10}%</b>)`).join(' · ')}</div>
       </div>`;
     });
-    showDetail('تنبيهات الغياب المرتفع','⚠️',html);
+    showDetail('متدربون بغياب مرتفع (25%+)','⚠️',html);
   }
 }
 // ترتيب المتدربين (نفس حساب الداشبورد) — للاستخدام في التفاصيل
@@ -15556,13 +15628,25 @@ function showBandStudents(min,max,lbl){
 // تفاصيل بطاقات صفحة "الاشعارات الأكاديمية"
 function showNotifStat(kind){
   const cl=notifClassified();
-  const map={fail:['failed','راسبون بالدرجة','❌'],dep:['highAbs','غياب مرتفع — الدرجات محسوبة','⚠️'],weak:['weak','بنود تحتاج تحسين','📉'],abs:['highAbs','إنذار غياب','⚠️']};
-  const m=map[kind]||map.fail, list=cl[m[0]]||[];
-  let html=list.length?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">${m[1]} (${list.length}):</div>`:'<div class="alert as"><span class="aicon">✅</span>لا توجد حالات</div>';
-  list.forEach(c=>{const nm=c.sname||c.name||c.sid;
-    const v=(m[0]==='deprived'||m[0]==='highAbs')?Math.round(c.abs)+'% غياب'
-           :(m[0]==='weak'?(weakItemsText(c,' · ')||Math.round(c.pct)+'%'):Math.round(c.pct)+'%');
-    html+=`<div ${_openStud(c.sid)}>${detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · '+esc(c.course)+' · شعبة '+esc(c.grp||'—'),v,m[0]==='weak'?'var(--acc-y)':'var(--red)')}</div>`;});
+  const map={
+    all:[allCourses.filter(hasIssue),'متدربون يحتاجون متابعة','👥','var(--acc-b)'],
+    fail:[cl.failed,'متدربون راسبون بالدرجة','❌','var(--red)'],
+    weak:[cl.weak,'متدربون يحتاجون تحسين','📉','var(--acc-y)'],
+    abs:[cl.highAbs,'متدربون بإنذار غياب','⚠️','var(--red)']
+  };
+  const m=map[kind]||map.fail, list=m[0]||[];
+  const byStu=new Map();
+  list.forEach(c=>{
+    const sid=String(c.sid||''); if(!sid)return;
+    const st=students.find(s=>String(s.id)===sid);
+    if(!byStu.has(sid))byStu.set(sid,{sid,name:(st&&st.name)||c.sname||c.name||sid,grp:String((st&&st.grp)||c.grp||'—').replace(/\.0$/,''),items:[]});
+    const v=(kind==='abs')?`${c.course} (${Math.round(c.abs)}%)`:(kind==='weak')?`${c.course} (${weakItemsText(c,'، ')||Math.round(c.pct)+'%'})`:`${c.course} (${Math.round(c.pct||0)}%)`;
+    byStu.get(sid).items.push(v);
+  });
+  let html=byStu.size?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">${m[1]} (${byStu.size} متدرب):</div>`:'<div class="alert as"><span class="aicon">✅</span>لا توجد حالات</div>';
+  byStu.forEach(s=>{
+    html+=`<div ${_openStud(s.sid)}>${detailRow(esc(String(s.name).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(s.grp),s.items.join(' · '),m[3])}</div>`;
+  });
   showDetail(m[1],m[2],html);
 }
 // تفاصيل أداء مدرب
@@ -15572,7 +15656,7 @@ function showTrainerDetail(t){
   const courses=[...new Set(tc.map(c=>c.course))];
   window._trName=t; window._trCourses=courses; // للتنقّل في التفاصيل
   const studCount=[...new Set(tc.map(c=>c.sid))].length;
-  const alertCount=tc.filter(hasIssue).length;
+  const alertCount=uniqIssueStudentsCount(tc);
   let html=`<div class="igrid" style="margin-bottom:16px">
     <div class="iitem" onclick="showTrainerSub('students')" style="cursor:pointer"><div class="ilbl">عدد المتدربين ›</div><div class="ival">${studCount}</div></div>
     <div class="iitem" onclick="showTrainerSub('courses')" style="cursor:pointer"><div class="ilbl">عدد المقررات ›</div><div class="ival">${courses.length}</div></div>
@@ -15608,8 +15692,14 @@ function showTrainerSub(kind){
     showDetail((kind==='avg'?'متوسط درجات ':'مقررات ')+t,'📚',html);
   } else if(kind==='alerts'){
     const iss=tc.filter(hasIssue);
-    let html=back+(iss.length?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">حالات تحتاج متابعة (${iss.length}):</div>`:'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات لهذا المدرب</div>');
-    iss.forEach(c=>{const nm=c.sname||c.name||c.sid;const r=isHighAbs(c)?'غياب '+Math.round(c.abs)+'%':'درجة '+Math.round(c.pct)+'%';html+=detailRow(esc(String(nm).split(' ').slice(0,3).join(' '))+' · '+esc(c.course),r,'var(--red)');});
+    const byS=new Map();
+    iss.forEach(c=>{
+      const sid=String(c.sid||'');
+      if(!byS.has(sid))byS.set(sid,{sid,name:c.sname||c.name||sid,grp:c.grp,notes:[]});
+      byS.get(sid).notes.push(`${c.course} (${isHighAbs(c)?'غياب '+Math.round(c.abs)+'%':'درجة '+Math.round(c.pct)+'%'})`);
+    });
+    let html=back+(byS.size?`<div style="font-size:13px;color:var(--muted);margin-bottom:8px">متدربون يحتاجون متابعة (${byS.size} متدرب):</div>`:'<div class="alert as"><span class="aicon">✅</span>لا توجد اشعارات لهذا المدرب</div>');
+    byS.forEach(s=>{html+=`<div ${_openStud(s.sid)}>${detailRow(esc(String(s.name).split(' ').slice(0,3).join(' '))+' · شعبة '+esc(s.grp||'—'),s.notes.join(' · '),'var(--red)')}</div>`;});
     showDetail('اشعارات '+t,'⚠️',html);
   }
 }
@@ -16408,8 +16498,11 @@ function controlShell(bodyHtml,subtitle){
     var blocks=[].slice.call(document.querySelectorAll('.cs-block'));
     var sel=document.getElementById('csPick');
     if(!sel)return;
-    var opts='<option value="all">كل الشعب ('+blocks.length+') — كل شعبة في صفحة</option>';
-    blocks.forEach(function(b,i){ opts+='<option value="'+i+'">الشعبة '+(b.getAttribute('data-grp')||(i+1))+' فقط</option>'; });
+    var opts='<option value="all">الكل ('+blocks.length+') — كل جدول في صفحة</option>';
+    blocks.forEach(function(b,i){
+      var lbl=b.getAttribute('data-lbl')||(b.getAttribute('data-grp')?'الشعبة '+b.getAttribute('data-grp'):('جدول '+(i+1)));
+      opts+='<option value="'+i+'">'+lbl+' فقط</option>';
+    });
     sel.innerHTML=opts;
     window.csFilter=function(v){
       blocks.forEach(function(b,i){ b.classList.toggle('hidden', v!=='all' && String(i)!==String(v)); });
@@ -16646,44 +16739,139 @@ async function printControlSheet(half,onlyGrp){
 window.openControlSheet=openControlSheet;
 window.printControlSheet=printControlSheet;
 
-// ===== سجل الغياب اليومي لكل مادة (يجمع كل التواريخ في جدول واحد) =====
-function printDailyAbsenceByCourse(){
+// ===== سجل الغياب اليومي لكل مادة (مع نافذة تحديد النصف المجزأ والشعبة والمادة) =====
+function _dailyAbsParsedRows(){
   const rows=(typeof absenceRows!=='undefined'&&Array.isArray(absenceRows))?absenceRows:[];
-  if(rows.length<2){showToast('لا يوجد سجل غياب يومي بعد','w');return;}
   const dig=s=>String(s||'').replace(/[^0-9]/g,'');
+  const gk=g=>String(g||'').replace(/\.0$/,'').trim();
   const fmt=v=>{const s=String(v||'').trim();const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);if(m)return s.slice(0,10);const d=new Date(s);return isNaN(d)?s:(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear());};
-  const dnum=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?((m[3].length===2?'20'+m[3]:m[3])+m[2].padStart(2,'0')+m[1].padStart(2,'0')):'0';};
-  const courses=new Map(); // key=cnk(cname) -> {course, dates:Set, studs:Map(sid->{sid,name,byDate})}
+  const out=[];
   for(let i=1;i<rows.length;i++){
     const r=rows[i]; const sid=dig(r[0]); if(!sid)continue;
-    const cname=r[2]||'—', date=fmt(r[5]), status=String(r[6]||'').trim()||'غائب';
-    const k=cnk_(cname);
-    if(!courses.has(k))courses.set(k,{course:cname,dates:new Set(),studs:new Map()});
-    const C=courses.get(k); C.dates.add(date);
-    if(!C.studs.has(sid))C.studs.set(sid,{sid,name:r[1]||'',byDate:{}});
-    C.studs.get(sid).byDate[date]=status;
+    const cname=String(r[2]||'—').trim(), grp=gk(r[4]), date=fmt(r[5]), status=String(r[6]||'').trim()||'غائب', term=String(r[7]||'').trim();
+    out.push({sid,name:r[1]||'',course:cname,ck:cnk_(cname),grp,date,status,term,tk:termKeyOf(term)});
   }
+  return out;
+}
+function printDailyAbsenceByCourse(directHalf,directGrp,directCourse){
+  const list=_dailyAbsParsedRows();
+  if(!list.length){showToast('لا يوجد سجل غياب يومي بعد','w');return;}
+  if(directHalf!==undefined){
+    execPrintDailyAbsence(directHalf,directGrp||'',directCourse||'');
+    return;
+  }
+  const curTk=termKeyOf(currentHalf());
+  const termMap=new Map();
+  list.forEach(x=>{if(x.tk&&!termMap.has(x.tk))termMap.set(x.tk,x.term);});
+  (allCourses||[]).forEach(c=>{const tk=termKeyOf(c.half||'');if(tk&&!termMap.has(tk))termMap.set(tk,String(c.half||'').trim());});
+  const halves=[...termMap.entries()].sort((a,b)=>termSortKey(b[1]).localeCompare(termSortKey(a[1])));
+  const defTk=termMap.has(curTk)?curTk:(halves[0]?halves[0][0]:'');
+  document.getElementById('daModal')?.remove();
+  const ov=document.createElement('div'); ov.className='modal-overlay'; ov.id='daModal';
+  ov.innerHTML=`<div class="modal" style="max-width:560px">
+    <div class="modal-title"><span>🗓️ سجل الغياب اليومي لكل مادة</span>
+      <button class="modal-close" onclick="document.getElementById('daModal').remove()">✕</button></div>
+    <div class="dlg-hint">حدد النصف المجزأ والشعبة والمادة التي تريد طباعة سجل غيابها اليومي بدل طباعة كل المواد دفعة واحدة.</div>
+    <div class="dlg-field">
+      <label for="daHalf">📅 النصف المجزأ</label>
+      <select id="daHalf" onchange="daFillFilters()">
+        ${halves.map(([tk,raw])=>`<option value="${escAttr(tk)}" ${tk===defTk?'selected':''}>${esc(fmtTerm(String(raw).replace(/-/g,' ')))}${tk===curTk?' · النصف الجاري':''}</option>`).join('')}
+        <option value="__ALL__">📚 كل الأنصاف</option>
+      </select>
+    </div>
+    <div class="dlg-field">
+      <label for="daGrp">🏫 الشعبة</label>
+      <select id="daGrp" onchange="daFillCourses()"></select>
+    </div>
+    <div class="dlg-field">
+      <label for="daCourse">📘 المادة</label>
+      <select id="daCourse" onchange="daSummary()"></select>
+    </div>
+    <div class="dlg-sum" id="daSum">…</div>
+    <div class="dlg-acts">
+      <button class="btn btn-out" onclick="document.getElementById('daModal').remove()">إلغاء</button>
+      <button class="btn btn-b" onclick="const h=document.getElementById('daHalf').value,g=document.getElementById('daGrp').value,c=document.getElementById('daCourse').value;document.getElementById('daModal').remove();execPrintDailyAbsence(h,g,c)">🖨️ عرض وطباعة السجل</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  daFillFilters();
+}
+function daFillFilters(){
+  const list=_dailyAbsParsedRows();
+  const h=(document.getElementById('daHalf')||{}).value||'';
+  const rows=list.filter(x=>!h||h==='__ALL__'||x.tk===h);
+  const grps=[...new Set(rows.map(x=>x.grp).filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'ar',{numeric:true}));
+  const gSel=document.getElementById('daGrp');
+  if(gSel){
+    gSel.innerHTML=`<option value="">كل الشعب (${grps.length})</option>`+grps.map(g=>`<option value="${escAttr(g)}">الشعبة ${esc(g)}</option>`).join('');
+  }
+  daFillCourses();
+}
+function daFillCourses(){
+  const list=_dailyAbsParsedRows();
+  const h=(document.getElementById('daHalf')||{}).value||'';
+  const g=(document.getElementById('daGrp')||{}).value||'';
+  const rows=list.filter(x=>(!h||h==='__ALL__'||x.tk===h)&&(!g||x.grp===g));
+  const cmap=new Map();
+  rows.forEach(x=>{if(!cmap.has(x.ck))cmap.set(x.ck,x.course);});
+  const cList=[...cmap.entries()].sort((a,b)=>String(a[1]).localeCompare(String(b[1]),'ar'));
+  const cSel=document.getElementById('daCourse');
+  if(cSel){
+    cSel.innerHTML=`<option value="">كل المواد (${cList.length})</option>`+cList.map(([ck,cn])=>`<option value="${escAttr(ck)}">${esc(cn)}</option>`).join('');
+  }
+  daSummary();
+}
+function daSummary(){
+  const el=document.getElementById('daSum'); if(!el)return;
+  const list=_dailyAbsParsedRows();
+  const h=(document.getElementById('daHalf')||{}).value||'';
+  const g=(document.getElementById('daGrp')||{}).value||'';
+  const c=(document.getElementById('daCourse')||{}).value||'';
+  const rows=list.filter(x=>(!h||h==='__ALL__'||x.tk===h)&&(!g||x.grp===g)&&(!c||x.ck===c));
+  if(!rows.length){el.className='dlg-sum warn';el.textContent='⚠️ لا توجد سجلات غياب مطابقة لهذا الاختيار';return;}
+  const blocks=new Set(rows.map(x=>x.ck+'|'+x.grp));
+  const dates=new Set(rows.map(x=>x.date));
+  const studs=new Set(rows.map(x=>x.sid));
+  el.className='dlg-sum';
+  el.innerHTML=`سيتم تجهيز <b>${blocks.size}</b> كشف مادة/شعبة · <b>${studs.size}</b> متدرب · <b>${dates.size}</b> يوم مسجّل`;
+}
+function execPrintDailyAbsence(halfTk,onlyGrp,onlyCk){
+  const list=_dailyAbsParsedRows().filter(x=>(!halfTk||halfTk==='__ALL__'||x.tk===halfTk)&&(!onlyGrp||x.grp===onlyGrp)&&(!onlyCk||x.ck===onlyCk));
+  if(!list.length){showToast('لا توجد سجلات مطابقة للاختيار','w');return;}
+  const dnum=d=>{const m=String(d).match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?((m[3].length===2?'20'+m[3]:m[3])+m[2].padStart(2,'0')+m[1].padStart(2,'0')):'0';};
+  const blocks=new Map(); // key = ck|grp -> {course, grp, term, dates:Set, studs:Map}
+  list.forEach(r=>{
+    const k=r.ck+'|'+r.grp;
+    if(!blocks.has(k))blocks.set(k,{course:r.course,grp:r.grp,term:r.term,dates:new Set(),studs:new Map()});
+    const B=blocks.get(k); B.dates.add(r.date);
+    if(!B.studs.has(r.sid))B.studs.set(r.sid,{sid:r.sid,name:r.name,byDate:{}});
+    B.studs.get(r.sid).byDate[r.date]=r.status;
+  });
   let body='';
-  [...courses.values()].sort((a,b)=>String(a.course).localeCompare(String(b.course),'ar')).forEach(C=>{
+  [...blocks.values()].sort((a,b)=>String(a.course).localeCompare(String(b.course),'ar')||String(a.grp).localeCompare(String(b.grp),'ar',{numeric:true})).forEach(C=>{
     const dates=[...C.dates].sort((a,b)=>dnum(a).localeCompare(dnum(b)));
     const studs=[...C.studs.values()].sort((a,b)=>String(a.name).localeCompare(String(b.name),'ar'));
-    const head=`<th style="width:26px">م</th><th class="nm">الاسم</th><th style="width:80px">الرقم</th>${dates.map(d=>`<th class="dt">${esc(d)}</th>`).join('')}<th>غياب</th><th>تأخير</th>`;
+    const head=`<th style="width:26px">م</th><th class="nm">الاسم</th><th style="width:80px">الرقم</th>${dates.map(d=>`<th class="dt">${esc(d)}</th>`).join('')}<th>غياب</th><th>تأخير</th><th>عذر</th>`;
     const trs=studs.map((s,i)=>{
-      let absN=0,lateN=0;
+      let absN=0,lateN=0,excN=0;
       const cells=dates.map(d=>{const st=s.byDate[d];
         if(st==='غائب'){absN++;return '<td class="g">غ</td>';}
         if(st==='متأخر'){lateN++;return '<td class="l">ت</td>';}
+        if(st==='معذور'){excN++;return '<td style="color:#2563eb;font-weight:700">ع</td>';}
         if(st==='حاضر')return '<td class="p">✓</td>';
         return '<td></td>';}).join('');
-      return `<tr><td>${i+1}</td><td class="nm">${esc(s.name)}</td><td>${esc(s.sid)}</td>${cells}<td class="g">${absN||''}</td><td class="l">${lateN||''}</td></tr>`;
+      return `<tr><td>${i+1}</td><td class="nm">${esc(s.name)}</td><td>${esc(s.sid)}</td>${cells}<td class="g">${absN||''}</td><td class="l">${lateN||''}</td><td style="color:#2563eb;font-weight:700">${excN||''}</td></tr>`;
     }).join('');
-    body+=`<div class="cs-block"><div class="cs-title">📉 ${esc(C.course)} — سجل الغياب اليومي <span style="font-size:11px;opacity:.85">(${dates.length} يوم · ${studs.length} متدرب)</span></div>
+    const grpTxt=C.grp?` — شعبة ${C.grp}`:'';
+    const trmTxt=C.term?` · ${fmtTerm(String(C.term).replace(/-/g,' '))}`:'';
+    const lbl=`${C.course}${grpTxt}`;
+    body+=`<div class="cs-block" data-lbl="${escAttr(lbl)}"><div class="cs-title"><span>📉 ${esc(C.course)}${esc(grpTxt)} <small style="font-weight:500;opacity:.9">${esc(trmTxt)}</small></span><span style="font-size:11px;opacity:.9">(${dates.length} يوم · ${studs.length} متدرب)</span></div>
       <table class="cs"><thead><tr>${head}</tr></thead><tbody>${trs}</tbody></table>
-      <div style="font-size:10px;color:#5a6b85;margin-top:4px">غ = غائب · ت = متأخر · ✓ = حاضر</div></div>`;
+      <div style="font-size:10px;color:#5a6b85;margin-top:4px">غ = غائب · ت = متأخر · ع = معذور · ✓ = حاضر</div></div>`;
   });
-  openReport(controlShell(body));
+  openReport(controlShell(body,'سجل الغياب اليومي المجمّع حسب النصف المجزأ والمادة والشعبة'));
 }
-window.printDailyAbsenceByCourse=printDailyAbsenceByCourse;
+window.printDailyAbsenceByCourse=printDailyAbsenceByCourse;window.daFillFilters=daFillFilters;window.daFillCourses=daFillCourses;window.daSummary=daSummary;window.execPrintDailyAbsence=execPrintDailyAbsence;
 
 // ===== 2) تقرير الدرجات المفصّل (لكل شعبة/مادة) =====
 function printGradesReport(){
