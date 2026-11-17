@@ -2455,6 +2455,17 @@ body.light-mode[data-thm]::before{
 </div>
 
 <script>
+/* ============================================================================
+ *  📑 فهرس أقسام الواجهة الرئيسية (Index.html) — نسخة 2026-11-17
+ *  ──────────────────────────────────────────────────────────────────────────
+ *   • حماية XSS ودوام التخزين المحلي (esc / imgSrc / LS)
+ *   • الاتصال بالخادم والجسر الموحّد (callWrite / callServer / jsonpCall / nativeApiCall)
+ *   • الدخول والتحقق بخطوتين وإصدار الواجهة (login / OTP / CLIENT_BUILD)
+ *   • الإقلاع وحسابات الغياب والدرجات (boot / absTotalDays / cnk_ / gpa)
+ *   • إدارة الجداول، الحضور، البنود، التحاضير، المقررات، والمستخدمين
+ *   • الطلبات وسير العمل، الأخبار والمكتبة، الصيانة والإعدادات، والطباعة
+ *   • المساعد الذكي، التوجيهات، والترجمة (TRANSLATIONS)
+ * ============================================================================ */
 /* ═══════════ 🗄️ تخزين لا يرمي ═══════════
    داخل إطار HtmlService (وفي التصفّح الخاص، وحين تُحجب بيانات المواقع)
    مجرّدُ لمس window.localStorage يرمي SecurityError. وكان في الصفحة ٦٢
@@ -4127,7 +4138,7 @@ function warmServer(){
    تبقى أعطالٌ مُصلَحةٌ ظاهرة، ولا شيء في الواجهة يقول السبب. الآن
    يقارن العميل بصمته ببصمة الخادم ويقولها صراحةً.
    ⚠️ ارفع الرقمين معاً عند كل تعديل جوهري. */
-const CLIENT_BUILD='2026-11-16';
+const CLIENT_BUILD='2026-11-17';
 let SERVER_BUILD=null;
 function buildSeen(r){
   try{
@@ -5583,7 +5594,7 @@ function excusePreviewDays(r,cc){
     if(grp&&gk(row[4])&&gk(row[4])!==grp)return;
     if(nWant&&!want[dk(row[5])])return;
     const st=String(row[6]||'').trim();
-    if(st==='حاضر'||st==='معذور')return;
+    if(st!=='غائب'&&st!=='متأخر')return;
     days+=(st==='متأخر')?0.5:1; hit++;
   });
   return {days,hit};
@@ -9709,7 +9720,7 @@ async function saveAttendance(course){
     if(d&&d.hours!==''&&d.hours!=null){
       const hours=parseFloat(d.hours)||0;
       const absence=absHoursToPct(hours,s.code); // النسبة المحسوبة
-      records.push({key:s.key,sid:s.sid,code:s.code,grp:s.grp,absence});  // ⭐ بدون code/grp كان الخادم يقع على صف خاطئ لو الطالب مسجّل بنفس المادة في شعبتين
+      records.push({key:s.key,sid:s.sid,code:s.code,course:s.course,grp:s.grp,term:s.term,absence});  // ⭐ بدون code/grp كان الخادم يقع على صف خاطئ لو الطالب مسجّل بنفس المادة في شعبتين
     }
   });
   if(!records.length){showToast('لم تُدخل أي ساعات غياب','w');return}
@@ -16872,14 +16883,25 @@ function renderExcuseDates(){
   const sel=document.getElementById('rq-course');
   const course=sel?sel.value:'';
   const grp=user.grp;
+  const onlyD=x=>String(x||'').replace(/[^0-9]/g,'');
+  const dkNorm=v=>{if(!v&&v!==0)return '';if(v instanceof Date)return isNaN(v)?'':new Date(v.getTime()-v.getTimezoneOffset()*60000).toISOString().slice(0,10);const t=String(v).trim();if(/^\d{4}-\d{2}-\d{2}$/.test(t))return t;const m=t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);if(m)return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');const p=new Date(t);return isNaN(p)?t:new Date(p.getTime()-p.getTimezoneOffset()*60000).toISOString().slice(0,10);};
   list.innerHTML=excuseDates.map(dt=>{
     const day=dateToArDay(dt);
     const sessions=course?courseSessionsOnDay(course,grp,day):0;
     const perHour=schedConfig.periodHours||2;
     const hrs=sessions*perHour;
     const info=course?(sessions>0?`${sessions} حصة · ${hrs} ساعة`:'لا حصص لهذه المادة بهذا اليوم'):'اختر المادة أولاً';
+    let absBadge='';
+    if(course){
+      const hit=(absenceRows||[]).slice(1).find(row=>onlyD(row[0])===onlyD(user.id)&&cnk_(row[2])===cnk_(course)&&dkNorm(row[5])===dt);
+      const st=hit?String(hit[6]||'').trim():'';
+      if(st==='غائب'||st==='متأخر') absBadge=`<span class="pill pg" style="font-size:11px;margin-right:6px">✓ مسجّل: ${esc(st)}</span>`;
+      else if(st==='حاضر') absBadge=`<span class="pill pr" style="font-size:11px;margin-right:6px">⚠️ مسجّل حاضر بهذا اليوم</span>`;
+      else if(st==='معذور') absBadge=`<span class="pill pb" style="font-size:11px;margin-right:6px">ℹ️ معذور مسبقاً</span>`;
+      else absBadge=`<span style="font-size:11px;color:var(--muted);margin-right:6px">· لم يُرصد التحضير بعد</span>`;
+    }
     return `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--card2);padding:8px 12px;border-radius:6px;border:1px solid var(--border)">
-      <div><span style="font-weight:700">${day}</span> <span style="color:var(--muted);font-size:12px">${dt}</span> <span style="font-size:11px;color:var(--acc-b);margin-right:8px">${info}</span></div>
+      <div><span style="font-weight:700">${day}</span> <span style="color:var(--muted);font-size:12px">${dt}</span> <span style="font-size:11px;color:var(--acc-b);margin-right:8px">${info}</span>${absBadge}</div>
       <button type="button" onclick="removeExcuseDate('${jsq(dt)}')" style="background:none;border:none;color:var(--acc-r);cursor:pointer;font-size:16px">✕</button>
     </div>`;
   }).join('');
@@ -17071,9 +17093,23 @@ function reqCard(r,opts){
   let body='';
   if(cat==='عذر'){
     const ex=reqExcuseParse(r);
+    const onlyD=x=>String(x||'').replace(/[^0-9]/g,'');
+    const ccMatch=(courses||[]).find(c=>onlyD(c.sid)===onlyD(r.sid)&&sameCourse(c.course,ex.course||'')&&(!r.grp||grpKey(c.grp)===grpKey(r.grp)));
+    let absCheckHtml='';
+    if(fin==='مكتمل'||fin==='معتمد'){
+      if(r.effectBefore!==''&&r.effectAfter!=='') absCheckHtml=`<div class="alert ag" style="margin-top:8px">✓ تم خصم الغياب بعد موافقة الإدارة: من <b>${esc(r.effectBefore)}%</b> إلى <b>${esc(r.effectAfter)}%</b></div>`;
+    }else if(!['مرفوض','ملغي','ملغى'].includes(fin)&&ccMatch){
+      const pv=excusePreviewDays(r,ccMatch);
+      const curPct=absPctFromBase(ccMatch.sid,ccMatch.code,ccMatch.course,ccMatch.grp,ccMatch.half,isActive(ccMatch.status));
+      const nextPct=excusePreviewPct(r,ccMatch);
+      absCheckHtml=pv.hit>0
+        ?`<div class="alert ab" style="margin-top:8px">✓ لديه غياب مسجّل (<b>${pv.hit}</b> يوم / ${pv.days} يوم محسوب) · النسبة الحالية <b>${curPct}%</b>${nextPct!==null?` ← بعد موافقة الإدارة: <b>${nextPct}%</b>`:''}</div>`
+        :`<div class="alert aw" style="margin-top:8px">⚠️ لا يوجد غياب مسجّل (غائب/متأخر) في التواريخ المحددة بقاعدة الغياب (النسبة الحالية: <b>${curPct}%</b>)</div>`;
+    }
     body=`<div class="req-detail-grid"><div><span>المادة</span><b>${esc(ex.course||'—')}</b></div><div><span>أيام الغياب</span><b>${esc(ex.days||'—')}</b></div><div><span>الساعات</span><b>${esc(ex.hours||'0')} ساعة</b></div><div><span>نوع العذر</span><b>${esc(ex.excuseType||'—')}</b></div></div>
       ${ex.reason&&ex.reason!=='—'?`<div class="req-notes">السبب: ${esc(ex.reason)}</div>`:''}${ex.file?`<a class="btn btn-out btn-sm" href="${escUrl(ex.file)}" target="_blank" rel="noopener">📎 فتح المستند</a>`:''}
-      <div class="cc-meta" style="margin-top:8px">إرسال العذر لا يحذف الغياب تلقائياً؛ تعالجه الإدارة عند إكمال الطلب.</div>`;
+      ${absCheckHtml}
+      <div class="cc-meta" style="margin-top:8px">تنخصم نسبة الغياب تلقائياً فور موافقة الإدارة النهائية على العذر.</div>`;
   }else body=r.details?`<div class="req-notes">${esc(r.details)}</div>`:'';
   const targetLine=(cat==='عام'&&r.targetName)?`<div class="cc-meta" style="color:var(--acc-b)">✉️ موجَّه إلى: <b>${esc(r.targetName)}</b></div>`:'';
   let actions='';
@@ -17200,7 +17236,16 @@ window.openRequestDetails=openRequestDetails;window.openRequestCompletion=openRe
 async function updateRequestOperational(rec,modalId){
   showToast(rec.decision?'جاري تسجيل الإجراء...':'جاري حفظ المتابعة...','i');const res=await callWrite('updateRequest',{records:[rec]}).catch(()=>null);
   if(!res||res.status!=='ok'){showToast('تعذّر الحفظ: '+attErrMsg(res&&res.msg,res&&res.hint),'e');return false;}
-  if(modalId)document.getElementById(modalId)?.remove();document.getElementById('requestDetailsModal')?.remove();await loadRequests().catch(()=>{});showToast(rec.decision==='approve'?'✅ تم قبول الطلب':rec.decision==='reject'?'✅ تم رفض الطلب':rec.finalStatus==='مكتمل'?'✅ تم اعتماد الطلب وإكماله':'✅ تم حفظ المتابعة','s');reloadRequestsPage();return true;
+  if(modalId)document.getElementById(modalId)?.remove();document.getElementById('requestDetailsModal')?.remove();
+  await loadRequests().catch(()=>{});
+  if(res.excuse){
+    await loadAbsenceBase().catch(()=>{});
+    const ex=res.excuse;
+    showToast(`✅ تم اعتماد العذر وخصم الغياب (${ex.excused||0} يوم: ${ex.before||'—'}% ← ${ex.after||ex.pct||0}%)`,'s');
+  }else{
+    showToast(rec.decision==='approve'?'✅ تم قبول الطلب':rec.decision==='reject'?'✅ تم رفض الطلب':rec.finalStatus==='مكتمل'?'✅ تم اعتماد الطلب وإكماله':'✅ تم حفظ المتابعة','s');
+  }
+  reloadRequestsPage();return true;
 }
 function openRequestReview(rid,decision){
   const r=requests.find(x=>String(x.rid)===String(rid));if(!r||!canActStage(r,user))return;
