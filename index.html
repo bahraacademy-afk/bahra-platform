@@ -2063,12 +2063,26 @@ body.has-modal .mob-nav{transform:translateY(110%);pointer-events:none}
 .topbar .out-btn.tb-off{display:none!important}
 /* زر الخروج نصّي لكنه يحاذي الأيقونات بنفس الارتفاع */
 .topbar .out-btn{height:40px;border-radius:12px;padding:0 14px;display:inline-flex;align-items:center}
-/* على الجوال يرتفع المقاس إلى 44px — الحدّ المريح للإصبع، لا ينزل دونه */
-@media(max-width:640px){
-  .topbar .tb-ic,.topbar #themeBtn,.topbar #thmPickBtn,.topbar #txBtn,.topbar .notif-btn{
-    width:44px!important;height:44px!important;min-width:44px;font-size:17px!important}
-  .topbar .out-btn{height:44px;padding:0 13px}
-  .topbar{gap:7px;padding:10px 14px}
+/* 📱 على الجوال: إخفاء الأزرار الثانوية (.tb-sm-hide) بأولوية تعلو على #topbar-kit
+   وإبراز زر حساب المستخدم (#topAv) ليكون واضحاً بجانب الإشعارات والتحديث فقط */
+@media(max-width:768px){
+  .tb-sm-hide,
+  .topbar .tb-sm-hide,
+  .topbar .tb-ic.tb-sm-hide,
+  .topbar #themeBtn.tb-sm-hide,
+  .topbar #thmPickBtn.tb-sm-hide,
+  .topbar .notif-btn.tb-sm-hide,
+  .topbar .out-btn.tb-sm-hide{display:none!important}
+  .topbar{padding:8px 12px!important;gap:8px!important;overflow:visible!important}
+  .tb-brand img{width:40px!important;height:40px!important}
+  .tb-right{gap:7px!important;flex-shrink:0!important;margin-inline-start:auto}
+  .topbar .tb-ic,.topbar .notif-btn{
+    width:40px!important;height:40px!important;min-width:40px!important;font-size:16px!important;border-radius:12px!important}
+  .topbar #topAv{
+    width:42px!important;height:42px!important;min-width:42px!important;border-radius:12px!important;
+    font-size:14px!important;font-weight:800!important;flex-shrink:0!important;
+    border:2px solid var(--brand-1)!important;
+    box-shadow:0 3px 12px color-mix(in srgb,var(--brand-1) 30%,transparent)!important}
 }
 /* شارة العدّاد فوق الأيقونة: 10px غير مقروء — رفعناها مع تكبير الدائرة */
 .notif-badge{font-size:11px!important;min-width:17px;height:17px;line-height:17px}
@@ -5719,8 +5733,8 @@ function excuseHoursFromDates(course,grp,dates){
   (dates||[]).forEach(dt=>{
     const day=dateToArDay(dt);
     const sessions=courseSessionsOnDay(course,grp,day);
-    const hrs=sessions*perHour;
-    totalHrs+=hrs;
+    const hrs=Math.round(sessions*perHour*10)/10;
+    totalHrs=Math.round((totalHrs+hrs)*10)/10;
     breakdown.push({date:dt,day,sessions,hrs});
   });
   return {totalHrs,breakdown};
@@ -14147,7 +14161,7 @@ const aPgs={
     <div class="banner"><div><div class="btitle">🧰 صيانة النظام</div><div class="bsub">فحص صحة النظام والعمليات الدورية — بضغطة واحدة</div></div></div>
     <div class="stitle">🔍 صحة النظام</div>
     <div id="sysHealth"><div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري الفحص...</div></div>
-    ${apiCustomBanner()}<div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="showAuditLog()" title="من فعل ماذا ومتى — الإجراءات الحساسة">📜 سجل الإجراءات</button><button class="btn btn-out" onclick="hashPasswords()" title="يحوّل الرموز المكتوبة نصّاً في الورقة إلى صيغةٍ مُجزَّأة — الدخول لا ينكسر">🔐 تأمين الرموز القديمة</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المكتملة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="goAdmin('accounts','_accTab','student')" title="بيتها: الأشخاص › المتدربون">🔗 ربط بيانات منفصلة ↗</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="apiUrlPanel()" title="رابط نشر Apps Script الذي تخاطبه هذه الصفحة">🔧 إعداد الاتصال بالخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
+    ${apiCustomBanner()}<div class="btn-grid" style="margin:12px 0 4px"><button class="btn btn-out" onclick="refreshSystemHealth()">🔄 إعادة الفحص</button><button class="btn btn-out" onclick="repairSheets()">🛠️ إصلاح التبويبات</button><button class="btn btn-out" onclick="repairKeys(true)">🔑 فحص المفاتيح</button><button class="btn btn-out" onclick="showAuditLog()" title="من فعل ماذا ومتى — الإجراءات الحساسة">📜 سجل الإجراءات</button><button class="btn btn-out" onclick="hashPasswords()" title="يحوّل الرموز المكتوبة نصّاً في الورقة إلى صيغةٍ مُجزَّأة — الدخول لا ينكسر">🔐 تأمين الرموز القديمة</button><button class="btn btn-out" onclick="aiPingTest()">🤖 فحص المساعد الذكي</button><button class="btn btn-out" onclick="trimGrid()">✂️ تقليم الفراغ (تسريع)</button><button class="btn btn-out" onclick="syncAbsence()">📉 مزامنة نسب الغياب</button><button class="btn btn-out" onclick="fixStuckRequestsUI()">⚡ تخليص الطلبات المعلّقة</button><button class="btn btn-out" onclick="reapplyExcuses()">🔁 تطبيق الأعذار المكتملة</button><button class="btn btn-out" onclick="dedupeRequests()">🧹 طلبات مكرّرة</button><button class="btn btn-out" onclick="goAdmin('accounts','_accTab','student')" title="بيتها: الأشخاص › المتدربون">🔗 ربط بيانات منفصلة ↗</button><button class="btn btn-out" onclick="perfProbe()">🩺 قياس سرعة الخادم</button><button class="btn btn-out" onclick="apiUrlPanel()" title="رابط نشر Apps Script الذي تخاطبه هذه الصفحة">🔧 إعداد الاتصال بالخادم</button><button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button><button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button><button class="btn btn-out" onclick="showBackupSteps()">💾 خطوات النسخ الاحتياطي</button></div>
     <div class="alert ab" style="margin-top:8px;font-size:12.5px"><span class="aicon">💡</span>«إصلاح التبويبات» يوسّع أعمدة التبويبات الضيقة في Google Sheets · «فحص المفاتيح» يعرض السجلات التي مفتاحها لا يطابق الرقم الأكاديمي الحالي (يحدث بعد تحديث الأرقام) ويصلحها بضغطة.</div>
 
     <div class="stitle" style="margin-top:26px">🛠️ العمليات الدورية</div>
@@ -14872,7 +14886,7 @@ const AUDIT_LBL_={deleteUser:'حذف حساب',addUser:'إضافة حساب',upd
  trimGrid:'تقليم الفراغ',hashPasswords:'تأمين الرموز',setCertUrl:'رابط شهادة',
  setUserPhoto:'صورة حساب',saveReqFlow:'تعديل مسار الطلبات',setSetting:'تغيير إعداد',
  saveMailCfg:'إعدادات البريد',renameSpec:'إعادة تسمية تخصص',saveSpecs:'تعديل التخصصات',
- excuseAbsence:'خصم غياب بعذر',reapplyExcuses:'إعادة تطبيق الأعذار',
+ excuseAbsence:'خصم غياب بعذر',reapplyExcuses:'إعادة تطبيق الأعذار',fixStuckRequests:'تخليص الطلبات المعلّقة',
  deleteDailyAbsence:'حذف غياب',deleteLessonPrep:'حذف تحضير',deleteNews:'حذف خبر',
  dedupeRequests:'حذف طلبات مكرّرة',changePassword:'تغيير رمز',addDelegation:'تكليف',
  updateDelegation:'تعديل تكليف',notifyPerformance:'إرسال تنبيهات أداء'};
@@ -17012,9 +17026,15 @@ function printRequestsReport(){
   openReport(reportShell('تقرير الطلبات والمتابعة','تقرير الطلبات وبلاغات الصيانة',body));
 }
 function showStudentDetail(sid){
-  const st=students.find(s=>s.id===sid);
-  if(!st)return;
-  const stCourses=allCourses.filter(c=>c.sid===sid);
+  const onlyD=x=>String(x||'').replace(/[^0-9]/g,'');
+  const sidD=onlyD(sid);
+  let st=(students||[]).find(s=>s.id&&onlyD(s.id)===sidD);
+  if(!st){
+    const trRow=(students||[]).find(s=>onlyD(s.sid)===sidD)||(allCourses||[]).find(c=>onlyD(c.sid)===sidD)||(requests||[]).find(r=>onlyD(r.sid)===sidD);
+    if(!trRow){showToast('بيانات المتدرب غير متوفرة في هذا العرض','w');return;}
+    st={id:sidD||sid,name:trRow.name||trRow.sname||'متدرب',grp:trRow.grp||'—',spec:trRow.spec||trRow.reqSpec||'—',ph:trRow.ph||'—',email:trRow.email||'—',cert:trRow.cert||'',photo:trRow.photo||''};
+  }
+  const stCourses=(allCourses&&allCourses.length)?allCourses.filter(c=>onlyD(c.sid)===sidD):((students||[]).filter(c=>c.course&&onlyD(c.sid)===sidD));
   const avg=avgPct(stCourses);
   
   const overlay=document.createElement('div');
@@ -17350,13 +17370,26 @@ function reqIsTerminalStatus(st){return ['مكتمل','مغلق','ملغي','م�
 function reqReadyToComplete(r){
   if(!r||reqIsTerminalStatus(reqFinal(r)))return false;
   const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[reqCat(r)],stages=c&&(c.stages||[]);
-  return !!(stages&&stages.length&&stages.every(st=>stageStatus(r,st.slot)==='معتمد'));
+  if(!stages||!stages.length)return false;
+  if(stages.some(st=>stageStatus(r,st.slot)==='مرفوض'))return false;
+  return stages.every(st=>stageStatus(r,st.slot)==='معتمد') || stageStatus(r,stages[stages.length-1].slot)==='معتمد';
 }
 function reqActiveStage(r){
   if(!r||reqCat(r)==='صيانة'||reqIsTerminalStatus(reqFinal(r)))return null;
   const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[reqCat(r)];if(!c)return null;
+  if((c.stages||[]).some(st=>stageStatus(r,st.slot)==='مرفوض'))return null;
   for(const st of (c.stages||[])){const status=stageStatus(r,st.slot);if(status==='معتمد')continue;return status==='معلق'?st.slot:null;}
   return null;
+}
+function isStuckRequest(r){
+  if(!r||isLegacyRequest(r))return false;
+  const fin=reqFinal(r),c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[reqCat(r)],stages=(c&&c.stages)||[];
+  if(reqReadyToComplete(r))return true;
+  if(['بانتظار التعديل','معاد','قيد التصعيد','معتمد'].includes(fin))return true;
+  if(fin==='مرفوض'&&stages.length&&!stages.some(st=>stageStatus(r,st.slot)==='مرفوض'))return true;
+  if(fin==='مكتمل'&&stages.some(st=>stageStatus(r,st.slot)!=='معتمد'))return true;
+  if(reqCat(r)==='عذر'&&fin==='مكتمل'&&r.effectAfter==='')return true;
+  return false;
 }
 function isDirector(u){return !!u&&u.role==='a'&&u.level==='director';} // مدير الأكاديمية يطّلع على جميع الطلبات
 function isSpecSup(u){return !!u&&u.role==='a'&&u.level!=='director';} // مشرف تخصص — لكل مشرف تخصصه
@@ -17420,13 +17453,31 @@ function canActStage(r,u){
   return false;
 }
 function reqStatusPill(r){
-  if(reqReadyToComplete(r))return '<span class="pill py">اكتملت المراحل · بانتظار الإكمال</span>';
-  const st=reqFinal(r),cls=st==='مكتمل'?'pg':['ملغي','ملغى','مرفوض'].includes(st)?'pr':st==='مغلق'?'':st==='قيد المعالجة'?'pb':'pb';
+  if(reqReadyToComplete(r))return '<span class="pill py">⚡ معتمد · جاهز للتخليص النهائي</span>';
+  const st=reqFinal(r);
+  if(['بانتظار التعديل','معاد'].includes(st))return `<span class="pill py">⚠️ ${esc(st)} (متاح للإجراء)</span>`;
+  const cls=['مكتمل','معتمد'].includes(st)?'pg':['ملغي','ملغى','مرفوض'].includes(st)?'pr':st==='مغلق'?'':st==='قيد المعالجة'?'pb':'pb';
   return `<span class="pill ${cls}">${esc(st)}</span>`;
 }
 function reqTimeline(r){
   const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[reqCat(r)];if(!c||!(c.stages||[]).length)return '';
-  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:9px 0">${c.stages.map((st,i)=>{const v=stageStatus(r,st.slot),active=reqActiveStage(r)===st.slot,cls=v==='معتمد'?'pg':v==='مرفوض'?'pr':active?'pb':'';return `<span class="pill ${cls}">${i+1}. ${esc(reqWhoLabel(st.who,true))} · ${esc(v==='معلق'?(active?'بانتظار الإجراء':'لم تصل بعد'):v)}</span>`;}).join('')}</div>`;
+  const fin=reqFinal(r),activeSlot=reqActiveStage(r);
+  const isDone=['مكتمل','معتمد'].includes(fin);
+  const isRej=fin==='مرفوض';
+  const isClosed=['ملغي','ملغى','مغلق','مغلق بنهاية النصف'].includes(fin);
+  const anyStageRej=(c.stages||[]).some(s=>stageStatus(r,s.slot)==='مرفوض');
+  let markedAdminRej=false;
+  return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin:9px 0">${c.stages.map((st,i)=>{
+    let v=stageStatus(r,st.slot);
+    const active=activeSlot===st.slot;
+    if(v==='معلق'){
+      if(isDone) v='معتمد';
+      else if(isRej&&!anyStageRej&&!markedAdminRej){ v='مرفوض'; markedAdminRej=true; }
+    }
+    const cls=v==='معتمد'?'pg':v==='مرفوض'?'pr':active?'pb':'';
+    const txt=v==='معلق'?(isRej||isClosed?'أُغلق المسار':active?'بانتظار الإجراء':'لم تصل بعد'):v;
+    return `<span class="pill ${cls}">${i+1}. ${esc(reqWhoLabel(st.who,true))} · ${esc(txt)}</span>`;
+  }).join('')}</div>`;
 }
 function staffList(){
   const me=user;
@@ -17457,22 +17508,48 @@ function staffList(){
 }
 function reqExcuseParse(r){
   const d=r.details||'';
+  const rawH=parseFloat(((d.match(/ساعات:\s*([\d.]+)/)||[])[1]||'0'))||0;
   return {course:((d.match(/المادة:\s*([^|]+)/)||[])[1]||'').trim(),
     days:((d.match(/الأيام:\s*([^|]+)/)||[])[1]||'').trim(),
-    hours:((d.match(/ساعات:\s*([\d.]+)/)||[])[1]||'0'),
+    hours:String(Math.round(rawH*10)/10),
     reason:((d.match(/السبب:\s*([^|]+)/)||[])[1]||'').trim(),
     excuseType:((d.match(/نوع العذر:\s*([^|]+)/)||[])[1]||'').trim(),
     file:((d.match(/الملف:\s*(\S+)/)||[])[1]||'').trim()};
 }
+function resolveRequesterInfo(r){
+  const onlyD=x=>String(x||'').replace(/[^0-9]/g,'');
+  const sid=String((r&&r.sid)||'').trim(), sidD=onlyD(sid);
+  let name=String((r&&r.sname)||'').trim();
+  let grp=String((r&&r.grp)||'').trim();
+  let spec=String((r&&r.reqSpec)||'').trim();
+  if(sidD){
+    const st=(students||[]).find(s=>onlyD(s.id||s.sid)===sidD);
+    if(st){
+      if(!name)name=st.name||st.sname||'';
+      if(!grp)grp=st.grp||'';
+      if(!spec)spec=st.spec||'';
+    }
+    const cr=(allCourses||[]).find(c=>onlyD(c.sid)===sidD);
+    if(cr){
+      if(!name)name=cr.sname||cr.name||'';
+      if(!grp)grp=cr.grp||'';
+    }
+  }
+  const roleLbl=r&&r.reqRole==='t'?'مدرب':r&&r.reqRole==='a'?'إداري':'متدرب';
+  return {sid:sid||'—',sidD,name:name||'غير محدد',grp,spec,roleLbl};
+}
 function reqCard(r,opts){
   opts=opts||{};const cat=reqCat(r),meta=REQ_CATS[cat]||{label:r.type||cat,icon:'📄'},fin=reqFinal(r);
-  const isOwner=String(r.sid)===String(user.id),manager=user.role==='a';
-  const cls=reqReadyToComplete(r)?'cc-y':fin==='مكتمل'?'cc-g':['ملغي','ملغى','مرفوض'].includes(fin)?'cc-r':fin==='قيد المعالجة'?'cc-b':'cc-b';
+  const onlyD=x=>String(x||'').replace(/[^0-9]/g,'');
+  const isOwner=onlyD(r.sid)?onlyD(r.sid)===onlyD(user.id):String(r.sid)===String(user.id);
+  const manager=user.role==='a';
+  const reqInfo=resolveRequesterInfo(r);
+  const cls=reqReadyToComplete(r)?'cc-y':['مكتمل','معتمد'].includes(fin)?'cc-g':['ملغي','ملغى','مرفوض'].includes(fin)?'cc-r':fin==='قيد المعالجة'?'cc-b':'cc-b';
   let body='';
   if(cat==='عذر'){
     const ex=reqExcuseParse(r);
-    const onlyD=x=>String(x||'').replace(/[^0-9]/g,'');
-    const ccMatch=(courses||[]).find(c=>onlyD(c.sid)===onlyD(r.sid)&&sameCourse(c.course,ex.course||'')&&(!r.grp||grpKey(c.grp)===grpKey(r.grp)));
+    const coursePool=(user.role==='a'?allCourses:user.role==='t'?students:courses)||[];
+    const ccMatch=coursePool.find(c=>onlyD(c.sid)===onlyD(r.sid)&&sameCourse(c.course,ex.course||'')&&(!r.grp||grpKey(c.grp)===grpKey(r.grp)));
     let absCheckHtml='';
     if(fin==='مكتمل'||fin==='معتمد'){
       if(r.effectBefore!==''&&r.effectAfter!=='') absCheckHtml=`<div class="alert ag" style="margin-top:8px">✓ تم خصم الغياب بعد موافقة الإدارة: من <b>${esc(r.effectBefore)}%</b> إلى <b>${esc(r.effectAfter)}%</b></div>`;
@@ -17487,11 +17564,22 @@ function reqCard(r,opts){
     body=`<div class="req-detail-grid"><div><span>المادة</span><b>${esc(ex.course||'—')}</b></div><div><span>أيام الغياب</span><b>${esc(ex.days||'—')}</b></div><div><span>الساعات</span><b>${esc(ex.hours||'0')} ساعة</b></div><div><span>نوع العذر</span><b>${esc(ex.excuseType||'—')}</b></div></div>
       ${ex.reason&&ex.reason!=='—'?`<div class="req-notes">السبب: ${esc(ex.reason)}</div>`:''}${ex.file?`<a class="btn btn-out btn-sm" href="${escUrl(ex.file)}" target="_blank" rel="noopener">📎 فتح المستند</a>`:''}
       ${absCheckHtml}
-      <div class="cc-meta" style="margin-top:8px">تنخصم نسبة الغياب تلقائياً فور موافقة الإدارة النهائية على العذر.</div>`;
+      <div class="cc-meta" style="margin-top:8px">تنخصم نسبة الغياب تلقائياً فور اكتمال الموافقة على العذر.</div>`;
   }else body=r.details?`<div class="req-notes">${esc(r.details)}</div>`:'';
   const targetLine=(cat==='عام'&&r.targetName)?`<div class="cc-meta" style="color:var(--acc-b)">✉️ موجَّه إلى: <b>${esc(r.targetName)}</b></div>`:'';
+  const requesterStrip=`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:9px 12px;margin:9px 0 6px;background:var(--card2,rgba(255,255,255,.04));border:1px solid var(--border);border-radius:10px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px">
+      <span style="font-weight:800;color:var(--text)">👤 رافع الطلب: ${esc(reqInfo.name)}</span>
+      <span class="pill pb" style="font-size:11px">الرقم الأكاديمي: ${esc(reqInfo.sid)}</span>
+      ${reqInfo.grp?`<span class="pill pg" style="font-size:11px">الشعبة ${esc(reqInfo.grp)}</span>`:''}
+      ${reqInfo.spec?`<span style="font-size:11.5px;color:var(--muted)">· ${esc(reqInfo.spec)}</span>`:''}
+    </div>
+    ${(user.role==='a'||user.role==='t')&&reqInfo.sidD?`<button type="button" class="btn btn-out btn-sm" style="padding:4px 10px;font-size:11.5px" onclick="showStudentDetail('${jsq(reqInfo.sid)}')">📊 سجل المتدرب</button>`:''}
+  </div>`;
   let actions='';
-  if(manager&&reqReadyToComplete(r))actions+=`<button class="btn btn-g btn-sm" onclick="openRequestCompletion('${jsq(r.rid)}')">✓ اعتماد وإكمال</button>`;
+  if((manager||user.role==='t')&&reqReadyToComplete(r)){
+    actions+=`<button class="btn btn-g btn-sm" onclick="fixStuckRequestsUI('${jsq(r.rid)}')">⚡ اعتماد وتخليص الطلب فوراً</button>`;
+  }
   if(manager)actions+=`<button class="btn btn-b btn-sm" onclick="openRequestOperations('${jsq(r.rid)}')">🛠️ متابعة الطلب</button>`;
   const reviewStage=reqStageOf(cat,reqActiveStage(r));
   if(canActStage(r,user)&&reviewStage){
@@ -17499,15 +17587,14 @@ function reqCard(r,opts){
     if(reviewStage.reject!==false)actions+=`<button class="btn btn-r btn-sm" onclick="openRequestReview('${jsq(r.rid)}','reject')">✕ رفض الطلب</button>`;
   }
   if(isOwner){
-    if(fin==='جديد')actions+=`<button class="btn btn-out btn-sm" onclick="resubmitRequest('${jsq(r.rid)}')">✏️ تعديل التفاصيل</button>`;
+    if(['جديد','بانتظار التعديل','معاد'].includes(fin))actions+=`<button class="btn btn-out btn-sm" onclick="resubmitRequest('${jsq(r.rid)}')">✏️ تعديل وإعادة إرسال</button>`;
     if(!reqIsTerminalStatus(fin))actions+=`<button class="btn btn-out btn-sm" onclick="cancelMyRequest('${jsq(r.rid)}')">إلغاء الطلب</button>`;
     if(cat==='تعريف'&&fin==='مكتمل')actions+=`<button class="btn btn-b btn-sm" onclick="printMyIntro()">🖨️ طباعة التعريف</button>`;
   }
-  const who=opts.showRequester?` — ${esc(r.sname||'')}`:'';
-  return `<article class="ccard ${cls}" style="margin-bottom:12px"><div class="cc-top"><div><div class="cc-name">${meta.icon} ${esc(meta.label)}${who}</div>
-    <div class="cc-meta">رقم الطلب <b style="color:var(--acc-b)">${esc(String(r.rid||'—'))}</b>${r.grp?' · الشعبة '+esc(r.grp):''}${r.date?' · '+esc(fmtDateAr(r.date)):''}</div></div>${reqStatusPill(r)}</div>
-    ${targetLine}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${r.priority&&r.priority!=='عادية'?`<span class="pill ${r.priority==='عاجلة'?'pr':'py'}">الأولوية: ${esc(r.priority)}</span>`:''}${r.term?`<span class="pill pb">${esc(termShort(r.term))}</span>`:''}</div>
-    ${reqTimeline(r)}${manager&&reqReadyToComplete(r)?'<div class="rq-ready-note"><b>اكتملت جميع مراحل الموافقة.</b><br>يمكن للإدارة الآن اعتماد الطلب وإكماله لتصبح حالته النهائية «مكتمل».</div>':''}${body}${r.notes?`<div class="req-notes">📌 ${esc(r.notes)}</div>`:''}${actions?`<div class="btn-row" style="margin-top:10px;flex-wrap:wrap;gap:8px">${actions}</div>`:''}</article>`;
+  return `<article class="ccard ${cls}" style="margin-bottom:12px"><div class="cc-top"><div><div class="cc-name">${meta.icon} ${esc(meta.label)} — <span style="color:var(--acc-b)">${esc(reqInfo.name)}</span></div>
+    <div class="cc-meta">رقم الطلب <b style="color:var(--acc-b)">${esc(String(r.rid||'—'))}</b> · الرقم <b style="color:var(--text)">${esc(reqInfo.sid)}</b>${reqInfo.grp?' · الشعبة '+esc(reqInfo.grp):''}${r.date?' · '+esc(fmtDateAr(r.date)):''}</div></div>${reqStatusPill(r)}</div>
+    ${requesterStrip}${targetLine}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${r.priority&&r.priority!=='عادية'?`<span class="pill ${r.priority==='عاجلة'?'pr':'py'}">الأولوية: ${esc(r.priority)}</span>`:''}${r.term?`<span class="pill pb">${esc(termShort(r.term))}</span>`:''}</div>
+    ${reqTimeline(r)}${reqReadyToComplete(r)?'<div class="rq-ready-note"><b>⚡ اعتُمدت المرحلة النهائية لهذا الطلب.</b><br>اضغط «⚡ اعتماد وتخليص الطلب فوراً» أو «✓ قبول الطلب» لإغلاقه كـ «مكتمل» وخصم الغياب تلقائياً.</div>':''}${body}${r.notes?`<div class="req-notes">📌 ${esc(r.notes)}</div>`:''}${actions?`<div class="btn-row" style="margin-top:10px;flex-wrap:wrap;gap:8px">${actions}</div>`:''}</article>`;
 }
 function reqTypeForCat(cat){return {'عذر':'عذر غياب','ساعات':'إعادة ساعات','تعريف':'ورقة تعريف','إداري':'طلب إداري','عام':'طلب عام'}[cat]||((REQ_FLOW.cats[cat]||{}).label||cat);}
 function requestFormHtml(){
@@ -17583,8 +17670,9 @@ async function submitRequest(){
   finally{REQ_BUSY=false;if(btn){btn.disabled=false;btn.textContent='📨 إرسال';}}
 }
 function resubmitRequest(rid){
-  const r=requests.find(x=>String(x.rid)===String(rid));if(!r||String(r.sid)!==String(user.id)||reqFinal(r)!=='جديد')return;
-  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='reqEditModal';ov.innerHTML=`<div class="modal-box" style="max-width:560px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:18px;padding:20px"><div class="mh"><div class="mt">✏️ تعديل تفاصيل الطلب</div><button class="mc" onclick="this.closest('.modal-overlay').remove()">✕</button></div><textarea id="reqEditDetails" class="lp-in" rows="6">${esc(r.details||'')}</textarea><div class="mft"><button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button><button class="btn btn-b" onclick="saveRequestDetails('${jsq(rid)}')">حفظ التعديل</button></div></div>`;document.body.appendChild(ov);
+  const onlyD=x=>String(x||'').replace(/[^0-9]/g,'');
+  const r=requests.find(x=>String(x.rid)===String(rid));if(!r||(onlyD(r.sid)!==onlyD(user.id)&&String(r.sid)!==String(user.id))||!['جديد','بانتظار التعديل','معاد'].includes(reqFinal(r)))return;
+  const ov=document.createElement('div');ov.className='modal-overlay';ov.id='reqEditModal';ov.innerHTML=`<div class="modal-box" style="max-width:560px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:18px;padding:20px"><div class="mh"><div class="mt">✏️ تعديل وإعادة إرسال الطلب</div><button class="mc" onclick="this.closest('.modal-overlay').remove()">✕</button></div><textarea id="reqEditDetails" class="lp-in" rows="6">${esc(r.details||'')}</textarea><div class="mft"><button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button><button class="btn btn-b" onclick="saveRequestDetails('${jsq(rid)}')">حفظ وإعادة إرسال</button></div></div>`;document.body.appendChild(ov);
 }
 async function saveRequestDetails(rid){const details=String(document.getElementById('reqEditDetails').value||'').trim();if(!details){showToast('التفاصيل مطلوبة','w');return;}await updateRequestOperational({rid,details,finalStatus:'جديد'},'reqEditModal');}
 async function cancelMyRequest(rid){if(!confirm('إلغاء هذا الطلب؟'))return;await updateRequestOperational({rid,finalStatus:'ملغي'});}
@@ -17596,11 +17684,12 @@ function openRequestDetails(rid){
 }
 function openRequestCompletion(rid){
   if(user.role!=='a')return;const r=requests.find(x=>String(x.rid)===String(rid));if(!r||!reqReadyToComplete(r))return;
+  const info=resolveRequesterInfo(r);
   document.getElementById('requestCompletionModal')?.remove();const ov=document.createElement('div');ov.className='modal-overlay';ov.id='requestCompletionModal';
   ov.innerHTML=`<div class="modal-box" style="max-width:580px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:16px;padding:20px"><div class="mh"><div><div class="cc-meta">رقم الطلب <b class="rq-id">${esc(r.rid)}</b></div><div class="mt">✓ اعتماد وإكمال الطلب</div></div><button class="mc" onclick="this.closest('.modal-overlay').remove()" aria-label="إغلاق">✕</button></div>
-    <div class="alert ab">اكتملت جميع مراحل الموافقة لهذا الطلب. عند التأكيد تصبح حالته النهائية «مكتمل» ويُحفظ الإجراء بصلاحية الإدارة.</div>
-    <div class="req-notes"><b>${esc(r.type||'')}</b><br>${esc(r.sname||'')}<br>${esc(r.details||'')}</div>
-    ${reqCat(r)==='عذر'?'<div class="alert aw">تنبيه: إكمال عذر الغياب ينفذ معالجة العذر المسجلة في النظام. راجع المادة وأيام الغياب والمستند قبل التأكيد.</div>':''}
+    <div class="alert ab">اكتملت مراحل الموافقة لهذا الطلب. عند التأكيد تصبح حالته النهائية «مكتمل» وتُخصم ساعات/أيام الغياب تلقائياً إن كان عذراً.</div>
+    <div class="req-notes"><b>${esc(r.type||'')}</b> · 👤 <b>${esc(info.name)}</b> (${esc(info.sid)}${info.grp?' · شعبة '+esc(info.grp):''})<br>${esc(r.details||'')}</div>
+    ${reqCat(r)==='عذر'?'<div class="alert aw">تنبيه: إكمال عذر الغياب ينفذ معالجة العذر المسجلة في النظام وخصم النسبة فوراً.</div>':''}
     <div class="mform-group"><label>ملاحظة الاعتماد النهائي (اختياري)</label><textarea id="completionNotes" class="lp-in" rows="3" placeholder="ملاحظة تظهر في سجل متابعة الطلب"></textarea></div>
     <div class="mft"><button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button><button class="btn btn-g" onclick="confirmRequestCompletion('${jsq(rid)}')">تأكيد الاعتماد والإكمال</button></div></div>`;
   document.body.appendChild(ov);
@@ -17618,23 +17707,33 @@ async function updateRequestOperational(rec,modalId){
   await loadRequests().catch(()=>{});
   if(res.excuse){
     await loadAbsenceBase().catch(()=>{});
+    recomputeAbsPct();
     const ex=res.excuse;
     showToast(`✅ تم اعتماد العذر وخصم الغياب (${ex.excused||0} يوم: ${ex.before||'—'}% ← ${ex.after||ex.pct||0}%)`,'s');
   }else{
-    showToast(rec.decision==='approve'?'✅ تم قبول الطلب':rec.decision==='reject'?'✅ تم رفض الطلب':rec.finalStatus==='مكتمل'?'✅ تم اعتماد الطلب وإكماله':'✅ تم حفظ المتابعة','s');
+    showToast(rec.decision==='approve'?'✅ تم قبول الطلب وتحديث مساره':rec.decision==='reject'?'✅ تم رفض الطلب':rec.finalStatus==='مكتمل'?'✅ تم اعتماد الطلب وإكماله':'✅ تم حفظ المتابعة','s');
   }
   reloadRequestsPage();return true;
 }
 function openRequestReview(rid,decision){
   const r=requests.find(x=>String(x.rid)===String(rid));if(!r||!canActStage(r,user))return;
   const st=reqStageOf(reqCat(r),reqActiveStage(r));if(!st||(decision==='approve'?st.approve===false:st.reject===false))return;
+  const info=resolveRequesterInfo(r);
   const approve=decision==='approve',ov=document.createElement('div');ov.className='modal-overlay';ov.id='requestReviewModal';
+  const dirFastTrack=(approve&&isDirector(user))?`<label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:12.5px;font-weight:700;cursor:pointer"><input type="checkbox" id="reviewFinalizeAll" checked> اعتماد نهائي وإكمال الطلب فوراً (تجاوز أي مرحلة معلقة)</label>`:'';
   ov.innerHTML=`<div class="modal-box" style="max-width:560px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:16px;padding:20px"><div class="mh"><div><div class="cc-meta">${esc(r.rid)} · ${esc(reqWhoLabel(st.who))}</div><div class="mt">${approve?'✓ قبول الطلب':'✕ رفض الطلب'}</div></div><button class="mc" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="req-notes"><b>${esc(r.type||'')}</b><br>${esc(r.details||'')}</div><div class="mform-group"><label>${approve?'ملاحظة القبول (اختياري)':'سبب الرفض *'}</label><textarea id="reviewNotes" class="lp-in" rows="4" placeholder="${approve?'أضف ملاحظة تظهر في سجل الطلب':'وضّح سبب الرفض لصاحب الطلب'}"></textarea></div>
+    <div class="req-notes"><b>${esc(r.type||'')}</b> · 👤 <b>${esc(info.name)}</b> (الرقم: ${esc(info.sid)}${info.grp?' · الشعبة '+esc(info.grp):''})<br>${esc(r.details||'')}</div>
+    ${dirFastTrack}
+    <div class="mform-group"><label>${approve?'ملاحظة القبول (اختياري)':'سبب الرفض *'}</label><textarea id="reviewNotes" class="lp-in" rows="4" placeholder="${approve?'أضف ملاحظة تظهر في سجل الطلب':'وضّح سبب الرفض لصاحب الطلب'}"></textarea></div>
     <div class="mft"><button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button><button class="btn ${approve?'btn-g':'btn-r'}" onclick="submitRequestReview('${jsq(rid)}','${decision}')">${approve?'تأكيد القبول':'تأكيد الرفض'}</button></div></div>`;
   document.body.appendChild(ov);
 }
-async function submitRequestReview(rid,decision){const notes=String(document.getElementById('reviewNotes').value||'').trim();if(decision==='reject'&&!notes){showToast('اكتب سبب الرفض','w');return;}await updateRequestOperational({rid,decision,notes},'requestReviewModal');}
+async function submitRequestReview(rid,decision){
+  const notes=String(document.getElementById('reviewNotes').value||'').trim();
+  if(decision==='reject'&&!notes){showToast('اكتب سبب الرفض','w');return;}
+  const finalizeAll=!!(document.getElementById('reviewFinalizeAll')&&document.getElementById('reviewFinalizeAll').checked);
+  await updateRequestOperational({rid,decision,notes,finalizeAll},'requestReviewModal');
+}
 window.openRequestReview=openRequestReview;window.submitRequestReview=submitRequestReview;
 function openRequestOperations(rid){
   if(user.role!=='a')return;const r=requests.find(x=>String(x.rid)===String(rid));if(!r)return;
@@ -17656,9 +17755,9 @@ function adminReqAll(){return requests.filter(r=>!isLegacyRequest(r));}
 function adminReqNorm(v){return String(v==null?'':v).replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))).replace(/[۰-۹]/g,d=>String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))).trim().toLowerCase();}
 function adminReqLabel(r){const cat=reqCat(r),c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[cat];return String((c&&c.label)||(REQ_CATS[cat]&&REQ_CATS[cat].label)||r.type||cat||'طلب');}
 function adminReqMatchesStatus(r,st){
-  const fin=reqFinal(r),ready=reqReadyToComplete(r);
-  if(st==='all')return true;if(st==='action')return ready||canActStage(r,user);if(st==='ready')return ready;
-  if(st==='open')return !ready&&['جديد','قيد المعالجة'].includes(fin);
+  const fin=reqFinal(r),ready=reqReadyToComplete(r),stuck=isStuckRequest(r);
+  if(st==='all')return true;if(st==='action')return ready||stuck||canActStage(r,user);if(st==='ready')return ready||stuck;
+  if(st==='open')return !ready&&['جديد','قيد المعالجة','بانتظار التعديل','معاد','قيد التصعيد'].includes(fin);
   if(st==='completed')return ['مكتمل','معتمد'].includes(fin);if(st==='rejected')return fin==='مرفوض';
   if(st==='closed')return reqIsTerminalStatus(fin)&&!['مكتمل','معتمد','مرفوض'].includes(fin);
   return fin===st;
@@ -17669,7 +17768,8 @@ function adminReqFiltered(){
     if(ADMIN_REQ_VIEW.term!=='all'&&String(r.term||'')!==ADMIN_REQ_VIEW.term)return false;
     if(!adminReqMatchesStatus(r,ADMIN_REQ_VIEW.status))return false;
     if(!q)return true;
-    const hay=adminReqNorm([r.rid,r.sid,r.sname,r.grp,r.type,adminReqLabel(r),r.details,r.targetName,r.finalStatus].join(' '));
+    const info=resolveRequesterInfo(r);
+    const hay=adminReqNorm([r.rid,r.sid,info.name,info.grp,r.type,adminReqLabel(r),r.details,r.targetName,r.finalStatus].join(' '));
     return hay.includes(q);
   });
   const rank=r=>r.priority==='عاجلة'?0:r.priority&&r.priority!=='عادية'?1:2;
@@ -17677,20 +17777,20 @@ function adminReqFiltered(){
   return out;
 }
 function adminReqBadge(r){
-  const fin=reqFinal(r);if(reqReadyToComplete(r))return '<span class="rq-badge py">جاهز للإكمال</span>';
-  const cls=['مكتمل','معتمد'].includes(fin)?'pg':fin==='مرفوض'?'pr':['جديد','قيد المعالجة'].includes(fin)?'pb':'pm';return `<span class="rq-badge ${cls}">${esc(fin)}</span>`;
+  const fin=reqFinal(r);if(reqReadyToComplete(r))return '<span class="rq-badge py">⚡ جاهز للتخليص</span>';
+  const cls=['مكتمل','معتمد'].includes(fin)?'pg':fin==='مرفوض'?'pr':['جديد','قيد المعالجة','بانتظار التعديل','معاد'].includes(fin)?'pb':'pm';return `<span class="rq-badge ${cls}">${esc(fin)}</span>`;
 }
 function adminReqWorkflow(r){
   const chain=reqChain(r),approved=chain.filter(slot=>stageStatus(r,slot)==='معتمد').length,active=reqActiveStage(r),ready=reqReadyToComplete(r);
-  const label=reqIsTerminalStatus(reqFinal(r))?'انتهى مسار الطلب':ready?`اكتملت المراحل ${approved}/${chain.length}`:active?`الحالية: ${reqWhoLabel((reqStageOf(reqCat(r),active)||{}).who,true)}`:'بانتظار بدء المسار';
+  const label=reqIsTerminalStatus(reqFinal(r))?'انتهى مسار الطلب':ready?`اعتُمدت المراحل (${approved}/${chain.length})`:active?`الحالية: ${reqWhoLabel((reqStageOf(reqCat(r),active)||{}).who,true)}`:'بانتظار بدء المسار';
   const bars=chain.length?chain.map(slot=>`<i class="${stageStatus(r,slot)==='معتمد'?'done':active===slot?'active':''}"></i>`).join(''):'<i></i>';
   return `<div class="rq-stage" title="${escAttr(label)}">${esc(label)}</div><div class="rq-progress" aria-label="تقدم مسار الطلب">${bars}</div>`;
 }
 function adminReqRow(r){
-  const ready=reqReadyToComplete(r),st=reqStageOf(reqCat(r),reqActiveStage(r));let primary='';
-  if(ready)primary=`<button class="btn btn-g btn-sm" onclick="openRequestCompletion('${jsq(r.rid)}')">✓ اعتماد وإكمال</button>`;
+  const ready=reqReadyToComplete(r),st=reqStageOf(reqCat(r),reqActiveStage(r)),info=resolveRequesterInfo(r);let primary='';
+  if(ready)primary=`<button class="btn btn-g btn-sm" onclick="fixStuckRequestsUI('${jsq(r.rid)}')">⚡ تخليص وإكمال</button>`;
   else if(canActStage(r,user)&&st&&st.approve!==false)primary=`<button class="btn btn-g btn-sm" onclick="openRequestReview('${jsq(r.rid)}','approve')">✓ قبول</button>`;
-  return `<div class="rq-row ${ready?'is-ready':''}" data-rid="${escAttr(r.rid)}"><div class="rq-cell rq-primary"><span class="rq-title">${esc(adminReqLabel(r))}</span><span class="rq-sub">${esc(r.sname||'—')}${r.grp?' · شعبة '+esc(r.grp):''}${r.priority&&r.priority!=='عادية'?' · أولوية '+esc(r.priority):''}</span></div>
+  return `<div class="rq-row ${ready?'is-ready':''}" data-rid="${escAttr(r.rid)}"><div class="rq-cell rq-primary"><span class="rq-title">${esc(adminReqLabel(r))}</span><span class="rq-sub">👤 <b>${esc(info.name)}</b> · الرقم ${esc(info.sid)}${info.grp?' · شعبة '+esc(info.grp):''}${r.priority&&r.priority!=='عادية'?' · أولوية '+esc(r.priority):''}</span></div>
     <div class="rq-cell rq-number"><span class="rq-cell-label">رقم الطلب والتاريخ</span><span class="rq-id">${esc(r.rid||'—')}</span><span class="rq-date">${esc(fmtDateAr(r.createdAt||r.date)||'—')}</span></div>
     <div class="rq-cell rq-workflow"><span class="rq-cell-label">المرحلة الحالية</span>${adminReqWorkflow(r)}</div>
     <div class="rq-cell rq-status-cell"><span class="rq-cell-label">الحالة</span>${adminReqBadge(r)}</div>
@@ -17723,25 +17823,75 @@ function lookupRequestById(ev){
 }
 window.adminReqSetFilter=adminReqSetFilter;window.adminReqPage=adminReqPage;window.resetAdminRequestFilters=resetAdminRequestFilters;window.lookupRequestById=lookupRequestById;
 
+async function fixStuckRequestsUI(onlyRid){
+  const ridParam=onlyRid?String(onlyRid):'';
+  showToast(ridParam?'جاري اعتماد وتخليص الطلب...':'جاري فحص وتخليص الطلبات المعلّقة...','i');
+  try{
+    let r=null;
+    const payload={action:'fixStuckRequests',dryRun:'',rid:ridParam};
+    try{ r=await postJSONRead(SCRIPT_URL,Object.assign({token:SESSION.token},payload)); }
+    catch(_){ r=await jsonpCall({action:'fixStuckRequests',data:JSON.stringify(payload)}); }
+    if(!r||r.status!=='ok'||!r.report){
+      showToast('تعذّرت المعالجة — تأكد من نشر نسخة Code.gs الجديدة','e');
+      return;
+    }
+    const rep=r.report;
+    await Promise.all([loadRequests().catch(()=>{}),loadAbsenceBase().catch(()=>{})]);
+    recomputeAbsPct();
+    reloadRequestsPage();
+    if(!rep.fixed){
+      showToast('✅ لا توجد طلبات معلّقة تحتاج لتخليص','s');
+      return;
+    }
+    showToast(`✅ تم تخليص ومعالجة ${rep.fixed} طلب بنجاح${rep.excusesApplied?` (خُصم ${rep.excusesApplied} يوم غياب بعذر)`:''}`,'s');
+  }catch(e){
+    showToast('تعذّر الاتصال بالخادم — حاول مرة أخرى','e');
+  }
+}
+window.fixStuckRequestsUI=fixStuckRequestsUI;
+function setMyReqFilter(f){
+  window._myReqFilter=f;
+  reloadRequestsPage();
+}
+window.setMyReqFilter=setMyReqFilter;
+
 function requestsDashboardHTML(){
   if(user.role==='a'){
-    const all=adminReqAll(),counts={all:all.length,action:all.filter(r=>adminReqMatchesStatus(r,'action')).length,open:all.filter(r=>adminReqMatchesStatus(r,'open')).length,completed:all.filter(r=>adminReqMatchesStatus(r,'completed')).length,rejected:all.filter(r=>adminReqMatchesStatus(r,'rejected')).length};
+    const all=adminReqAll(),stuckAll=all.filter(isStuckRequest),counts={all:all.length,action:all.filter(r=>adminReqMatchesStatus(r,'action')).length,open:all.filter(r=>adminReqMatchesStatus(r,'open')).length,completed:all.filter(r=>adminReqMatchesStatus(r,'completed')).length,rejected:all.filter(r=>adminReqMatchesStatus(r,'rejected')).length};
     const catMap={};all.forEach(r=>catMap[reqCat(r)]=adminReqLabel(r));const cats=Object.keys(catMap).sort((a,b)=>catMap[a].localeCompare(catMap[b],'ar')),terms=[...new Set(all.map(r=>String(r.term||'')).filter(Boolean))].sort();
     const stats=[['all','إجمالي الطلبات'],['action','يتطلب إجراء'],['open','قيد المتابعة'],['completed','مكتمل'],['rejected','مرفوض']];
     const filtered=adminReqFiltered(),per=Number(ADMIN_REQ_VIEW.perPage)||10,totalPages=Math.max(1,Math.ceil(filtered.length/per));ADMIN_REQ_VIEW.page=Math.min(Math.max(1,ADMIN_REQ_VIEW.page),totalPages);const start=(ADMIN_REQ_VIEW.page-1)*per,pageRows=filtered.slice(start,start+per);
-    return `<div class="banner"><div><div class="btitle">📋 الطلبات والمتابعة</div><div class="bsub">بحث سريع، متابعة واضحة، واتخاذ الإجراء دون ازدحام</div></div></div>
+    const stuckBanner=stuckAll.length?`<div class="alert aw" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px"><div><b>⚡ يوجد ${stuckAll.length} طلب معلّق أو معتمد بانتظار التخليص النهائي وخصم الغياب.</b><div style="font-size:12px;margin-top:3px">اضغط لتخليص الطلبات المعتمدة، وفك تعليق الحالات القديمة («بانتظار التعديل»)، ومزامنة خصم الغياب دفعةً واحدة.</div></div><button class="btn btn-g btn-sm" onclick="fixStuckRequestsUI()">⚡ تخليص الطلبات المعلّقة الآن (${stuckAll.length})</button></div>`:'';
+    return `<div class="banner" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><div><div class="btitle">📋 الطلبات والمتابعة</div><div class="bsub">بحث سريع، هوية واضحة لرافع الطلب، وتخليص فوري دون تعليق</div></div><button class="btn btn-out btn-sm" onclick="fixStuckRequestsUI()">⚡ فحص وتخليص المعلّق</button></div>
+      ${stuckBanner}
       <div class="rq-stats">${stats.map(([key,label])=>`<button class="rq-stat ${ADMIN_REQ_VIEW.status===key?'on':''}" data-rq-stat="${key}" onclick="adminReqSetFilter('status','${key}');document.getElementById('adminReqStatus').value='${key}'"><strong>${counts[key]}</strong><span>${label}</span></button>`).join('')}</div>
       <section class="rq-controls" aria-label="البحث وفلاتر الطلبات"><form class="rq-lookup" onsubmit="lookupRequestById(event)"><div><label for="rqLookup">تحقق من طلب برقمه</label><input id="rqLookup" dir="ltr" autocomplete="off" placeholder="مثال: REQ1794388938484"></div><button class="btn btn-b" type="submit">تحقق واعرض الطلب</button><div id="rqLookupMsg" class="rq-lookup-msg" role="status" aria-live="polite"></div></form>
-        <div class="rq-filter-row"><div class="rq-field rq-search-field"><label for="adminReqSearch">بحث في الطلبات</label><input id="adminReqSearch" value="${escAttr(ADMIN_REQ_VIEW.query)}" oninput="adminReqSetFilter('query',this.value)" placeholder="الرقم، اسم المتدرب، النوع أو التفاصيل" autocomplete="off"></div>
-          <div class="rq-field"><label for="adminReqStatus">الحالة</label><select id="adminReqStatus" onchange="adminReqSetFilter('status',this.value)">${[['all','كل الحالات'],['action','يتطلب إجرائي'],['open','قيد المتابعة'],['ready','جاهز للإكمال'],['جديد','جديد'],['قيد المعالجة','قيد المعالجة'],['completed','مكتمل'],['rejected','مرفوض'],['closed','مغلق أو ملغي']].map(([v,l])=>`<option value="${escAttr(v)}" ${ADMIN_REQ_VIEW.status===v?'selected':''}>${l}</option>`).join('')}</select></div>
+        <div class="rq-filter-row"><div class="rq-field rq-search-field"><label for="adminReqSearch">بحث في الطلبات</label><input id="adminReqSearch" value="${escAttr(ADMIN_REQ_VIEW.query)}" oninput="adminReqSetFilter('query',this.value)" placeholder="الرقم، اسم المتدرب، الرقم الأكاديمي، النوع أو التفاصيل" autocomplete="off"></div>
+          <div class="rq-field"><label for="adminReqStatus">الحالة</label><select id="adminReqStatus" onchange="adminReqSetFilter('status',this.value)">${[['all','كل الحالات'],['action','يتطلب إجرائي'],['open','قيد المتابعة'],['ready','جاهز للتخليص'],['جديد','جديد'],['قيد المعالجة','قيد المعالجة'],['بانتظار التعديل','بانتظار التعديل'],['completed','مكتمل'],['rejected','مرفوض'],['closed','مغلق أو ملغي']].map(([v,l])=>`<option value="${escAttr(v)}" ${ADMIN_REQ_VIEW.status===v?'selected':''}>${l}</option>`).join('')}</select></div>
           <div class="rq-field"><label for="adminReqCat">نوع الطلب</label><select id="adminReqCat" onchange="adminReqSetFilter('cat',this.value)"><option value="all">كل الأنواع</option>${cats.map(c=>`<option value="${escAttr(c)}" ${ADMIN_REQ_VIEW.cat===c?'selected':''}>${esc(catMap[c])}</option>`).join('')}</select></div>
           <div class="rq-field"><label for="adminReqTerm">النصف</label><select id="adminReqTerm" onchange="adminReqSetFilter('term',this.value)"><option value="all">كل الأنصاف</option>${terms.map(t=>`<option value="${escAttr(t)}" ${ADMIN_REQ_VIEW.term===t?'selected':''}>${esc(termShort(t))}</option>`).join('')}</select></div>
           <div class="rq-field"><label for="adminReqSort">الترتيب</label><select id="adminReqSort" onchange="adminReqSetFilter('sort',this.value)"><option value="newest" ${ADMIN_REQ_VIEW.sort==='newest'?'selected':''}>الأحدث أولاً</option><option value="oldest" ${ADMIN_REQ_VIEW.sort==='oldest'?'selected':''}>الأقدم أولاً</option><option value="priority" ${ADMIN_REQ_VIEW.sort==='priority'?'selected':''}>الأولوية ثم الأحدث</option></select></div></div>
         <div class="rq-filter-foot"><span id="adminReqResultMeta">${filtered.length?`عرض ${start+1}–${Math.min(start+per,filtered.length)} من ${filtered.length} طلب`:'لا توجد نتائج مطابقة'}</span><div style="display:flex;gap:8px;align-items:center"><label for="adminReqPerPage">لكل صفحة</label><select id="adminReqPerPage" class="lp-in" style="width:72px;min-height:34px;height:34px;padding:4px 8px" onchange="adminReqSetFilter('perPage',this.value)">${[10,20,50].map(n=>`<option value="${n}" ${per===n?'selected':''}>${n}</option>`).join('')}</select><button class="btn btn-out btn-sm" onclick="resetAdminRequestFilters()">مسح الفلاتر</button></div></div></section>
       <div id="adminReqList">${adminReqListHTML(pageRows)}</div><div id="adminReqPager">${adminReqPagerHTML(filtered.length,totalPages)}</div>${termClosurePanel()}`;
   }
-  const visible=requests.filter(r=>!isLegacyRequest(r)&&(String(r.sid)===String(user.id)||canActStage(r,user)||(reqCat(r)==='عام'&&reqTargetMatches(r,user)))).sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
-  return `<div class="stitle">📝 الطلبات والخدمات</div>${requestFormHtml()}<div class="stitle">طلباتي وما وُجّه إليّ (${visible.length})</div>${visible.length?visible.map(r=>reqCard(r)).join(''):'<div class="empty">لا توجد طلبات</div>'}`;
+  const onlyD=x=>String(x||'').replace(/[^0-9]/g,'');
+  const allVis=requests.filter(r=>!isLegacyRequest(r)&&(user.role==='t'?(onlyD(r.sid)===onlyD(user.id)||trainerOwnsReqCourse(r)||canActStage(r,user)||reqTargetMatches(r,user)):(onlyD(r.sid)===onlyD(user.id)||String(r.sid)===String(user.id)||canActStage(r,user)||(reqCat(r)==='عام'&&reqTargetMatches(r,user))))).sort((a,b)=>String(b.createdAt||b.date).localeCompare(String(a.createdAt||a.date)));
+  const actList=allVis.filter(r=>canActStage(r,user)||reqReadyToComplete(r));
+  const openList=allVis.filter(r=>!reqIsTerminalStatus(reqFinal(r)));
+  const doneList=allVis.filter(r=>['مكتمل','معتمد'].includes(reqFinal(r)));
+  const closedList=allVis.filter(r=>['مرفوض','ملغي','ملغى','مغلق','مغلق بنهاية النصف'].includes(reqFinal(r)));
+  const stuckVis=allVis.filter(isStuckRequest);
+  const curF=window._myReqFilter||'all';
+  const shown=curF==='action'?actList:curF==='open'?openList:curF==='done'?doneList:curF==='closed'?closedList:allVis;
+  const stuckBanner=(user.role==='t'&&stuckVis.length)?`<div class="alert aw" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px"><div><b>⚡ لديك ${stuckVis.length} طلب معلّق بحالة قديمة أو معتمد من الإدارة بانتظار التخليص.</b></div><button class="btn btn-g btn-sm" onclick="fixStuckRequestsUI()">⚡ تخليص الطلبات المعلّقة (${stuckVis.length})</button></div>`:'';
+  const filterTabs=`<div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 14px">
+    <button type="button" class="btn ${curF==='all'?'btn-b':'btn-out'} btn-sm" onclick="setMyReqFilter('all')">الكل (${allVis.length})</button>
+    ${user.role==='t'||actList.length?`<button type="button" class="btn ${curF==='action'?'btn-g':'btn-out'} btn-sm" onclick="setMyReqFilter('action')">⚡ بانتظار إجرائي (${actList.length})</button>`:''}
+    <button type="button" class="btn ${curF==='open'?'btn-b':'btn-out'} btn-sm" onclick="setMyReqFilter('open')">⏳ قيد المتابعة (${openList.length})</button>
+    <button type="button" class="btn ${curF==='done'?'btn-b':'btn-out'} btn-sm" onclick="setMyReqFilter('done')">✅ مكتملة (${doneList.length})</button>
+    <button type="button" class="btn ${curF==='closed'?'btn-b':'btn-out'} btn-sm" onclick="setMyReqFilter('closed')">🚫 مرفوضة / ملغاة (${closedList.length})</button>
+  </div>`;
+  return `<div class="stitle">📝 الطلبات والخدمات</div>${requestFormHtml()}${stuckBanner}<div class="stitle" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><span>طلباتي وما وُجّه إليّ (${shown.length})</span>${user.role==='t'?`<button class="btn btn-out btn-sm" onclick="fixStuckRequestsUI()">⚡ فحص وتخليص المعلّق</button>`:''}</div>${filterTabs}${shown.length?shown.map(r=>reqCard(r,{showRequester:true})).join(''):'<div class="empty">لا توجد طلبات في هذا التصنيف</div>'}`;
 }
 
 function termClosurePanel(){
@@ -17842,7 +17992,7 @@ function openAccountSheet(){
   ov.innerHTML=`<div class="acct-sheet" onclick="event.stopPropagation()">
     <div class="acct-grab"></div>
     <div class="acct-head">
-      <div class="acct-av">${esc(initials||'؟')}</div>
+      <div class="acct-av" style="overflow:hidden;padding:0">${(typeof photoOf==='function'&&photoOf(u))?`<img src="${escUrl(photoOf(u))}" alt="${escAttr(u.name||'')}" style="width:100%;height:100%;object-fit:cover;display:block">`:esc(initials||'؟')}</div>
       <div style="min-width:0;flex:1">
         <div class="acct-name">${esc(u.name||'')}</div>
         <div class="acct-sub">${esc(roleLbl)}${u.grp?' · الشعبة '+esc(u.grp):''}${u.id?' · '+esc(u.id):''}</div>
