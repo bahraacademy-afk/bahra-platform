@@ -15327,9 +15327,31 @@ async function aiPingTest(){
 async function refreshSystemHealth(){
   const box=document.getElementById('sysHealth'); if(!box)return;
   box.innerHTML='<div style="color:var(--muted);font-size:13px;padding:10px">⏳ جاري فحص النظام...</div>';
-  let d=null;
-  try{ d=await jsonpTo(AUTH_URL,{action:'systemStats',token:SESSION.token}); }catch(e){}
-  if(!d||!d.ok){ box.innerHTML='<div class="alert ad"><span class="aicon">⚠️</span>تعذّر الفحص — تأكد من نشر الخادم (v16)</div>'; return; }
+  let d=null, netErr='';
+  try{ d=await jsonpTo(AUTH_URL,{action:'systemStats',token:SESSION.token},25000); }
+  catch(e){
+    netErr=String(e&&e.message||e||'');
+    try{ d=await fetchGet(AUTH_URL,{action:'systemStats',token:SESSION.token}); }catch(e2){ netErr=netErr||String(e2&&e2.message||e2||''); }
+  }
+  if(!d||!d.ok){
+    if(d&&d.error==='forbidden'){
+      box.innerHTML='<div class="alert ad"><span class="aicon">🔐</span>تعذّر الفحص لأن الجلسة انتهت أو تغيّر الخادم — سجّل الخروج ثم ادخل من جديد. <button class="btn btn-out btn-sm" style="margin-inline-start:8px" onclick="doLogout()">🚪 خروج</button></div>';
+      return;
+    }
+    let pingMsg='';
+    if(!d){
+      try{
+        const pg=await jsonpTo(AUTH_URL,{action:'ping'},8000);
+        if(pg&&pg.ok) pingMsg=`الخادم يردّ (نسخة <b>${esc(pg.build||'قديمة')}</b>) لكن فحص البيانات ${netErr==='timeout'?'استغرق أكثر من 25 ثانية':'تعثّر'}.`;
+      }catch(_){
+        pingMsg=`الخادم لا يردّ على الرابط الحالي (<b>…${esc(String(AUTH_URL).slice(-20))}</b>). تأكد أن النشر في Apps Script مضبوط على: <b>من لديه حق الوصول ← أي شخص (Anyone)</b>، أو بدّل الرابط من زر «🔧 إعداد الاتصال بالخادم».`;
+      }
+    }else if(d.error){
+      pingMsg='ردّ الخادم بخطأ: '+esc(String(d.error));
+    }
+    box.innerHTML=`<div class="alert ad"><span class="aicon">⚠️</span>تعذّر الفحص — ${pingMsg||'تأكد من نشر الخادم (v16)'} <button class="btn btn-out btn-sm" style="margin-inline-start:8px" onclick="apiUrlPanel()">🔧 إعداد الاتصال</button> <button class="btn btn-out btn-sm" onclick="refreshSystemHealth()">🔄 إعادة المحاولة</button></div>`;
+    return;
+  }
   window._reqEmails=d.reqEmails||'on';
   if(d.gradeAlertPct)window._gradeAlertPct=parseFloat(d.gradeAlertPct)||60;
   const rs=document.getElementById('reqEmState'); if(rs)rs.textContent=(d.reqEmails==='off')?'إشعارات الطلبات موقوفة':'مفعّلة';
