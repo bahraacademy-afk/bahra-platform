@@ -4031,7 +4031,7 @@ async function callWrite(action, payload, opts){
   const body = Object.assign({token:SESSION.token, action:action}, payload);
   let lastErr = null;
   try{
-    const r = await withRetry(()=>postJSONRead(SCRIPT_URL, body), opts.tries || 2);
+    const r = await postJSONRead(SCRIPT_URL, body, opts.postMs || 8000);
     if (r){ WRITE_POST_OK=true; document.getElementById('writeWarn')?.remove(); return r; }
   }catch(e){ lastErr = e; }
   // الاحتياطي: الرابط محدود الطول، فالحمولة الطويلة تُرسَل على دفعات
@@ -4903,8 +4903,8 @@ async function loadAttachments(){
       mime:n0(r[5]),size:n0(r[6]),by:n0(r[7]),uid:n0(r[8]),date:n0(r[9])});
   }
 }
-async function loadRequests(){
-  const rq=await fetchSheet('طلبات الخدمات!A:AM').catch(()=>[]);
+async function loadRequests(fresh){
+  const rq=await fetchSheet('طلبات الخدمات!A:AM', fresh?{fresh:true}:undefined).catch(()=>[]);
   requests=[];
   for(let i=1;i<rq.length;i++){
     const r=rq[i];
@@ -17919,10 +17919,11 @@ async function confirmRequestCompletion(rid){
 }
 window.openRequestDetails=openRequestDetails;window.openRequestCompletion=openRequestCompletion;window.confirmRequestCompletion=confirmRequestCompletion;
 async function updateRequestOperational(rec,modalId){
-  showToast(rec.decision?'جاري تسجيل الإجراء...':'جاري حفظ المتابعة...','i');const res=await callWrite('updateRequest',{records:[rec]}).catch(()=>null);
-  if(!res||res.status!=='ok'){showToast('تعذّر الحفظ: '+attErrMsg(res&&res.msg,res&&res.hint),'e');return false;}
+  showToast(rec.decision?'⏳ جاري تسجيل الإجراء...':'⏳ جاري حفظ المتابعة...','i');
+  const res=await callWrite('updateRequest',{records:[rec]}).catch(()=>null);
+  if(!res||res.status!=='ok'||res.updated===0){showToast('تعذّر الحفظ: '+attErrMsg(res&&res.msg,res&&res.hint||'لم يتحدّث الطلب — تأكد من نشر Code.gs وتحديث الصفحة'),'e');return false;}
   if(modalId)document.getElementById(modalId)?.remove();document.getElementById('requestDetailsModal')?.remove();
-  await loadRequests().catch(()=>{});
+  await loadRequests(true).catch(()=>{});
   if(res.excuse){
     await loadAbsenceBase().catch(()=>{});
     recomputeAbsPct();
@@ -17937,20 +17938,24 @@ function openRequestReview(rid,decision){
   const r=requests.find(x=>String(x.rid)===String(rid));if(!r||!canActStage(r,user))return;
   const st=reqStageOf(reqCat(r),reqActiveStage(r));if(!st||(decision==='approve'?st.approve===false:st.reject===false))return;
   const info=resolveRequesterInfo(r);
-  const approve=decision==='approve',ov=document.createElement('div');ov.className='modal-overlay';ov.id='requestReviewModal';
+  document.getElementById('requestReviewModal')?.remove();
+  const approve=decision==='approve',ov=document.createElement('div');ov.className='modal-overlay';ov.id='requestReviewModal';ov.style.zIndex='100001';
   const dirFastTrack=(approve&&isDirector(user))?`<label style="display:flex;align-items:center;gap:8px;margin:10px 0;font-size:12.5px;font-weight:700;cursor:pointer"><input type="checkbox" id="reviewFinalizeAll" checked> اعتماد نهائي وإكمال الطلب فوراً (تجاوز أي مرحلة معلقة)</label>`:'';
   ov.innerHTML=`<div class="modal-box" style="max-width:560px;width:100%;background:var(--card,#0f1b2e);border:1px solid var(--border);border-radius:16px;padding:20px"><div class="mh"><div><div class="cc-meta">${esc(r.rid)} · ${esc(reqWhoLabel(st.who))}</div><div class="mt">${approve?'✓ قبول الطلب':'✕ رفض الطلب'}</div></div><button class="mc" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
     <div class="req-notes"><b>${esc(r.type||'')}</b> · 👤 <b>${esc(info.name)}</b> (الرقم: ${esc(info.sid)}${info.grp?' · الشعبة '+esc(info.grp):''})<br>${esc(r.details||'')}</div>
     ${dirFastTrack}
     <div class="mform-group"><label>${approve?'ملاحظة القبول (اختياري)':'سبب الرفض *'}</label><textarea id="reviewNotes" class="lp-in" rows="4" placeholder="${approve?'أضف ملاحظة تظهر في سجل الطلب':'وضّح سبب الرفض لصاحب الطلب'}"></textarea></div>
-    <div class="mft"><button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button><button class="btn ${approve?'btn-g':'btn-r'}" onclick="submitRequestReview('${jsq(rid)}','${decision}')">${approve?'تأكيد القبول':'تأكيد الرفض'}</button></div></div>`;
+    <div class="mft"><button class="btn btn-out" onclick="this.closest('.modal-overlay').remove()">إلغاء</button><button id="reviewSubmitBtn" class="btn ${approve?'btn-g':'btn-r'}" onclick="submitRequestReview('${jsq(rid)}','${decision}')">${approve?'تأكيد القبول':'تأكيد الرفض'}</button></div></div>`;
   document.body.appendChild(ov);
 }
 async function submitRequestReview(rid,decision){
-  const notes=String(document.getElementById('reviewNotes').value||'').trim();
+  const notes=String(document.getElementById('reviewNotes')?.value||'').trim();
   if(decision==='reject'&&!notes){showToast('اكتب سبب الرفض','w');return;}
+  const btn=document.getElementById('reviewSubmitBtn');
+  if(btn){ if(btn.disabled)return; btn.disabled=true; btn.textContent='⏳ جاري التنفيذ...'; }
   const finalizeAll=!!(document.getElementById('reviewFinalizeAll')&&document.getElementById('reviewFinalizeAll').checked);
-  await updateRequestOperational({rid,decision,notes,finalizeAll},'requestReviewModal');
+  const ok=await updateRequestOperational({rid,decision,notes,finalizeAll},'requestReviewModal');
+  if(!ok&&btn){ btn.disabled=false; btn.textContent=decision==='approve'?'تأكيد القبول':'تأكيد الرفض'; }
 }
 window.openRequestReview=openRequestReview;window.submitRequestReview=submitRequestReview;
 function openRequestOperations(rid){
