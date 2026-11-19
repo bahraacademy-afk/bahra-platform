@@ -2565,7 +2565,7 @@ let SESSION={token: (function(){try{return LS.getItem('bla_token')||'';}catch(e)
 /* ⚠️ رابط النشر الحالي. كل «New version» تحت نشرٍ قائم يُبقي الرابط كما
    هو؛ أما «New deployment» فيولّد رابطاً جديداً، وحينها يجب تحديث هذا
    السطر وإعادة رفع الصفحة، وإلا بقيت تخاطب النشر القديم. */
-const SCRIPT_URL_FALLBACK='https://script.google.com/macros/s/AKfycbwm2VOac08IufxYWSyCRcxOt4xOx1eIENsG9qBvVWhRWdJSIRf9bzjIJ216GnUMF0Uo/exec';
+const SCRIPT_URL_FALLBACK='https://script.google.com/macros/s/AKfycbyfTCrFktvqsaHT5IGVH4pOADwiuaymauEmzOtSPrFm-QJZqMEbMzMLjtRAC40qNlBn/exec';
 /* 🔐 الرابط المخصّص — متنفَّسٌ حين يموت الرابط الثابت (نشرٌ جديد) فتصير
    الصفحة بلا خادم ولا سبيل لإصلاحها إلا برفع الملف من جديد.
    يُقبل رابط Apps Script وحده بصيغته الدقيقة: الرمز يُرسل إلى هذا
@@ -2616,11 +2616,12 @@ function apiUrlPanel(){
     <input id="apiIn" class="lp-in" dir="ltr" style="width:100%;font-family:ui-monospace,monospace;font-size:12px"
       placeholder="https://script.google.com/macros/s/.../exec" value="${escAttr(cur)}">
     <div id="apiErr" class="alert ad" style="display:none;margin-top:10px"></div>
-    <div class="alert ab" style="margin-top:12px;font-size:12px"><span class="aicon">🔐</span>
-      رموز الدخول تُرسَل إلى هذا العنوان — فلا يُقبل إلا رابط Apps Script بصيغته الدقيقة.</div>
+    <div class="alert ab" style="margin-top:12px;font-size:12px;line-height:1.7"><span class="aicon">💡</span>
+      لتحديث الخادم مستقبلاً <b>على نفس الرابط بدون تعديل الصفحة</b>: في Apps Script اختر <b>نشر ← إدارة عمليات النشر ← ✏️ ← إصدار جديد ← نشر</b> (وليس «نشر جديد»).</div>
     <div class="btn-row" style="margin-top:14px">
       <button class="btn btn-b" onclick="apiUrlSave()">💾 حفظ وتحديث</button>
       <button class="btn btn-out" onclick="apiUrlTest()">🩺 اختبار الاتصال</button>
+      <button class="btn btn-out" onclick="apiUrlCopyLine()">📋 نسخ سطر الرابط للكود</button>
       ${custom?`<button class="btn btn-out" onclick="apiUrlClear()">↩︎ الرجوع للمنشور</button>`:''}
       <button class="btn btn-out" onclick="document.getElementById('apiModal').remove()">إغلاق</button></div>
   </div>`;
@@ -2669,6 +2670,14 @@ function apiUrlSave(){
 function apiUrlClear(){
   setCustomApiUrl('');
   apiReload(); return true;
+}
+function apiUrlCopyLine(){
+  const typed=String((document.getElementById('apiIn')||{}).value||'').trim();
+  const target=typed||customApiUrl()||SCRIPT_URL_FALLBACK;
+  if(!APPS_SCRIPT_RE.test(target)){ apiUrlErr('رابط غير صالح — يجب أن يبدأ بـ https://script.google.com/macros/s/ وينتهي بـ /exec'); return; }
+  const line="const SCRIPT_URL_FALLBACK='"+target+"';";
+  try{ navigator.clipboard.writeText(line); showToast('✅ تم نسخ سطر SCRIPT_URL_FALLBACK — الصقه في Index.html','s'); }
+  catch(_){ prompt('انسخ السطر التالي وضعه في Index.html:', line); }
 }
 /* إشعار الرابط المخصّص لم يعد على شاشة الدخول: مكانه صفحة الصيانة
    حيث يراه الإداري وحده، فلا تُعلَن إعداداتُ الجهاز لكل من يدخل. */
