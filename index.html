@@ -2576,7 +2576,9 @@ const APPS_SCRIPT_RE=/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]{2
 function customApiUrl(){
   try{
     const v=String(LS.getItem('bla_api_url')||'').trim();
-    return APPS_SCRIPT_RE.test(v)?v:'';
+    if(!APPS_SCRIPT_RE.test(v))return '';
+    if(v===SCRIPT_URL_FALLBACK){ try{LS.removeItem('bla_api_url');}catch(_){} return ''; }
+    return v;
   }catch(e){ return ''; }
 }
 /* ═══════ 🔧 إعداد رابط الخادم — مخفيٌّ عن المستخدمين ═══════
@@ -17533,7 +17535,7 @@ const REQ_CATS=new Proxy({},{
   ownKeys(){return Object.keys((REQ_FLOW&&REQ_FLOW.cats)||{});},
   getOwnPropertyDescriptor(){return {enumerable:true,configurable:true};}
 });
-function reqStageOf(cat,slot){const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[cat];return c?(c.stages||[]).find(x=>x.slot===slot)||null:null;}
+function reqStageOf(cat,slot){const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[cat];const f=c?(c.stages||[]).find(x=>x.slot===slot)||null:null;return f||(slot==='dir'?{who:'dir',slot:'dir',approve:true,reject:true}:null);}
 function reqWhoLabel(who,short){
   if(REQ_WHO_LBL[who])return short&&who==='tgt'?'المسؤول المحدد':REQ_WHO_LBL[who];
   if(String(who||'').indexOf('a:')===0){const id=String(who).slice(2),a=RQF_ADMINS.find(x=>String(x.id)===id)||(typeof adminsDB!=='undefined'?adminsDB:[]).find(x=>String(x.id)===id);return a?a.name:'الإداري المحدد';}
@@ -17582,6 +17584,7 @@ function reqReadyToComplete(r){
 }
 function reqActiveStage(r){
   if(!r||reqCat(r)==='صيانة'||reqIsTerminalStatus(reqFinal(r)))return null;
+  if(reqFinal(r)==='قيد التصعيد')return 'dir';
   const c=REQ_FLOW&&REQ_FLOW.cats&&REQ_FLOW.cats[reqCat(r)];if(!c)return null;
   if((c.stages||[]).some(st=>stageStatus(r,st.slot)==='مرفوض'))return null;
   for(const st of (c.stages||[])){const status=stageStatus(r,st.slot);if(status==='معتمد')continue;return status==='معلق'?st.slot:null;}
@@ -17822,7 +17825,7 @@ function requestFormHtml(){
       <div class="mform-group"><label>أيام الغياب *</label><div style="display:flex;gap:8px;flex-wrap:wrap"><input type="date" id="rq-date" class="lp-in" max="${todayISO()}"><button type="button" class="btn btn-b" onclick="addExcuseDate()">➕ أضف اليوم</button></div><div id="rq-dates-list"></div><div id="rq-dates-total" class="cc-meta"></div></div>
       <div class="mform-group"><label>المستند الداعم (PDF) *</label><input type="file" id="rq-file" accept="application/pdf,.pdf"></div></div>`:'<div id="excuse-fields" style="display:none"></div>'}
     <div id="makeup-fields" style="display:none"><div class="mform-group"><label>المادة *</label>${r==='s'?`<select id="rq-makeup-course" class="lp-in"><option value="">— اختر المادة —</option>${courseOpts}</select>`:'<input id="rq-makeup-course" class="lp-in">'} </div><div class="mform-group"><label>عدد الساعات *</label><input type="number" id="rq-makeup-hours" class="lp-in" min="1"></div><div class="mform-group"><label>الجدول المقترح *</label><input id="rq-makeup-schedule" class="lp-in"></div></div>
-    <div id="target-fields" style="display:none" class="mform-group"><label>توجيه الطلب إلى *</label><select id="rq-target" class="lp-in"><option value="">— اختر الشخص —</option>${staff.map(p=>`<option value="${escAttr(p.name)}" data-role="${escAttr(p.role)}" data-id="${escAttr(p.id||'')}">${esc(p.name)} — ${esc(p.roleLbl||'')}</option>`).join('')}</select></div>
+    <div id="target-fields" style="display:none" class="mform-group"><label>توجيه الطلب إلى *</label><select id="rq-target" class="lp-in"><option value="">— اختر الشخص —</option>${staff.map(p=>`<option value="${escAttr(p.name)}" data-role="${escAttr(p.role)}" data-id="${escAttr(p.id||'')}">${esc(p.name)}${(p.roleLbl||p.sub)?' — '+esc(p.roleLbl||p.sub):''}</option>`).join('')}</select></div>
     <div id="priority-fields" class="mform-group"><label>الأولوية</label><select id="rq-priority-general" class="lp-in"><option>عادية</option><option>مهمة</option><option>عاجلة</option></select></div>
     <div class="mform-group"><label>تفاصيل الطلب *</label><textarea id="rq-details" class="lp-in" rows="4" placeholder="اكتب التفاصيل بوضوح"></textarea></div>
     <div id="general-attachment" class="mform-group"><label>مرفق اختياري (PDF أو صورة، حتى 5 ميجا)</label><input type="file" id="rq-general-file" accept="application/pdf,image/jpeg,image/png"></div>
