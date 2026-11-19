@@ -2713,9 +2713,9 @@ const IDLE_HOURS={s:24, t:168, a:168}; // متدرب: يومي · بقية ال�
    حساب الإداري يفتح كل شيء، والمتدرب كثيرٌ منهم بلا بريد مسجَّل
    فتعميمُه يقفل الباب على أصحابه. ومن لا بريد له من الإداريين يدخل
    وينبَّه — لا يُقفَل أحدٌ خارج منصّته. */
-const OTP_ROLES=['a','m'];
-function otpRequired(r){ return OTP_ROLES.indexOf(String(r||''))>-1; }
-const OTP_ENABLED=true;   // الباقي للتوافق — القرار الفعليّ عند الخادم
+const OTP_ROLES=[];
+function otpRequired(r){ return false; }
+const OTP_ENABLED=false;  // تم تعطيل التحقق بخطوتين بطلب الإدارة — الدخول مباشر
 const ADMIN=[]; // التحقق صار في الخادم
 
 
@@ -3779,6 +3779,9 @@ function setBootPayload(bp){
   if(bp.flow&&bp.flow.cats)REQ_FLOW=cleanRequestFlow(bp.flow);
   if(bp.termLocks)TERM_LOCKS=bp.termLocks;
   if(typeof bp.makeupMax!=='undefined')MAKEUP_MAX_HOURS=Number(bp.makeupMax)||0;
+  if(bp.acadCfg)setAcadCfg(bp.acadCfg);
+  if(bp.instCfg)setInstCfg(bp.instCfg);
+  if(typeof bp.mailOn!=='undefined')window._mailOn=!!bp.mailOn;
   REQ_FLOW_FROM_BOOT=true;   // وصلت الحمولة → لا نداء إضافي للمسار
   if(typeof bp.ai!=='undefined'){ AI_ON=!!bp.ai; AI_FROM_BOOT=true; }
   if(bp.theme)setThemeCfg(bp.theme);     // 🎉 إعداد المناسبات من الخادم → الجميع يراه
@@ -5281,37 +5284,61 @@ function explicitFailMark(c){
   // «محروم» علامة قديمة لا تُسقط الدرجة الآن؛ القرار الصريح المتبقي هو «راسب» فقط.
   return /راسب/.test(L);
 }
+let ACAD_CFG={weeksPerHalf:8,passPct:60,gradeAlertPct:60,absWarn1:10,absWarn2:20,absDeprive:25,makeupMaxHours:0};
+let INST_CFG={nameAr:'معهد المعرفة والإبداع العالي للتدريب',nameEn:'High Knowledge and Creativity Institute for Training',city:'بحرة'};
+function setAcadCfg(c){
+  if(!c||typeof c!=='object')return;
+  ACAD_CFG={
+    weeksPerHalf:Number(c.weeksPerHalf)||8,
+    passPct:Number(c.passPct)||60,
+    gradeAlertPct:Number(c.gradeAlertPct)||60,
+    absWarn1:Number(c.absWarn1)||10,
+    absWarn2:Number(c.absWarn2)||20,
+    absDeprive:Number(c.absDeprive)||25,
+    makeupMaxHours:Number(c.makeupMaxHours)||0
+  };
+  WEEKS_PER_HALF=ACAD_CFG.weeksPerHalf;
+  window._gradeAlertPct=ACAD_CFG.gradeAlertPct;
+  if(typeof MAKEUP_MAX_HOURS!=='undefined')MAKEUP_MAX_HOURS=ACAD_CFG.makeupMaxHours;
+}
+function setInstCfg(c){
+  if(!c||typeof c!=='object')return;
+  INST_CFG={
+    nameAr:String(c.nameAr||'معهد المعرفة والإبداع العالي للتدريب').trim(),
+    nameEn:String(c.nameEn||'High Knowledge and Creativity Institute for Training').trim(),
+    city:String(c.city||'بحرة').trim()
+  };
+}
 function isFailed(c){
   if(!c)return false;
   const g=parseFloat(c.pct)||0;
   const L=String(c.letter||'').replace(/\s+/g,'').trim();
   if(explicitFailMark(c))return true;              // قرار مكتوب — يغلب كل حساب
   // الغياب لا يُرسّب ولا يصفّر المادة؛ تبقى هذه الدالة متوافقة مع السجلات القديمة.
-  if(g>0)return g<60;                               // رقمٌ مرصود ⇒ هو الحَكَم
+  if(g>0)return g<(ACAD_CFG.passPct||60);           // رقمٌ مرصود ⇒ هو الحَكَم
   // بلا رقم: الحرف الآلي وحده يقرر
   return ['F','f','هـ','ه','ر'].indexOf(L)>-1;
 }
 // ===== مستويات الإنذار للغياب =====
-// 10% إنذار أول | 20% إنذار ثاني | 25% تنبيه غياب مرتفع — بلا حرمان أو تأثير على الدرجة
 function absLevel(abs){
   abs=parseFloat(abs)||0;
-  if(abs>=25)return {key:'deprived',label:'غياب مرتفع',color:'var(--acc-r)',pill:'pr'};
-  if(abs>=20)return {key:'warn2',label:'إنذار ثاني',color:'var(--acc-y)',pill:'pr'};
-  if(abs>=10)return {key:'warn1',label:'إنذار أول',color:'var(--acc-y)',pill:'py'};
+  if(abs>=(ACAD_CFG.absDeprive||25))return {key:'deprived',label:'غياب مرتفع',color:'var(--acc-r)',pill:'pr'};
+  if(abs>=(ACAD_CFG.absWarn2||20))return {key:'warn2',label:'إنذار ثاني',color:'var(--acc-y)',pill:'pr'};
+  if(abs>=(ACAD_CFG.absWarn1||10))return {key:'warn1',label:'إنذار أول',color:'var(--acc-y)',pill:'py'};
   return {key:'ok',label:'منتظم',color:'var(--acc-g)',pill:'pg'};
 }
-function isDeprived(abs){return (parseFloat(abs)||0)>=25}
-// غياب عالي للاشعارات: من الإنذار الأول (10%) فأكثر
-function isHighAbs(c){return (parseFloat(c.abs)||0)>=10}
+function isDeprived(abs){return (parseFloat(abs)||0)>=(ACAD_CFG.absDeprive||25);}
+// غياب عالي للاشعارات: من الإنذار الأول فأكثر
+function isHighAbs(c){return (parseFloat(c.abs)||0)>=(ACAD_CFG.absWarn1||10);}
 // مشكلة عامة (للعدّ والتلوين)
-function hasIssue(c){return isHighAbs(c)||isLowPerf(c)}
+function hasIssue(c){return isHighAbs(c)||isLowPerf(c);}
 
 // ⭐ دوال توحيد العدّ بالشخص (متدرب فريد) وبالمادة الفعلية بدل ضرب السجلات (طالب × مادة)
 function uniqIssueStudentsCount(list){
   return new Set((list||[]).filter(hasIssue).map(c=>String(c.sid||c.id||'')).filter(Boolean)).size;
 }
 function uniqDeprivedStudentsCount(list){
-  return new Set((list||[]).filter(c=>(parseFloat(c.abs)||0)>=25).map(c=>String(c.sid||c.id||'')).filter(Boolean)).size;
+  return new Set((list||[]).filter(c=>(parseFloat(c.abs)||0)>=(ACAD_CFG.absDeprive||25)).map(c=>String(c.sid||c.id||'')).filter(Boolean)).size;
 }
 function completedCourseGroups(list){
   // المقرر (مادة × شعبة × نصف) الذي تم رصد درجاته واكتمل
@@ -5329,7 +5356,7 @@ function completedCourseGroups(list){
 
 // ===== حساب ساعات المادة في النصف المجزأ =====
 // ساعات الاتصال أسبوعية × 8 أسابيع = إجمالي ساعات النصف المجزأ
-const WEEKS_PER_HALF=8;
+let WEEKS_PER_HALF=8;
 // كشف التدريب التعاوني (حالة خاصة: ساعات إجمالية مباشرة + خارج الجدول الأسبوعي)
 function isCoopTraining(code){
   const cat=catalog.find(c=>normCode(c.code)===normCode(code));
@@ -6856,7 +6883,7 @@ const isScored=c=>(parseFloat(c&&c.pct)||0)>0;
 /* ناجح = ليس راسباً أصلاً + درجته المحتسبة ٦٠ فأكثر.
    ربطُها بـisFailed يمنع عودة التناقض: لا يمكن أن تكون المادة ناجحة
    وراسبة في آنٍ مهما تغيّرت القواعد لاحقاً. */
-function isPass(c){ return !isFailed(c) && effPct(c)>=60; }
+function isPass(c){ return !isFailed(c) && effPct(c)>=(ACAD_CFG.passPct||60); }
 window.effPct=effPct;window.isPass=isPass;
 function scoredOf(list){return (list||[]).filter(isScored);}
 function scoredCount(list){return scoredOf(list).length;}
@@ -14110,45 +14137,86 @@ const aPgs={
     const totSt=students.length;
     const totCr=[...new Set(allCourses.map(c=>c.course))].length;
     const totTr=[...new Set(allCourses.map(c=>c.trainer).filter(Boolean))].length;
-    return `<div class="stitle">إعدادات النظام</div>
-    <div class="rep-card" style="margin-bottom:14px">
-      <div class="rep-header"><div class="rep-title">🎉 ثيمات المناسبات</div></div>
-      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">تتبدّل ألوان المنصة مع المناسبة تلقائياً حسب التاريخ — والمناسبات الهجرية تُحسب بتقويم أم القرى فلا تحتاج تحديثاً كل سنة. ما تحفظه هنا يسري على كل المستخدمين.</div>
-      <div id="thmPanel">${themePanelHTML()}</div>
+    const reqCnt=Object.keys((REQ_FLOW&&REQ_FLOW.cats)||{}).filter(k=>REQ_FLOW.cats[k]&&REQ_FLOW.cats[k].on!==false).length;
+    const curCat=window._setCat||'all';
+    const showCat=cat=>(curCat==='all'||curCat===cat)?'':'display:none';
+    return `<div class="banner"><div><div class="btitle">⚙️ مركز إعدادات النظام</div><div class="bsub">جميع قواعد المنصة، البريد، الدرجات، الطلبات، والهوية في مكان واحد ومربوطة تلقائياً بالخادم</div></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="setCatTabs">
+      <button type="button" class="rep-tab ${curCat==='all'?'on':''}" onclick="filterSettingsCat('all',this)">📋 الكل</button>
+      <button type="button" class="rep-tab ${curCat==='acad'?'on':''}" onclick="filterSettingsCat('acad',this)">🎓 القواعد الأكاديمية والدرجات</button>
+      <button type="button" class="rep-tab ${curCat==='mail'?'on':''}" onclick="filterSettingsCat('mail',this)">📧 البريد والتنبيهات</button>
+      <button type="button" class="rep-tab ${curCat==='flow'?'on':''}" onclick="filterSettingsCat('flow',this)">🔀 الطلبات والتخصصات</button>
+      <button type="button" class="rep-tab ${curCat==='sys'?'on':''}" onclick="filterSettingsCat('sys',this)">🏛️ الهوية والمظهر والحساب</button>
     </div>
-    <div class="rep-card" style="margin-bottom:14px">
+
+    <div class="rep-card set-card" data-scat="acad" style="margin-bottom:14px;${showCat('acad')}">
+      <div class="rep-header"><div class="rep-title">🎓 القواعد الأكاديمية والحضور والدرجات</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">أي تعديل تحفظه هنا ينعكس فوراً على حسابات الغياب، حالات الرسوب والنجاح، وتنبيهات المتابعة في الخادم والواجهة لجميع الأدوار.</div>
+      <div id="acadCfgPanel">${acadCfgPanelHTML()}</div>
+    </div>
+
+    <div class="rep-card set-card" data-scat="acad" style="margin-bottom:14px;${showCat('acad')}">
+      <div class="rep-header"><div class="rep-title">🔒 موعد إظهار الدرجات</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">في وقت الاختبارات النهائية تُحجب الدرجات عن المتدربين حتى الموعد الذي تحدّده — ويبقون يرون موادهم وغيابهم وجدولهم. الحجب يتم في الخادم: القيم لا تُرسَل أصلاً، والمدربون والإدارة يرونها دائماً.</div>
+      <div id="grelPanel">${grelPanelHTML()}</div>
+    </div>
+
+    <div class="rep-card set-card" data-scat="mail" style="margin-bottom:14px;${showCat('mail')}">
+      <div class="rep-header"><div class="rep-title">📧 مركز البريد والتنبيهات الصباحية</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">تحكّم كامل بأنواع الرسائل، إيقاف إيميلات 6 صباحاً، استبعاد مدير الأكاديمية من النسخ CC، فحص التغطية، ومراقبة سجل الإرسال. الحالة العامة: <b>${window._mailOn===false?'موقوف':'مفعّل'}</b> · الدخول بخطوتين: <b style="color:var(--acc-g)">معطّل (دخول مباشر)</b></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-g" onclick="openMailSettings()">📧 فتح لوحة إعدادات البريد</button>
+        <button class="btn btn-out" onclick="showEmailLog()">📜 سجل الإيميلات</button>
+        <button class="btn btn-out" onclick="showEmailCoverage()">📊 تغطية الإيميلات</button>
+        <button class="btn btn-out" onclick="goAdmin('alerts')">🔔 صفحة الاشعارات ↗</button>
+      </div>
+    </div>
+
+    <div class="rep-card set-card" data-scat="flow" style="margin-bottom:14px;${showCat('flow')}">
+      <div class="rep-header"><div class="rep-title">📋 أنواع الطلبات ومسارات الاعتماد</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">تعديل أسماء الطلبات وأيقوناتها وترتيب جهات الاعتماد وصلاحيات القبول والرفض أو إيقاف أي نوع. الأنواع المفعّلة الآن: <b>${reqCnt}</b></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-b" onclick="openReqFlow()">⚙️ إدارة أنواع الطلبات والمسارات</button>
+        <button class="btn btn-out" onclick="goAdmin('requests')">📋 فتح صفحة الطلبات ↗</button>
+      </div>
+    </div>
+
+    <div class="rep-card set-card" data-scat="flow" style="margin-bottom:14px;${showCat('flow')}">
       <div class="rep-header"><div class="rep-title">🎓 تخصصات المعهد</div></div>
-      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">القائمة المعتمدة التي يُختار منها تخصص كل مقرر ومتدرب ومدرب — بدل كتابته نصّاً حرّاً في كل مكان. تعديل اسم تخصص هنا يصحّحه في النظام كله، ولكل تخصص مكتبته وتصفيته.</div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">القائمة المعتمدة التي يُختار منها تخصص كل مقرر ومتدرب ومدرب. تعديل اسم تخصص هنا يصحّحه في النظام كله.</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-b" onclick="openSpecs()">🎓 إدارة التخصصات</button>
         <span style="font-size:12px;color:var(--muted)">المسجّلة الآن: <b>${(typeof specsDB!=='undefined'?specsDB.length:0)}</b>${(function(){const u=(typeof allSpecs==='function')?allSpecs(false).filter(x=>!x.reg).length:0;return u?` · <span style="color:var(--acc-y)">${u} غير مسجّل</span>`:'';})()}</span>
       </div>
     </div>
-    <div class="rep-card" style="margin-bottom:14px">
-      <div class="rep-header"><div class="rep-title">🔒 موعد إظهار الدرجات</div></div>
-      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">في وقت الاختبارات النهائية تُحجب الدرجات عن المتدربين حتى الموعد الذي تحدّده — ويبقون يرون موادهم وغيابهم وجدولهم. الحجب يتم في الخادم: القيم لا تُرسَل أصلاً، فلا يراها أحد بفتح أدوات المتصفح. والمدربون والإدارة يرونها دائماً.</div>
-      <div id="grelPanel">${grelPanelHTML()}</div>
+
+    <div class="rep-card set-card" data-scat="sys" style="margin-bottom:14px;${showCat('sys')}">
+      <div class="rep-header"><div class="rep-title">🏛️ هوية المعهد والتقارير</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">الاسم الرسمي بالعربية والإنجليزية والمدينة الظاهرة في المنصة والتقارير المطبوعة.</div>
+      <div id="instCfgPanel">${instCfgPanelHTML()}</div>
     </div>
-    <div class="rep-card">
-      <div class="rep-header"><div class="rep-title">⚙️ إعدادات عامة</div></div>
-      <div class="iitem" style="margin-bottom:10px"><div class="ilbl">معرف الشيت</div><div class="ival" style="font-size:12px;word-break:break-all">${SID}</div></div>
-      <div class="iitem" style="margin-bottom:10px"><div class="ilbl">الإداري</div><div class="ival">${esc(user.name)}</div></div>
-      <div class="iitem" style="margin-bottom:10px"><div class="ilbl">الصلاحية</div><div class="ival">${esc(user.title)}</div></div>
-      <button class="btn btn-out" onclick="openChangePassword(false)">🔐 تغيير الرمز السري</button>
+
+    <div class="rep-card set-card" data-scat="sys" style="margin-bottom:14px;${showCat('sys')}">
+      <div class="rep-header"><div class="rep-title">🎉 ثيمات المناسبات والمظهر الشخصي</div></div>
+      <div style="font-size:12.5px;color:var(--muted);margin:2px 0 12px;line-height:1.75">تتبدّل ألوان المنصة مع المناسبة تلقائياً بتقويم أم القرى وتسري على الجميع، بينما المظهر الشخصي يخصّ جهازك وحسابك.</div>
+      <div style="margin-bottom:12px"><button class="btn btn-out btn-sm" onclick="openThemePick()">🎨 تغيير مظهر ألواني الشخصي</button></div>
+      <div id="thmPanel">${themePanelHTML()}</div>
     </div>
-    <div class="rep-card">
-      <div class="rep-header"><div class="rep-title">📊 إحصائيات سريعة</div></div>
-      <div class="sbar"><span class="sbar-name">المتدربون</span><div class="sbar-track"><div class="sbar-fill" style="width:100%"></div></div><span class="sbar-val">${totSt}</span></div>
-      <div class="sbar"><span class="sbar-name">المقررات النشطة</span><div class="sbar-track"><div class="sbar-fill" style="width:80%"></div></div><span class="sbar-val">${totCr}</span></div>
-      <div class="sbar"><span class="sbar-name">المدربون</span><div class="sbar-track"><div class="sbar-fill" style="width:60%"></div></div><span class="sbar-val">${totTr}</span></div>
-    </div>
-    <div class="stitle" style="margin-top:26px">📋 أنواع الطلبات</div>
-    <div class="ccard cc-b">
-      <div class="cc-name">الأسماء والأيقونات والتفعيل</div>
-      <div style="font-size:12.5px;color:var(--muted);margin:6px 0 10px">كل الطلبات تصل مباشرةً للجهة المختصة. يمكنك تعديل الاسم والأيقونة وترتيب الجهات وصلاحيات القبول والرفض أو إيقاف النوع.</div>
-      <button class="btn btn-b" onclick="openReqFlow()">⚙️ إدارة أنواع الطلبات</button>
-    </div>
-    `;
+
+    <div class="rep-card set-card" data-scat="sys" style="margin-bottom:14px;${showCat('sys')}">
+      <div class="rep-header"><div class="rep-title">⚙️ الحساب والاتصال بالخادم والإحصائيات</div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px">
+        <div class="iitem"><div class="ilbl">الإداري</div><div class="ival">${esc(user.name)}</div></div>
+        <div class="iitem"><div class="ilbl">الصلاحية</div><div class="ival">${esc(user.title)}</div></div>
+        <div class="iitem"><div class="ilbl">المتدربون / المقررات / المدربون</div><div class="ival">${totSt} · ${totCr} · ${totTr}</div></div>
+      </div>
+      <div class="iitem" style="margin-bottom:12px"><div class="ilbl">معرف الشيت (Google Sheets)</div><div class="ival" style="font-size:12px;word-break:break-all">${SID}</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-out" onclick="openChangePassword(false)">🔐 تغيير الرمز السري</button>
+        <button class="btn btn-out" onclick="apiUrlPanel()">🔧 إعداد رابط الخادم</button>
+        <button class="btn btn-out" onclick="goAdmin('maintenance')">🧰 الانتقال إلى صيانة النظام ↗</button>
+      </div>
+    </div>`;
   },
   maintenance:()=>{
     const activeTerms=[...new Set(allCourses.filter(c=>isActive(c.status)).map(c=>c.half).filter(t=>t&&t!=='غير محدد'))];
@@ -14348,11 +14416,79 @@ async function toggleReqEmails(){
     else showToast('تعذّر — تأكد من نشر الخادم (v18)','e');
   }catch(e){showToast('تعذّر الاتصال — حاول مرة أخرى','e');}
 }
+function filterSettingsCat(cat, btn){
+  window._setCat=cat;
+  document.querySelectorAll('#setCatTabs .rep-tab').forEach(b=>b.classList.toggle('on',b===btn));
+  document.querySelectorAll('.set-card').forEach(el=>{
+    el.style.display=(cat==='all'||el.dataset.scat===cat)?'':'none';
+  });
+}
+window.filterSettingsCat=filterSettingsCat;
+function acadCfgPanelHTML(){
+  const c=ACAD_CFG;
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:10px;margin-bottom:12px">
+    <div class="mform-group" style="margin:0"><label>📅 أسابيع النصف المجزأ</label><input type="number" id="acWeeks" class="lp-in" min="1" max="20" value="${c.weeksPerHalf}"></div>
+    <div class="mform-group" style="margin:0"><label>✅ درجة النجاح (%)</label><input type="number" id="acPass" class="lp-in" min="40" max="95" value="${c.passPct}"></div>
+    <div class="mform-group" style="margin:0"><label>📉 حد تنبيه البنود (%)</label><input type="number" id="acAlert" class="lp-in" min="10" max="100" value="${c.gradeAlertPct}"></div>
+    <div class="mform-group" style="margin:0"><label>⚠️ إنذار الغياب الأول (%)</label><input type="number" id="acW1" class="lp-in" min="1" max="90" value="${c.absWarn1}"></div>
+    <div class="mform-group" style="margin:0"><label>🟠 إنذار الغياب الثاني (%)</label><input type="number" id="acW2" class="lp-in" min="1" max="95" value="${c.absWarn2}"></div>
+    <div class="mform-group" style="margin:0"><label>🔴 الغياب المرتفع (%)</label><input type="number" id="acDep" class="lp-in" min="5" max="100" value="${c.absDeprive}"></div>
+    <div class="mform-group" style="margin:0"><label>🕒 حد ساعات الإعادة (0=بلا حد)</label><input type="number" id="acMakeup" class="lp-in" min="0" max="200" value="${c.makeupMaxHours}"></div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button type="button" class="btn btn-g" onclick="saveAcadCfg()">💾 حفظ القواعد للجميع</button>
+    <button type="button" class="btn btn-out" onclick="setAcadCfg({weeksPerHalf:8,passPct:60,gradeAlertPct:60,absWarn1:10,absWarn2:20,absDeprive:25,makeupMaxHours:0});const p=document.getElementById('acadCfgPanel');if(p)p.innerHTML=acadCfgPanelHTML();showToast('↺ استعيدت القيم الافتراضية — اضغط حفظ لتثبيتها','i')">↺ افتراضي</button>
+  </div>`;
+}
+async function saveAcadCfg(){
+  const g=id=>parseFloat((document.getElementById(id)||{}).value);
+  const cfg={
+    weeksPerHalf:g('acWeeks')||8,
+    passPct:g('acPass')||60,
+    gradeAlertPct:g('acAlert')||60,
+    absWarn1:g('acW1')||10,
+    absWarn2:g('acW2')||20,
+    absDeprive:g('acDep')||25,
+    makeupMaxHours:Math.max(0,g('acMakeup')||0)
+  };
+  if(cfg.absWarn1>=cfg.absWarn2||cfg.absWarn2>=cfg.absDeprive){showToast('تأكد من ترتيب نسب الغياب: الأول < الثاني < المرتفع','w');return;}
+  showToast('جاري حفظ القواعد الأكاديمية...','i');
+  const r=await callWrite('setSetting',{key:'ACAD_CFG',value:JSON.stringify(cfg)}).catch(()=>null);
+  if(!r||(r.status!=='ok'&&r.ok!==true)){showToast('تعذّر الحفظ — تأكد من نشر نسخة Code.gs الجديدة','e');return;}
+  setAcadCfg(cfg);
+  try{recomputeAbsPct();}catch(e){}
+  showToast('✅ حُفظت القواعد الأكاديمية ورُبطت بالنظام بالكامل','s');
+}
+function instCfgPanelHTML(){
+  const c=INST_CFG;
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:12px">
+    <div class="mform-group" style="margin:0"><label>اسم المعهد (عربي)</label><input type="text" id="icNameAr" class="lp-in" value="${escAttr(c.nameAr)}"></div>
+    <div class="mform-group" style="margin:0"><label>اسم المعهد (إنجليزي)</label><input type="text" id="icNameEn" class="lp-in" dir="ltr" value="${escAttr(c.nameEn)}"></div>
+    <div class="mform-group" style="margin:0"><label>المدينة / الفرع</label><input type="text" id="icCity" class="lp-in" value="${escAttr(c.city)}"></div>
+  </div>
+  <button type="button" class="btn btn-b" onclick="saveInstCfg()">💾 حفظ هوية المعهد</button>`;
+}
+async function saveInstCfg(){
+  const cfg={
+    nameAr:String((document.getElementById('icNameAr')||{}).value||'').trim()||'معهد المعرفة والإبداع العالي للتدريب',
+    nameEn:String((document.getElementById('icNameEn')||{}).value||'').trim()||'High Knowledge and Creativity Institute for Training',
+    city:String((document.getElementById('icCity')||{}).value||'').trim()||'بحرة'
+  };
+  showToast('جاري الحفظ...','i');
+  const r=await callWrite('setSetting',{key:'INST_CFG',value:JSON.stringify(cfg)}).catch(()=>null);
+  if(!r||(r.status!=='ok'&&r.ok!==true)){showToast('تعذّر الحفظ','e');return;}
+  setInstCfg(cfg);
+  showToast('✅ حُفظت هوية المعهد','s');
+}
+window.acadCfgPanelHTML=acadCfgPanelHTML;window.saveAcadCfg=saveAcadCfg;
+window.instCfgPanelHTML=instCfgPanelHTML;window.saveInstCfg=saveInstCfg;
+window.setAcadCfg=setAcadCfg;window.setInstCfg=setInstCfg;
+
 /* ===== 📧 لوحة إعدادات البريد — كل شيء من هنا بلا تعديل كود ===== */
 let MAILCFG=null;
 const MAIL_DAYS=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 const MAIL_DESC={
-  otp:'الرمز الذي يصل المستخدم عند تسجيل الدخول بالتحقّق بخطوتين',
+  otp:'(معطّل حالياً) الرمز الذي يصل المستخدم عند تسجيل الدخول بخطوتين',
   warn:'خطاب الإنذار الرسمي الذي ترسله يدوياً من صفحة التقارير',
   absence:'الإشعار التلقائي عند بلوغ نسبة الغياب 10% / 20% / 25%',
   grade:'الإشعار التلقائي عند نزول الدرجة النهائية عن الحد',
@@ -14411,6 +14547,23 @@ function mailCfgHTML(d){
     .mc-tbl th{font-size:11.5px;color:var(--muted);font-weight:700;padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)}
     .mc-tbl input[type=checkbox]{width:20px;height:20px;margin:0;accent-color:#1a7abf}
   </style>
+
+  <div class="mc-sec" style="border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.06)">
+    <div class="mc-h">☀️ إيميلات الساعة 6 صباحاً وإزعاج الإدارة</div>
+    <div class="mc-hint">تحكّم في الإرسال التلقائي الصباحي ومنع وصول نسخ CC/BCC لمدير الأكاديمية.</div>
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px;font-weight:700;margin-bottom:9px">
+      <input type="checkbox" id="mcAutoDaily" ${c.autoDaily?'checked':''} style="width:20px;height:20px;accent-color:#1a7abf">
+      <span>تفعيل التنبيهات اليومية التلقائية (6 صباحاً)</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13.5px;font-weight:700;margin-bottom:10px">
+      <input type="checkbox" id="mcExcludeDir" ${c.ccExcludeDirector!==false?'checked':''} style="width:20px;height:20px;accent-color:#1a7abf">
+      <span>استبعاد مدير الأكاديمية من جميع النسخ (CC)</span>
+    </label>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button type="button" class="btn btn-g btn-sm" onclick="applyQuietMailPreset()">⚡ تطبيق الوضع الهادئ (إيقاف 6 ص + منع نسخ المدير)</button>
+      <button type="button" class="btn btn-r btn-sm" onclick="removeDailyTriggerUI()">🛑 حذف مؤقت 6 صباحاً من الخادم${typeof d.dailyTriggers==='number'&&d.dailyTriggers>=0?` (${d.dailyTriggers})`:''}</button>
+    </div>
+  </div>
 
   <div class="mc-sec">
     <div class="mc-h">🔌 المفتاح العام</div>
@@ -14489,7 +14642,10 @@ function mailCfgRead(){
   document.querySelectorAll('.mc-type').forEach(x=>types[x.dataset.k]=x.checked);
   document.querySelectorAll('.mc-cc').forEach(x=>ccOn[x.dataset.k]=x.checked);
   return {
-    on:g('mcOn').checked, types, ccOn,
+    on:g('mcOn').checked,
+    autoDaily:g('mcAutoDaily')?g('mcAutoDaily').checked:false,
+    ccExcludeDirector:g('mcExcludeDir')?g('mcExcludeDir').checked:true,
+    types, ccOn,
     cc:g('mcCc').value, bcc:g('mcBcc').value,
     ccAdmins:g('mcCcAdmins').checked, ccTrainer:g('mcCcTrainer').checked,
     senderName:g('mcSender').value, replyTo:g('mcReply').value,
@@ -14498,6 +14654,34 @@ function mailCfgRead(){
     cap:parseInt(g('mcCap').value,10)||0, log:g('mcLog').checked
   };
 }
+function applyQuietMailPreset(){
+  const g=id=>document.getElementById(id);
+  if(g('mcAutoDaily'))g('mcAutoDaily').checked=false;
+  if(g('mcExcludeDir'))g('mcExcludeDir').checked=true;
+  if(g('mcCcAdmins'))g('mcCcAdmins').checked=false;
+  if(g('mcBcc'))g('mcBcc').value='';
+  document.querySelectorAll('.mc-cc').forEach(x=>x.checked=false);
+  ['otp','absence','grade','perf'].forEach(k=>{
+    const el=document.querySelector('.mc-type[data-k="'+k+'"]');
+    if(el)el.checked=false;
+  });
+  showToast('✓ طُبّق الوضع الهادئ — اضغط «💾 حفظ الإعدادات» لتأكيده','i');
+}
+async function removeDailyTriggerUI(){
+  if(!confirm('سيتم إيقاف وحذف مؤقت التنبيهات اليومية (6 صباحاً) من الخادم نهائياً. متابعة؟'))return;
+  showToast('جاري إيقاف المؤقت الصباحي...','i');
+  try{
+    let r=null;
+    try{ r=await postJSONRead(SCRIPT_URL,{token:SESSION.token,action:'manageDailyTrigger',mode:'off'}); }
+    catch(_){ r=await jsonpCall({action:'manageDailyTrigger',data:JSON.stringify({mode:'off'})}); }
+    if(r&&r.status==='ok'){
+      const g=id=>document.getElementById(id);
+      if(g('mcAutoDaily'))g('mcAutoDaily').checked=false;
+      showToast(`✅ تم إيقاف إيميلات 6 صباحاً (حُذف ${r.removed||0} مؤقت من الخادم)`,'s');
+    } else showToast('تعذّر إيقاف المؤقت — تأكد من نشر نسخة Code.gs الجديدة','e');
+  }catch(e){ showToast('تعذّر الاتصال بالخادم','e'); }
+}
+window.applyQuietMailPreset=applyQuietMailPreset;window.removeDailyTriggerUI=removeDailyTriggerUI;
 async function saveMailSettings(){
   const cfg=mailCfgRead();
   showToast('جاري الحفظ...','i');
